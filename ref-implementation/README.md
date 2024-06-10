@@ -25,10 +25,9 @@ Ensure you have the following tools installed on your computer.
 If you happen to configure a different host or port for the idpBuilder, the manifests in the reference example need to be updated
 and be configured with the new host and port. you can use the [replace.sh](replace.sh) to change the port as desired prior to applying the manifest as instructed in the command above._
 
-Run the following command from the root of this repository.
-
 ```bash
-idpbuilder create --use-path-routing --package-dir examples/ref-implementation
+idpbuilder create --use-path-routing \
+  --package-dir https://github.com/cnoe-io/stacks//ref-implementation
 ```
 
 This will take ~6 minutes for everything to come up. To track the progress, you can go to the [ArgoCD UI](https://cnoe.localtest.me:8443/argocd/applications).
