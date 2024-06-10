@@ -25,8 +25,6 @@ Ensure you have the following tools installed on your computer.
 If you happen to configure a different host or port for the idpBuilder, the manifests in the reference example need to be updated
 and be configured with the new host and port. you can use the [replace.sh](replace.sh) to change the port as desired prior to applying the manifest as instructed in the command above._
 
-Run the following command from the root of this repository.
-
 ```bash
 idpbuilder create --use-path-routing \
   --package-dir https://github.com/cnoe-io/stacks//ref-implementation
