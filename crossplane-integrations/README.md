@@ -1,6 +1,6 @@
 # Crossplane Integrations for Backstage
 
-`idpBuilder` is extensible to launch custom crossplane patterns using package extensions. 
+`idpBuilder` is extensible to launch custom Crossplane patterns using package extensions. 
 
 Please use the below command to deploy an IDP reference implementation with an Argo application for preparing up the setup for terraform integrations:
 
@@ -16,11 +16,11 @@ idpbuilder create \
 1. AWS providers
 1. Basic Compositions
 
-This needs your credentials for this to work. Follow the crossplane installation documentation on how to add your credentials.
+This needs your credentials for this to work. Follow the Crossplane installation documentation on how to add your credentials.
 
 ## Application with cloud resources.
 
-With this integration, we can deploy an application with cloud resources using Backstage templates from the reference implemenation, together with Crossplane integrations.
+With this integration, we can deploy an application with cloud resources using Backstage templates from the reference implementation, together with Crossplane integrations.
 
 In this example, we will create an application with a S3 Bucket.
 
