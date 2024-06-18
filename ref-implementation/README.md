@@ -35,11 +35,10 @@ This will take ~6 minutes for everything to come up. To track the progress, you 
 ### What was installed?
 
 1. **Argo Workflows** to enable workflow orchestrations.
-2. **Backstage** as the UI for software catalog and templating. Source is available [here](https://github.com/cnoe-io/backstage-app).
-3. **Crossplane**, AWS providers, and basic compositions for deploying cloud related resources (needs your credentials for this to work)
-4. **External Secrets** to generate secrets and coordinate secrets between applications.
-5. **Keycloak** as the identity provider for applications.
-6. **Spark Operator** to demonstrate an example Spark workload through Backstage.
+1. **Backstage** as the UI for software catalog and templating. Source is available [here](https://github.com/cnoe-io/backstage-app).
+1. **External Secrets** to generate secrets and coordinate secrets between applications.
+1. **Keycloak** as the identity provider for applications.
+1. **Spark Operator** to demonstrate an example Spark workload through Backstage.
 
 If you don't want to install a package above, you can remove the ArgoCD Application file corresponding to the package you want to remove.
 For example, if you want to remove Spark Operator, you can delete [this file](./spark-operator.yaml).
@@ -137,19 +136,10 @@ Back in the entity page, you can view more details about Spark jobs by navigatin
 
 ## Application with cloud resources.
 
-Similar to the above, we can deploy an application with cloud resources using Backstage templates.
-In this example, we will create an application with a S3 Bucket.
+To deploy cloud resources, you can follow any of the instructions below:
 
-Choose a template named `App with S3 bucket`, type `demo3` as the name, then choose a region to create this bucket in.
-
-Once you click the create button, you will have a very similar setup as the basic example. 
-The only difference is we now have a resource for a S3 Bucket which is managed by Crossplane.
-
-Note that Bucket is **not** created because Crossplane doesn't have necessary credentials to do so.
-If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package-dir examples/ref-implementation`.
-
-In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as Terraform instead. 
-Regardless of your tool choice, concepts are the same. We use Backstage as the templating mechanism and UI for users, then use Kubernetes API with GitOps to deploy resources. 
+- [Cloud resource deployments via Crossplane](../crossplane-integrations/)
+- [Cloud resource deployments via Terraform](../terraform-integrations/)
 
 ## Notes
 
