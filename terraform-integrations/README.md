@@ -7,8 +7,8 @@ Please use the below command to deploy an IDP reference implementation with an A
 ```bash
 idpbuilder create \
   --use-path-routing \
-  --package-dir https://github.com/cnoe-io/stacks//ref-implementation \
-  --package-dir https://github.com/cnoe-io/stacks//terraform-integrations
+  --package-dir https://github.com/cnoe-io/stacks/ref-implementation \
+  --package-dir https://github.com/cnoe-io/stacks/terraform-integrations
 ```
 
 As you see above, this add-on to `idpbuilder` has a dependency to the [reference implementation](../ref-implementation/). This command primarily does the following:
