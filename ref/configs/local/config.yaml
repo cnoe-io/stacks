@@ -1,0 +1,22 @@
+environment: local
+packages:
+  - name: external-secrets
+    namespace: external-secrets
+    install: "true"
+    manifestPath: "external-secrets/manifests"
+  - name: keycloak
+    namespace: keycloak
+    install: "true"
+    manifestPath: "keycloak/manifests"
+  - name: argo-workflows
+    namespace: argo
+    install: "true"
+    manifestPath: "argo-workflows/manifests/dev"
+  - name: backstage
+    namespace: backstage
+    install: "true"
+    manifestPath: "backstage/manifests"
+  - name: backstage-templates
+    namespace: backstage
+    install: "true"
+    manifestPath: "backstage-templates/entities/.ignore"
