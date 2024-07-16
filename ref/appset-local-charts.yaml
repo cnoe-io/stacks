@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: ref-impl
+  name: local-charts
   namespace: argocd
 spec:
   goTemplate: true
@@ -28,6 +28,7 @@ spec:
       name: "{{ .name }}"
       labels:
         environment: "{{ .environment }}"
+        cnoe.io/package-name: ref-impl
     spec:
       project: default
       sources:

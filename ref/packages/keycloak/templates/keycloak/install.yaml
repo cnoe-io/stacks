@@ -83,13 +83,15 @@ data:
     proxy=edge
     
     # hostname configuration
-    hostname=cnoe.localtest.me
-    hostname-port=8443
-    http-relative-path=keycloak
+    hostname={{ .Values.networking.host }}
+    {{- if not (eq (int .Values.networking.port) 443) }}
+    hostname-port={{ .Values.networking.port }}
     
     # the admin url requires its own configuration to reflect correct url
-    hostname-admin=cnoe.localtest.me:8443
+    hostname-admin={{ .Values.networking.host }}:{{ .Values.networking.port }}
+    {{- end }}
     
+    http-relative-path=keycloak
     hostname-debug=true
     
     # this should only be allowed in development. NEVER in production.
@@ -161,4 +163,3 @@ spec:
       resources:
         requests:
           storage: "500Mi"
-
