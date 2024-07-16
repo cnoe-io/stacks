@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: argo-server
   namespace: argo
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
 spec:
   template:
     spec:
