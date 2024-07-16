@@ -17,21 +17,21 @@ spec:
         values: |
           hub:
             baseUrl: /jupyterhub
+            extraEnv:
+              - name: OAUTH_TLS_VERIFY # for getting around self signed certificate issue
+                value: "0"
+              - name: OAUTH_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: jupyterhub-oidc
+                    key: JUPYTERHUB_OAUTH_CLIENT_SECRET
             config:
-              extraEnv:
-                - name: OAUTH_TLS_VERIFY # for getting around self signed certificate issue
-                  value: "0"
-                - name: OAUTH_CLIENT_SECRET
-                  valueFrom:
-                    secretKeyRef:
-                      name: jupyterhub-oidc
-                      key: JUPYTERHUB_OAUTH_CLIENT_SECRET
               GenericOAuthenticator:
                 oauth_callback_url: https://cnoe.localtest.me:8443/jupyterhub/hub/oauth_callback
                 client_id: jupyterhub
-                authorize_url: https://cnoe.localtest.me:8443/keycloak/realms/master/protocol/openid-connect/auth
-                token_url: https://cnoe.localtest.me:8443/keycloak/realms/master/protocol/openid-connect/token
-                userdata_url: https://cnoe.localtest.me:8443/keycloak/realms/master/protocol/openid-connect/userinfo
+                authorize_url: https://cnoe.localtest.me:8443/keycloak/realms/cnoe/protocol/openid-connect/auth
+                token_url: https://cnoe.localtest.me:8443/keycloak/realms/cnoe/protocol/openid-connect/token
+                userdata_url: https://cnoe.localtest.me:8443/keycloak/realms/cnoe/protocol/openid-connect/userinfo
                 scope:
                   - openid
                   - profile
