@@ -12,7 +12,7 @@ data:
       "name": "Jupyterhub Client",
       "description": "Used for Jupyterhub SSO",
       "publicClient": false,
-      "authorizationServicesEnabled": false,
+      "authorizationServicesEnabled": true,
       "serviceAccountsEnabled": false,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
