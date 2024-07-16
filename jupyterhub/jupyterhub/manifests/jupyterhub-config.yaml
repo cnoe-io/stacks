@@ -11,7 +11,7 @@ data:
       "clientId": "jupyterhub",
       "name": "Jupyterhub Client",
       "description": "Used for Jupyterhub SSO",
-      "publicClient": true,
+      "publicClient": false,
       "authorizationServicesEnabled": false,
       "serviceAccountsEnabled": false,
       "implicitFlowEnabled": false,
