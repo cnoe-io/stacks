@@ -111,7 +111,7 @@ spec:
         argoInstance: in-cluster
         projectName: default
         # necessary until we generate our own cert
-        repoUrl: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/${{parameters.name}}
+        repoUrl: https://cnoe.localtest.me:8443/gitea/giteaAdmin/${{parameters.name}}
         path: "kustomize/base"
     - id: register
       name: Register
