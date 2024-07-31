@@ -24,7 +24,7 @@ spec:
         kustomizeController: 
           create: false
         notificationController:
-          create: false
+          create: true
     chart: flux2
   destination:
     server: 'https://kubernetes.default.svc'
