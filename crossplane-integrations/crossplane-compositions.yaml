@@ -10,7 +10,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://crossplane-compositions/manifests
+    repoURL: cnoe://crossplane-compositions
     targetRevision: HEAD
     path: "."
     directory:
