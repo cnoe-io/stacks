@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://crossplane-compositions
+    repoURL: https://github.com/cnoe-io/backstage-crossplane-integrations
     targetRevision: HEAD
-    path: "."
+    path: "./crossplane-compositions"
     directory:
       recurse: true
   destination:
