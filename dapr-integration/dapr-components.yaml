@@ -10,7 +10,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://dapr-components/manifests
+    repoURL: cnoe://dapr-components
     targetRevision: HEAD
     path: "."
     directory:
