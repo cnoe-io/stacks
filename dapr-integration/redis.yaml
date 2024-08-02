@@ -13,6 +13,8 @@ spec:
     repoURL: 'registry-1.docker.io/bitnamicharts'
     targetRevision: 19.6.4
     helm:
+      valuesObject:
+        architecture: standalone
       releaseName: redis
     chart: redis
   destination:
