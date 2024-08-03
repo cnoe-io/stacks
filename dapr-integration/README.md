@@ -13,23 +13,7 @@ idpbuilder create \
 
 1. Dapr Control Plane
 1. Dapr Statestore and PubSub components
+2. Redis instance to support Statestore and Pubsub components
 
-This needs your credentials for this to work. Follow the Dapr installation documentation on how to add your credentials.
 
-## Application with cloud resources.
 
-With this integration, we can deploy an application with cloud resources using Backstage templates from the reference implementation, together with Dapr integrations.
-
-In this example, we will create an application with a S3 Bucket.
-
-Choose a template named `App with S3 bucket`, type `demo3` as the name, then choose a region to create this bucket in.
-
-Once you click the create button, you will have a very similar setup as the basic example.
-The only difference is we now have a resource for a S3 Bucket which is managed by Crossplane.
-
-Note that Bucket is **not** created because Crossplane doesn't have necessary credentials to do so.
-If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package-dir examples/ref-implementation`.
-
-In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as Terraform instead.
-
-Regardless of your tool choice, concepts are the same. We use Backstage as the templating mechanism and UI for users, then use Kubernetes API with GitOps to deploy resources.
