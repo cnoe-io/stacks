@@ -7,8 +7,7 @@ Please use the below command to deploy an IDP reference implementation with an A
 ```bash
 idpbuilder create \
   --use-path-routing \
-  --package-dir https://github.com/cnoe-io/stacks//ref-implementation \
-  --package-dir https://github.com/cnoe-io/stacks//dapr-integrations
+  --p https://github.com/cnoe-io/stacks//dapr-integrations
 ```
 ## What is installed?
 
