@@ -16,3 +16,4 @@ See [the instructions](https://github.com/cnoe-io/idpbuilder?tab=readme-ov-file#
 - **[Local Backup](./local-backup)**. How do I make sure my work is backed up?
 - **[Localstack](./localstack-integration)**. Use [LocalStack](https://github.com/localstack/localstack) to test out cloud integrations.
 - **[Terraform Integrations](./terraform-integrations)**. Integrating Terraform with Reference Implementation.
+- **[Dapr Integration](./dapr-integrations)**. Integrating the Dapr APIs for Building Secure and Reliable Microservices .
