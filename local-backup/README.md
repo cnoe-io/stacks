@@ -34,7 +34,7 @@ Once you've made the change, run this command from the root of this repository.
 # example: mkdir /Users/my-name/backup
 mkdir <path/to/directory> 
 
-idpbuilder create --kind-config examples/local-backup/kind.yaml --package-dir examples/local-backup/
+idpbuilder create --kind-config examples/local-backup/kind.yaml --package examples/local-backup/
 ```
 
 This command:
@@ -119,7 +119,7 @@ kind delete clusters localdev && docker system prune -f
 Once it is destroyed, create it again.
 
 ```bash
-idpbuilder create --kind-config examples/local-backup/kind.yaml --package-dir examples/local-backup/
+idpbuilder create --kind-config examples/local-backup/kind.yaml --package examples/local-backup/
 ```
 
 Make sure everything looks good:

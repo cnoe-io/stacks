@@ -7,8 +7,8 @@ Please use the below command to deploy an IDP reference implementation with an A
 ```bash
 idpbuilder create \
   --use-path-routing \
-  --package-dir https://github.com/cnoe-io/stacks//ref-implementation \
-  --package-dir https://github.com/cnoe-io/stacks//crossplane-integrations
+  --package https://github.com/cnoe-io/stacks//ref-implementation \
+  --package https://github.com/cnoe-io/stacks//crossplane-integrations
 ```
 ## What is installed?
 
@@ -30,7 +30,7 @@ Once you click the create button, you will have a very similar setup as the basi
 The only difference is we now have a resource for a S3 Bucket which is managed by Crossplane.
 
 Note that Bucket is **not** created because Crossplane doesn't have necessary credentials to do so.
-If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package-dir examples/ref-implementation`.
+If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package examples/ref-implementation`.
 
 In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as Terraform instead.
 

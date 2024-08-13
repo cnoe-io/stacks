@@ -44,7 +44,7 @@ Now you are ready to run idpbuilder with reference implementation.
 ```bash
 idpbuilder create --protocol http  \
   --host ${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN} \
-  --port 8080 --use-path-routing --package-dir examples/ref-implementation
+  --port 8080 --use-path-routing --package examples/ref-implementation
 ```
 Once idpbuilder finishes bootstrapping, you should have port 8080 forward in the port tab within Codespaces.
 
