@@ -30,9 +30,11 @@ Codespaces assigns random hostname to your specific instance. You need to make s
 Instance host name is available as an environment variable (`CODESPACE_NAME`). Let's use it to setup our host names. 
 Run the following commands to update host name and ports. Port is set to 443 because this is the port used by the browser to access your instance.
 
+Clone the [stacks](https://github.com/cnoe-io/stacks) repo.
+
 
 ```bash
-cd examples/ref-implementation 
+cd ref-implementation 
 
 ./replace.sh ${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN} 443
 
@@ -44,7 +46,7 @@ Now you are ready to run idpbuilder with reference implementation.
 ```bash
 idpbuilder create --protocol http  \
   --host ${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN} \
-  --port 8080 --use-path-routing --package examples/ref-implementation
+  --port 8080 --use-path-routing --package ref-implementation
 ```
 Once idpbuilder finishes bootstrapping, you should have port 8080 forward in the port tab within Codespaces.
 

@@ -43,11 +43,6 @@ This will take ~6 minutes for everything to come up. To track the progress, you 
 If you don't want to install a package above, you can remove the ArgoCD Application file corresponding to the package you want to remove.
 For example, if you want to remove Spark Operator, you can delete [this file](./spark-operator.yaml).
 
-```bash
-# remove spark operator from this installation.
-rm examples/ref-implementation/spark-operator.yaml
-```
-
 The only package that cannot be removed this way is Keycloak because other packages rely on it. 
 
 

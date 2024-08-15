@@ -30,7 +30,7 @@ Once you click the create button, you will have a very similar setup as the basi
 The only difference is we now have a resource for a S3 Bucket which is managed by Crossplane.
 
 Note that Bucket is **not** created because Crossplane doesn't have necessary credentials to do so.
-If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package examples/ref-implementation`.
+If you'd like it to actually create a bucket, update [the credentials secret file](crossplane-providers/provider-secret.yaml), then run `idpbuilder create --package https://github.com/cnoe-io/stacks//ref-implementation`.
 
 In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as Terraform instead.
 
