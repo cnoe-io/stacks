@@ -27,7 +27,7 @@ and be configured with the new host and port. you can use the [replace.sh](repla
 
 ```bash
 idpbuilder create --use-path-routing \
-  --package-dir https://github.com/cnoe-io/stacks//ref-implementation
+  --package https://github.com/cnoe-io/stacks//ref-implementation
 ```
 
 This will take ~6 minutes for everything to come up. To track the progress, you can go to the [ArgoCD UI](https://cnoe.localtest.me:8443/argocd/applications).
@@ -42,11 +42,6 @@ This will take ~6 minutes for everything to come up. To track the progress, you 
 
 If you don't want to install a package above, you can remove the ArgoCD Application file corresponding to the package you want to remove.
 For example, if you want to remove Spark Operator, you can delete [this file](./spark-operator.yaml).
-
-```bash
-# remove spark operator from this installation.
-rm examples/ref-implementation/spark-operator.yaml
-```
 
 The only package that cannot be removed this way is Keycloak because other packages rely on it. 
 

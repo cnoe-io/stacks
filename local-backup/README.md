@@ -1,7 +1,7 @@
 # Local Backup with Velero and Minio
 
 This example creates a configuration that allows you to back up Kubernetes objects
-to your laptop (or wherever you are running idpbuilder from).
+to your laptop (or wherever you are running idpbuilder from). It assumes that idpBuilder is on the path and that you have cloned this repository.
 
 In short, it:
 1. Creates a [MinIO](https://min.io/) installation that mounts a local directory.
@@ -34,7 +34,7 @@ Once you've made the change, run this command from the root of this repository.
 # example: mkdir /Users/my-name/backup
 mkdir <path/to/directory> 
 
-idpbuilder create --kind-config examples/local-backup/kind.yaml --package-dir examples/local-backup/
+idpbuilder create --kind-config local-backup/kind.yaml --package local-backup/
 ```
 
 This command:
@@ -81,7 +81,7 @@ kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/main/exam
 Once they are created and running, create a backup.
 
 ```bash
-kubectl apply -f examples/local-backup/demo/backup.yaml
+kubectl apply -f local-backup/demo/backup.yaml
 ```
 
 This command is equivalent to this Velero command:  `velero backup create nginx-backup --selector app=nginx`
@@ -119,7 +119,7 @@ kind delete clusters localdev && docker system prune -f
 Once it is destroyed, create it again.
 
 ```bash
-idpbuilder create --kind-config examples/local-backup/kind.yaml --package-dir examples/local-backup/
+idpbuilder create --kind-config local-backup/kind.yaml --package local-backup/
 ```
 
 Make sure everything looks good:
@@ -153,7 +153,7 @@ nginx-backup   1m
 Target this backup to restore objects.
 
 ```bash
-kubectl apply -f examples/local-backup/demo/restore.yaml
+kubectl apply -f local-backup/demo/restore.yaml
 ```
 
 This command is equivalent to `velero restore create --from-backup nginx-backup`.

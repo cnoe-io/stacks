@@ -5,8 +5,8 @@
 set -e
 # Check if the new port number is provided as an argument
 if [ "$#" -ne 2 ]; then
-    echo "Usage: NEW_HOST NEW_PORT"
-    exit 1
+	echo "Usage: NEW_HOST NEW_PORT"
+	exit 1
 fi
 
 # Assign the first script argument to NEW_PORT
@@ -16,8 +16,8 @@ NEW_PORT="$2"
 # Base directory to start from, "." means the current directory
 CURRENT_DIR=$(echo "${PWD##*/}")
 if [[ ${CURRENT_DIR} != "ref-implementation" ]]; then
-  echo "please run this script from the examples/ref-implementation directory"
-  exit 10
+	echo "please run this script from the ref-implementation directory"
+	exit 10
 fi
 BASE_DIRECTORY="."
 
@@ -28,9 +28,9 @@ find "$BASE_DIRECTORY" -type f -name "*.yaml" -exec sed -i "s/cnoe\.localtest\.m
 
 # Remove hostname-port configuration if the new port is 443. Browsers strip 443 but keycloak still expects 443 in url.
 if [[ ${NEW_PORT} == "443" ]]; then
-  sed -i "/hostname-port/d" keycloak/manifests/install.yaml
-  sed -i "/hostname-admin/d" keycloak/manifests/install.yaml
-  sed -i '0,/:443/{s/:443//}' argo-workflows/manifests/dev/patches/cm-argo-workflows.yaml
+	sed -i "/hostname-port/d" keycloak/manifests/install.yaml
+	sed -i "/hostname-admin/d" keycloak/manifests/install.yaml
+	sed -i '0,/:443/{s/:443//}' argo-workflows/manifests/dev/patches/cm-argo-workflows.yaml
 fi
 
 echo "Replacement complete."
