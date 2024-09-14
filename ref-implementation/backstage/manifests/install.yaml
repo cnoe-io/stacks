@@ -148,7 +148,6 @@ data:
             metadataUrl: ${KEYCLOAK_NAME_METADATA}
             clientId: backstage
             clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-            scope: 'openid profile email groups'
             prompt: auto
 
     scaffolder:
@@ -264,7 +263,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/cnoe-io/backstage-app:b8e4f08914af17a48ed6b8b83a3621a9f4b4181d
+          image: ghcr.io/cnoe-io/backstage-app:f8b92b5067803554a4891fccd399326ac16db558
           name: backstage
           ports:
             - containerPort: 7007
