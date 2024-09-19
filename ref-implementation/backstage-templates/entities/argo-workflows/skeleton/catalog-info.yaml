@@ -3,8 +3,9 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: ${{values.name | dump}}
-  description: This is for testing purposes
+  description: This is an example Backstage component representing the use of Argo Workflows and Spark Operator.
   annotations:
+    backstage.io/techdocs-ref: dir:.
     backstage.io/kubernetes-label-selector: 'entity-id=${{values.name}}'
     backstage.io/kubernetes-namespace: argo
     argocd/app-name: ${{values.name | dump}}
@@ -15,6 +16,23 @@ metadata:
   links:
     - url: https://cnoe.localtest.me:8443/gitea
       title: Repo URL
+      icon: github
+spec:
+  owner: guest
+  lifecycle: experimental
+  type: service
+  system: ${{values.name | dump}}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: ${{values.name | dump}}
+  description: An example system for demonstration purposes
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - url: https://github.com/cnoe-io/stacks/tree/main/ref-implementation
+      title: CNOE Repo
       icon: github
 spec:
   owner: guest
