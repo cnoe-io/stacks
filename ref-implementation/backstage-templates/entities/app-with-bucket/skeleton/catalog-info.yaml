@@ -15,6 +15,7 @@ metadata:
   name: ${{values.name | dump}}
   description: This is for testing purposes
   annotations:
+    backstage.io/techdocs-ref: dir:.
     backstage.io/kubernetes-label-selector: 'entity-id=${{values.name}}'
     backstage.io/kubernetes-namespace: default
     argocd/app-name: ${{values.name | dump}}
@@ -26,5 +27,22 @@ spec:
   owner: guest
   lifecycle: experimental
   type: service
+  system: ${{values.name | dump}}
   dependsOn:
     - resource:default/${{values.name}}-bucket
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: ${{values.name | dump}}
+  description: An example system for demonstration purposes
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - url: https://github.com/cnoe-io/stacks/tree/main/ref-implementation
+      title: CNOE Repo
+      icon: github
+spec:
+  owner: guest
+  lifecycle: experimental
+  type: service
