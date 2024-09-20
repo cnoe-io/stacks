@@ -134,7 +134,7 @@ data:
     techdocs:
       builder: 'local' # Alternatives - 'external'
       generator:
-        runIn: 'docker' # Alternatives - 'local'
+        runIn: 'local'
       publisher:
         type: 'local' # Alternatives - 'googleGcs' or 'awsS3'. Read documentation for using alternatives.
 
@@ -148,7 +148,6 @@ data:
             metadataUrl: ${KEYCLOAK_NAME_METADATA}
             clientId: backstage
             clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-            scope: 'openid profile email groups'
             prompt: auto
 
     scaffolder:
@@ -264,7 +263,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/cnoe-io/backstage-app:b8e4f08914af17a48ed6b8b83a3621a9f4b4181d
+          image: ghcr.io/cnoe-io/backstage-app:9232d633b2698fffa6d0a73b715e06640d170162
           name: backstage
           ports:
             - containerPort: 7007
