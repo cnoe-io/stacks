@@ -6,9 +6,18 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/nirmata/kyverno-policies
-    targetRevision: HEAD
-    path: pod-security/restricted
+    repoURL: https://github.com/kyverno/kyverno
+    targetRevision: 3.2.5
+    path: charts/kyverno-policies
+    helm:
+      releaseName: "kyverno-policies"
+      parameters:
+        - name: "podSecurityStandard"
+          value: restricted
+        - name: "validationFailureAction"
+          value: Audit
+        - name: "podSecuritySeverity"
+          value: High
   destination:
     server: "https://kubernetes.default.svc"
   syncPolicy:
