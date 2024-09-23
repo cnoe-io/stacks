@@ -22,7 +22,7 @@ You can use and test out this stack without using any policies, using the `ref-i
 
 ```bash
 idpbuilder create --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//ref-implementation
+  -p https://github.com/cnoe-io/stacks//ref-implementation \
   -p https://github.com/cnoe-io/stacks//kyverno-integration
 ```
 
@@ -30,8 +30,8 @@ Depending on your use case, install the Kubernetes PSS Policies in `Audit`, impl
 
 ```bash
 idpbuilder create --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//ref-implementation
-  -p https://github.com/cnoe-io/stacks//kyverno-integration
+  -p https://github.com/cnoe-io/stacks//ref-implementation \
+  -p https://github.com/cnoe-io/stacks//kyverno-integration \
   -p https://github.com/cnoe-io/stacks//kyverno-integration/modules/audit
 ```
 
@@ -39,8 +39,8 @@ If you would like to change to `Enforce` mode:
 
 ```bash
 idpbuilder create --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//ref-implementation
-  -p https://github.com/cnoe-io/stacks//kyverno-integration
+  -p https://github.com/cnoe-io/stacks//ref-implementation \
+  -p https://github.com/cnoe-io/stacks//kyverno-integration \
   -p https://github.com/cnoe-io/stacks//kyverno-integration/modules/enforce
 ```
 
