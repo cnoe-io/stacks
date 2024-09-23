@@ -4,9 +4,9 @@ Implementation of Kyverno for CNOE
 
 ## Components
 
-The Stack installs `Kyverno` and `Kyverno Pod Security Policies - Restricted` implementation. By default users should use:
-  - `kyverno-pss-policies-audit.yaml` - for testing and understanding of the impact
-  - `kyverno-pss-policies-enforce.yaml` - once the proper state of platform is understood and all necessary workload exceptions or violations have been accounted for.
+The Stack installs `Kyverno` and optionally `Kyverno Pod Security Policies - Restricted` implementation. By default users should use:
+  - `module/audit` - for testing and understanding of the impact
+  - `module/enforce` - once the proper state of platform is understood and all necessary workload exceptions or violations have been accounted for.
     - If you chose to enable `Enforce` mode. Exceptions for the following `ref-implementation` components are included, to ensure proper operability:
       - [ArgoCD](modules/enforce/exceptions/argocd.yaml)
       - [Crossplane](modules/enforce/exceptions/crossplane.yaml)
@@ -14,7 +14,7 @@ The Stack installs `Kyverno` and `Kyverno Pod Security Policies - Restricted` im
       - [Ingress-Nginx](modules/enforce/exceptions/ingress-nginx.yaml)
       - [Kind cluster](modules/enforce/exceptions/kind.yaml), this should mainly be needed when testing `ref-implementation` on a `kind` installation
 
-*NOTE* - enabling `Enforce` mode without prior testing will most likely cause issues, always start with `Audit` unless you are completely sure of the impact enabling blocking policies will have on your platform.
+*NOTE* - enabling `Enforce` mode without prior testing will most likely cause issues for NEW workloads, already existing workloads will not be affected immediately, always start with `Audit` unless you are completely sure of the impact enabling blocking policies will have on your platform.
 
 ## Installation
 
