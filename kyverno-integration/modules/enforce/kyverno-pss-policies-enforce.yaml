@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/kyverno/kyverno
-    targetRevision: 3.2.5
+    targetRevision: HEAD
     path: charts/kyverno-policies
     helm:
       releaseName: "kyverno-policies"
