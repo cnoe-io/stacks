@@ -1,4 +1,3 @@
----
 kind: Application
 apiVersion: argoproj.io/v1alpha1
 metadata:
@@ -19,33 +18,6 @@ spec:
           value: Enforce
         - name: "podSecuritySeverity"
           value: High
-  destination:
-    server: "https://kubernetes.default.svc"
-  syncPolicy:
-    syncOptions:
-    - Replace=true
-    automated:
-      selfHeal: true
-    retry:
-      limit: 30
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m0s
----
-kind: Application
-apiVersion: argoproj.io/v1alpha1
-metadata:
-  name: kyverno-pss-policies-enforce-exceptions
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: cnoe://exceptions
-    targetRevision: HEAD
-    path: "."
-    directory:
-      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
   syncPolicy:
