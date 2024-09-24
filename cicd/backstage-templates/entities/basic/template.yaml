@@ -39,7 +39,7 @@ spec:
       input:
         appName: ${{parameters.name}}
         appNamespace: ${{parameters.name}}
-        argoInstance: in-cluster
+        argoInstance: workshop-cluster
         projectName: default
         # necessary until we generate our own cert
         repoUrl: https://cnoe.localtest.me:8443/gitea/giteaAdmin/${{parameters.name}}
