@@ -8,3 +8,4 @@ spec:
     - ./basic/template.yaml
     - ./argo-workflows/template.yaml
     - ./app-with-bucket/template.yaml
+    - ./basic-remote/template.yaml
