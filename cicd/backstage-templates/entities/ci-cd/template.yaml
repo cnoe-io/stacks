@@ -196,14 +196,14 @@ spec:
         method: POST
         headers: 
           content-type: 'application/json'
-          body:
-            {
-              "commits": [
-                {
-                  "modified": ["provisioner.yaml"]
-                }
-              ]
-            }
+        body:
+          {
+            "commits": [
+              {
+                "modified": ["provisioner.yaml"]
+              }
+            ]
+          }
 
     - id: register
       name: Register
