@@ -467,7 +467,7 @@ spec:
                           deploy_repo={{inputs.parameters.deploy-repo}} &&
                           service_name={{inputs.parameters.service-name}} &&
                           echo "serviceName: $service_name" > cd-test.yaml &&
-                          echo "k8sServer: workshop-cluster" >> cd-test.yaml && 
+                          echo "k8sServer: workshop" >> cd-test.yaml && 
                           echo "envList: " >> cd-test.yaml &&
                           for env in $(yq -r '.envs[].name' /workdir/$service_name-deploy/provisioner.yaml); do 
                             echo "*** Creating ${env} Argo CD App ***"
