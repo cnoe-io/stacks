@@ -1,0 +1,9 @@
+serviceName: ${{values.name}}
+
+namespace: ${{values.name}}
+
+hostName: ${{values.repoHost}}
+
+giteaBaseUrl: ${{values.repoHost}}:443/gitea/giteaAdmin
+
+imageBase: ${{values.repoHost}}:443/gitea/giteaadmin

@@ -1,0 +1,12 @@
+serviceName: ${{values.name}}
+
+envs:
+{%- if (values.envConfig.length) %}
+{%- set depends = 'None' %}
+{%- for envDetails in values.envConfig %}
+  - name: ${{ envDetails.environment }}
+    depends: ${{ depends }}
+    cluster: ${{ envDetails.clusterName }}
+  {%- set depends = envDetails.environment %}
+{%- endfor %}
+{%- endif %}

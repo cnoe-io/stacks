@@ -1,0 +1,253 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: "{{ .Values.serviceName }}-es"
+  namespace: {{ .Values.namespace }}
+spec:
+  service:
+    ports:
+      - port: 12000
+        targetPort: 12000
+  webhook:
+    github:
+      port: "12000"
+      endpoint: /
+      method: POST
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: "{{ .Values.serviceName }}-sensor"
+  namespace: {{ .Values.namespace }}
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+    - name: test-dep
+      eventSourceName: "{{ .Values.serviceName }}-es"
+      eventName: github
+  triggers:
+    - template:
+        name: "{{ .Values.serviceName }}-argo-workflow-trigger"
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: "ci-{{ .Values.serviceName }}-"
+                namespace: {{ .Values.namespace }}
+                labels:
+                  env: dev
+                  entity-id: "{{ .Values.serviceName }}"
+              spec:
+                serviceAccountName: admin
+                entrypoint: ci-build
+                arguments:
+                  parameters:
+                    - name: apprepo
+                      value: "https://{{ .Values.giteaBaseUrl }}/{{ .Values.serviceName}}"
+                    - name: branch
+                      value: main
+                    - name: deployrepo
+                      value: "{{ .Values.giteaBaseUrl }}/{{ .Values.serviceName}}-deploy"
+                    - name: image
+                      value: "{{ .Values.imageBase }}/{{ .Values.serviceName}}"
+                    - name: tag-version
+                      value: 0.0.1
+                    - name: hostname
+                      value: {{ .Values.hostName }}
+                volumeClaimTemplates:
+                - metadata:
+                    name: workdir
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 256Mi
+                templates:
+                  - name: ci-build
+                    dag:
+                      tasks:
+                        - name: clone
+                          template: clonerepo
+                          arguments:
+                            parameters:
+                              - name: apprepo
+                                value: "{{`{{workflow.parameters.apprepo}}`}}"
+                              - name: branch
+                                value: "{{`{{workflow.parameters.branch}}`}}"
+                        
+                        - name: build-and-push-image
+                          template: build-image-kaniko
+                          arguments:
+                            parameters:
+                              - name: image
+                                value: "{{`{{workflow.parameters.image}}`}}"
+                              - name: tag-version
+                                value: "{{`{{workflow.parameters.tag-version}}`}}"
+                          depends: "clone"
+                        
+                        - name: invoke-cd-workflow
+                          template: invoke-cd-workflow
+                          arguments:
+                            parameters:
+                              - name: hostname
+                                value: "{{`{{workflow.parameters.hostname}}`}}"
+                              - name: cdpath
+                                value: "{{ .Values.serviceName}}-deploy"
+                              - name: imageversion
+                                value: "{{`{{workflow.parameters.tag-version}}`}}"
+                          depends: "build-and-push-image"
+                        
+                  - name: clonerepo
+                    inputs:
+                      parameters:
+                        - name: apprepo
+                        - name: branch
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      image: alpine/git:v2.45.1
+                      workingDir: /workdir
+                      args:
+                        - clone
+                        - --depth
+                        - "1"
+                        - --branch
+                        - "{{`{{inputs.parameters.branch}}`}}"
+                        - --single-branch
+                        - "{{`{{inputs.parameters.apprepo}}`}}"
+                        - -c
+                        - http.sslVerify=false
+                        - .
+                  
+                  - name: go-build
+                    container:
+                      image: golang:1.22
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      workingDir: /workdir
+                      command:
+                        - go
+                      args:
+                        - build
+                        - -v
+                        - -o
+                        - myapp
+                  
+                  - name: build-image-kaniko
+                    inputs:
+                      parameters:
+                        - name: image
+                        - name: tag-version
+                    volumes:
+                      - name: docker-config
+                        configMap:
+                          name: docker-config
+                    container:
+                      image: gcr.io/kaniko-project/executor:latest
+                      volumeMounts:
+                        - name: workdir
+                          mountPath: /workdir
+                        - name: docker-config
+                          mountPath: /kaniko/.docker
+                      workingDir: /workdir
+                      resources:
+                        limits:
+                          cpu: 1
+                          memory: 2Gi
+                      env:
+                        - name: DOCKER_CONFIG
+                          value: /kaniko/.docker
+                      args:
+                      - --dockerfile=Dockerfile
+                      - --context=.
+                      - --destination={{`{{inputs.parameters.image}}`}}:{{`{{inputs.parameters.tag-version}}`}}
+                      - --skip-tls-verify
+                      - --cache=false
+                  
+                  - name: invoke-cd-workflow
+                    inputs:
+                      parameters:
+                        - name: hostname
+                        - name: cdpath
+                        - name: imageversion
+                    container:
+                      image: alpine:3.20
+                      envFrom:
+                        - secretRef:
+                            name: gitea-credentials
+                      volumeMounts:
+                          - mountPath: /workdir
+                            name: workdir
+                      workingDir: "/workdir"
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          set -x &&
+                          apk add curl jq &&
+                          cd_workflow_url=https://{{`{{inputs.parameters.hostname}}`}}:443/argo-events/{{`{{inputs.parameters.cdpath}}`}} &&
+                          image_version={{`{{inputs.parameters.imageversion}}`}} &&
+                          curl -k -s -d '{"image_version":"'${image_version}'"}' -H "Content-Type: application/json" -X POST ${cd_workflow_url}
+          parameters:
+            - src:
+                dependencyName: test-dep
+                dataTemplate: "{{`{{ .Input.body.head_commit.id }}`}}"
+              dest: spec.arguments.parameters.4.value
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.serviceName }}-webhook-es-svc"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: argo-events
+    app.kubernetes.io/name: argo-events
+    app.kubernetes.io/instance: my-argo-events
+spec:
+  ports:
+  - port: 12000
+    protocol: TCP
+    targetPort: 12000
+  selector:
+    eventsource-name: "{{ .Values.serviceName }}-es"
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "{{ .Values.serviceName }}-webhook-es-ing"
+  namespace: {{ .Values.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.hostName }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: "{{ .Values.serviceName }}-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/{{ .Values.serviceName }}(/|$)(.*)
+            pathType: ImplementationSpecific
+    - host: localhost
+      http:
+        paths:
+          - backend:
+              service:
+                name: "{{ .Values.serviceName }}-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/{{ .Values.serviceName }}(/|$)(.*)
+            pathType: ImplementationSpecific

@@ -1,0 +1,320 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: "{{ .Values.serviceName }}-deploy-es"
+  namespace: {{ .Values.namespace }}
+spec:
+  service:
+    ports:
+      - port: 12000
+        targetPort: 12000
+  webhook:
+    github:
+      port: "12000"
+      endpoint: /
+      method: POST
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: "{{ .Values.serviceName }}-deploy-sensor"
+  namespace: {{ .Values.namespace }}
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+    - name: test-dep
+      eventSourceName: "{{ .Values.serviceName }}-deploy-es"
+      eventName: github
+  triggers:
+    - template:
+        name: "{{ .Values.serviceName }}-deploy-argo-workflow-trigger"
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: "cd-{{ .Values.serviceName }}-"
+                namespace: {{ .Values.namespace }}
+                labels:
+                  env: dev
+                  entity-id: "{{ .Values.serviceName }}"
+              spec:
+                serviceAccountName: admin
+                entrypoint: deploy-workflow
+                arguments:
+                  parameters:
+                    - name: deployrepo
+                      value: "{{ .Values.giteaBaseUrl }}/{{ .Values.serviceName}}-deploy"
+                    - name: image-tag
+                      value: "0.0.1"
+                volumeClaimTemplates:
+                - metadata:
+                    name: workdir
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 256Mi
+                templates:
+                  - name: deploy-workflow
+                    dag:
+                      tasks:
+                      {{- range $v := .Values.envs }}
+                        - name: {{ $v.name | upper }}
+                          template: deployment-workflow
+                          arguments:
+                            parameters:
+                              - name: deployrepo
+                                value: "{{`{{workflow.parameters.deployrepo}}`}}"
+                              - name: image-tag
+                                value: "{{`{{workflow.parameters.image-tag}}`}}"
+                              - name: envname
+                                value: {{ $v.name }}
+                          {{- if not (eq $v.depends "None") }}
+                          depends: {{ $v.depends | upper}}
+                          {{- end }}
+                        {{- end }}
+                  - name: deployment-workflow
+                    inputs:
+                      parameters:
+                        - name: deployrepo
+                        - name: image-tag
+                        - name: envname
+                    dag:
+                      tasks:
+                        - name: clone-deploy-repo
+                          template: clonerepo
+                          arguments:
+                            parameters:
+                              - name: deployrepo
+                                value: "https://{{`{{inputs.parameters.deployrepo}}`}}"
+                              - name: branch
+                                value: "main"
+                              - name: envname
+                                value: "{{`{{inputs.parameters.envname}}`}}"
+                        - name: update-image-version
+                          template: update-manifest
+                          arguments:
+                            parameters:
+                              - name: deployrepo
+                                value: "{{`{{inputs.parameters.deployrepo}}`}}"
+                              - name: tag-version
+                                value: "{{`{{inputs.parameters.image-tag}}`}}"
+                              - name: envname
+                                value: "{{`{{inputs.parameters.envname}}`}}"
+                          depends: "clone-deploy-repo"
+                        - name: sync-argocd-app
+                          template: sync-argocd-app
+                          when: "'{{`{{tasks.update-image-version.outputs.parameters.argocd_flag}}`}}' == 'execute_cd'"
+                          arguments:
+                            parameters:
+                              - name: appname
+                                value: "{{`{{inputs.parameters.envname}}`}}-{{ .Values.serviceName }}"
+                              - name: envname
+                                value: "{{`{{inputs.parameters.envname}}`}}"
+                          depends: "update-image-version"
+                        
+                        - name: wait-for-app-sync
+                          template: wait-for-sync
+                          when: "'{{`{{tasks.update-image-version.outputs.parameters.argocd_flag}}`}}' == 'execute_cd'"
+                          arguments:
+                            parameters:
+                              - name: appname
+                                value: "{{`{{inputs.parameters.envname}}`}}-{{ .Values.serviceName }}"
+                              - name: envname
+                                value: "{{`{{inputs.parameters.envname}}`}}"
+                          depends: "sync-argocd-app"
+                  - name: clonerepo
+                    inputs:
+                      parameters:
+                        - name: deployrepo
+                        - name: branch
+                        - name: envname
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      image: alpine/git:v2.45.1
+                      workingDir: /workdir/{{`{{inputs.parameters.envname}}`}}
+                      args:
+                        - clone
+                        - --depth
+                        - "1"
+                        - --branch
+                        - "{{`{{inputs.parameters.branch}}`}}"
+                        - --single-branch
+                        - "{{`{{inputs.parameters.deployrepo}}`}}"
+                        - -c
+                        - http.sslVerify=false
+                        - .
+                  
+                  - name: update-manifest
+                    inputs:
+                      parameters:
+                        - name: deployrepo
+                        - name: tag-version
+                        - name: envname
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      image: alpine/git:v2.45.1
+                      envFrom:
+                        - secretRef:
+                            name: gitea-credentials
+                      workingDir: /workdir/{{`{{inputs.parameters.envname}}`}}
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-  
+                          set -x &&
+                          mkdir deploy-repo && cd deploy-repo &&
+                          git clone https://{{`{{inputs.parameters.deployrepo}}`}}.git -c http.sslVerify=false &&
+                          repo={{`{{inputs.parameters.deployrepo}}`}} &&
+                          repo_name=`echo -n $repo | awk -F/ '{print $NF}'` &&
+                          env_name={{`{{inputs.parameters.envname}}`}} &&
+                          cd $repo_name/environments/$env_name &&
+                          image_version={{`{{inputs.parameters.tag-version}}`}} &&
+                          sed -i "s/  tag: .*/  tag: $image_version/g" values.yaml &&
+                          cat values.yaml &&
+                          git status &&
+                          echo -n "execute_cd" > /workdir/cd_argo_flag.txt &&
+                          m_count=$(git status -s | wc -l) &&
+                          if [ $m_count == 1 ]; then
+                            git config --global user.email "noreply@aws.com" 
+                            git config --global user.name ARGO
+                            git remote set-url origin https://$GITEA_USERNAME:$GITEA_TOKEN@{{`{{inputs.parameters.deployrepo}}`}}.git
+                            git add values.yaml
+                            git commit -m "Updated image version to $image_version"
+                            git push --set-upstream origin main
+                          else
+                            echo "No updates to values file, skipping git push"
+                            echo -n "skip_cd" > /workdir/cd_argo_flag.txt
+                          fi
+                    outputs:
+                      parameters:
+                      - name: argocd_flag
+                        valueFrom:
+                          path: /workdir/cd_argo_flag.txt
+                  - name: sync-argocd-app
+                    inputs:
+                      parameters:
+                        - name: appname
+                        - name: envname
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      workingDir: /workdir/{{`{{inputs.parameters.envname}}`}}
+                      image: argoproj/argocd:v2.6.15
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-  
+                          argocd login argocd-server.argocd --plaintext --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD &&
+                          argocd app sync "{{`{{inputs.parameters.appname}}`}}" --force --prune
+                      env:
+                        - name: ARGOCD_USERNAME
+                          value: admin
+                        - name: ARGOCD_PASSWORD
+                          valueFrom:
+                            secretKeyRef:
+                              name: argocd-credentials
+                              key: ARGOCD_ADMIN_PASSWORD
+                  
+                  - name: wait-for-sync
+                    inputs:
+                      parameters:
+                        - name: appname
+                        - name: envname
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      workingDir: /workdir/{{`{{inputs.parameters.envname}}`}}
+                      image: argoproj/argocd:v2.6.15
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-  
+                          argocd login argocd-server.argocd --plaintext --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD &&
+                          health_status=$(argocd app get "{{`{{inputs.parameters.appname}}`}}" --refresh | grep "Health Status:" | awk '{print $3}') &&
+                          for i in {1..10};
+                          do
+                            if [ "${health_status}" = "Healthy" ]; then
+                              echo "App is Healthy"
+                              exit 0
+                            fi
+                            health_status=$(argocd app get "{{`{{inputs.parameters.appname}}`}}" --refresh | grep "Health Status:" | awk '{print $3}')
+                            sleep 10
+                          done &&
+                          echo "App Sync: $health_status" &&
+                          exit 1
+                      env:
+                        - name: ARGOCD_USERNAME
+                          value: admin
+                        - name: ARGOCD_PASSWORD
+                          valueFrom:
+                            secretKeyRef:
+                              name: argocd-credentials
+                              key: ARGOCD_ADMIN_PASSWORD
+          parameters:
+            - src:
+                dependencyName: test-dep
+                dataTemplate: "{{`{{ .Input.body.image_version }}`}}"
+              dest: spec.arguments.parameters.1.value
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.serviceName }}-deploy-webhook-es-svc"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: argo-events
+    app.kubernetes.io/name: argo-events
+    app.kubernetes.io/instance: my-argo-events
+spec:
+  ports:
+  - port: 12000
+    protocol: TCP
+    targetPort: 12000
+  selector:
+    eventsource-name: "{{ .Values.serviceName }}-deploy-es"
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "{{ .Values.serviceName }}-deploy-webhook-es-ing"
+  namespace: {{ .Values.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.hostName }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: "{{ .Values.serviceName }}-deploy-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/{{ .Values.serviceName }}-deploy(/|$)(.*)
+            pathType: ImplementationSpecific
+    - host: localhost
+      http:
+        paths:
+          - backend:
+              service:
+                name: "{{ .Values.serviceName }}-deploy-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/{{ .Values.serviceName }}-deploy(/|$)(.*)
+            pathType: ImplementationSpecific

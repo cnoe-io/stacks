@@ -1,0 +1,21 @@
+{{- range $env, $config := .Values.envList }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "{{ $env }}-{{ $.Values.serviceName }}"
+  namespace: {{ $.Values.namespace }}
+  labels:
+    entity-id: {{ $.Values.serviceName }}
+spec:
+  project: {{ $.Values.project }}
+  source:
+    path: {{ $config.path }}
+    repoURL: "{{ $config.repo }}"
+  destination:
+    server: {{ $.Values.k8sServer }}
+    namespace: {{ $config.namespace }}
+  syncPolicy:
+    automated:
+      selfHeal: true
+---
+{{- end }}

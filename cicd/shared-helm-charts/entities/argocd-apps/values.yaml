@@ -1,0 +1,14 @@
+serviceName: demo-app01
+project: default
+namespace: argocd
+k8sServer: https://kubernetes.default.svc
+
+# envList:
+#   dev:
+#     repo: dev
+#     path: "abc"
+#     namespace: demo-app01-dev
+#   test:
+#     repo: test
+#     path: "abc"
+#     namespace: demo-app01-test
