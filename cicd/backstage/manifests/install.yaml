@@ -18,6 +18,7 @@ rules:
       - argoproj.io
     resources:
       - workflows
+      - applications
     verbs:
       - create
 ---
