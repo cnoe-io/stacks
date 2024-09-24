@@ -2,7 +2,7 @@ serviceName: demo-app01
 project: default
 namespace: argocd
 
-k8sServer: https://kubernetes.default.svc
+k8sServer: in-cluster
 
 # envList:
 #   dev:

@@ -12,7 +12,7 @@ spec:
     path: {{ $config.path }}
     repoURL: "{{ $config.repo }}"
   destination:
-    server: {{ $.Values.k8sServer }}
+    name: {{ $.Values.k8sServer }}
     namespace: {{ $config.namespace }}
   syncPolicy:
     automated:
