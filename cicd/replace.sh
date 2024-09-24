@@ -15,7 +15,7 @@ NEW_PORT="$2"
 
 # Base directory to start from, "." means the current directory
 CURRENT_DIR=$(echo "${PWD##*/}")
-if [[ ${CURRENT_DIR} != "ref-implementation" ]]; then
+if [[ ${CURRENT_DIR} != "cicd" ]]; then
 	echo "please run this script from the ref-implementation directory"
 	exit 10
 fi

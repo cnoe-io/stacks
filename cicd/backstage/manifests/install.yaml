@@ -263,7 +263,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/mmaroth/backstage-app:ff86dd49c2fc56f4dbad16a5c2756952671a13c5
+          image: ghcr.io/mmaroth/backstage-app:94e4984cd820d816ec3b8827399f3b2521f53e3b
           name: backstage
           ports:
             - containerPort: 7007
