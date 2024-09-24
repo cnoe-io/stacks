@@ -1,9 +1,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  description: Creates CI and CD Workflows and Deploy on Remote EKS
+  description: Creates CI and CD Workflows and Deploy Apps on Remote EKS
   name: eks-ci-cd
-  title: CICD on EKS
+  title: Deploy an Application with CICD on EKS
   tags:
     - go
 spec:

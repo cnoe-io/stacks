@@ -1,9 +1,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  description: Creates a Simple Kubernetes Deployment
+  description: Creates a Simple Kubernetes Deployment on Remote EKS
   name: basic
-  title: Create Simple Deployment on EKS
+  title: Deploy an Application on EKS
 spec:
   owner: guest
   type: service
