@@ -17,6 +17,7 @@ spec:
         serviceName:
           title: Service Name
           type: string
+          default: riv2024demo
           pattern: ^[a-z\d]{1,64}$
           description: Provide service name
         costCenter:
@@ -54,7 +55,7 @@ spec:
         owner:
           type: string
           title: Owner
-          default: Sam
+          default: cnoe.org
           description: Repo Owner Name
         isNewAppRepo:
           title: Would you like us to create the application repository for you?
