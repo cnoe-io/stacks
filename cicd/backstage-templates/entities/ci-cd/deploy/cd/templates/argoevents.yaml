@@ -236,7 +236,7 @@ spec:
                           name: workdir
                       workingDir: /workdir/{{`{{inputs.parameters.envname}}`}}
                       image: argoproj/argocd:v2.6.15
-                      command: ["/bin/sh"]
+                      command: ["/bin/bash"]
                       args:
                         - -c
                         - >-  
@@ -248,10 +248,11 @@ spec:
                               echo "App is Healthy"
                               exit 0
                             fi
+                            echo "App Health: $health_status"
                             health_status=$(argocd app get "{{`{{inputs.parameters.appname}}`}}" --refresh | grep "Health Status:" | awk '{print $3}')
                             sleep 10
                           done &&
-                          echo "App Sync: $health_status" &&
+                          echo "App Health: $health_status" &&
                           exit 1
                       env:
                         - name: ARGOCD_USERNAME
