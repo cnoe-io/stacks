@@ -96,7 +96,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: EventSource
 metadata:
-  name: "${{values.name}}-provisioner-es"
+  name: "${{values.name}}-provisioner"
   namespace: ${{values.name}}
 spec:
   service:
@@ -112,14 +112,14 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Sensor
 metadata:
-  name: "${{values.name}}-provisioner-sensor"
+  name: "${{values.name}}-provisioner"
   namespace: ${{values.name}}
 spec:
   template:
     serviceAccountName: operate-workflow-sa
   dependencies:
     - name: test-dep
-      eventSourceName: "${{values.name}}-provisioner-es"
+      eventSourceName: "${{values.name}}-provisioner"
       eventName: github
       filters:
         data:
@@ -392,10 +392,12 @@ spec:
                             mkdir environments
                           fi &&
                           cd environments/ &&
+                          image_tag="0.0.0" &&
                           for env in $(yq -r '.envs[].name' ../provisioner.yaml); do 
                             echo "*** Processing ${env} Env ***"
                             if [ -d $env ]; then 
                                 echo "$env env helm chart exists, skipping helm directory creation"
+                                image_tag=$(yq -r '.image.tag' $env/values.yaml)
                             else
                                 echo "Creating $env env helm skelton structure"
                                 echo -n "commit" > /workdir/commit_flag.txt
@@ -404,6 +406,7 @@ spec:
                                 cp -pR /workdir/shared-repo/app-deploy/* ${env}/
                                 ls -lrt ${env}/
                                 sed -i "s/envName: .*/envName: $env/" ${env}/values.yaml
+                                sed -i "s/tag: .*/tag: $image_tag/" ${env}/values.yaml
                             fi
                           done &&
                           if grep -q "commit" "/workdir/commit_flag.txt"; then
@@ -524,7 +527,7 @@ spec:
     protocol: TCP
     targetPort: 12000
   selector:
-    eventsource-name: "${{values.name}}-provisioner-es"
+    eventsource-name: "${{values.name}}-provisioner"
   type: ClusterIP
 
 ---

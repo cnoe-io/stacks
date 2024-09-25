@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: EventSource
 metadata:
-  name: "{{ .Values.serviceName }}-deploy-es"
+  name: "{{ .Values.serviceName }}-deploy"
   namespace: {{ .Values.namespace }}
 spec:
   service:
@@ -17,14 +17,14 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Sensor
 metadata:
-  name: "{{ .Values.serviceName }}-deploy-sensor"
+  name: "{{ .Values.serviceName }}-deploy"
   namespace: {{ .Values.namespace }}
 spec:
   template:
     serviceAccountName: operate-workflow-sa
   dependencies:
     - name: test-dep
-      eventSourceName: "{{ .Values.serviceName }}-deploy-es"
+      eventSourceName: "{{ .Values.serviceName }}-deploy"
       eventName: github
   triggers:
     - template:
@@ -283,7 +283,7 @@ spec:
     protocol: TCP
     targetPort: 12000
   selector:
-    eventsource-name: "{{ .Values.serviceName }}-deploy-es"
+    eventsource-name: "{{ .Values.serviceName }}-deploy"
   type: ClusterIP
 
 ---
