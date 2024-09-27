@@ -1,9 +1,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  description: Creates CI and CD Workflows and Deploy Apps on Remote EKS
+  description: Creates CI and CD Workflows and Deploy Apps to Remote EKS
   name: eks-ci-cd
-  title: Deploy an Application with CICD on EKS
+  title: Deploy an Application with CICD to EKS
   tags:
     - go
 spec:
@@ -17,7 +17,7 @@ spec:
         serviceName:
           title: Service Name
           type: string
-          default: riv2024demo
+          default: demo2
           pattern: ^[a-z\d]{1,64}$
           description: Provide service name
         costCenter:
@@ -55,7 +55,7 @@ spec:
         owner:
           type: string
           title: Owner
-          default: cnoe.org
+          default: cnoe.io
           description: Repo Owner Name
         isNewAppRepo:
           title: Would you like us to create the application repository for you?
@@ -184,7 +184,7 @@ spec:
           repoHost: ${{parameters.repoHost}}
     
     - id: wait-for-provisioner
-      name: Wait for provisioner workflow to available
+      name: Wait for provisioner workflow to be available
       action: debug:wait
       input:
         seconds: 70
