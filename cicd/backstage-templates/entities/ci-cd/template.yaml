@@ -17,7 +17,7 @@ spec:
         serviceName:
           title: Service Name
           type: string
-          default: demo2
+          default: riv2024demo
           pattern: ^[a-z\d]{1,64}$
           description: Provide service name
         costCenter:
