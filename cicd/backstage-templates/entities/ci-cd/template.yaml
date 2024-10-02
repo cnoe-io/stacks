@@ -71,7 +71,7 @@ spec:
             - Yes
     - title: Artifact and Credentials Management
       required:
-        - artifactory
+        - registry
       properties:
         registry:
           title: Select Container Registry
