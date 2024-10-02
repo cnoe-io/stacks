@@ -14,6 +14,7 @@ spec:
       properties:
         name:
           type: string
+          default: demo
           description: name of this application
         
   steps:
@@ -24,6 +25,7 @@ spec:
         url: ./skeleton
         values:
           name: ${{parameters.name}}
+          repoUrl: https://cnoe.localtest.me:8443/gitea/giteaAdmin/${{parameters.name}}.git
 
     - id: publish
       name: Publishing to a gitea git repository
@@ -40,7 +42,6 @@ spec:
         manifestPath: manifests/argocd-app.yaml
         namespaced: true
         clusterName: local
-        repoUrl: https://cnoe.localtest.me:8443/gitea/${{parameters.name}}.git
     - id: register
       name: Register
       action: catalog:register

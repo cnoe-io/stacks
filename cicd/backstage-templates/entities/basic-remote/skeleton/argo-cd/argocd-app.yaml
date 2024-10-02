@@ -8,12 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: ${{values.repoUrl | dump}}
+    repoURL: ${{values.repoUrl}}
     targetRevision: HEAD
     path: .
   destination:
     name: workshop
-    namespace: ${{values.name | dump}}
+    namespace: ${{values.name}}
   syncPolicy:
     automated:
       selfHeal: true
