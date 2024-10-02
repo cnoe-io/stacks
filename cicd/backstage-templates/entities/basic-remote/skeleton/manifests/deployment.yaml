@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ${{values.name | dump}}
-  namespace: default
   labels:
     entity-id: ${{values.name}}
     app: nginx
