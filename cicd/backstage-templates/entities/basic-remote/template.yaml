@@ -40,6 +40,7 @@ spec:
         manifestPath: manifests/argocd-app.yaml
         namespaced: true
         clusterName: local
+        repoUrl: https://cnoe.localtest.me:8443/gitea/${{parameters.name}}.git
     - id: register
       name: Register
       action: catalog:register

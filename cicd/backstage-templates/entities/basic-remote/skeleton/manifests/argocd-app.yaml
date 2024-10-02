@@ -8,12 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    repoURL: ${{values.repoUrl | dump}}
     targetRevision: HEAD
-    path: guestbook
+    path: .
   destination:
     name: workshop
-    namespace: guestbook
+    namespace: ${{values.name | dump}}
   syncPolicy:
     automated:
       selfHeal: true

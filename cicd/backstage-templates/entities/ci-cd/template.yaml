@@ -73,24 +73,24 @@ spec:
       required:
         - artifactory
       properties:
-        artifactory:
-          title: Select Artifactory
+        registry:
+          title: Select Container Registry
           type: string
           default: gitea
           enum:
             - gitea
-        artifactoryCredentialPath:
-          title: Artifactory Store Credentials Path
+        registryCredentialsPath:
+          title: Containers Registry Keys Path
           type: string
-          default: /team1/artifactory
-        githubCrdes:
-          title: GitHub Credentials
-          default: /team1/github
+          default: /team1/ociregistry
+        gitCrdes:
+          title: Git Keys Path 
+          default: /team1/git
           type: string
-        slackCreds:
-          title: Slack Credentials
+        chatCreds:
+          title: Chat Keys Path
           type: string
-          default: /team1/slack
+          default: /team1/chatkey
 
     - title: Environment Configuration
       properties:
