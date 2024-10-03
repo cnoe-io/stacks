@@ -26,3 +26,17 @@ Gitea
 EOF
 
 echo "credentials.txt file created with ArgoCD details."
+
+# Setting up gitconfig
+git config --global user.name "CNOE"
+git config --global user.email "cnoe@io"
+
+GITEA_PAT=$(kubectl get secret gitea-token -n gitea -o jsonpath='{.data.token}' | base64 -d)
+GIT_CREDS="$HOME/.git-credentials"
+cat > $GIT_CREDS << EOT
+https://giteaAdmin:${GITEA_PAT}@${IDE_DOMAIN}/gitea
+EOT
+
+git config --global credential.helper 'store'
+
+echo "Git config update completed."
