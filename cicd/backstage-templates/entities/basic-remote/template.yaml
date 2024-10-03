@@ -39,7 +39,7 @@ spec:
       name: Create ArgoCD App
       action: cnoe:kubernetes:apply
       input:
-        manifestPath: manifests/argocd-app.yaml
+        manifestPath: argo-cd/app.yaml
         namespaced: true
         clusterName: local
     - id: register
