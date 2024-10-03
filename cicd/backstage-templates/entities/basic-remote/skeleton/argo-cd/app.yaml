@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: ${{values.repoUrl}}
     targetRevision: HEAD
-    path: .
+    path: manifests
   destination:
     name: workshop
     namespace: ${{values.name}}
