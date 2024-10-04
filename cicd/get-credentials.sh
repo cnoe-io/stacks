@@ -12,7 +12,7 @@ ArgoCD
         Username: admin
         Password: ${argocd_password}
 ArgoWorkflows
-        URL: https://d3jzhjgbbfbtfo.cloudfront.net/argo-workflows
+        URL: https://${IDE_DOMAIN}/argo-workflows
         Username: user1
         Password: ${keycloak_password}
 BackStage
