@@ -71,26 +71,26 @@ spec:
             - Yes
     - title: Artifact and Credentials Management
       required:
-        - registry
+        - artifactStore
       properties:
-        registry:
-          title: Select Container Registry
+        artifactStore:
+          title: Select Artifact Store
           type: string
           default: gitea
           enum:
             - gitea
-        registryCredentialsPath:
-          title: Containers Registry Keys Path
+        artifactStoreCredentialsPath:
+          title: Artifact Store Credentials Path
           type: string
-          default: /team1/ociregistry
-        gitCrdes:
-          title: Git Keys Path 
-          default: /team1/git
+          default: /team1/artifact-store
+        sourceControlCredentialsPath:
+          title: Source Control Credentials Path 
+          default: /team1/source-control
           type: string
-        chatCreds:
-          title: Chat Keys Path
+        notificationChannelCredentialsPath:
+          title: Notification Channel Credentials Path
           type: string
-          default: /team1/chatkey
+          default: /team1/notification-channel
 
     - title: Environment Configuration
       properties:
