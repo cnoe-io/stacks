@@ -191,9 +191,9 @@ spec:
     
     - id: run-provisioner-workflow
       name: Invoke Provisioner Workflow
-      action: cnoe:http:request
+      action: http:backstage:request
       input:
-        api: https://${{parameters.repoHost}}/argo-events/${{parameters.serviceName}}-provisioner
+        api: '/proxy/provisioner/argo-events/${{parameters.serviceName}}-provisioner'
         method: POST
         headers: 
           content-type: 'application/json'

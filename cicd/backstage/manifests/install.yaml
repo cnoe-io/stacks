@@ -127,6 +127,12 @@ data:
         # - host: ghe.example.net
         #   apiBaseUrl: https://ghe.example.net/api/v3
         #   token: ${GHE_TOKEN}
+    
+    proxy:
+      ### Example for how to add a proxy endpoint for the frontend.
+      ### A typical reason to do this is to handle HTTPS and CORS for internal services.
+      endpoints:
+        '/provisioner': https://cnoe.localtest.me/
 
     # Reference documentation http://backstage.io/docs/features/techdocs/configuration
     # Note: After experimenting with basic setup, use CI/CD to generate docs
@@ -264,7 +270,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/mmaroth/backstage-app:94e4984cd820d816ec3b8827399f3b2521f53e3b
+          image: ghcr.io/cnoe-io/backstage-app:135c0cb26f3e004a27a11edb6a4779035aff9805
           name: backstage
           ports:
             - containerPort: 7007
