@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: shared-helm-charts
+  namespace: argocd
+  labels:
+    env: dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://shared-helm-charts/entities
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true

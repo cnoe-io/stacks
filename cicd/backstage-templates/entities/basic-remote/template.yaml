@@ -1,0 +1,55 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  description: Creates a Simple Kubernetes Deployment to Remote EKS
+  name: basic-remote
+  title: Deploy an Application to EKS
+spec:
+  owner: guest
+  type: service
+  parameters:
+    - title: Configuration Options
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          default: demo
+          description: name of this application
+        
+  steps:
+    - id: template
+      name: Generating component
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{parameters.name}}
+          repoUrl: https://cnoe.localtest.me:8443/gitea/giteaAdmin/${{parameters.name}}.git
+
+    - id: publish
+      name: Publishing to a gitea git repository
+      action: publish:gitea
+      input:
+        description: This is an example app
+        # Hard coded value for this demo purposes only.
+        repoUrl: cnoe.localtest.me:8443/gitea?repo=${{parameters.name}}
+        defaultBranch: main
+    - id: create-argocd-app
+      name: Create ArgoCD App
+      action: cnoe:kubernetes:apply
+      input:
+        manifestPath: argo-cd/app.yaml
+        namespaced: true
+        clusterName: local
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: 'catalog-info.yaml'
+  output:
+    links:
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}

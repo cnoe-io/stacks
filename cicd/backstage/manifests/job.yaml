@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitea-token
+  namespace: backstage
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      generateName: gitea-token
+    spec:
+      serviceAccountName: backstage
+      restartPolicy: Never
+      volumes:
+        - name: k8s-config
+          secret:
+            secretName: k8s-config
+      containers:
+        - name: kubectl
+          image: alpine/k8s:1.31.0
+          envFrom:
+            - secretRef:
+                name: gitea-credentials
+          volumeMounts:
+            - name: k8s-config
+              readOnly: true
+              mountPath: "/.kube/"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              #! /bin/bash
+  
+              apt -qq update && apt -qq install curl jq -y
+              
+              GITEA_URL=http://my-gitea-http.gitea.svc.cluster.local:3000
+              GITEA_TOKENS_URL="${GITEA_URL}/api/v1/users/giteaAdmin/tokens"
+              
+              TOKENS_COUNT=$(curl -k -s -X 'GET' "${GITEA_TOKENS_URL}" -H "accept: application/json" -H "Content-Type: application/json" -u $GITEA_USERNAME:$GITEA_PASSWORD | jq '. | length')
+              
+              curl -sS -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+
+              if [ ${TOKENS_COUNT} -eq 0 ]; then
+                echo "No tokens found, creating token and k8s secret"
+                NEW_TOKEN=$(curl -k -X POST "${GITEA_TOKENS_URL}" \
+                            -H "Content-Type: application/json" \
+                            -d '{"name": "token1", "scopes": ["write:repository", "read:issue", "read:organization", "read:misc"]}' \
+                            -u $GITEA_USERNAME:$GITEA_PASSWORD | jq -r '.sha1')
+                TOKEN=$(echo -n $NEW_TOKEN | base64)
+                echo \
+                "apiVersion: v1
+              kind: Secret
+              metadata:
+                name: gitea-token
+                namespace: gitea
+              type: Opaque
+              data:
+                token: ${TOKEN}
+                " > /tmp/gitea_secret.yaml
+                ./kubectl apply -f /tmp/gitea_secret.yaml
+              else
+                echo "$TOKENS_COUNT tokens found, skipping secret creation"
+              fi

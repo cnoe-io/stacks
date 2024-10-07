@@ -1,0 +1,9 @@
+apiVersion: v2
+name: workflowTemplates 
+description: A Helm chart for Workflow Templates
+
+type: application
+
+version: 0.1.0
+
+appVersion: "0.1.0"

@@ -1,0 +1,220 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  description: Creates CI and CD Workflows and Deploy Apps to Remote EKS
+  name: eks-ci-cd
+  title: Deploy an Application with CICD to EKS
+  tags:
+    - go
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Service Info
+      required:
+        - serviceName
+      properties:
+        serviceName:
+          title: Service Name
+          type: string
+          default: riv2024demo
+          pattern: ^[a-z\d]{1,64}$
+          description: Provide service name
+        costCenter:
+          type: string
+          title: Cost Center
+          default: C0001
+          description: Provide CostCenter ID for finance management
+        language:
+          title: Language
+          type: string
+          default: go
+          enum:
+            - go
+        readOnlyGroup:
+          type: string
+          title: Access Group Name (ReadOnly)
+          default: cnoe-ro-ad@cnoe.io
+          description: AD Group Name to provide read only access
+        readWriteGroup:
+          type: string
+          title: Access Group Name (ReadWrite)
+          default: cnoe-rw-ad@cnoe.io
+          description: AD Group Name to provide read & write only access
+
+    - title: Source Control Configuration
+      required:
+        - repoHost
+      properties:
+        repoHost:
+          title: Repository Host
+          type: string
+          default: cnoe.localtest.me
+          enum:
+            - cnoe.localtest.me
+        owner:
+          type: string
+          title: Owner
+          default: cnoe.io
+          description: Repo Owner Name
+        isNewAppRepo:
+          title: Would you like us to create the application repository for you?
+          type: string
+          default: Yes
+          enum:
+            - Yes
+        isNewDeployRepo:
+          title: Would you like us to create the deploy repository for you?
+          type: string
+          default: Yes
+          enum:
+            - Yes
+    - title: Artifact and Credentials Management
+      required:
+        - artifactStore
+      properties:
+        artifactStore:
+          title: Select Artifact Store
+          type: string
+          default: gitea
+          enum:
+            - gitea
+        artifactStoreCredentialsPath:
+          title: Artifact Store Credentials Path
+          type: string
+          default: /team1/artifact-store
+        sourceControlCredentialsPath:
+          title: Source Control Credentials Path 
+          default: /team1/source-control
+          type: string
+        notificationChannelCredentialsPath:
+          title: Notification Channel Credentials Path
+          type: string
+          default: /team1/notification-channel
+
+    - title: Environment Configuration
+      properties:
+        envConfig:
+          title: Environments
+          type: array
+          minItems: 1
+          ui:options:
+            addable: true
+            orderable: true
+            removable: true
+          items:
+            title: ''
+            type: object
+            required:
+              - environment
+              - clusterName
+            properties:
+              environment:
+                title: Environment Name
+                type: string
+                default: dev
+                description: Allowed values ci, dev, qa, stage, production, prod, preprod
+                pattern: '^(|dev|test|ci|qa|stage|production|prod|preprod)[0-9]*$'
+              clusterName:
+                title: Cluster Name
+                type: string
+                default: workshop
+                enum:
+                  - 'workshop'      
+        
+  steps:
+    - id: deploy-template
+      name: Generating application deployment template
+      action: fetch:template
+      input:
+        url: ./deploy
+        targetPath: ./app-deploy
+        values:
+          name: ${{parameters.serviceName}}
+          repoHost: ${{parameters.repoHost}}
+          envConfig: ${{parameters.envConfig}}
+    
+    - id: app-template
+      name: Generating application code template
+      action: fetch:template
+      input:
+        url: ./go-api
+        targetPath: ./app
+        values:
+          name: ${{parameters.serviceName}}
+          repoHost: ${{parameters.repoHost}}
+    
+    - id: provisioner-template
+      name: Generating application code template
+      action: fetch:template
+      input:
+        url: ./provisioner
+        targetPath: ./provisioner
+        values:
+          name: ${{parameters.serviceName}}
+          repoHost: ${{parameters.repoHost}}
+
+    - id: publish-deploy-repo
+      name: Publishing to a gitea deploy git repository
+      action: publish:gitea
+      input:
+        description: This is an example app
+        sourcePath: ./app-deploy
+        repoUrl: ${{parameters.repoHost}}:443/gitea?repo=${{parameters.serviceName}}-deploy
+        defaultBranch: main
+    
+    - id: publish-app-repo
+      name: Publishing to a gitea application git repository
+      action: publish:gitea
+      input:
+        description: This is an example app
+        sourcePath: ./app
+        repoUrl: ${{parameters.repoHost}}:443/gitea?repo=${{parameters.serviceName}}
+        defaultBranch: main
+
+    - id: create-provisioner-workflow
+      name: Create Provisioner Workflow
+      action: cnoe:kubernetes:apply
+      input:
+        namespaced: true
+        manifestPath: ./provisioner/workflow.yaml
+        clusterName: local
+        values:
+          name: ${{parameters.serviceName}}
+          repoHost: ${{parameters.repoHost}}
+    
+    - id: wait-for-provisioner
+      name: Wait for provisioner workflow to be available
+      action: debug:wait
+      input:
+        seconds: 70
+    
+    - id: run-provisioner-workflow
+      name: Invoke Provisioner Workflow
+      action: http:backstage:request
+      input:
+        path: '/proxy/provisioner/argo-events/${{parameters.serviceName}}-provisioner'
+        method: POST
+        headers: 
+          content-type: 'application/json'
+        body:
+          {
+            "commits": [
+              {
+                "modified": ["provisioner.yaml"]
+              }
+            ]
+          }
+
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish-app-repo'].output.repoContentsUrl }}
+        catalogInfoPath: 'catalog-info.yaml'
+
+  output:
+    links:
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}

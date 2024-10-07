@@ -1,0 +1,17 @@
+appName: demoapp
+envName: dev
+
+replicaCount: 1
+
+image:
+  registry: REGISTRY_HOST:443/gitea/giteaadmin
+  tag: 0.0.0
+
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enable: false
+  host: INGRESS_HOST

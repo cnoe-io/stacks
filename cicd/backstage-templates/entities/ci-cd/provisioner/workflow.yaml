@@ -1,0 +1,565 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${{values.name}}
+  labels:
+    name: ${{values.name}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${{values.name}}
+  namespace: ${{values.name}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: operate-workflow-sa
+  namespace: ${{values.name}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: operate-workflow-sa-binding
+  namespace: ${{values.name}}
+subjects:
+- kind: ServiceAccount
+  name: operate-workflow-sa
+  namespace: ${{values.name}}
+roleRef:
+  kind: ClusterRole
+  name: argo-server-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${{values.name}}-cluster-binding
+  namespace: ${{values.name}}
+subjects:
+- kind: ServiceAccount
+  name: ${{values.name}}
+  namespace: ${{values.name}}
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: gitea-credentials
+  namespace: ${{values.name}}
+spec:
+  secretStoreRef:
+    name: gitea
+    kind: ClusterSecretStore
+  refreshInterval: "0"
+  target:
+    name: gitea-credentials
+  data:
+    - secretKey: GITEA_USERNAME
+      remoteRef:
+        key: gitea-credential
+        property: username
+    - secretKey: GITEA_PASSWORD
+      remoteRef:
+        key: gitea-credential
+        property: password
+    - secretKey: GITEA_TOKEN
+      remoteRef:
+        key: gitea-token
+        property: token
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: k8s-config
+  namespace: ${{values.name}}
+stringData:
+  k8s-config.yaml: "type: 'config'\nclusters:\n  - url: https://kubernetes.default.svc.cluster.local\n
+    \   name: local\n    authProvider: 'serviceAccount'\n    skipTLSVerify: true\n
+    \   skipMetricsLookup: true\n    serviceAccountToken: \n      $file: /var/run/secrets/kubernetes.io/serviceaccount/token\n
+    \   caData: \n      $file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: default
+  namespace: ${{values.name}}
+spec:
+  nats:
+    native:
+      auth: token
+      replicas: 3
+---
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: "${{values.name}}-provisioner"
+  namespace: ${{values.name}}
+spec:
+  service:
+    ports:
+      - port: 12000
+        targetPort: 12000
+  webhook:
+    github:
+      port: "12000"
+      endpoint: /
+      method: POST
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: "${{values.name}}-provisioner"
+  namespace: ${{values.name}}
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+    - name: test-dep
+      eventSourceName: "${{values.name}}-provisioner"
+      eventName: github
+      filters:
+        data:
+          - path: "[body.commits.#.modified.#()#]"
+            type: string
+            value:
+              - 'provisioner.yaml'
+  triggers:
+    - template:
+        name: "${{values.name}}-provisioner-argo-workflow-trigger"
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: "provisioner-${{values.name}}-"
+                namespace: ${{values.name}}
+                labels:
+                  env: dev
+                  entity-id: "${{values.name}}"
+              spec:
+                serviceAccountName: ${{values.name}}
+                entrypoint: instantiate-provisioner
+                volumes:
+                  - name: k8s-config
+                    secret:
+                      secretName: k8s-config
+                arguments:
+                  parameters:
+                    - name: service-name
+                      value: ${{values.name}}
+                    - name: repobaseurl
+                      value: ${{values.repoHost}}:443/gitea
+                    - name: argoeventsBaseUrl
+                      value: ${{values.repoHost}}:443/argo-events
+                    - name: repoHostName
+                      value: ${{values.repoHost}}
+                volumeClaimTemplates:
+                - metadata:
+                    name: workdir
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 256Mi
+                templates:
+                  - name: instantiate-provisioner
+                    dag:
+                      tasks:
+                        - name: clone-shared-helm-repo
+                          template: clone-repo
+                          arguments:
+                            parameters:
+                              - name: repo-name
+                                value: "https://{{workflow.parameters.repobaseurl}}/giteaAdmin/idpbuilder-localdev-shared-helm-charts-entities"
+                              - name: target-dir
+                                value: shared-repo
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                        - name: cicd-argocd-apps
+                          template: cicd-argocd-apps
+                          arguments:
+                            parameters:
+                              - name: app-repo
+                                value: "https://{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}"
+                              - name: deploy-repo
+                                value: "https://{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}-deploy"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                          depends: "clone-shared-helm-repo"
+                        - name: create-dockerconfig
+                          template: create-dockerconfig
+                          arguments:
+                            parameters:
+                              - name: gitea-url
+                                value: "https://{{workflow.parameters.repobaseurl}}"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                          depends: "cicd-argocd-apps"
+                        - name: clone-deploy-repo
+                          template: clone-repo
+                          arguments:
+                            parameters:
+                              - name: repo-name
+                                value: "https://{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}-deploy"
+                              - name: target-dir
+                                value: "{{workflow.parameters.service-name}}-deploy"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                          depends: "create-dockerconfig"
+                        - name: helm-folders-create
+                          template: create-helm-env-directories
+                          arguments:
+                            parameters:
+                              - name: deploy-repo
+                                value: "https://{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}-deploy"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                              - name: host-name
+                                value: "{{workflow.parameters.repoHostName}}"
+                          depends: "clone-deploy-repo"
+                        - name: push-to-deploy-repo
+                          template: push-to-repo
+                          when: "'{{tasks.helm-folders-create.outputs.parameters.commit-flag}}' == 'commit'"
+                          arguments:
+                            parameters:
+                              - name: deploy-repo
+                                value: "{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}-deploy"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                          depends: "helm-folders-create"
+                        - name: create-argocd-apps-for-services
+                          template: argo-cd-apps-for-services
+                          arguments:
+                            parameters:
+                              - name: deploy-repo
+                                value: https://"{{workflow.parameters.repobaseurl}}/giteaAdmin/{{workflow.parameters.service-name}}-deploy"
+                              - name: service-name
+                                value: "{{workflow.parameters.service-name}}"
+                          depends: "push-to-deploy-repo || push-to-deploy-repo.Skipped"
+                        - name: add-webhook-to-apprepo
+                          template: gitea-webhook-creation
+                          arguments:
+                            parameters:
+                              - name: gitea-url
+                                value: "https://{{workflow.parameters.repobaseurl}}"
+                              - name: repo-name
+                                value: "{{workflow.parameters.service-name}}"
+                              - name: webhook-url
+                                value: "https://{{workflow.parameters.argoeventsBaseUrl}}/{{workflow.parameters.service-name}}"
+                          depends: "create-argocd-apps-for-services"
+                        - name: add-webhook-to-provisioner
+                          template: gitea-webhook-creation
+                          arguments:
+                            parameters:
+                              - name: gitea-url
+                                value: "https://{{workflow.parameters.repobaseurl}}"
+                              - name: repo-name
+                                value: "{{workflow.parameters.service-name}}-deploy"
+                              - name: webhook-url
+                                value: "https://{{workflow.parameters.argoeventsBaseUrl}}/{{workflow.parameters.service-name}}-provisioner"
+                          depends: "create-argocd-apps-for-services"
+                  - name: clone-repo
+                    inputs:
+                      parameters:
+                        - name: repo-name
+                        - name: target-dir
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      image: alpine/git:v2.45.1
+                      workingDir: "/workdir/{{inputs.parameters.target-dir}}"
+                      args:
+                        - clone
+                        - --depth
+                        - "1"
+                        - --branch
+                        - "main"
+                        - --single-branch
+                        - "{{inputs.parameters.repo-name}}.git"
+                        - -c
+                        - http.sslVerify=false
+                        - .
+                  - name: cicd-argocd-apps
+                    inputs:
+                      parameters:
+                        - name: app-repo
+                        - name: deploy-repo
+                        - name: service-name
+                    container:
+                      image: alpine/k8s:1.31.0
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                        - mountPath: "/.kube/"
+                          name: k8s-config
+                      workingDir: /workdir
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          set -x &&
+                          ls -lrt &&
+                          cd shared-repo/argocd-apps &&
+                          app_repo={{inputs.parameters.app-repo}} &&
+                          deploy_repo={{inputs.parameters.deploy-repo}} &&
+                          service_name={{inputs.parameters.service-name}} &&
+                          kubectl get ns &&
+                          echo "serviceName: $service_name" > test.yaml &&
+                          echo "envList: " >> test.yaml &&
+                          echo "  ci:" >> test.yaml &&
+                          echo "    repo: $app_repo" >> test.yaml &&
+                          echo "    path: ci " >> test.yaml &&
+                          echo "    namespace: $service_name " >> test.yaml &&
+                          echo "  cd:" >> test.yaml &&
+                          echo "    repo: $deploy_repo" >> test.yaml &&
+                          echo "    path: cd " >> test.yaml &&
+                          echo "    namespace: $service_name " >> test.yaml &&
+                          helm template . -f test.yaml &&
+                          helm template . -f test.yaml | kubectl apply -f - 
+                  - name: create-dockerconfig
+                    inputs:
+                      parameters:
+                        - name: gitea-url
+                        - name: service-name
+                    container:
+                      image: alpine/k8s:1.31.0
+                      envFrom:
+                        - secretRef:
+                            name: gitea-credentials
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                        - mountPath: "/.kube/"
+                          name: k8s-config
+                      workingDir: /workdir
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          apk add yq &&
+                          echo "Creating Configmap for docker config" &&
+                          gitea_auth=$(echo -n $GITEA_USERNAME:$GITEA_PASSWORD | base64) &&
+                          echo "apiVersion: v1
+
+                          kind: ConfigMap
+
+                          metadata:
+                            name: docker-config
+                            namespace: {{inputs.parameters.service-name}}
+                          data:
+                            config.json: |
+                              {
+                                \"auths\": {
+                                  \"{{inputs.parameters.gitea-url}}\": {
+                                    \"auth\": \"$gitea_auth\"
+                                  }
+                                }
+                              }
+                          " > docker_config.yaml &&
+                          kubectl apply -f docker_config.yaml  
+                  - name: create-helm-env-directories
+                    inputs:
+                      parameters:
+                        - name: deploy-repo
+                        - name: service-name
+                        - name: host-name
+                    container:
+                      image: alpine:3.20
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      workingDir: "/workdir/{{ inputs.parameters.service-name }}-deploy"
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          set -x &&
+                          apk add yq &&
+                          ls -lrt && pwd &&
+                          sed -i "s/appName: .*/appName: {{ inputs.parameters.service-name }}/g" /workdir/shared-repo/app-deploy/values.yaml &&
+                          sed -i "s/REGISTRY_HOST/{{ inputs.parameters.host-name }}/g" /workdir/shared-repo/app-deploy/values.yaml &&
+                          sed -i "s/INGRESS_HOST/{{ inputs.parameters.host-name }}/g" /workdir/shared-repo/app-deploy/values.yaml &&
+                          echo "Check all environment specific helm templates exists or not" &&
+                          echo -n "flag" > /workdir/commit_flag.txt &&
+                          if [ ! -d environments ]; then
+                            mkdir environments
+                          fi &&
+                          cd environments/ &&
+                          image_tag="0.0.0" &&
+                          for env in $(yq -r '.envs[].name' ../provisioner.yaml); do 
+                            echo "*** Processing ${env} Env ***"
+                            if [ -d $env ]; then 
+                                echo "$env env helm chart exists, skipping helm directory creation"
+                                image_tag=$(yq -r '.image.tag' $env/values.yaml)
+                            else
+                                echo "Creating $env env helm skelton structure"
+                                echo -n "commit" > /workdir/commit_flag.txt
+                                mkdir $env
+                                # cp -pR ../helm ${env}/
+                                cp -pR /workdir/shared-repo/app-deploy/* ${env}/
+                                ls -lrt ${env}/
+                                sed -i "s/envName: .*/envName: $env/" ${env}/values.yaml
+                                sed -i "s/tag: .*/tag: $image_tag/" ${env}/values.yaml
+                            fi
+                          done &&
+                          if grep -q "commit" "/workdir/commit_flag.txt"; then
+                            echo "Adding new environment to CD helm chart"
+                            yq -i '.envs = (load("../provisioner.yaml") | .envs)' ../cd/values.yaml
+                          fi
+
+                    outputs:
+                      parameters:
+                      - name: commit-flag  
+                        valueFrom:
+                          path: /workdir/commit_flag.txt
+                  - name: push-to-repo
+                    inputs:
+                      parameters:
+                        - name: deploy-repo
+                        - name: service-name
+                    container:
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                      image: alpine/git:v2.45.1
+                      envFrom:
+                        - secretRef:
+                            name: gitea-credentials
+                      workingDir: /workdir/{{ inputs.parameters.service-name }}-deploy
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-  
+                          set -x &&
+                          ls -lrt && pwd &&
+                          git status &&
+                          git config --global user.email "noreply@aws.com" &&
+                          git config --global user.name ARGO &&
+                          git remote set-url origin https://$GITEA_USERNAME:$GITEA_TOKEN@{{inputs.parameters.deploy-repo}}.git &&
+                          git add . &&
+                          git commit -m "Adding helm charts" &&
+                          git push --set-upstream origin main
+                  - name: argo-cd-apps-for-services
+                    inputs:
+                      parameters:
+                        - name: deploy-repo
+                        - name: service-name
+                    container:
+                      image: alpine/k8s:1.31.0
+                      volumeMounts:
+                        - mountPath: /workdir
+                          name: workdir
+                        - mountPath: "/.kube/"
+                          name: k8s-config
+                      workingDir: /workdir
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          set -x &&
+                          ls -lrt &&
+                          apk add yq &&
+                          cd shared-repo/argocd-apps &&
+                          deploy_repo={{inputs.parameters.deploy-repo}} &&
+                          service_name={{inputs.parameters.service-name}} &&
+                          echo "serviceName: $service_name" > cd-test.yaml &&
+                          echo "k8sServer: workshop" >> cd-test.yaml && 
+                          echo "envList: " >> cd-test.yaml &&
+                          for env in $(yq -r '.envs[].name' /workdir/$service_name-deploy/provisioner.yaml); do 
+                            echo "*** Creating ${env} Argo CD App ***"
+                            echo "  $env:" >> cd-test.yaml
+                            echo "    repo: $deploy_repo" >> cd-test.yaml
+                            echo "    path: environments/$env " >> cd-test.yaml
+                            echo "    namespace: $service_name-$env " >> cd-test.yaml
+                          done &&
+                          helm template . -f cd-test.yaml &&
+                          helm template . -f cd-test.yaml | kubectl apply -f -
+                  - name: gitea-webhook-creation
+                    inputs:
+                      parameters:
+                        - name: gitea-url
+                        - name: repo-name
+                        - name: webhook-url
+                    container:
+                      image: alpine:3.20
+                      envFrom:
+                        - secretRef:
+                            name: gitea-credentials
+                      volumeMounts:
+                          - mountPath: /workdir
+                            name: workdir
+                      workingDir: "/workdir"
+                      command: ["/bin/sh"]
+                      args:
+                        - -c
+                        - >-
+                          set -x &&
+                          apk add curl jq &&
+                          hooks_api_url={{inputs.parameters.gitea-url}}/api/v1/repos/giteaAdmin/{{inputs.parameters.repo-name}}/hooks &&
+                          webhook_url={{inputs.parameters.webhook-url}} &&
+                          webhook_details=`curl -k -X 'GET' "${hooks_api_url}" -H "accept: application/json" -H "Authorization: token ${GITEA_TOKEN}" -H "Content-Type: application/json" | jq '.[].config.url'` &&
+                          if [ -z "$webhook_details" ]; then
+                            echo "Webhook is not found, creating webhook with $webhook_url" 
+                            curl -k -X 'POST' "${hooks_api_url}" -H "accept: application/json" -H "Authorization: token ${GITEA_TOKEN}" -H "Content-Type: application/json" -d '{"branch_filter": "main","type": "gitea", "events":["push"], "config": {"url": "'${webhook_url}'", "content_type": "json"}, "active": true}'
+                          else
+                            echo "Webhook is already exists"
+                          fi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "${{values.name}}-provisioner-webhook-es-svc"
+  namespace: ${{values.name}}
+  labels:
+    app: argo-events
+    app.kubernetes.io/name: argo-events
+    app.kubernetes.io/instance: my-argo-events
+spec:
+  ports:
+  - port: 12000
+    protocol: TCP
+    targetPort: 12000
+  selector:
+    eventsource-name: "${{values.name}}-provisioner"
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "${{values.name}}-provisioner-webhook-es-ing"
+  namespace: ${{values.name}}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ${{values.repoHost}}
+      http:
+        paths:
+          - backend:
+              service:
+                name: "${{values.name}}-provisioner-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/${{values.name}}-provisioner(/|$)(.*)
+            pathType: ImplementationSpecific
+    - host: localhost
+      http:
+        paths:
+          - backend:
+              service:
+                name: "${{values.name}}-provisioner-webhook-es-svc"
+                port:
+                  number: 12000
+            path: /argo-events/${{values.name}}-provisioner(/|$)(.*)
+            pathType: ImplementationSpecific

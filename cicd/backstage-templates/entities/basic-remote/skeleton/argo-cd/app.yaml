@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${{values.name | dump}}
+  namespace: argocd
+  labels:
+    example: basic
+spec:
+  project: default
+  source:
+    repoURL: ${{values.repoUrl}}
+    targetRevision: HEAD
+    path: manifests
+  destination:
+    name: workshop
+    namespace: ${{values.name}}
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
