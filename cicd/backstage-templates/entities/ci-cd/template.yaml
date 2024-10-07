@@ -193,7 +193,7 @@ spec:
       name: Invoke Provisioner Workflow
       action: http:backstage:request
       input:
-        api: '/proxy/provisioner/argo-events/${{parameters.serviceName}}-provisioner'
+        path: '/proxy/provisioner/argo-events/${{parameters.serviceName}}-provisioner'
         method: POST
         headers: 
           content-type: 'application/json'
