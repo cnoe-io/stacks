@@ -27,6 +27,9 @@ EOF
 
 echo "credentials.txt file created with ArgoCD details."
 
+# Hack : Removing internal svc resolution for backstage
+kubectl patch configmap coredns-conf-default --patch '{"data":{"default.conf":""}}' -n kube-system
+
 # Setting up gitconfig
 git config --global user.name "CNOE"
 git config --global user.email "cnoe@io"
