@@ -7,7 +7,7 @@ metadata:
     argocd/app-name: ${{values.name | dump}}
 spec:
   type: s3-bucket
-  owner: guest
+  owner: guests
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -24,7 +24,7 @@ metadata:
       title: Repo URL
       icon: github
 spec:
-  owner: guest
+  owner: guests
   lifecycle: experimental
   type: service
   system: ${{values.name | dump}}
@@ -43,6 +43,6 @@ metadata:
       title: CNOE Repo
       icon: github
 spec:
-  owner: guest
+  owner: guests
   lifecycle: experimental
   type: service

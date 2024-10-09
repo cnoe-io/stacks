@@ -166,11 +166,8 @@ data:
         # Examples from a public GitHub repository.
         - type: url
           target: https://cnoe.localtest.me/gitea/giteaAdmin/idpbuilder-localdev-backstage-templates-entities/raw/branch/main/catalog-info.yaml
-        ## Uncomment these lines to add an example org
-        # - type: url
-        #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/acme-corp.yaml
-        #   rules:
-        #     - allow: [User, Group]
+          rules:
+            - allow: [Component, System, API, Resource, Location, Template, User, Group]
     kubernetes:
       serviceLocatorMethod:
         type: 'multiTenant'

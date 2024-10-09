@@ -18,7 +18,7 @@ metadata:
       title: Repo URL
       icon: github
 spec:
-  owner: guest
+  owner: guests
   lifecycle: experimental
   type: service
   system: ${{values.name | dump}}
@@ -35,6 +35,6 @@ metadata:
       title: CNOE Repo
       icon: github
 spec:
-  owner: guest
+  owner: guests
   lifecycle: experimental
   type: service
