@@ -5,7 +5,7 @@ metadata:
   name: argo-workflows-basic
   title: Basic Argo Workflow with a Spark Job
 spec:
-  owner: guest
+  owner: guests
   type: service
   parameters:
     - title: Configuration Options
