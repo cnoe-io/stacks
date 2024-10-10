@@ -5,7 +5,7 @@ metadata:
   name: app-with-aws-resources
   title: Add a Go App with AWS resources
 spec:
-  owner: guest
+  owner: guests
   type: service
   parameters:
     - properties:

@@ -8,3 +8,12 @@ spec:
     - ./basic/template.yaml
     - ./argo-workflows/template.yaml
     - ./app-with-bucket/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: basic-organization
+  description: Basic organization data
+spec:
+  targets:
+    - ./organization/guests.yaml

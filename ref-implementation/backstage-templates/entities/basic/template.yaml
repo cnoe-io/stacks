@@ -5,7 +5,7 @@ metadata:
   name: basic
   title: Create a Basic Deployment
 spec:
-  owner: guest
+  owner: guests
   type: service
   parameters:
     - title: Configuration Options
