@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: local-charts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: "cnoe://configs"
+              revision: HEAD
+              files:
+                - path: "**/config.yaml"
+          - list:
+              elementsYaml: "{{ .packages | toJson }}"
+            selector:
+              matchExpressions:
+                - key: install
+                  operator: In
+                  values:
+                    - "true"
+  template:
+    metadata:
+      name: "{{ .name }}"
+      labels:
+        environment: "{{ .environment }}"
+        cnoe.io/package-name: ref-impl
+    spec:
+      project: default
+      sources:
+        - repoURL: "cnoe://packages"
+          targetRevision: HEAD
+          path: "{{ .manifestPath }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .namespace }}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          selfHeal: true
