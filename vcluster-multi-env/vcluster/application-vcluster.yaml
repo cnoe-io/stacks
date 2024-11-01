@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: unpatched-vcluster
+  namespace: argocd
+  labels:
+    cnoe.io/stackName: vcluster-multi-env
+    cnoe.io/applicationName: vcluster-helm
+spec:
+  project: default
+  source:
+    chart: vcluster
+    repoURL: https://charts.loft.sh
+    targetRevision: 0.20.0
+    helm:
+      valuesObject:
+        sync:
+          fromHost:
+            nodes:
+              enabled: true # Required for virtualScheduler
+        controlPlane:
+          advanced:
+            virtualScheduler: # For Keptn support: https://keptn.sh/stable/docs/installation/configuration/vcluster/
+              enabled: true
+          proxy:
+            extraSANs:
+            - unpatched-vcluster-hostname.cnoe.localtest.me
+          statefulSet:
+            scheduling:
+              podManagementPolicy: OrderedReady
+        exportKubeConfig:
+          server: https://unpatched-vcluster-hostname.cnoe.localtest.me:443
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: unpatched-vcluster
+  syncPolicy:
+    automated: {}
+    syncOptions:
+    - CreateNamespace=true
