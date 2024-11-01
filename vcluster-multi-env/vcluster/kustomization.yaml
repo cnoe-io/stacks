@@ -1,0 +1,3 @@
+resources:
+- application-vcluster.yaml
+- ingress.yaml
