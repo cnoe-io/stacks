@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://helm.cilium.io/'
+    targetRevision: 1.16.1
+    helm:
+      releaseName: cilium
+      values: |
+        image:
+          pullPolicy: IfNotPresent
+        operator:
+          replicas: 1
+        ipam:
+          mode: kubernetes
+        hubble:
+          relay:
+            enabled: true
+          ui:
+            enabled: true
+    chart: cilium
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+  ignoreDifferences:
+  - kind: Secret
+    name: cilium-ca
+    jsonPointers:
+      - /data
+  - kind: Secret
+    name: hubble-relay-client-certs
+    jsonPointers:
+      - /data
+  - kind: Secret
+    name: hubble-server-certs
+    jsonPointers:
+      - /data

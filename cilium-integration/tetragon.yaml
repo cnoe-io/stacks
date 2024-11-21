@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tetragon
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://helm.cilium.io/'
+    targetRevision: 1.2.0
+    helm:
+      releaseName: tetragon
+      values: |
+        tetragon:
+          exportFilename: /dev/stdout
+          exportAllowList: |-
+            {"event_set":["PROCESS_EXEC", "PROCESS_EXIT", "PROCESS_UPROBE"]}
+    chart: tetragon
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
