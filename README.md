@@ -17,3 +17,4 @@ See [the instructions](https://github.com/cnoe-io/idpbuilder?tab=readme-ov-file#
 - **[Localstack](./localstack-integration)**. Use [LocalStack](https://github.com/localstack/localstack) to test out cloud integrations.
 - **[Terraform Integrations](./terraform-integrations)**. Integrating Terraform with Reference Implementation.
 - **[Dapr Integration](./dapr-integrations)**. Integrating the Dapr APIs for Building Secure and Reliable Microservices .
+- **[Cilium Integration](./cilium-integration)**. Integrates Cilium, Tetragon and Hubble for networking.
