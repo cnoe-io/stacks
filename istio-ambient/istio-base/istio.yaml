@@ -4,38 +4,37 @@ metadata:
   name: 'istio-system'
   namespace: argocd
 spec:
+  ignoreDifferences:
+    - kind: ValidatingWebhookConfiguration
+      group: "admissionregistration.k8s.io"
+      jsonPointers:
+        - /webhooks
   project: default
   sources:
     - repoURL: 'https://istio-release.storage.googleapis.com/charts'
       targetRevision: 1.24.1
       helm:
-        parameters:
-          - name: 'profile'
-            value: 'ambient'
+        valuesObject:
+          profile: ambient
       chart: cni
     - repoURL: 'https://istio-release.storage.googleapis.com/charts'
       targetRevision: 1.24.1
       helm:
-        parameters:
-          - name: 'profile'
-            value: 'ambient'
+        valuesObject:
+          profile: ambient
       chart: base
     - repoURL: 'https://istio-release.storage.googleapis.com/charts'
       targetRevision: 1.24.1
       chart: ztunnel
       helm:
-        parameters:
-          - name: 'profile'
-            value: 'ambient'
+        valuesObject:
+          profile: ambient
     - repoURL: 'https://istio-release.storage.googleapis.com/charts'
       targetRevision: 1.24.1
       chart: istiod
       helm:
-        parameters:
-          - name: 'profile'
-            value: 'ambient'
-        # Tracing Config
         valuesObject:
+          profile: ambient
           meshConfig:
             defaultProviders:
               metrics:
@@ -58,7 +57,5 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      # Turned off, validating webhook shows out of sync when setup in idpbuilder
-      selfHeal: false
     syncOptions:
       - CreateNamespace=true

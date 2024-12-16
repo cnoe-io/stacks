@@ -29,4 +29,6 @@ Kiali: https://kiali.cnoe.localtest.me:8443/
 
 Grafana: https://grafana.cnoe.localtest.me:8443/
 
-# Example Gateway and Application coming soon
+Path based routing using idpbuilder's `--use-path-routing` flag is not required and has not been tested
+
+Path based routing and other traffic shaping can be setup using istio - gateway and application examples coming soon
