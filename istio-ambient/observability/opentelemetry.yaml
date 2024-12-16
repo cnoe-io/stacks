@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: "https://kubernetes.default.svc"
+  sources:
+    - repoURL: 'https://open-telemetry.github.io/opentelemetry-helm-charts'
+      targetRevision: 0.73.0
+      helm:
+        valuesObject:
+          mode: deployment
+          config:
+            exporters:
+              logging:
+                loglevel: debug
+              otlp:
+                endpoint: tempo.observability.svc:4317
+                tls:
+                  insecure: true
+            extensions:
+              # The health_check extension is mandatory for this chart.
+              # Without the health_check extension the collector will fail the readiness and liveliness probes.
+              # The health_check extension can be modified, but should never be removed.
+              health_check: {}
+            receivers:
+              otlp:
+                protocols:
+                  grpc:
+                    endpoint: ${env:MY_POD_IP}:4317
+                  http:
+                    endpoint: ${env:MY_POD_IP}:4318
+            service:
+              extensions:
+                - health_check
+              pipelines:
+                metrics:
+                  receivers:
+                    - otlp
+                logs:
+                  receivers: [otlp]
+                  exporters: [logging]
+                traces:
+                  receivers:
+                    - otlp
+                  exporters:
+                    - logging
+                    - otlp
+      chart: opentelemetry-collector
+  project: default
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        istio.io/dataplane-mode: 'ambient'
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 'istio-system'
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: 1.24.1
+      helm:
+        parameters:
+          - name: 'profile'
+            value: 'ambient'
+      chart: cni
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: 1.24.1
+      helm:
+        parameters:
+          - name: 'profile'
+            value: 'ambient'
+      chart: base
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: 1.24.1
+      chart: ztunnel
+      helm:
+        parameters:
+          - name: 'profile'
+            value: 'ambient'
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: 1.24.1
+      chart: istiod
+      helm:
+        parameters:
+          - name: 'profile'
+            value: 'ambient'
+        # Tracing Config
+        valuesObject:
+          meshConfig:
+            defaultProviders:
+              metrics:
+                - prometheus
+            enableTracing: true
+            extensionProviders:
+              - name: otel
+                opentelemetry:
+                  port: 4317
+                  service: otel-opentelemetry-collector.observability.svc.cluster.local
+                  resource_detectors:
+                    environment: {}
+    # Add Gateway API CRDs
+    - repoURL: 'https://github.com/kubernetes-sigs/gateway-api/'
+      targetRevision: v1.2.1
+      path: ./config/crd
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+      # Turned off, validating webhook shows out of sync when setup in idpbuilder
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
