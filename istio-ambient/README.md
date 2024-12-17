@@ -2,6 +2,9 @@
 
 This stack contains installation of Istio Ambient as well as supporting observability tooling so traffic, metrics, and traces can be observed
 
+Istio Ambient Mesh Docs: https://istio.io/latest/docs/ambient/overview/
+
+
 
 ## Modules
 - istio-base
