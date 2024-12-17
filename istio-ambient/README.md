@@ -18,6 +18,8 @@ This stack contains installation of Istio Ambient as well as supporting observab
 
 `idpbuilder create -p https://github.com/cnoe-io/stacks//isto-ambient/istio-base`
 
+Uses istio's helmcharts to create an example istio ConfigMap, however the istio argo Application is set to ignore differences for this ConfigMap object, allowing users to adjust configuration here if needed for testing 
+
 # Install istio along with observability components 
 
 `idpbuilder create -p https://github.com/cnoe-io/stacks//isto-ambient/istio-base -p https://github.com/cnoe-io/stacks//isto-ambient/observability`
