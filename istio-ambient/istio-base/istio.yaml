@@ -5,6 +5,13 @@ metadata:
   namespace: argocd
 spec:
   ignoreDifferences:
+    # Allow users to modify mesh config if needed for testing
+    - kind: ConfigMap
+      group: ""
+      name: istio
+      jsonPointers:
+        - /data
+    # Kind issue
     - kind: ValidatingWebhookConfiguration
       group: "admissionregistration.k8s.io"
       jsonPointers:
