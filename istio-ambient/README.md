@@ -7,13 +7,8 @@ Istio Ambient Mesh Docs: https://istio.io/latest/docs/ambient/overview/
 
 
 ## Modules
-- istio-base
+- istio
   - installs istio ambient and no additional observability tooling
-- observability
-  - grafana - provides UI for tracing & prometheus metrics
-    - tempo - collects traces for grafana
-  - prometheus - required for kiali to display data
-  - opentelemetry - used to collect traces from istio and forward to tempo
 
 ## Installation
 
@@ -21,19 +16,6 @@ Istio Ambient Mesh Docs: https://istio.io/latest/docs/ambient/overview/
 
 `idpbuilder create -p https://github.com/cnoe-io/stacks//isto-ambient/istio-base`
 
-Uses istio's helmcharts to create an example istio ConfigMap, however the istio argo Application is set to ignore differences for this ConfigMap object, allowing users to adjust configuration here if needed for testing 
+Uses Default Mesh Configuration; user's can add an istio-configmap[1] to adjust configuration here if needed for testing 
 
-# Install istio along with observability components 
-
-`idpbuilder create -p https://github.com/cnoe-io/stacks//isto-ambient/istio-base -p https://github.com/cnoe-io/stacks//isto-ambient/observability`
-
-
-# Observability UIs
-
-Kiali: https://kiali.cnoe.localtest.me:8443/
-
-Grafana: https://grafana.cnoe.localtest.me:8443/
-
-Path based routing using idpbuilder's `--use-path-routing` flag is not required and has not been tested
-
-Path based routing and other traffic shaping can be setup using istio - gateway and application examples coming soon
+[1]: https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/
