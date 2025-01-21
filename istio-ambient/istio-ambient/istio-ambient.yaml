@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 'istio-ambient'
+  namespace: argocd
+spec:
+  ignoreDifferences:
+    # Kind issue
+    - kind: ValidatingWebhookConfiguration
+      group: "admissionregistration.k8s.io"
+      jsonPointers:
+        - /webhooks
+  project: default
+  sources:
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: &ISTIO_VERSION 1.24.2
+      helm:
+        valuesObject:
+          profile: ambient
+      chart: cni
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: *ISTIO_VERSION
+      helm:
+        valuesObject:
+          profile: ambient
+      chart: base
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: *ISTIO_VERSION
+      chart: ztunnel
+      helm:
+        valuesObject:
+          profile: ambient
+    - repoURL: 'https://istio-release.storage.googleapis.com/charts'
+      targetRevision: *ISTIO_VERSION
+      chart: istiod
+      helm:
+        valuesObject:
+          profile: ambient
+          configMap: false
+    # Add Gateway API CRDs
+    - repoURL: 'https://github.com/kubernetes-sigs/gateway-api/'
+      targetRevision: v1.2.1
+      path: ./config/crd
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
