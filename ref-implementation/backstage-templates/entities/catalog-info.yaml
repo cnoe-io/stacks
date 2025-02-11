@@ -8,6 +8,7 @@ spec:
     - ./basic/template.yaml
     - ./argo-workflows/template.yaml
     - ./app-with-bucket/template.yaml
+    - ./ray-serve/template-ray-serve.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Location
