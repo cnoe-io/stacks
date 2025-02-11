@@ -7,7 +7,7 @@ Please use the following command to deploy ray using `idpbuilder`:
 ```bash
 idpbuilder create \
   --use-path-routing \
-  --p https://github.com/cnoe-io/stacks//ray-integration
+  -p https://github.com/cnoe-io/stacks//ray-integration
 ```
 
 Notice that you can add Ray to the reference implementation:
@@ -15,8 +15,8 @@ Notice that you can add Ray to the reference implementation:
 ```bash
 idpbuilder create \
   --use-path-routing \
-  --p https://github.com/cnoe-io/stacks//ref-implementation
-  --p https://github.com/cnoe-io/stacks//ray-integration
+  -p https://github.com/cnoe-io/stacks//ref-implementation \
+  -p https://github.com/cnoe-io/stacks//ray-integration
 ```
 
 ## What is installed?
