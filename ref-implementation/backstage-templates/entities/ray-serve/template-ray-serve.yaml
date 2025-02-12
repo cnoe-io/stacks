@@ -19,10 +19,6 @@ spec:
           type: string
           default: "https://github.com/mlops-on-kubernetes/Book/raw/main/Chapter%206/serve-config.zip"
           description: Path to your Ray Service Multi-application config zip file
-        repoUrl:
-          default: gitea.elamaras.people.aws.dev
-          title: Repo URL of your Gitea Repo integrated with Backstage
-          type: string
   steps:
     - id: template
       name: Generating component
