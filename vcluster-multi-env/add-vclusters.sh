@@ -28,8 +28,8 @@ metadata:
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: cluster
-    cnoe.io/vclusterMultiEnv/clusterClass: "app-runtime"
-    cnoe.io/vclusterMultiEnv/clusterName: "${cluster_name}"
+    vcluster.cnoe.io/clusterClass: "app-runtime"
+    vcluster.cnoe.io/clusterName: "${cluster_name}"
 type: Opaque
 stringData:
   name: ${cluster_name}-vcluster
