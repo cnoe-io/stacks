@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opencost
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: 'https://opencost.github.io/opencost-helm-chart'
+      targetRevision: 1.38.1
+      helm:
+        releaseName: opencost
+        values: |
+          opencost:
+            prometheus:
+              internal:
+                serviceName: prometheus-kube-prometheus-prometheus
+                namespaceName: monitoring
+                port: 9090
+      chart: opencost
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      selfHeal: true

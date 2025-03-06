@@ -1,0 +1,200 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config-job
+  namespace: keycloak
+data:
+  client-role-admin-payload.json: |
+    {"name": "admin"}
+  client-role-editor-payload.json: |
+    {"name": "editor"}
+  client-role-viewer-payload.json: |
+    {"name": "viewer"}
+  admin-role-assignment-payload.json: |
+    [
+      {
+        "id": "$ADMIN_ROLE_ID",
+        "name": "admin"
+      }
+    ]
+  roles-mapper-payload.json: |
+    {
+      "id":"$CLIENT_ROLES_MAPPER_ID",
+      "name": "client roles",
+      "protocol":"openid-connect",
+      "protocolMapper":"oidc-usermodel-client-role-mapper",
+      "config": {
+        "access.token.claim":"true",
+        "claim.name":"resource_access.${client_id}.roles",
+        "jsonType.label":"String",
+        "multivalued":"true",
+        "id.token.claim": "true",
+        "userinfo.token.claim": "true"
+      }
+    }
+  grafana-client-payload.json: |
+    {
+      "protocol": "openid-connect",
+      "clientId": "grafana",
+      "name": "Grafana Client",
+      "description": "Used for Grafana SSO",
+      "publicClient": false,
+      "authorizationServicesEnabled": false,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "frontchannelLogout": true,
+      "attributes": {
+        "saml_idp_initiated_sso_url_name": "",
+        "oauth2.device.authorization.grant.enabled": false,
+        "oidc.ciba.grant.enabled": false
+      },
+      "alwaysDisplayInConsole": false,
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "https://cnoe.localtest.me:8443/grafana/login/generic_oauth"
+      ],
+      "webOrigins": [
+        "/*"
+      ]
+    }
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-config
+  namespace: keycloak
+spec:
+  template:
+    metadata:
+      generateName: grafana-config
+    spec:
+      serviceAccountName: keycloak-config
+      restartPolicy: Never
+      volumes:
+        - name: keycloak-config
+          secret:
+            secretName: keycloak-config
+        - name: config-payloads
+          configMap:
+            name: grafana-config-job
+      containers:
+        - name: kubectl
+          image: docker.io/library/ubuntu:22.04
+          volumeMounts:
+            - name: keycloak-config
+              readOnly: true
+              mountPath: "/var/secrets/"
+            - name: config-payloads
+              readOnly: true
+              mountPath: "/var/config/"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              #! /bin/bash
+              set -ex -o pipefail
+              apt -qq update && apt -qq install curl jq gettext-base -y
+              
+              curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              
+              echo "checking if we're ready to start"
+              set +e
+              ./kubectl get secret -n keycloak keycloak-clients &> /dev/null
+              if [ $? -ne 0 ]; then
+                exit 1
+              fi
+              set -e
+              
+              ADMIN_PASSWORD=$(cat /var/secrets/KEYCLOAK_ADMIN_PASSWORD)
+
+              KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080/keycloak
+
+              KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+                --data-urlencode "username=cnoe-admin" \
+                --data-urlencode "password=${ADMIN_PASSWORD}" \
+                --data-urlencode "grant_type=password" \
+                --data-urlencode "client_id=admin-cli" \
+                ${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token | jq -e -r '.access_token')
+                
+              set +e
+              
+              curl --fail-with-body -H "Authorization: bearer ${KEYCLOAK_TOKEN}"  "${KEYCLOAK_URL}/admin/realms/cnoe"  &> /dev/null
+              if [ $? -ne 0 ]; then
+                exit 0
+              fi
+              set -e
+              
+              echo "creating Grafana client"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/grafana-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+              
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "grafana") | .id')
+              
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+              
+              GRAFANA_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+              # Add Grafana roles to client
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/client-role-admin-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/roles
+              
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/client-role-editor-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/roles
+              
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/client-role-viewer-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/roles
+
+              export ADMIN_ROLE_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" "${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/roles/admin" | jq -r '.id')
+              
+              # Assign admin role to user1
+              USER1_USERID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" "${KEYCLOAK_URL}/admin/realms/cnoe/users?lastName=one" | jq -r '.[0].id')
+
+              envsubst < /var/config/admin-role-assignment-payload.json | curl -k -sS -H 'Content-Type: application/json' \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @- \
+              ${KEYCLOAK_URL}/admin/realms/cnoe/users/${USER1_USERID}/role-mappings/clients/${CLIENT_ID}
+              
+              # Add role to token
+              CLIENT_SCOPE_ROLES_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "roles") | .id')
+              
+              export CLIENT_ROLES_MAPPER_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes/${CLIENT_SCOPE_ROLES_ID}/protocol-mappers/models | jq -e -r  '.[] | select(.name == "client roles") | .id')
+
+              cat /var/config/roles-mapper-payload.json | envsubst '$CLIENT_ROLES_MAPPER_ID' | curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT --data @- \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes/${CLIENT_SCOPE_ROLES_ID}/protocol-mappers/models/${CLIENT_ROLES_MAPPER_ID}
+              
+              ./kubectl patch secret -n keycloak keycloak-clients --type=json \
+                -p='[{
+                "op" : "add" ,
+                "path" : "/data/GRAFANA_CLIENT_SECRET" ,
+                "value" : "'$(echo -n "$GRAFANA_CLIENT_SECRET" | base64 -w 0)'"
+                },{
+                  "op" : "add" ,
+                  "path" : "/data/GRAFANA_CLIENT_ID" ,
+                  "value" : "'$(echo -n "grafana" | base64 -w 0)'"
+                }]'
