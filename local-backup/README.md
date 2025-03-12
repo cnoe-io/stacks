@@ -8,7 +8,7 @@ In short, it:
 2. Creates a [Velero](https://velero.io/) installation that targets the in-cluster MinIO storage.
 
 ## Installation
-
+Once you have cloned this repository you will have access to the `local-backup` directory. 
 First, we need to ensure the local cluster is configured to mount a local directory.
 This is done through the kind configuration file that you can supply to `idpbuilder`.
 
@@ -34,6 +34,7 @@ Once you've made the change, run this command from the root of this repository.
 # example: mkdir /Users/my-name/backup
 mkdir <path/to/directory> 
 
+# when running this command make sure that local-backup/kind.yaml is available in the correct path and you have updated the path in hte kind.yaml file. 
 idpbuilder create --kind-config local-backup/kind.yaml --package local-backup/
 ```
 
