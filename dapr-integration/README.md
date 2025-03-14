@@ -5,18 +5,13 @@
 Please use the following command to deploy Dapr using `idpbuilder`:
 
 ```bash
-idpbuilder create \
-  --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//dapr-integration \
+idpbuilder create --color --use-path-routing -p https://github.com/cnoe-io/stacks//dapr-integration
 ```
 
 Notice that you can add Dapr to the reference implementation:
 
 ```bash
-idpbuilder create \
-  --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//ref-implementation \
-  -p https://github.com/cnoe-io/stacks//dapr-integration
+idpbuilder create --color --use-path-routing -p https://github.com/cnoe-io/stacks//ref-implementation -p https://github.com/cnoe-io/stacks//dapr-integration
 ```
 
 ## What is installed?
