@@ -4,7 +4,7 @@ This stack contains installation of Istio Ambient as well as supporting observab
 
 Istio Ambient Mesh Docs: https://istio.io/latest/docs/ambient/overview/
 
-
+Istio User Guides: https://istio.io/latest/docs/ambient/usage/
 
 ## Modules
 - istio
@@ -14,7 +14,7 @@ Istio Ambient Mesh Docs: https://istio.io/latest/docs/ambient/overview/
 
 # Install base istio with no observability
 
-`idpbuilder create -p https://github.com/cnoe-io/stacks//istio-ambient/istio-ambient`
+`idpbuilder create --color -p https://github.com/cnoe-io/stacks//istio-ambient/istio-ambient`
 
 Uses Default Mesh Configuration; user's can add an istio-configmap[1] to adjust configuration here if needed for testing 
 
