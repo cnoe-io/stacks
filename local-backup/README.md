@@ -29,12 +29,12 @@ You **must** change this value for your own setup. This directory also must exis
 For example, you may want to change it to `/Users/my-name/backup`.
 
 Once you've made the change, run this command from the root of this repository.
-
+> [!WARNING]  
+> When running this command make sure that local-backup/kind.yaml is available in the correct path and you have updated the path in the kind.yaml file. 
 ```bash
 # example: mkdir /Users/my-name/backup
 mkdir <path/to/directory> 
 
-# when running this command make sure that local-backup/kind.yaml is available in the correct path and you have updated the path in hte kind.yaml file. 
 idpbuilder create --kind-config local-backup/kind.yaml --package local-backup/
 ```
 
