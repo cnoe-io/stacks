@@ -14,7 +14,7 @@ Istio User Guides: https://istio.io/latest/docs/ambient/usage/
 
 # Install base istio with no observability
 
-`idpbuilder create --color -p https://github.com/cnoe-io/stacks//istio-ambient/istio-ambient`
+`idpbuilder create -package https://github.com/cnoe-io/stacks//istio-ambient/istio-ambient`
 
 Uses Default Mesh Configuration; user's can add an istio-configmap[1] to adjust configuration here if needed for testing 
 
