@@ -15,3 +15,8 @@ As you see above, this add-on to `idpbuilder` has a dependency to the [reference
 
 1. Installs `fluxcd` source repository controller as an `argo` application.
 2. Installs `tofu-controller` for managing the lifecycle of terraform deployments from your Kubernetes cluster for operations such as create, delete and update.
+
+> [!NOTE]
+> Make sure all ArgoCD applications are synced and healthy before proceeding. 
+
+For examples and documentation, Refer to the [tofu controller and flux guide](https://flux-iac.github.io/tofu-controller/use-tf-controller/provision-resources-and-auto-approve/)
