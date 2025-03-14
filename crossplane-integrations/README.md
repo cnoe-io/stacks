@@ -5,7 +5,7 @@
 Please use the below command to deploy an IDP reference implementation with an Argo application for preparing up the setup for terraform integrations:
 
 ```bash
-idpbuilder create --color --use-path-routing -p https://github.com/cnoe-io/stacks//ref-implementation -p https://github.com/cnoe-io/stacks//crossplane-integrations
+idpbuilder create --use-path-routing --package https://github.com/cnoe-io/stacks//ref-implementation --package https://github.com/cnoe-io/stacks//crossplane-integrations
 ```
 ## What is installed?
 
