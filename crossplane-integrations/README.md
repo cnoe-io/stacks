@@ -13,8 +13,9 @@ idpbuilder create --color --use-path-routing -p https://github.com/cnoe-io/stack
 1. AWS providers
 1. Basic Compositions
 
-### Note
-[Using the reference](https://github.com/cnoe-io/stacks/blob/main/ref-implementation/README.md#using-it) example explains how to use each UI's that idpbuilder creates from the reference implementation. Make sure each ArgoCD application is synced and healthy before proceeding. 
+> [!NOTE]  
+> [Using the reference](https://github.com/cnoe-io/stacks/blob/main/ref-implementation/README.md#using-it) example explains how to use each UI's that idpbuilder creates from the reference implementation. Make sure each ArgoCD application is synced and healthy before proceeding. 
+
 
 ## Preparing to use Crossplane
 
@@ -31,7 +32,6 @@ Choose a template that mentions `with AWS resources`, type `demo3` as the name, 
 Once you click the create button, you will have a very similar setup as the [basic example](https://github.com/cnoe-io/stacks/tree/main/ref-implementation#basic-deployment).
 The only difference is we now have a resource for a S3 Bucket with kind ObjectStorage which is managed by Crossplane.
 
-### Note
-In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as Terraform instead.
+> [!NOTE]  
+>In this example, we used Crossplane to provision resources, but you can use other cloud resource management tools such as [Terraform](../terraform-integrations/README.md) instead. If you want to explore a local option, take a look at the [localstack](../localstack-integration/README.md). Regardless of your tool choice, concepts are the same. We use Backstage as the templating mechanism and UI for users, then use Kubernetes API with GitOps to deploy resources.
 
-Regardless of your tool choice, concepts are the same. We use Backstage as the templating mechanism and UI for users, then use Kubernetes API with GitOps to deploy resources.
