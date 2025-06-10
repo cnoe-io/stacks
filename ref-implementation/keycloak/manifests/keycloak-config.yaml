@@ -242,7 +242,15 @@ spec:
               fi
               set -e
               
-              curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
+              # Detect architecture and map to kubectl release naming
+              ARCH=$(uname -m)
+              case $ARCH in
+                x86_64) KUBECTL_ARCH="amd64" ;;
+                aarch64) KUBECTL_ARCH="arm64" ;;
+                armv7l) KUBECTL_ARCH="arm" ;;
+                *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+              esac
+              curl -sS -LO "https://dl.k8s.io/release/v1.28.3/bin/linux/${KUBECTL_ARCH}/kubectl"
               chmod +x kubectl
               
               echo "creating cnoe realm and groups"
