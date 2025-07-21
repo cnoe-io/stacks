@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vault-ingress
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: "nginx"
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /vault(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: vault-ui
+                port:
+                  number: 8200
+    - host: cnoe.localtest.me
+      http:
+        paths:
+          - path: /vault(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: vault-ui
+                port:
+                  number: 8200
