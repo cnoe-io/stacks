@@ -23,7 +23,7 @@ spec:
     # Raw manifests from Git
     - repoURL: https://github.com/suwhang-cisco/stacks.git
       targetRevision: main
-      path: ai-platform-engineering/cluster/manifests
+      path: ai-platform-engineering/ai-platform-engineering/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: ai-platform-engineering
