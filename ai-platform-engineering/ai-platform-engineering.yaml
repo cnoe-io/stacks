@@ -20,6 +20,10 @@ spec:
     - repoURL: https://github.com/cnoe-io/ai-platform-engineering.git
       targetRevision: idpbuilder-values
       ref: values
+    # Raw manifests from Git
+    - repoURL: https://github.com/suwhang-cisco/stacks.git
+      targetRevision: main
+      path: ai-platform-engineering/cluster/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: ai-platform-engineering
