@@ -131,14 +131,21 @@ spec:
           ROOT_TOKEN=$(echo $INIT_RESPONSE | grep -o '"root_token":"[^"]*"' | cut -d: -f2 | tr -d '"')
           
           echo "Unsealing Vault..."
-          UNSEAL_RESPONSE=$(curl -s -X POST http://vault:8200/v1/sys/unseal -d "{\"key\":\"$UNSEAL_KEY\"}")
-          
-          if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
-            echo "Vault unsealed successfully!"
-          else
-            echo "Failed to unseal vault after initialization"
-            exit 1
-          fi
+          # Add retry logic for unseal step
+          for i in {1..10}; do
+            UNSEAL_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"key\":\"$UNSEAL_KEY\"}" http://vault:8200/v1/sys/unseal 2>/dev/null)
+            if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
+              echo "Vault unsealed successfully!"
+              break
+            else
+              echo "Unseal attempt $i failed, retrying in 3s..."
+              sleep 3
+            fi
+            if [ $i -eq 10 ]; then
+              echo "Failed to unseal vault after 10 attempts. Manual intervention required."
+              exit 1
+            fi
+          done
           
           echo "Storing credentials in Kubernetes secrets..."
           kubectl create secret generic vault-unseal-key \
