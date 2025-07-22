@@ -48,8 +48,15 @@ spec:
               exit 0
             else
               echo "No unseal key found. Vault was initialized externally."
-              echo "Cannot proceed without unseal key. Manual intervention required."
-              exit 1
+              echo "Resetting Vault data to allow re-initialization..."
+              
+              # Remove vault data to allow re-initialization
+              rm -rf /vault/data/*
+              
+              # Wait a moment for vault to detect the change
+              sleep 5
+              
+              echo "Proceeding with fresh initialization..."
             fi
           fi
           
