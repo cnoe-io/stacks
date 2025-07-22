@@ -48,15 +48,22 @@ spec:
               exit 0
             else
               echo "No unseal key found. Vault was initialized externally."
-              echo "Resetting Vault data to allow re-initialization..."
+              echo "Restarting vault pod to clear initialization state..."
               
-              # Remove vault data to allow re-initialization
-              rm -rf /vault/data/*
+              # Restart vault pod to clear state
+              kubectl delete pod vault-0 -n vault
               
-              # Wait a moment for vault to detect the change
-              sleep 5
+              # Wait for pod to restart
+              echo "Waiting for vault pod to restart..."
+              kubectl wait --for=condition=Ready pod/vault-0 -n vault --timeout=120s
               
-              echo "Proceeding with fresh initialization..."
+              # Wait for vault service to be available again
+              echo "Waiting for Vault service to be available after restart..."
+              until nc -z vault 8200; do
+                sleep 5
+              done
+              
+              echo "Proceeding with fresh initialization after restart..."
             fi
           fi
           
