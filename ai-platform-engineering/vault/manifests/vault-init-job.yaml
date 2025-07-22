@@ -10,7 +10,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: vault-init
-        image: hashicorp/vault:1.15.2
+        image: bitnami/kubectl:latest
         env:
         - name: VAULT_ADDR
           value: "http://vault:8200"
@@ -21,64 +21,74 @@ spec:
         - -c
         - |
           set -e
+          
           echo "Waiting for Vault service to be available..."
-          until nc -z vault 8200; do
+          until curl -s http://vault:8200/v1/sys/health >/dev/null 2>&1; do
             echo "Vault service not available, waiting..."
             sleep 5
           done
           
           echo "Checking Vault initialization status..."
           
-          # Check if Vault is sealed (this works for both initialized and uninitialized vault)
-          if vault status 2>/dev/null | grep -q "Sealed.*false"; then
+          # Check vault status via API
+          STATUS=$(curl -s http://vault:8200/v1/sys/health || echo '{"initialized":false,"sealed":true}')
+          INITIALIZED=$(echo $STATUS | grep -o '"initialized":[^,}]*' | cut -d: -f2 | tr -d '"')
+          SEALED=$(echo $STATUS | grep -o '"sealed":[^,}]*' | cut -d: -f2 | tr -d '"')
+          
+          echo "Vault status: initialized=$INITIALIZED, sealed=$SEALED"
+          
+          # If vault is unsealed, we're done
+          if [ "$SEALED" = "false" ]; then
             echo "Vault is already unsealed and ready"
             exit 0
           fi
           
-          # Check if vault is initialized but sealed
-          if vault status 2>/dev/null | grep -q "Initialized.*true"; then
+          # If vault is initialized but sealed, try to unseal
+          if [ "$INITIALIZED" = "true" ]; then
             echo "Vault is initialized but sealed. Checking for existing unseal key..."
             
-            # Try to get existing unseal key from secret
             if kubectl get secret vault-unseal-key -n vault >/dev/null 2>&1; then
               echo "Found existing unseal key, unsealing vault..."
               UNSEAL_KEY=$(kubectl get secret vault-unseal-key -n vault -o jsonpath='{.data.key}' | base64 -d)
-              vault operator unseal "$UNSEAL_KEY"
-              echo "Vault unsealed successfully!"
-              exit 0
+              
+              # Unseal via API
+              UNSEAL_RESPONSE=$(curl -s -X POST http://vault:8200/v1/sys/unseal -d "{\"key\":\"$UNSEAL_KEY\"}")
+              if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
+                echo "Vault unsealed successfully!"
+                exit 0
+              else
+                echo "Failed to unseal vault with stored key"
+                exit 1
+              fi
             else
               echo "No unseal key found. Vault was initialized externally."
-              echo "Restarting vault pod to clear initialization state..."
-              
-              # Restart vault pod to clear state
-              kubectl delete pod vault-0 -n vault
-              
-              # Wait for pod to restart
-              echo "Waiting for vault pod to restart..."
-              kubectl wait --for=condition=Ready pod/vault-0 -n vault --timeout=120s
-              
-              # Wait for vault service to be available again
-              echo "Waiting for Vault service to be available after restart..."
-              until nc -z vault 8200; do
-                sleep 5
-              done
-              
-              echo "Proceeding with fresh initialization after restart..."
+              echo "Manual unsealing required: kubectl exec vault-0 -n vault -- vault operator unseal <key>"
+              exit 1
             fi
           fi
           
+          # Vault is not initialized, initialize it
           echo "Vault is not initialized. Initializing now..."
-          vault operator init \
-            -key-shares=1 \
-            -key-threshold=1 \
-            -format=json > /tmp/vault-init.json
+          INIT_RESPONSE=$(curl -s -X POST http://vault:8200/v1/sys/init -d '{"secret_shares":1,"secret_threshold":1}')
           
-          # Extract unseal key and root token
-          UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
-          ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
+          if [ $? -ne 0 ]; then
+            echo "Failed to initialize vault"
+            exit 1
+          fi
+          
+          # Extract keys from response
+          UNSEAL_KEY=$(echo $INIT_RESPONSE | grep -o '"keys":\[[^]]*\]' | grep -o '"[^"]*"' | head -1 | tr -d '"')
+          ROOT_TOKEN=$(echo $INIT_RESPONSE | grep -o '"root_token":"[^"]*"' | cut -d: -f2 | tr -d '"')
           
           echo "Unsealing Vault..."
-          vault operator unseal "$UNSEAL_KEY"
+          UNSEAL_RESPONSE=$(curl -s -X POST http://vault:8200/v1/sys/unseal -d "{\"key\":\"$UNSEAL_KEY\"}")
+          
+          if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
+            echo "Vault unsealed successfully!"
+          else
+            echo "Failed to unseal vault after initialization"
+            exit 1
+          fi
           
           echo "Storing credentials in Kubernetes secrets..."
           kubectl create secret generic vault-unseal-key \
