@@ -28,13 +28,32 @@ spec:
           done
           
           echo "Checking Vault initialization status..."
-          # Check if Vault is already initialized (vault status will return 0 if initialized, 2 if not)
-          if vault status 2>/dev/null | grep -q "Initialized.*true"; then
-            echo "Vault is already initialized"
+          
+          # Check if Vault is sealed (this works for both initialized and uninitialized vault)
+          if vault status 2>/dev/null | grep -q "Sealed.*false"; then
+            echo "Vault is already unsealed and ready"
             exit 0
           fi
           
-          echo "Initializing Vault..."
+          # Check if vault is initialized but sealed
+          if vault status 2>/dev/null | grep -q "Initialized.*true"; then
+            echo "Vault is initialized but sealed. Checking for existing unseal key..."
+            
+            # Try to get existing unseal key from secret
+            if kubectl get secret vault-unseal-key -n vault >/dev/null 2>&1; then
+              echo "Found existing unseal key, unsealing vault..."
+              UNSEAL_KEY=$(kubectl get secret vault-unseal-key -n vault -o jsonpath='{.data.key}' | base64 -d)
+              vault operator unseal "$UNSEAL_KEY"
+              echo "Vault unsealed successfully!"
+              exit 0
+            else
+              echo "No unseal key found. Vault was initialized externally."
+              echo "Cannot proceed without unseal key. Manual intervention required."
+              exit 1
+            fi
+          fi
+          
+          echo "Vault is not initialized. Initializing now..."
           vault operator init \
             -key-shares=1 \
             -key-threshold=1 \
@@ -44,11 +63,10 @@ spec:
           UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
           ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
           
-          # Unseal Vault
           echo "Unsealing Vault..."
           vault operator unseal "$UNSEAL_KEY"
           
-          # Store credentials in Kubernetes secrets
+          echo "Storing credentials in Kubernetes secrets..."
           kubectl create secret generic vault-unseal-key \
             --from-literal=key="$UNSEAL_KEY" \
             --namespace=vault \
