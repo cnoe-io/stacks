@@ -10,7 +10,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: vault-init
-        image: bitnami/kubectl:latest
+        image: docker.io/library/ubuntu:22.04
         env:
         - name: VAULT_ADDR
           value: "http://vault:8200"
@@ -30,8 +30,8 @@ spec:
           
           echo "Checking Vault initialization status..."
           
-          # Check vault status via API (use wget since no curl)
-          STATUS=$(wget -qO- http://vault:8200/v1/sys/health 2>/dev/null || echo '{"initialized":false,"sealed":true}')
+          # Check vault status via API
+          STATUS=$(curl -s http://vault:8200/v1/sys/health || echo '{"initialized":false,"sealed":true}')
           INITIALIZED=$(echo $STATUS | grep -o '"initialized":[^,}]*' | cut -d: -f2 | tr -d '"')
           SEALED=$(echo $STATUS | grep -o '"sealed":[^,}]*' | cut -d: -f2 | tr -d '"')
           
@@ -52,7 +52,7 @@ spec:
               UNSEAL_KEY=$(kubectl get secret vault-unseal-key -n vault -o jsonpath='{.data.key}' | base64 -d)
               
               # Unseal via API
-              UNSEAL_RESPONSE=$(wget -qO- --post-data="{\"key\":\"$UNSEAL_KEY\"}" --header="Content-Type: application/json" http://vault:8200/v1/sys/unseal 2>/dev/null)
+              UNSEAL_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"key\":\"$UNSEAL_KEY\"}" http://vault:8200/v1/sys/unseal 2>/dev/null)
               if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
                 echo "Vault unsealed successfully!"
                 exit 0
@@ -69,7 +69,7 @@ spec:
           
           # Vault is not initialized, initialize it
           echo "Vault is not initialized. Initializing now..."
-          INIT_RESPONSE=$(wget -qO- --post-data='{"secret_shares":1,"secret_threshold":1}' --header="Content-Type: application/json" http://vault:8200/v1/sys/init 2>/dev/null)
+          INIT_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"secret_shares":1,"secret_threshold":1}' http://vault:8200/v1/sys/init 2>/dev/null)
           
           if [ $? -ne 0 ]; then
             echo "Failed to initialize vault"
@@ -81,7 +81,7 @@ spec:
           ROOT_TOKEN=$(echo $INIT_RESPONSE | grep -o '"root_token":"[^"]*"' | cut -d: -f2 | tr -d '"')
           
           echo "Unsealing Vault..."
-          UNSEAL_RESPONSE=$(wget -qO- --post-data="{\"key\":\"$UNSEAL_KEY\"}" --header="Content-Type: application/json" http://vault:8200/v1/sys/unseal 2>/dev/null)
+          UNSEAL_RESPONSE=$(curl -s -X POST http://vault:8200/v1/sys/unseal -d "{\"key\":\"$UNSEAL_KEY\"}")
           
           if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
             echo "Vault unsealed successfully!"
