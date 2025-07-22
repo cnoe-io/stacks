@@ -8,9 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/suwhang-cisco/stacks.git
-    targetRevision: main # Or your development branch
-    path: ai-platform-engineering/vault/manifests
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: "0.27.0" # update as needed
+    - repoURL: https://github.com/suwhang-cisco/stacks.git
+      targetRevision: main # Or your development branch
+      path: ai-platform-engineering/vault/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: vault

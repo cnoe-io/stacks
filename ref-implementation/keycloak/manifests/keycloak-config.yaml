@@ -97,20 +97,7 @@ data:
         "type": "password",
         "value": "${USER1_PASSWORD}"
     }
-  user-guest.json: |
-    {
-        "username": "guest",
-        "enabled": true,
-        "emailVerified": true,
-        "groups": ["base-user"]
-    }
-  user-guest-password.json: |
-    {
-        "temporary": false,
-        "type": "password",
-        "value": "guest"
-    }
-  user-user1.json: |
+user-user1.json: |
     {
         "username": "user1",
         "email": "",
