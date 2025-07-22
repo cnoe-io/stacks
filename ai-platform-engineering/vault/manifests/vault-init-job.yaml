@@ -22,11 +22,34 @@ spec:
         - |
           set -e
           
-          echo "Waiting for Vault service to be available..."
-          until nc -z vault 8200 2>/dev/null; do
-            echo "Vault service not available, waiting..."
-            sleep 5
-          done
+          # Install required tools FIRST
+          echo "Installing required tools..."
+          apt-get update -qq || { echo "ERROR: apt-get update failed"; exit 1; }
+          apt-get install -y -qq curl netcat-openbsd || { echo "ERROR: package installation failed"; exit 1; }
+          
+          # Install kubectl
+          echo "Installing kubectl..."
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" || { echo "ERROR: kubectl download failed"; exit 1; }
+          chmod +x kubectl
+          mv kubectl /usr/local/bin/
+          
+          echo "Tools installed successfully. Checking connectivity..."
+          
+          # Debug: check if vault service exists
+          echo "Checking if vault service exists..."
+          nslookup vault || echo "WARNING: vault DNS lookup failed"
+          
+          # Debug: check what's listening on port 8200
+          echo "Checking vault service connectivity..."
+          if nc -z vault 8200 2>/dev/null; then
+            echo "Vault service is available on port 8200"
+          else
+            echo "ERROR: Cannot connect to vault:8200"
+            echo "Debugging network connectivity:"
+            ping -c 3 vault || echo "Ping to vault failed"
+            nc -v vault 8200 || echo "Verbose netcat failed"
+            exit 1
+          fi
           
           echo "Checking Vault initialization status..."
           
