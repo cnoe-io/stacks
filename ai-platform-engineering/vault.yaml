@@ -7,7 +7,7 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
-  source:
+  sources:
     - repoURL: https://helm.releases.hashicorp.com
       chart: vault
       targetRevision: "0.27.0" # update as needed
