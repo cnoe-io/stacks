@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "200"  # Run after vault deployment
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      serviceAccountName: vault-init
+      restartPolicy: OnFailure
+      containers:
+      - name: vault-init
+        image: hashicorp/vault:1.15.2
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for Vault to be ready..."
+          until vault status 2>/dev/null; do
+            echo "Vault not ready, waiting..."
+            sleep 5
+          done
+          
+          # Check if Vault is already initialized
+          if vault status | grep -q "Initialized.*true"; then
+            echo "Vault is already initialized"
+            exit 0
+          fi
+          
+          echo "Initializing Vault..."
+          vault operator init \
+            -key-shares=1 \
+            -key-threshold=1 \
+            -format=json > /tmp/vault-init.json
+          
+          # Extract unseal key and root token
+          UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
+          ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
+          
+          # Unseal Vault
+          echo "Unsealing Vault..."
+          vault operator unseal "$UNSEAL_KEY"
+          
+          # Store credentials in Kubernetes secrets
+          kubectl create secret generic vault-unseal-key \
+            --from-literal=key="$UNSEAL_KEY" \
+            --namespace=vault \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          kubectl create secret generic vault-root-token \
+            --from-literal=token="$ROOT_TOKEN" \
+            --namespace=vault \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          echo "Vault initialization completed successfully!"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create", "get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+- kind: ServiceAccount
+  name: vault-init
+  namespace: vault
