@@ -85,8 +85,35 @@ spec:
               fi
             else
               echo "No unseal key found. Vault was initialized externally."
-              echo "Manual unsealing required: kubectl exec vault-0 -n vault -- vault operator unseal <key>"
-              exit 1
+              echo "For development environment, clearing vault data to allow re-initialization..."
+              
+              # Delete the vault pod to clear its state
+              kubectl delete pod vault-0 -n vault --force --grace-period=0
+              
+              # Wait for the pod to be recreated
+              echo "Waiting for vault pod to be recreated..."
+              sleep 10
+              kubectl wait --for=condition=Ready pod/vault-0 -n vault --timeout=120s
+              
+              # Wait for vault service to be available again
+              echo "Waiting for vault service to be available after restart..."
+              sleep 5
+              until nc -z vault 8200 2>/dev/null; do
+                echo "Waiting for vault service..."
+                sleep 5
+              done
+              
+              echo "Vault restarted. Checking if it's now uninitialized..."
+              # Re-check vault status after restart
+              STATUS=$(curl -s http://vault:8200/v1/sys/health 2>/dev/null || echo '{"initialized":false,"sealed":true}')
+              INITIALIZED=$(echo $STATUS | grep -o '"initialized":[^,}]*' | cut -d: -f2 | tr -d '"')
+              
+              if [ "$INITIALIZED" = "false" ]; then
+                echo "Vault is now uninitialized. Proceeding with initialization..."
+              else
+                echo "Vault is still initialized after restart. Manual intervention required."
+                exit 1
+              fi
             fi
           fi
           
