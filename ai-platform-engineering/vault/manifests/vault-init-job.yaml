@@ -21,14 +21,15 @@ spec:
         - -c
         - |
           set -e
-          echo "Waiting for Vault to be ready..."
-          until vault status 2>/dev/null; do
-            echo "Vault not ready, waiting..."
+          echo "Waiting for Vault service to be available..."
+          until nc -z vault 8200; do
+            echo "Vault service not available, waiting..."
             sleep 5
           done
           
-          # Check if Vault is already initialized
-          if vault status | grep -q "Initialized.*true"; then
+          echo "Checking Vault initialization status..."
+          # Check if Vault is already initialized (vault status will return 0 if initialized, 2 if not)
+          if vault status 2>/dev/null | grep -q "Initialized.*true"; then
             echo "Vault is already initialized"
             exit 0
           fi
