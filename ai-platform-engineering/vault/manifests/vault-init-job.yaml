@@ -5,6 +5,8 @@ metadata:
   namespace: vault
 spec:
   template:
+    metadata:
+      generateName: vault-init
     spec:
       serviceAccountName: vault-init
       restartPolicy: OnFailure
@@ -16,16 +18,24 @@ spec:
           value: "http://vault:8200"
         - name: VAULT_SKIP_VERIFY
           value: "true"
-        command:
-        - /bin/sh
-        - -c
+        command: ["/bin/bash", "-c"]
+        args:
         - |
-          set -e
+          #! /bin/bash
+
+          set -ex -o pipefail
           
           # Install required tools FIRST
           echo "Installing required tools..."
           apt-get update -qq || { echo "ERROR: apt-get update failed"; exit 1; }
-          apt-get install -y -qq curl netcat-openbsd || { echo "ERROR: package installation failed"; exit 1; }
+          apt-get install -y -qq curl netcat-openbsd software-properties-common wget jq || { echo "ERROR: package installation failed"; exit 1; }
+          
+          # Install Vault CLI
+          echo "Installing Vault CLI..."
+          wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
+          apt-get update
+          apt-get install vault -y
           
           # Install kubectl
           echo "Installing kubectl..."
@@ -35,21 +45,20 @@ spec:
           
           echo "Tools installed successfully. Checking connectivity..."
           
-          # Debug: check if vault service exists
-          echo "Checking if vault service exists..."
-          nslookup vault || echo "WARNING: vault DNS lookup failed"
-          
-          # Debug: check what's listening on port 8200
-          echo "Checking vault service connectivity..."
-          if nc -z vault 8200 2>/dev/null; then
-            echo "Vault service is available on port 8200"
-          else
-            echo "ERROR: Cannot connect to vault:8200"
-            echo "Debugging network connectivity:"
-            ping -c 3 vault || echo "Ping to vault failed"
-            nc -v vault 8200 || echo "Verbose netcat failed"
-            exit 1
-          fi
+          echo "Waiting for Vault to be ready for initialization..."
+          ATTEMPTS=0
+          MAX_ATTEMPTS=24 # 24 * 10s = 120s = 4 minutes
+          until [ "$(curl -s -o /dev/null -w '%{http_code}' http://vault:8200/v1/sys/health)" = "501" ]; do
+            ATTEMPTS=$((ATTEMPTS + 1))
+            if [ "$ATTEMPTS" -gt "$MAX_ATTEMPTS" ]; then
+              echo "Error: Timed out waiting for Vault to become ready."
+              exit 1
+            fi
+            echo "Vault not ready yet (attempt $ATTEMPTS/$MAX_ATTEMPTS). Retrying in 10 seconds..."
+            sleep 10
+          done
+
+          echo "Vault is ready to be initialized."
           
           echo "Checking Vault initialization status..."
           
@@ -87,7 +96,18 @@ spec:
               echo "No unseal key found. Vault was initialized externally."
               echo "For development environment, clearing vault data to allow re-initialization..."
               
-              # Delete the vault pod to clear its state
+              # Find and delete the PVC associated with the vault-0 pod
+              PVC_NAME=$(kubectl get pod vault-0 -n vault -o jsonpath='{.spec.volumes[?(@.persistentVolumeClaim)].persistentVolumeClaim.claimName}' 2>/dev/null)
+
+              if [ -n "$PVC_NAME" ]; then
+                echo "Found PVC '$PVC_NAME', deleting it to clear Vault state..."
+                kubectl delete pvc "$PVC_NAME" -n vault
+              else
+                echo "No PVC found attached to pod vault-0. Skipping PVC deletion."
+              fi
+
+              # Now, force-delete the pod to trigger a restart with a fresh volume
+              echo "Deleting pod vault-0 to reset its state..."
               kubectl delete pod vault-0 -n vault --force --grace-period=0
               
               # Wait for the pod to be recreated
@@ -119,33 +139,30 @@ spec:
           
           # Vault is not initialized, initialize it
           echo "Vault is not initialized. Initializing now..."
-          INIT_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"secret_shares":1,"secret_threshold":1}' http://vault:8200/v1/sys/init 2>/dev/null)
-          
-          if [ $? -ne 0 ]; then
-            echo "Failed to initialize vault"
+          INIT_RESPONSE=$(vault operator init -format=json -key-shares=1 -key-threshold=1)
+
+          if [ -z "$INIT_RESPONSE" ]; then
+            echo "Failed to initialize vault. The init command returned no output."
             exit 1
           fi
-          
-          # Extract keys from response
-          UNSEAL_KEY=$(echo $INIT_RESPONSE | grep -o '"keys":\[[^]]*\]' | grep -o '"[^"]*"' | head -1 | tr -d '"')
-          ROOT_TOKEN=$(echo $INIT_RESPONSE | grep -o '"root_token":"[^"]*"' | cut -d: -f2 | tr -d '"')
-          
+
+          # Extract keys from response using jq
+          UNSEAL_KEY=$(echo "$INIT_RESPONSE" | jq -r .unseal_keys_b64[0])
+          ROOT_TOKEN=$(echo "$INIT_RESPONSE" | jq -r .root_token)
+
+          if [ -z "$UNSEAL_KEY" ] || [ "$UNSEAL_KEY" = "null" ]; then
+            echo "Failed to extract unseal key from init response."
+            echo "Init Response: $INIT_RESPONSE"
+            exit 1
+          fi
+
           echo "Unsealing Vault..."
-          # Add retry logic for unseal step
-          for i in {1..10}; do
-            UNSEAL_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"key\":\"$UNSEAL_KEY\"}" http://vault:8200/v1/sys/unseal 2>/dev/null)
-            if echo $UNSEAL_RESPONSE | grep -q '"sealed":false'; then
-              echo "Vault unsealed successfully!"
-              break
-            else
-              echo "Unseal attempt $i failed, retrying in 3s..."
-              sleep 3
-            fi
-            if [ $i -eq 10 ]; then
-              echo "Failed to unseal vault after 10 attempts. Manual intervention required."
-              exit 1
-            fi
-          done
+          vault operator unseal "$UNSEAL_KEY"
+          if [ $? -ne 0 ]; then
+            echo "Failed to unseal vault. Manual intervention required."
+            exit 1
+          fi
+          echo "Vault unsealed successfully!"
           
           echo "Storing credentials in Kubernetes secrets..."
           kubectl create secret generic vault-unseal-key \

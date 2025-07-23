@@ -4,7 +4,7 @@ metadata:
   name: vault-ingress
   namespace: vault
   annotations:
-    argocd.argoproj.io/sync-wave: "100"
+    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: "nginx"
@@ -16,7 +16,15 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: vault-ui
+                name: vault
+                port:
+                  number: 8200
+          # TODO: this might conflict with other ingresses
+          - path: /ui(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: vault
                 port:
                   number: 8200
     - host: cnoe.localtest.me
@@ -26,6 +34,13 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: vault-ui
+                name: vault
+                port:
+                  number: 8200
+          - path: /ui(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: vault
                 port:
                   number: 8200
