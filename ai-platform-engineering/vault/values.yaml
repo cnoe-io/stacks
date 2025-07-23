@@ -5,5 +5,15 @@
 server:
   extraEnvironmentVars:
     VAULT_ADDR: 'https://vault.cnoe.localtest.me:8443'
-    # Explicitly set VAULT_ADDR for internal use to localhost
-    VAULT_ADDR_INTERNAL: 'http://127.0.0.1:8200'
+  
+  # Configure readiness probe to use HTTP endpoint instead of vault status command
+  # Setting 'path' triggers httpGet mode in Helm template instead of exec vault status
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+    port: 8200
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 2
+    successThreshold: 1
