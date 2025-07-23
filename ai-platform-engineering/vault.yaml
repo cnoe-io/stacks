@@ -10,10 +10,13 @@ spec:
   sources:
     - repoURL: https://helm.releases.hashicorp.com
       chart: vault
-      targetRevision: "0.27.0" # update as needed
+      targetRevision: "0.27.0"
+      helm:
+        valueFiles:
+          - $values/values.yaml
     - repoURL: https://github.com/suwhang-cisco/stacks.git
-      targetRevision: main # Or your development branch
-      path: ai-platform-engineering/vault/manifests
+      targetRevision: main
+      path: ai-platform-engineering/vault
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
