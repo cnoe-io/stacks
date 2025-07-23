@@ -16,6 +16,7 @@ spec:
           value: "http://vault:8200"
         - name: VAULT_SKIP_VERIFY
           value: "true"
+
         command: ["/bin/bash", "-c"]
         args:
         - |
@@ -26,7 +27,7 @@ spec:
           # Install required tools FIRST
           echo "Installing required tools..."
           apt-get update -qq || { echo "ERROR: apt-get update failed"; exit 1; }
-          apt-get install -y -qq curl netcat-openbsd software-properties-common wget jq || { echo "ERROR: package installation failed"; exit 1; }
+          apt-get install -y -qq curl netcat-openbsd software-properties-common wget jq libcap2-bin || { echo "ERROR: package installation failed"; exit 1; }
           
           # Install Vault CLI
           echo "Installing Vault CLI..."
@@ -34,6 +35,7 @@ spec:
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
           apt-get update
           apt-get install vault -y
+          setcap cap_ipc_lock= /usr/bin/vault
           
           # Install kubectl
           echo "Installing kubectl..."
