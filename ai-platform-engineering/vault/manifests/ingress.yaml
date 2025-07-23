@@ -7,10 +7,6 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
   ingressClassName: "nginx"
-  tls:
-    - hosts:
-        - vault.cnoe.localtest.me
-      secretName: cnoe-localtest-me-tls
   rules:
     - host: vault.cnoe.localtest.me
       http:
