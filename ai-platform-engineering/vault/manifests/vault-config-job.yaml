@@ -19,26 +19,29 @@ spec:
         args:
         - |
           #!/bin/bash
-          set -ex
 
-          # Install required tools
+          set -ex -o pipefail
+
+          # Install required tools FIRST
           echo "Installing required tools..."
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends curl wget jq ca-certificates gnupg lsb-release
-          
-          # Install kubectl
-          echo "Installing kubectl..."
-          curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
-          apt-get update -qq
-          apt-get install -y -qq kubectl
+          apt-get update -qq || { echo "ERROR: apt-get update failed"; exit 1; }
+          apt-get install -y -qq curl netcat-openbsd software-properties-common wget jq libcap2-bin || { echo "ERROR: package installation failed"; exit 1; }
           
           # Install Vault CLI
           echo "Installing Vault CLI..."
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
-          apt-get update -qq
-          apt-get install -y -qq vault
+          wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
+          apt-get update
+          apt-get install vault -y
+          setcap cap_ipc_lock= /usr/bin/vault
+          
+          # Install kubectl
+          echo "Installing kubectl..."
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" || { echo "ERROR: kubectl download failed"; exit 1; }
+          chmod +x kubectl
+          mv kubectl /usr/local/bin/
+          
+          echo "Tools installed successfully. Checking connectivity..."
 
           # Wait for the root token to be available
           until kubectl get secret vault-root-token -n vault >/dev/null 2>&1; do
@@ -46,6 +49,7 @@ spec:
             sleep 5
           done
 
+          echo "Vault root token available. Authenticating..."
           # Authenticate to Vault
           export VAULT_ADDR="http://vault:8200"
           set +x # Disable logging for this line

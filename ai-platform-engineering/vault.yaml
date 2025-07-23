@@ -12,14 +12,12 @@ spec:
       chart: vault
       targetRevision: "0.27.0"
       helm:
-        values: |
-          server:
-            extraEnvironmentVars:
-              VAULT_ADDR: 'https://cnoe.localtest.me:8443/vault'
-              VAULT_UI_ADDR: 'https://cnoe.localtest.me:8443/ui'
+        valueFiles:
+          - $values/ai-platform-engineering/vault/values.yaml
     - repoURL: https://github.com/suwhang-cisco/stacks.git
       targetRevision: main
       path: ai-platform-engineering/vault/manifests
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
