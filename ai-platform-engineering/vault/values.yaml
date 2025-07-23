@@ -1,8 +1,7 @@
 # This values file configures the official Vault Helm chart.
 
 # Tell the Vault server about its external address so it can generate correct
-# redirect URLs. This is crucial for fixing the redirect loop when accessing the UI.
+# redirect URLs. Vault will auto-determine the UI path from VAULT_ADDR.
 server:
   extraEnvironmentVars:
     VAULT_ADDR: 'https://cnoe.localtest.me:8443/vault'
-    VAULT_UI_ADDR: 'https://cnoe.localtest.me:8443/ui'

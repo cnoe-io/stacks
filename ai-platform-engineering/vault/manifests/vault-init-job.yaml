@@ -45,20 +45,25 @@ spec:
           
           echo "Tools installed successfully. Checking connectivity..."
           
-          echo "Waiting for Vault to be ready for initialization..."
+          echo "Waiting for Vault to be ready for initialization or unsealing..."
           ATTEMPTS=0
           MAX_ATTEMPTS=24 # 24 * 10s = 120s = 4 minutes
-          until [ "$(curl -s -o /dev/null -w '%{http_code}' http://vault:8200/v1/sys/health)" = "501" ]; do
+          while true; do
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' http://vault:8200/v1/sys/health)
+            # 501 = not initialized (ready for init), 503 = sealed (ready for unseal), 200 = ready
+            if [ "$HTTP_CODE" = "501" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "Vault is ready (HTTP $HTTP_CODE)"
+              break
+            fi
+            
             ATTEMPTS=$((ATTEMPTS + 1))
             if [ "$ATTEMPTS" -gt "$MAX_ATTEMPTS" ]; then
-              echo "Error: Timed out waiting for Vault to become ready."
+              echo "Error: Timed out waiting for Vault to become ready. Last HTTP code: $HTTP_CODE"
               exit 1
             fi
-            echo "Vault not ready yet (attempt $ATTEMPTS/$MAX_ATTEMPTS). Retrying in 10 seconds..."
+            echo "Vault not ready yet (HTTP $HTTP_CODE, attempt $ATTEMPTS/$MAX_ATTEMPTS). Retrying in 10 seconds..."
             sleep 10
           done
-
-          echo "Vault is ready to be initialized."
           
           echo "Checking Vault initialization status..."
           
