@@ -60,9 +60,64 @@ spec:
           echo "Enabling KV v2 secrets engine at path 'secret'..."
           vault secrets enable -path=secret kv-v2 || echo "Secrets engine 'secret' already enabled."
 
-          # Create a secret at the desired path
-          echo "Creating a sample secret at path 'secret/ai-platform-engineering/database'..."
-          vault kv put secret/ai-platform-engineering/database username="db-user" password="super-secret-password-123"
+          # Create agent-specific secrets based on values-secrets.yaml.example structure
+          echo "Creating agent-specific secrets..."
+          
+          # Global secrets (shared across all agents)
+          echo "Creating global secrets..."
+          vault kv put secret/ai-platform-engineering/global \
+            LLM_PROVIDER="azure-openai" \
+            AZURE_OPENAI_API_KEY="" \
+            AZURE_OPENAI_ENDPOINT="" \
+            AZURE_OPENAI_API_VERSION="" \
+            AZURE_OPENAI_DEPLOYMENT="" \
+            OPENAI_API_KEY="" \
+            OPENAI_ENDPOINT="" \
+            OPENAI_MODEL_NAME="" \
+            AWS_ACCESS_KEY_ID="" \
+            AWS_SECRET_ACCESS_KEY="" \
+            AWS_REGION="" \
+            AWS_BEDROCK_MODEL_ID="" \
+            AWS_BEDROCK_PROVIDER=""
+          
+          # ArgoCD agent secrets
+          echo "Creating argocd-secret..."
+          vault kv put secret/ai-platform-engineering/argocd-secret \
+            ARGOCD_TOKEN="" \
+            ARGOCD_API_URL="" \
+            ARGOCD_VERIFY_SSL="true"
+          
+          # PagerDuty agent secrets
+          echo "Creating pagerduty-secret..."
+          vault kv put secret/ai-platform-engineering/pagerduty-secret \
+            PAGERDUTY_API_KEY="" \
+            PAGERDUTY_API_URL=""
+          
+          # GitHub agent secrets
+          echo "Creating github-secret..."
+          vault kv put secret/ai-platform-engineering/github-secret \
+            GITHUB_TOKEN=""
+          
+          # Jira agent secrets
+          echo "Creating jira-secret..."
+          vault kv put secret/ai-platform-engineering/jira-secret \
+            ATLASSIAN_TOKEN="" \
+            ATLASSIAN_EMAIL="" \
+            ATLASSIAN_API_URL=""
+          
+          # Backstage agent secrets (empty data as per example)
+          echo "Creating backstage-secret..."
+          vault kv put secret/ai-platform-engineering/backstage-secret \
+            placeholder="empty"
+          
+          # Slack agent secrets
+          echo "Creating slack-secret..."
+          vault kv put secret/ai-platform-engineering/slack-secret \
+            SLACK_BOT_TOKEN="" \
+            SLACK_APP_TOKEN="" \
+            SLACK_SIGNING_SECRET="" \
+            SLACK_CLIENT_SECRET="" \
+            SLACK_TEAM_ID=""
 
           echo "Vault configuration complete."
 ---
