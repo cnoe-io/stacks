@@ -5,15 +5,5 @@
 server:
   extraEnvironmentVars:
     VAULT_ADDR: 'https://vault.cnoe.localtest.me:8443'
-  
-  # Configure readiness probe to use localhost HTTP endpoint
-  readinessProbe:
-    enabled: true
-    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
-    port: 8200
-    scheme: HTTP
-    initialDelaySeconds: 5
-    periodSeconds: 5
-    timeoutSeconds: 3
-    failureThreshold: 2
-    successThreshold: 1
+    # Explicitly set VAULT_ADDR for internal use to localhost
+    VAULT_ADDR_INTERNAL: 'http://127.0.0.1:8200'
