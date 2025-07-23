@@ -6,6 +6,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
   ingressClassName: "nginx"
   rules:
@@ -13,14 +14,6 @@ spec:
       http:
         paths:
           - path: /vault(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: vault
-                port:
-                  number: 8200
-          # TODO: this might conflict with other ingresses
-          - path: /ui(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:

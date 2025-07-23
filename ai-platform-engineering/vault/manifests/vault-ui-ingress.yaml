@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vault-ui-ingress
+  namespace: vault
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # Note: No rewrite-target annotation here
+spec:
+  ingressClassName: "nginx"
+  tls:
+    - hosts:
+        - cnoe.localtest.me
+      secretName: cnoe-localtest-me-tls
+  rules:
+    - host: cnoe.localtest.me
+      http:
+        paths:
+          - path: /ui
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
+    - host: localhost
+      http:
+        paths:
+          - path: /ui
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
