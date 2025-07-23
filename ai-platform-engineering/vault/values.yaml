@@ -1,7 +1,7 @@
 # This values file configures the official Vault Helm chart.
 
 # Tell the Vault server about its external address so it can generate correct
-# redirect URLs. Vault will auto-determine the UI path from VAULT_ADDR.
+# redirect URLs. Using subdomain eliminates path-based routing conflicts.
 server:
   extraEnvironmentVars:
-    VAULT_ADDR: 'https://cnoe.localtest.me:8443/vault'
+    VAULT_ADDR: 'https://vault.cnoe.localtest.me:8443'
