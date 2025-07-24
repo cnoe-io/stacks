@@ -386,7 +386,7 @@ spec:
         KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
         ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
         ARGO_CD_URL: 'https://argocd-server.argocd.svc.cluster.local/api/v1/'
-        AGENT_FORGE_URL: https://cnoe.localtest.me:8443/agent-forge
+        AGENT_FORGE_URL: https://cnoe.localtest.me:8443/ai-platform-engineering
   data:
     - secretKey: ARGOCD_SESSION_TOKEN
       remoteRef:
