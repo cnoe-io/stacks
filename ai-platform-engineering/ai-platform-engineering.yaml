@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-platform-engineering
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Main chart from GHCR
+    - chart: ai-platform-engineering
+      repoURL: ghcr.io/cnoe-io/helm-charts
+      targetRevision: 0.1.10
+      helm:
+        valueFiles:
+          - $values/helm/values.yaml
+          - $values/helm/values-external-secrets.yaml
+    # Values files from Git repository (your custom branch)
+    - repoURL: https://github.com/cnoe-io/ai-platform-engineering.git
+      targetRevision: idpbuilder-values
+      ref: values
+    # Raw manifests from Git
+    - repoURL: https://github.com/suwhang-cisco/stacks.git
+      targetRevision: main
+      path: ai-platform-engineering/ai-platform-engineering/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-platform-engineering
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
