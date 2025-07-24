@@ -95,7 +95,7 @@ spec:
           # GitHub agent secrets
           echo "Creating github-secret..."
           vault kv put secret/ai-platform-engineering/github-secret \
-            GITHUB_TOKEN=""
+            GITHUB_PERSONAL_ACCESS_TOKEN=""
           
           # Jira agent secrets
           echo "Creating jira-secret..."
