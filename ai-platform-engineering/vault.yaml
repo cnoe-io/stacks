@@ -14,7 +14,7 @@ spec:
       helm:
         valueFiles:
           - $values/ai-platform-engineering/vault/values.yaml
-    - repoURL: https://github.com/suwhang-cisco/stacks.git
+    - repoURL: https://github.com/cnoe-io/stacks.git
       targetRevision: main
       path: ai-platform-engineering/vault/manifests
       ref: values

@@ -21,7 +21,7 @@ spec:
       targetRevision: idpbuilder-values
       ref: values
     # Raw manifests from Git
-    - repoURL: https://github.com/suwhang-cisco/stacks.git
+    - repoURL: https://github.com/cnoe-io/stacks.git
       targetRevision: main
       path: ai-platform-engineering/ai-platform-engineering/manifests
   destination:
