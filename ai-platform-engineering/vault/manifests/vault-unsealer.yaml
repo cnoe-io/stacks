@@ -4,6 +4,8 @@ kind: Deployment
 metadata:
   name: vault-unsealer
   namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
   labels:
     app: vault-unsealer
 spec:

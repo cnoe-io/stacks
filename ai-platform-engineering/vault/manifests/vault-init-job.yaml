@@ -3,6 +3,9 @@ kind: Job
 metadata:
   name: vault-init
   namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   template:
     spec:
