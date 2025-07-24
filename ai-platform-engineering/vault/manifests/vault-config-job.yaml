@@ -4,8 +4,7 @@ metadata:
   name: vault-config
   namespace: vault
   annotations:
-    # This hook ensures the job runs after the main sync, including after the init job
-    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/sync-wave: "1"
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   template:

@@ -97,7 +97,7 @@ data:
         "type": "password",
         "value": "${USER1_PASSWORD}"
     }
-  user-user1.json: |
+user-user1.json: |
     {
         "username": "user1",
         "email": "",
