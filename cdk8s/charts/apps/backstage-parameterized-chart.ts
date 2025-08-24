@@ -371,12 +371,12 @@ clusters:
                 ],
                 resources: {
                   requests: {
-                    cpu: k8s.Quantity.fromString(envName === 'dev' ? '100m' : '200m'),
-                    memory: k8s.Quantity.fromString(envName === 'dev' ? '256Mi' : '512Mi')
+                    cpu: k8s.Quantity.fromString(envName === 'dev' ? '2' : '200m'),
+                    memory: k8s.Quantity.fromString(envName === 'dev' ? '8Gi' : '512Mi')
                   },
                   limits: {
-                    cpu: k8s.Quantity.fromString(envName === 'dev' ? '500m' : '1000m'),
-                    memory: k8s.Quantity.fromString(envName === 'dev' ? '1Gi' : '2Gi')
+                    cpu: k8s.Quantity.fromString(envName === 'dev' ? '8' : '1000m'),
+                    memory: k8s.Quantity.fromString(envName === 'dev' ? '32Gi' : '2Gi')
                   }
                 },
                 imagePullPolicy: 'Always',
@@ -427,7 +427,8 @@ clusters:
         },
         annotations: {
           'nginx.ingress.kubernetes.io/force-ssl-redirect': 'false',
-          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP'
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          'argocd.argoproj.io/sync-wave': '30'
         }
       },
       spec: {

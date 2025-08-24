@@ -6,6 +6,23 @@ import { automatedSyncWithOptions } from '../lib/argocd-sync-builders';
  * Add new applications here to have them automatically synthesized
  */
 export const applicationConfigs: ApplicationConfig[] = [
+  // ArgoCD Configuration - Wave -110 (very early, before everything else)
+  {
+    name: 'argocd-config',
+    namespace: 'argocd',
+    chart: {
+      type: 'ArgoCDConfigChart'
+    },
+    argocd: {
+      syncWave: '-110',  // Apply very early, before any applications
+      labels: {
+        'app.kubernetes.io/component': 'config',
+        'app.kubernetes.io/part-of': 'argocd',
+        'app.kubernetes.io/name': 'argocd-config'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
   // VCluster RBAC - Wave 5 (before vclusters)
   {
     name: 'vcluster-registration-rbac',

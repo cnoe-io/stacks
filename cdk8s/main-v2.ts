@@ -2,6 +2,7 @@ import { App, YamlOutputType } from 'cdk8s';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ArgoApplicationsChartV2 } from './charts/platform/argo-applications-chart-v2';
+import { ArgoCDConfigChart } from './charts/platform/argocd-config-chart';
 import { IdpBuilderChartFactory } from './lib/idpbuilder-chart-factory';
 import { applicationConfigs } from './config/applications';
 
@@ -78,6 +79,7 @@ IdpBuilderChartFactory.register('BackstageStagingApplicationChart', BackstageSta
 IdpBuilderChartFactory.register('BackstageSecretsChart', BackstageSecretsChart);
 IdpBuilderChartFactory.register('NextJsDevApplicationChart', NextJsDevApplicationChart);
 IdpBuilderChartFactory.register('NextJsStagingApplicationChart', NextJsStagingApplicationChart);
+IdpBuilderChartFactory.register('ArgoCDConfigChart', ArgoCDConfigChart);
 
 const outputDir = 'dist';
 

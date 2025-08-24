@@ -1,0 +1,82 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gitea.cnoe.localtest.me:8443"]
+    endpoint = ["https://gitea.cnoe.localtest.me"]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."gitea.cnoe.localtest.me".tls]
+    insecure_skip_verify = true
+nodes:
+- role: control-plane
+  image: "kindest/node:v1.31.4"
+  labels:
+    ingress-ready: "true"
+  extraPortMappings:
+  - containerPort: 443
+    hostPort: 8443
+    protocol: TCP
+  - containerPort: 32222
+    hostPort: 32222
+    protocol: TCP
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      extraArgs:
+        service-account-issuer: "https://oidcissuer65846b7df97b.z13.web.core.windows.net/"
+        service-account-key-file: /etc/kubernetes/pki/sa.pub
+        service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+    controllerManager:
+      extraArgs:
+        service-account-private-key-file: /etc/kubernetes/pki/sa.key
+  preKubeadmCommands:
+  - |
+    cat > /etc/kubernetes/pki/sa.key <<'EOF'
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEowIBAAKCAQEAvHAR5NTaNwso5pFFlqbkhbpvcdfY5pQLp1Gtav5ze9hHwFXt
+    sXkDIINOqtMKrZrEccB0WLyQBtsNIC3preyo6fwUo7tHEjaGLnbn25pQ4u9s5J5g
+    LleAU8WNQEGiUiuHeaoLXqOx392SkE76tiv9HcEgZh/xDuvYQSeMk1RSX6LWhapb
+    2fUV2BXxJ7Z7ORcfXdNhOkSrKhMnAT2tYdMbFwlwasK4pqkNT2Z351DWn2G3PCYM
+    gWrDYsm0HNfe4XliN334pqpZ/1bzABvxIz3r+nNgmUH4Mv4HPZlNUp1FIck9UpfG
+    dpkQ0l+hhxXccRGbtjGXDbndU6ePH1BM5hiFKQIDAQABAoIBAAQMZFYGPKnyE27g
+    sB4Md9xnpP1NJdvOUnHFz3P9A34lp2T6c6DceLS6HXaOEiyopo/LErTVWELNcfq/
+    AcY6z2Y3hDoATAaYJUnaRCDzr8kwW6aNwIM+XgNuuxomTtZ1GPQEMzpVSf0FRaDU
+    EY7YYxfAjnGjPgqUBpFfyCViKmLjk0NAOAJyX16PTMrFW53Cu3hNrUNMR0/SPgAi
+    GiZAplVfZwdTBmLysMQj7MmJ6ZNI25xs39vXUcRXfUqtgPHOE03VuprqEHWAlrKr
+    b0VPL6Fv5zbO92oJLGlpjTHQgOjFWk98FA403sHArEqo/37fFi0YusY/Cwh1hE68
+    UKwHNgECgYEA6kymtdvz+nZmFzWw+mG5c/rn6KpapOhksBGZYUJJBTS7ap/aPP42
+    EB3rGWMY2WEG7EC3f1PbO/UCv43dxorQLIWRzHwb+T0rFRyQjsKx/thhiQReNm6q
+    vqwe21FZfnp1cWYVmbE+6UZCdFBE0OLrgX9PB+QbgNqkC/cq4Qg6ZgMCgYEAzeQE
+    gpk1I/B5bHpbnV17/b5ZARy5jMir85hZs1TZQGzl8x1xoGPjxK24Sp0ush3pigWG
+    f/T7mawYHORJb7yoR+Sk0d4SINZYMaj5k7JIHnltXC3yoCFPM7wHyh7GMJqNawtY
+    zc9dnZ2sE+F9vnzzuuiJ2vwyfgSM09aUExO1BmMCgYAEx6WLBj62+F1i0dSXdxDq
+    fc7nXzpULO2I7gL8CfclZQsBxNsV7XW65HFcZjomjSUwAq37qgFJ+tiggctpdoGC
+    twLfchS8A/RyDNAiKXSqJ03uFqm5YI6ZLze9763st6DXvGZqaURITAelCdItlMOL
+    M8av+YZaHZvFJri4OIvAcwKBgQCSSp/Bw+Z0QNul7lLGP7RoGSXYmnZkx/kVvnyN
+    5Y3wLvA8jAE+e3tNNjoqGgEh4gscXMyygnl7OUJw1OwxDpVrb9SEoguzdVl4/51G
+    Cnkf3huMUcGBcel60vGd9bvQsSAmnQteQSc9ZNjtz1yvSs1LUwsQo/2keMsvgdn4
+    rBoGDQKBgFTzJWVMyY82GxgfnE65S5oWnRu7cFwDFOw/IkWwXaF6a9gHeAHEN2Mi
+    is1PN02500jb18Meh+jEMzgXP7StBUTDXT0b8fscTl5NWhBajimdnrd57v/Co/g5
+    ieiMkJAwxQW5tkE11qq8GYsFtttjOXxkkc07tMS9A5qxVIze0A6l
+    -----END RSA PRIVATE KEY-----
+    EOF
+  - chmod 600 /etc/kubernetes/pki/sa.key
+  - |
+    cat > /etc/kubernetes/pki/sa.pub <<'EOF'
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvHAR5NTaNwso5pFFlqbk
+    hbpvcdfY5pQLp1Gtav5ze9hHwFXtsXkDIINOqtMKrZrEccB0WLyQBtsNIC3preyo
+    6fwUo7tHEjaGLnbn25pQ4u9s5J5gLleAU8WNQEGiUiuHeaoLXqOx392SkE76tiv9
+    HcEgZh/xDuvYQSeMk1RSX6LWhapb2fUV2BXxJ7Z7ORcfXdNhOkSrKhMnAT2tYdMb
+    FwlwasK4pqkNT2Z351DWn2G3PCYMgWrDYsm0HNfe4XliN334pqpZ/1bzABvxIz3r
+    +nNgmUH4Mv4HPZlNUp1FIck9UpfGdpkQ0l+hhxXccRGbtjGXDbndU6ePH1BM5hiF
+    KQIDAQAB
+    -----END PUBLIC KEY-----
+    EOF
+  - chmod 644 /etc/kubernetes/pki/sa.pub
+  - ls -la /etc/kubernetes/pki/sa.*

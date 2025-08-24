@@ -6,6 +6,9 @@ containerdConfigPatches:
     endpoint = ["https://gitea.cnoe.localtest.me"]
   [plugins."io.containerd.grpc.v1.cri".registry.configs."gitea.cnoe.localtest.me".tls]
     insecure_skip_verify = true
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6443
 nodes:
 - role: control-plane
   image: "kindest/node:v1.31.4"
@@ -19,20 +22,20 @@ nodes:
     hostPort: 32222
     protocol: TCP
   extraMounts:
-    - hostPath: /home/vpittamp/stacks/ref-implementation/keys/sa.key
-      containerPath: /etc/kubernetes/pki/sa.key
-      readOnly: true
-    - hostPath: /home/vpittamp/stacks/ref-implementation/keys/sa.pub
-      containerPath: /etc/kubernetes/pki/sa.pub
+    - hostPath: /mnt/wsl/docker-desktop-bind-mounts/kind-keys
+      containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration
     apiServer:
+      certSANs:
+      - "localhost"
+      - "127.0.0.1"
       extraArgs:
         service-account-issuer: "https://oidcissuer65846b7df97b.z13.web.core.windows.net/"
-        service-account-key-file: /etc/kubernetes/pki/sa.pub
-        service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+        service-account-key-file: /etc/kubernetes/pki/custom-keys/sa.pub
+        service-account-signing-key-file: /etc/kubernetes/pki/custom-keys/sa.key
     controllerManager:
       extraArgs:
-        service-account-private-key-file: /etc/kubernetes/pki/sa.key
+        service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
