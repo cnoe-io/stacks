@@ -47,7 +47,7 @@ fi
 
 # Step 2: Create cluster without mounted keys
 echo -e "${GREEN}Creating Kind cluster...${NC}"
-idpbuilder create --kind-config ${SCRIPT_DIR}/kind-config-nixos.yaml $IDPBUILDER_ARGS
+idpbuilder create --kind-config ${SCRIPT_DIR}/kind-config-nixos.yaml --dev-password $IDPBUILDER_ARGS
 
 # Step 3: Wait for cluster to be ready
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
@@ -187,7 +187,7 @@ if command -v vcluster &>/dev/null; then
             # Use the ingress URL for direct access (no port-forwarding needed)
             INGRESS_URL="https://${ENV}-vcluster.cnoe.localtest.me:8443"
             
-            if vcluster connect "${NAME}" -n "${NAMESPACE}" --server "${INGRESS_URL}" --insecure --print --update-current=false > "${TEMP_CONFIG}" 2>/dev/null; then
+            if vcluster connect "${NAME}" -n "${NAMESPACE}" --server "${INGRESS_URL}" --insecure --print > "${TEMP_CONFIG}" 2>/dev/null; then
                 # Backup current config if not already backed up
                 if [ ! -f ~/.kube/config.pre-vcluster ]; then
                     cp ~/.kube/config ~/.kube/config.pre-vcluster

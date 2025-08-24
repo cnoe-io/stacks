@@ -16,3 +16,30 @@ certificates/idpbuilder-static-cert.sh
 certificates/tls.key
 certificates/ca.crt
 certificates/tls.crt
+
+# DevSpace
+.devspace/
+**/.devspace/logs/
+
+# Kubeconfigs
+**/kubeconfig.yaml
+**/.kube/
+
+# CDK8s build artifacts
+cdk8s/dist/
+cdk8s/imports/
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+*~
+*.swp
+*.orig
+
+# OS files
+.DS_Store
+Thumbs.db

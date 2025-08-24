@@ -1,7 +1,7 @@
 {
   "dev": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "docker.io/vpittamp23/backstage-nixos:dev",
+    "backstage": "docker.io/vpittamp23/backstage-devcontainer:v2.0.0",
     "flagdUi": "ghcr.io/vpittamp/devspace-containers/typescript:20",
     "claudecodeui": "ghcr.io/vpittamp/devspace-containers/typescript:20"
   },

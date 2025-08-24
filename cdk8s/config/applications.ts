@@ -6,7 +6,23 @@ import { automatedSyncWithOptions } from '../lib/argocd-sync-builders';
  * Add new applications here to have them automatically synthesized
  */
 export const applicationConfigs: ApplicationConfig[] = [
-  // ArgoCD Configuration - Wave -110 (very early, before everything else)
+  // ArgoCD Configuration - DISABLED
+  // IDPBuilder manages ArgoCD directly. To customize ArgoCD's ConfigMap, use:
+  // idpbuilder create -c argocd:/path/to/argocd-cm-override.yaml
+  // See: https://cnoe.io/docs/idpbuilder/override
+  //
+  // If we need custom health checks, create a file with:
+  // apiVersion: v1
+  // kind: ConfigMap
+  // metadata:
+  //   name: argocd-cm
+  // data:
+  //   resource.customizations.health.networking.k8s.io_Ingress: |
+  //     hs = {}
+  //     hs.status = "Healthy"
+  //     hs.message = "Ingress is always considered healthy"
+  //     return hs
+  /*
   {
     name: 'argocd-config',
     namespace: 'argocd',
@@ -23,6 +39,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
     }
   },
+  */
   // VCluster RBAC - Wave 5 (before vclusters)
   {
     name: 'vcluster-registration-rbac',

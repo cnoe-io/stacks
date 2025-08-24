@@ -1,0 +1,76 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gitea.cnoe.localtest.me:8443"]
+    endpoint = ["https://gitea.cnoe.localtest.me"]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."gitea.cnoe.localtest.me".tls]
+    insecure_skip_verify = true
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6443
+nodes:
+- role: control-plane
+  image: "kindest/node:v1.31.4"
+  labels:
+    ingress-ready: "true"
+  extraPortMappings:
+  # Standard IDPBuilder ports
+  - containerPort: 443
+    hostPort: 8443
+    protocol: TCP
+  - containerPort: 32222
+    hostPort: 32222
+    protocol: TCP
+  
+  # DevSpace SSH ports for development containers
+  # Following the pattern: 300XX for different services/environments
+  
+  # Backstage SSH ports
+  - containerPort: 30022
+    hostPort: 30022
+    protocol: TCP
+    listenAddress: "0.0.0.0"  # Accessible from Windows/WSL
+  - containerPort: 30023
+    hostPort: 30023
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
+  # NextJS SSH ports
+  - containerPort: 30024
+    hostPort: 30024
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  - containerPort: 30025
+    hostPort: 30025
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
+  # Additional service SSH ports (reserved for future use)
+  - containerPort: 30026
+    hostPort: 30026
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  - containerPort: 30027
+    hostPort: 30027
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
+  # NO extraMounts - we'll copy keys after cluster creation on NixOS
+  # This avoids the symlink/mount issues with NixOS
+  
+  kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      certSANs:
+      - "localhost"
+      - "127.0.0.1"
+      extraArgs:
+        service-account-issuer: "https://oidcissuer65846b7df97b.z13.web.core.windows.net/"
+        # Using default paths - will replace keys after cluster creation
+        service-account-key-file: /etc/kubernetes/pki/sa.pub
+        service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+    controllerManager:
+      extraArgs:
+        service-account-private-key-file: /etc/kubernetes/pki/sa.key

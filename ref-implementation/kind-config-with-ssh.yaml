@@ -15,17 +15,51 @@ nodes:
   labels:
     ingress-ready: "true"
   extraPortMappings:
+  # Standard IDPBuilder ports
   - containerPort: 443
     hostPort: 8443
     protocol: TCP
   - containerPort: 32222
     hostPort: 32222
     protocol: TCP
-  # Mount the pre-existing keys to ensure consistent signing across recreations
+  
+  # DevSpace SSH ports for development containers
+  # Following the pattern: 300XX for different services/environments
+  
+  # Backstage SSH ports
+  - containerPort: 30022
+    hostPort: 30022
+    protocol: TCP
+    listenAddress: "0.0.0.0"  # Accessible from Windows/WSL
+  - containerPort: 30023
+    hostPort: 30023
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
+  # NextJS SSH ports (if needed)
+  - containerPort: 30024
+    hostPort: 30024
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  - containerPort: 30025
+    hostPort: 30025
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
+  # Additional service SSH ports (reserved for future use)
+  - containerPort: 30026
+    hostPort: 30026
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  - containerPort: 30027
+    hostPort: 30027
+    protocol: TCP
+    listenAddress: "0.0.0.0"
+  
   extraMounts:
-  - hostPath: /home/vpittamp/stacks/ref-implementation/keys
-    containerPath: /etc/kubernetes/pki/custom-keys
-    readOnly: true
+    - hostPath: /mnt/wsl/docker-desktop-bind-mounts/kind-keys
+      containerPath: /etc/kubernetes/pki/custom-keys
+      readOnly: true
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration

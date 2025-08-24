@@ -2,6 +2,7 @@ import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import * as images from '../../../.env-files/images.json';
+import { DevSpaceSSHConstruct, SSHNodePortAllocator } from '../../lib/devspace-ssh-construct';
 
 export interface BackstageParameterizedChartProps extends ChartProps {
   environmentName: string;
@@ -113,6 +114,15 @@ export class BackstageParameterizedChart extends Chart {
           environment: envName,
         }
       }
+    });
+
+    // DevSpace SSH Service using reusable construct
+    // This follows our standard pattern for SSH access to development containers
+    new DevSpaceSSHConstruct(this, `${envName}-backstage-ssh`, {
+      namespace: namespace,
+      appName: 'backstage',
+      environment: envName,
+      nodePort: SSHNodePortAllocator.getPort('backstage', envName)
     });
 
     // PostgreSQL Service (each environment gets its own database)
@@ -303,8 +313,7 @@ clusters:
               {
                 name: 'backstage',
                 image: imageRef,
-                // Dev containers sleep by default for development
-                ...(envName === 'dev' ? { command: ['sleep', 'infinity'] } : {}),
+                // Devcontainer entrypoint handles the sleep, no need to override
                 env: [
                   {
                     name: 'LOG_LEVEL',
@@ -321,6 +330,19 @@ clusters:
                   {
                     name: 'ENVIRONMENT',
                     value: envName
+                  },
+                  // NixOS devcontainer activation
+                  {
+                    name: 'NIXOS_CONFIG_ACTIVATE',
+                    value: 'true'
+                  },
+                  {
+                    name: 'NIXOS_CONFIG_GITHUB',
+                    value: 'https://github.com/vpittamp/nixos-config'
+                  },
+                  {
+                    name: 'NIXOS_PACKAGES',
+                    value: 'essential,nodejs_20,yarn,kubectl,devspace,gh'
                   },
                   {
                     name: 'POSTGRES_HOST',
@@ -365,7 +387,7 @@ clusters:
                 volumeMounts: [
                   {
                     name: 'k8s-config',
-                    mountPath: '/app/k8s-config.yaml',
+                    mountPath: '/workspace/k8s-config.yaml',
                     subPath: 'k8s-config.yaml'
                   }
                 ],
