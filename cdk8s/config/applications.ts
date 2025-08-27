@@ -851,6 +851,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'backstage-dev',
     namespace: 'backstage',
     chart: { 
+      // Use parameterized chart with External Secrets for vcluster deployment
       type: 'BackstageParameterizedChart',
       props: {
         environmentName: 'dev'
@@ -870,7 +871,8 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'backstage-staging',
     namespace: 'backstage',
     chart: { 
-      type: 'BackstageParameterizedChart',
+      // Always use enhanced chart with External Secrets
+      type: 'BackstageEnhancedChart',
       props: {
         environmentName: 'staging'
       }

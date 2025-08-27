@@ -50,5 +50,98 @@ export class BackstageSecretsChart extends Chart {
         'argocd.argoproj.io/sync-wave': '-10',
       }),
     );
+
+    // ---------------------------------------------------------------------
+    // SSH Keys for Development Access
+    // ---------------------------------------------------------------------
+    
+    // SSH Authorized Keys from Azure Key Vault (for each environment)
+    ['dev', 'staging'].forEach(envName => {
+      new ExternalSecret(this, `${envName}-ssh-keys-external`, {
+        metadata: {
+          name: `backstage-ssh-keys-${envName}`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+            purpose: 'ssh-keys'
+          }
+        },
+        spec: {
+          refreshInterval: '24h',
+          secretStoreRef: {
+            name: 'azure-keyvault-store',
+            kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE
+          },
+          target: {
+            name: `backstage-ssh-keys-${envName}`,
+            creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER
+          },
+          data: [
+            {
+              secretKey: 'authorized_keys',
+              remoteRef: {
+                key: `BACKSTAGE-SSH-AUTHORIZED-KEYS-${envName.toUpperCase()}`,
+                conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+              }
+            }
+          ]
+        }
+      });
+
+      // SSH Host Keys from Azure Key Vault
+      new ExternalSecret(this, `${envName}-ssh-host-keys-external`, {
+        metadata: {
+          name: `backstage-ssh-host-keys-${envName}`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+            purpose: 'ssh-host-keys'
+          }
+        },
+        spec: {
+          refreshInterval: '24h',
+          secretStoreRef: {
+            name: 'azure-keyvault-store',
+            kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE
+          },
+          target: {
+            name: `backstage-ssh-host-keys-${envName}`,
+            creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER
+          },
+          data: [
+            {
+              secretKey: 'ssh_host_rsa_key',
+              remoteRef: {
+                key: `BACKSTAGE-SSH-HOST-RSA-KEY-${envName.toUpperCase()}`,
+                conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+              }
+            },
+            {
+              secretKey: 'ssh_host_ed25519_key',
+              remoteRef: {
+                key: `BACKSTAGE-SSH-HOST-ED25519-KEY-${envName.toUpperCase()}`,
+                conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+              }
+            },
+            {
+              secretKey: 'ssh_host_rsa_key.pub',
+              remoteRef: {
+                key: `BACKSTAGE-SSH-HOST-RSA-KEY-PUB-${envName.toUpperCase()}`,
+                conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+              }
+            },
+            {
+              secretKey: 'ssh_host_ed25519_key.pub',
+              remoteRef: {
+                key: `BACKSTAGE-SSH-HOST-ED25519-KEY-PUB-${envName.toUpperCase()}`,
+                conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+              }
+            }
+          ]
+        }
+      });
+    });
   }
 }
