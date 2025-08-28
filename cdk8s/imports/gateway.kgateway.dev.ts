@@ -2814,9 +2814,14 @@ export interface GatewayParametersSpecKubeService {
   readonly extraLabels?: { [key: string]: string };
 
   /**
+   * @schema GatewayParametersSpecKubeService#ports
+   */
+  readonly ports?: GatewayParametersSpecKubeServicePorts[];
+
+  /**
    * @schema GatewayParametersSpecKubeService#type
    */
-  readonly type?: string;
+  readonly type?: GatewayParametersSpecKubeServiceType;
 
 }
 
@@ -2830,6 +2835,7 @@ export function toJson_GatewayParametersSpecKubeService(obj: GatewayParametersSp
     'clusterIP': obj.clusterIp,
     'extraAnnotations': ((obj.extraAnnotations) === undefined) ? undefined : (Object.entries(obj.extraAnnotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
     'extraLabels': ((obj.extraLabels) === undefined) ? undefined : (Object.entries(obj.extraLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'ports': obj.ports?.map(y => toJson_GatewayParametersSpecKubeServicePorts(y)),
     'type': obj.type,
   };
   // filter undefined values
@@ -4231,6 +4237,51 @@ export function toJson_GatewayParametersSpecKubeSdsContainerSecurityContext(obj:
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * @schema GatewayParametersSpecKubeServicePorts
+ */
+export interface GatewayParametersSpecKubeServicePorts {
+  /**
+   * @schema GatewayParametersSpecKubeServicePorts#nodePort
+   */
+  readonly nodePort?: number;
+
+  /**
+   * @schema GatewayParametersSpecKubeServicePorts#port
+   */
+  readonly port: number;
+
+}
+
+/**
+ * Converts an object of type 'GatewayParametersSpecKubeServicePorts' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GatewayParametersSpecKubeServicePorts(obj: GatewayParametersSpecKubeServicePorts | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'nodePort': obj.nodePort,
+    'port': obj.port,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema GatewayParametersSpecKubeServiceType
+ */
+export enum GatewayParametersSpecKubeServiceType {
+  /** ClusterIP */
+  CLUSTER_IP = "ClusterIP",
+  /** NodePort */
+  NODE_PORT = "NodePort",
+  /** LoadBalancer */
+  LOAD_BALANCER = "LoadBalancer",
+  /** ExternalName */
+  EXTERNAL_NAME = "ExternalName",
+}
+
+/**
  * @schema GatewayParametersSpecKubeAiExtensionEnvValueFrom
  */
 export interface GatewayParametersSpecKubeAiExtensionEnvValueFrom {
@@ -4880,6 +4931,11 @@ export interface GatewayParametersSpecKubeIstioCustomSidecarsLifecycle {
    */
   readonly preStop?: GatewayParametersSpecKubeIstioCustomSidecarsLifecyclePreStop;
 
+  /**
+   * @schema GatewayParametersSpecKubeIstioCustomSidecarsLifecycle#stopSignal
+   */
+  readonly stopSignal?: string;
+
 }
 
 /**
@@ -4891,6 +4947,7 @@ export function toJson_GatewayParametersSpecKubeIstioCustomSidecarsLifecycle(obj
   const result = {
     'postStart': toJson_GatewayParametersSpecKubeIstioCustomSidecarsLifecyclePostStart(obj.postStart),
     'preStop': toJson_GatewayParametersSpecKubeIstioCustomSidecarsLifecyclePreStop(obj.preStop),
+    'stopSignal': obj.stopSignal,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});

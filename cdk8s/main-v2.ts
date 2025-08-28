@@ -37,11 +37,19 @@ import { VclusterRegistrationJobChart } from './charts/vcluster-registration-job
 import { VclusterRegistrationCronJobChart } from './charts/vcluster-registration-cronjob-chart';
 import { NextJsParameterizedChart } from './charts/apps/nextjs-parameterized-chart';
 import { BackstageParameterizedChart } from './charts/apps/backstage-parameterized-chart';
+import { BackstageEnhancedChart } from './charts/apps/backstage-enhanced-chart';
 import { BackstageDevApplicationChart } from './charts/apps/backstage-dev-application-chart';
 import { BackstageStagingApplicationChart } from './charts/apps/backstage-staging-application-chart';
 import { BackstageSecretsChart } from './charts/secrets/backstage-secrets-chart';
 import { NextJsDevApplicationChart } from './charts/apps/nextjs-dev-application-chart';
 import { NextJsStagingApplicationChart } from './charts/apps/nextjs-staging-application-chart';
+import { KGatewayNamespaceChart } from './charts/platform/kgateway-namespace-chart';
+import { KGatewayCRDsChart } from './charts/platform/kgateway-crds-chart';
+import { KGatewayHelmChart } from './charts/platform/kgateway-helm-chart';
+import { KGatewayGatewayClassChart } from './charts/platform/kgateway-gatewayclass-chart';
+import { KGatewayMCPServersChart } from './charts/platform/kgateway-mcp-servers-chart';
+import { KGatewayMCPGatewayChart } from './charts/platform/kgateway-mcp-gateway-chart';
+import { KGatewayMCPRoutesChart } from './charts/platform/kgateway-mcp-routes-chart';
 
 // Register all charts
 IdpBuilderChartFactory.register('BootstrapSecretsChart', BootstrapSecretsChart);
@@ -74,12 +82,20 @@ IdpBuilderChartFactory.register('VclusterRegistrationJobChart', VclusterRegistra
 IdpBuilderChartFactory.register('VclusterRegistrationCronJobChart', VclusterRegistrationCronJobChart);
 IdpBuilderChartFactory.register('NextJsParameterizedChart', NextJsParameterizedChart);
 IdpBuilderChartFactory.register('BackstageParameterizedChart', BackstageParameterizedChart);
+IdpBuilderChartFactory.register('BackstageEnhancedChart', BackstageEnhancedChart);
 IdpBuilderChartFactory.register('BackstageDevApplicationChart', BackstageDevApplicationChart);
 IdpBuilderChartFactory.register('BackstageStagingApplicationChart', BackstageStagingApplicationChart);
 IdpBuilderChartFactory.register('BackstageSecretsChart', BackstageSecretsChart);
 IdpBuilderChartFactory.register('NextJsDevApplicationChart', NextJsDevApplicationChart);
 IdpBuilderChartFactory.register('NextJsStagingApplicationChart', NextJsStagingApplicationChart);
 IdpBuilderChartFactory.register('ArgoCDConfigChart', ArgoCDConfigChart);
+IdpBuilderChartFactory.register('KGatewayNamespaceChart', KGatewayNamespaceChart);
+IdpBuilderChartFactory.register('KGatewayCRDsChart', KGatewayCRDsChart);
+IdpBuilderChartFactory.register('KGatewayHelmChart', KGatewayHelmChart);
+IdpBuilderChartFactory.register('KGatewayGatewayClassChart', KGatewayGatewayClassChart);
+IdpBuilderChartFactory.register('KGatewayMCPServersChart', KGatewayMCPServersChart);
+IdpBuilderChartFactory.register('KGatewayMCPGatewayChart', KGatewayMCPGatewayChart);
+IdpBuilderChartFactory.register('KGatewayMCPRoutesChart', KGatewayMCPRoutesChart);
 
 const outputDir = 'dist';
 

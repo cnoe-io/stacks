@@ -202,6 +202,11 @@ export interface LocalbuildSpecPackageConfigs {
   readonly customPackageDirs?: string[];
 
   /**
+   * @schema LocalbuildSpecPackageConfigs#customPackageFiles
+   */
+  readonly customPackageFiles?: string[];
+
+  /**
    * @schema LocalbuildSpecPackageConfigs#customPackageUrls
    */
   readonly customPackageUrls?: string[];
@@ -229,6 +234,7 @@ export function toJson_LocalbuildSpecPackageConfigs(obj: LocalbuildSpecPackageCo
   const result = {
     'argoPackageConfigs': toJson_LocalbuildSpecPackageConfigsArgoPackageConfigs(obj.argoPackageConfigs),
     'customPackageDirs': obj.customPackageDirs?.map(y => y),
+    'customPackageFiles': obj.customPackageFiles?.map(y => y),
     'customPackageUrls': obj.customPackageUrls?.map(y => y),
     'embeddedArgoApplicationsPackageConfigs': toJson_LocalbuildSpecPackageConfigsEmbeddedArgoApplicationsPackageConfigs(obj.embeddedArgoApplicationsPackageConfigs),
     'packageCustomization': ((obj.packageCustomization) === undefined) ? undefined : (Object.entries(obj.packageCustomization).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: toJson_LocalbuildSpecPackageConfigsPackageCustomization(i[1]) }), {})),

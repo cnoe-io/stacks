@@ -43,3 +43,4 @@ cdk8s/imports/
 # OS files
 .DS_Store
 Thumbs.db
+ref-implementation/jwks.json
