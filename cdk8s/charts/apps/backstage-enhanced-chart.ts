@@ -268,6 +268,16 @@ clusters:
                     name: 'NODE_ENV',
                     value: envName === 'dev' ? 'development' : 'production'
                   },
+                  // Backend Auth Configuration
+                  {
+                    name: 'BACKEND_SECRET',
+                    valueFrom: {
+                      secretKeyRef: {
+                        name: `backstage-backend-auth-${envName}`,
+                        key: 'secret'
+                      }
+                    }
+                  },
                   // Database Configuration
                   {
                     name: 'POSTGRES_SERVICE_HOST',
@@ -386,6 +396,39 @@ clusters:
    * Create External Secrets resources from Azure Key Vault
    */
   private createExternalSecrets(envName: string, namespace: string, enableCodeTunnel: boolean) {
+    // Backend Auth Secret
+    new ExternalSecret(this, `${envName}-backend-auth-external`, {
+      metadata: {
+        name: `backstage-backend-auth-${envName}`,
+        namespace: namespace,
+        labels: {
+          app: `backstage-${envName}`,
+          environment: envName,
+          purpose: 'backend-auth'
+        }
+      },
+      spec: {
+        refreshInterval: '15m',
+        secretStoreRef: {
+          name: 'azure-keyvault-store',
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE
+        },
+        target: {
+          name: `backstage-backend-auth-${envName}`,
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER
+        },
+        data: [
+          {
+            secretKey: 'secret',
+            remoteRef: {
+              key: 'BACKSTAGE-BACKEND-AUTH-SECRET',
+              conversionStrategy: ExternalSecretSpecDataRemoteRefConversionStrategy.DEFAULT
+            }
+          }
+        ]
+      }
+    });
+
     // SSH Keys from Azure Key Vault
     new ExternalSecret(this, `${envName}-ssh-keys-external`, {
       metadata: {

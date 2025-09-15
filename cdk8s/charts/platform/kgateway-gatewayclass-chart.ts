@@ -68,16 +68,10 @@ export class KGatewayGatewayClassChart extends Chart {
             type: 'LoadBalancer',
             ports: [
               {
-                name: 'http',
                 port: 80,
-                targetPort: 8080,
-                protocol: 'TCP',
               },
               {
-                name: 'https',
                 port: 443,
-                targetPort: 8443,
-                protocol: 'TCP',
               },
             ],
             extraAnnotations: {
@@ -99,7 +93,7 @@ export class KGatewayGatewayClassChart extends Chart {
           // Envoy container configuration
           envoyContainer: {
             image: {
-              repository: 'docker.io/envoyproxy/envoy',
+              repository: 'docker.io/envoyproxy/envoy',  // Use full Docker Hub path
               tag: 'v1.33.0',
               pullPolicy: 'IfNotPresent',
             },
@@ -127,7 +121,7 @@ export class KGatewayGatewayClassChart extends Chart {
           aiExtension: {
             enabled: true,
             image: {
-              repository: 'cr.kgateway.dev/kgateway-dev/ai-extension',
+              repository: 'cr.kgateway.dev/kgateway-dev/ai-extension',  // Use full registry path
               tag: 'v2.0.4',
               pullPolicy: 'IfNotPresent',
             },
@@ -225,6 +219,141 @@ export class KGatewayGatewayClassChart extends Chart {
           namespace: namespace,
         },
       ],
+    });
+
+    // Create AgentGateway GatewayClass for MCP support
+    new ApiObject(this, 'agentgateway-class', {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'GatewayClass',
+      metadata: {
+        name: 'agentgateway',
+        labels: {
+          'app.kubernetes.io/name': 'agentgateway',
+          'app.kubernetes.io/component': 'gatewayclass',
+          'app.kubernetes.io/part-of': 'kgateway',
+          'app.kubernetes.io/managed-by': 'cdk8s',
+        },
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-80',
+          'gateway.kgateway.dev/description': 'AgentGateway controller for MCP protocol support',
+        },
+      },
+      spec: {
+        controllerName: 'kgateway.dev/kgateway',  // Use the same controller as kgateway
+        description: 'AgentGateway - MCP protocol support with dynamic discovery',
+        parametersRef: {
+          group: 'gateway.kgateway.dev',
+          kind: 'GatewayParameters',
+          name: 'agentgateway-params',
+          namespace: namespace,
+        },
+      },
+    });
+
+    // Create GatewayParameters for AgentGateway
+    new ApiObject(this, 'agentgateway-parameters', {
+      apiVersion: 'gateway.kgateway.dev/v1alpha1',
+      kind: 'GatewayParameters',
+      metadata: {
+        name: 'agentgateway-params',
+        namespace: namespace,
+        labels: {
+          'app.kubernetes.io/name': 'agentgateway',
+          'app.kubernetes.io/component': 'parameters',
+          'app.kubernetes.io/part-of': 'kgateway',
+        },
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-81',
+        },
+      },
+      spec: {
+        // Use kube mode for Kubernetes deployment
+        kube: {
+          // Deployment configuration
+          deployment: {
+            replicas: 2,
+          },
+          // Service configuration
+          service: {
+            type: 'LoadBalancer', // Use LoadBalancer for AgentGateway
+            ports: [
+              {
+                port: 8080,
+              },
+            ],
+            extraAnnotations: {
+              'service.beta.kubernetes.io/azure-load-balancer-internal': 'true',
+            },
+          },
+          // Pod template configuration
+          podTemplate: {
+            extraLabels: {
+              'app.kubernetes.io/managed-by': 'agentgateway',
+              'gateway.kgateway.dev/proxy': 'true',
+              'gateway.kgateway.dev/type': 'agentgateway',
+            },
+            extraAnnotations: {
+              'prometheus.io/scrape': 'true',
+              'prometheus.io/port': '9090',
+              'prometheus.io/path': '/metrics',
+            },
+          },
+          // Envoy container configuration
+          envoyContainer: {
+            image: {
+              repository: 'docker.io/envoyproxy/envoy',  // Use full Docker Hub path
+              tag: 'v1.33.0',
+              pullPolicy: 'IfNotPresent',
+            },
+            resources: {
+              requests: {
+                cpu: '200m',
+                memory: '256Mi',
+              },
+              limits: {
+                cpu: '1000m',
+                memory: '1Gi',
+              },
+            },
+            securityContext: {
+              allowPrivilegeEscalation: false,
+              capabilities: {
+                drop: ['ALL'],
+              },
+              readOnlyRootFilesystem: true,
+              runAsNonRoot: true,
+              runAsUser: 10001,
+            },
+          },
+          // AI extension configuration for MCP support - required for AgentGateway
+          aiExtension: {
+            enabled: true,
+            image: {
+              repository: 'cr.kgateway.dev/kgateway-dev/ai-extension',  // Use full registry path
+              tag: 'v2.1.0-main',
+              pullPolicy: 'IfNotPresent',
+            },
+            env: [
+              {
+                name: 'LOG_LEVEL',
+                value: 'info',
+              },
+              {
+                name: 'LOG_FORMAT',
+                value: 'json',
+              },
+              {
+                name: 'MCP_DISCOVERY_ENABLED',
+                value: 'true',
+              },
+              {
+                name: 'MCP_PROTOCOL_SUPPORT',
+                value: 'sse,http',
+              },
+            ],
+          },
+        },
+      },
     });
   }
 }

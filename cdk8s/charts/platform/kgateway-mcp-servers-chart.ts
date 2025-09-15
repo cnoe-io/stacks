@@ -188,11 +188,13 @@ export class KGatewayMCPServersChart extends Chart {
           'app.kubernetes.io/name': 'grafana-mcp',
           'app.kubernetes.io/component': 'mcp-server',
           'app.kubernetes.io/part-of': 'kgateway',
+          'mcp.kgateway.dev/enabled': 'true',  // Enable dynamic discovery
         },
         annotations: {
           'mcp.kgateway.dev/tools': 'grafana_*',
           'mcp.kgateway.dev/discovery': 'enabled',
           'mcp.kgateway.dev/description': 'Grafana dashboard and data source management',
+          'kgateway.dev/mcp-path': '/mcp',  // Optional: customize MCP endpoint path
           'argocd.argoproj.io/sync-wave': '11',
         },
       },
@@ -308,6 +310,7 @@ export class KGatewayMCPServersChart extends Chart {
           'app.kubernetes.io/name': 'echo-mcp',
           'app.kubernetes.io/component': 'mcp-server',
           'app.kubernetes.io/part-of': 'kgateway',
+          'mcp.kgateway.dev/enabled': 'true',  // Enable dynamic discovery
         },
         annotations: {
           'mcp.kgateway.dev/tools': 'echo',
@@ -423,6 +426,7 @@ export class KGatewayMCPServersChart extends Chart {
           'app.kubernetes.io/name': 'text-tools-mcp',
           'app.kubernetes.io/component': 'mcp-server',
           'app.kubernetes.io/part-of': 'kgateway',
+          'mcp.kgateway.dev/enabled': 'true',  // Enable dynamic discovery
         },
         annotations: {
           'mcp.kgateway.dev/tools': 'text_*',

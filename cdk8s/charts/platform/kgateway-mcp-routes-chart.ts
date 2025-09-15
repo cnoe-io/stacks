@@ -12,6 +12,44 @@ export class KGatewayMCPRoutesChart extends Chart {
     const kgatewayNamespace = 'kgateway-system';
     const mcpServersNamespace = 'mcp-servers';
 
+    // Create main MCP HTTPRoute that references the Backend
+    new ApiObject(this, 'mcp-main-route', {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'HTTPRoute',
+      metadata: {
+        name: 'mcp',
+        namespace: kgatewayNamespace,
+        labels: {
+          'app.kubernetes.io/name': 'mcp',
+          'app.kubernetes.io/component': 'route',
+          'app.kubernetes.io/part-of': 'kgateway',
+        },
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '30',
+          'mcp.kgateway.dev/description': 'Main MCP route to Backend',
+        },
+      },
+      spec: {
+        parentRefs: [
+          {
+            name: 'agentgateway',
+            namespace: kgatewayNamespace,
+          },
+        ],
+        rules: [
+          {
+            backendRefs: [
+              {
+                group: 'gateway.kgateway.dev',
+                kind: 'Backend',
+                name: 'mcp-backend',
+              },
+            ],
+          },
+        ],
+      },
+    });
+
     // Create HTTPRoute for Grafana MCP server
     new ApiObject(this, 'grafana-mcp-route', {
       apiVersion: 'gateway.networking.k8s.io/v1',
@@ -33,12 +71,11 @@ export class KGatewayMCPRoutesChart extends Chart {
       spec: {
         parentRefs: [
           {
-            name: 'mcp-gateway',
+            name: 'agentgateway',
             namespace: kgatewayNamespace,
-            sectionName: 'mcp-http',
           },
         ],
-        hostnames: ['mcp.kgateway.local', 'mcp-gateway.cnoe.localtest.me'],
+        hostnames: ['mcp-gateway.cnoe.localtest.me'],
         rules: [
           {
             matches: [
@@ -109,12 +146,11 @@ export class KGatewayMCPRoutesChart extends Chart {
       spec: {
         parentRefs: [
           {
-            name: 'mcp-gateway',
+            name: 'agentgateway',
             namespace: kgatewayNamespace,
-            sectionName: 'mcp-http',
           },
         ],
-        hostnames: ['mcp.kgateway.local', 'mcp-gateway.cnoe.localtest.me'],
+        hostnames: ['mcp-gateway.cnoe.localtest.me'],
         rules: [
           {
             matches: [
@@ -181,12 +217,11 @@ export class KGatewayMCPRoutesChart extends Chart {
       spec: {
         parentRefs: [
           {
-            name: 'mcp-gateway',
+            name: 'agentgateway',
             namespace: kgatewayNamespace,
-            sectionName: 'mcp-http',
           },
         ],
-        hostnames: ['mcp.kgateway.local', 'mcp-gateway.cnoe.localtest.me'],
+        hostnames: ['mcp-gateway.cnoe.localtest.me'],
         rules: [
           {
             matches: [
@@ -256,7 +291,7 @@ export class KGatewayMCPRoutesChart extends Chart {
             namespace: kgatewayNamespace,
           },
         ],
-        hostnames: ['mcp.kgateway.local', 'mcp-gateway.cnoe.localtest.me'],
+        hostnames: ['mcp-gateway.cnoe.localtest.me'],
         rules: [
           {
             matches: [

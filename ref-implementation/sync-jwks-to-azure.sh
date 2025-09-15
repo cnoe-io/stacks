@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to sync JWKS from Kind cluster to Azure storage for Workload Identity
 set -e
 

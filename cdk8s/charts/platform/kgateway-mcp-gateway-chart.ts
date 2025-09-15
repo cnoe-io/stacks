@@ -11,32 +11,31 @@ export class KGatewayMCPGatewayChart extends Chart {
 
     const kgatewayNamespace = 'kgateway-system';
 
-    // Create MCP Gateway using the kgateway GatewayClass
-    new ApiObject(this, 'mcp-gateway', {
+    // Create AgentGateway for MCP protocol support
+    new ApiObject(this, 'agentgateway', {
       apiVersion: 'gateway.networking.k8s.io/v1',
       kind: 'Gateway',
       metadata: {
-        name: 'mcp-gateway',
+        name: 'agentgateway',
         namespace: kgatewayNamespace,
         labels: {
-          'app.kubernetes.io/name': 'mcp-gateway',
+          'app.kubernetes.io/name': 'agentgateway',
           'app.kubernetes.io/component': 'gateway',
           'app.kubernetes.io/part-of': 'kgateway',
           'app.kubernetes.io/managed-by': 'cdk8s',
         },
         annotations: {
           'argocd.argoproj.io/sync-wave': '20',
-          'gateway.kgateway.dev/description': 'Central MCP gateway for AI tool servers',
+          'gateway.kgateway.dev/description': 'AgentGateway for MCP server discovery and routing',
         },
       },
       spec: {
-        gatewayClassName: 'kgateway',
+        gatewayClassName: 'agentgateway',
         listeners: [
           {
-            name: 'mcp-http',
+            name: 'http',
             protocol: 'HTTP',
             port: 8080,
-            hostname: 'mcp.kgateway.local',
             allowedRoutes: {
               namespaces: {
                 from: 'All', // Allow routes from all namespaces
@@ -47,40 +46,13 @@ export class KGatewayMCPGatewayChart extends Chart {
               }],
             },
           },
-          {
-            name: 'mcp-https',
-            protocol: 'HTTPS',
-            port: 8443,
-            hostname: 'mcp.kgateway.local',
-            tls: {
-              mode: 'Terminate',
-              certificateRefs: [{
-                kind: 'Secret',
-                name: 'mcp-gateway-tls',
-                namespace: kgatewayNamespace,
-              }],
-            },
-            allowedRoutes: {
-              namespaces: {
-                from: 'All',
-              },
-              kinds: [{
-                group: 'gateway.networking.k8s.io',
-                kind: 'HTTPRoute',
-              }],
-            },
-          },
-        ],
-        addresses: [
-          {
-            type: 'IPAddress',
-            value: '0.0.0.0', // Bind to all interfaces for vcluster access
-          },
+          // HTTPS listener can be added later if needed
         ],
       },
     });
 
-    // Create HTTP Gateway for general purpose routing
+    // HTTP Gateway removed - using AgentGateway for MCP
+    /*
     new ApiObject(this, 'http-gateway', {
       apiVersion: 'gateway.networking.k8s.io/v1',
       kind: 'Gateway',
@@ -140,47 +112,58 @@ export class KGatewayMCPGatewayChart extends Chart {
         ],
       },
     });
+    */
 
-    // Create Service to expose MCP Gateway to vclusters
-    new ApiObject(this, 'mcp-gateway-service', {
-      apiVersion: 'v1',
-      kind: 'Service',
+    // Create Backend resource for MCP servers with dynamic discovery
+    new ApiObject(this, 'mcp-backend', {
+      apiVersion: 'gateway.kgateway.dev/v1alpha1',
+      kind: 'Backend',
       metadata: {
-        name: 'mcp-gateway',
+        name: 'mcp-backend',
         namespace: kgatewayNamespace,
         labels: {
-          'app.kubernetes.io/name': 'mcp-gateway',
-          'app.kubernetes.io/component': 'service',
+          'app.kubernetes.io/name': 'mcp-backend',
+          'app.kubernetes.io/component': 'backend',
           'app.kubernetes.io/part-of': 'kgateway',
         },
         annotations: {
-          'argocd.argoproj.io/sync-wave': '21',
-          'service.beta.kubernetes.io/azure-load-balancer-internal': 'true',
+          'argocd.argoproj.io/sync-wave': '25',
         },
       },
       spec: {
-        type: 'LoadBalancer',
-        selector: {
-          'gateway.kgateway.dev/gateway-name': 'mcp-gateway',
+        type: 'MCP',
+        mcp: {
+          targets: [
+            // Dynamic discovery using label selectors
+            {
+              name: 'mcp-servers-dynamic',
+              selector: {
+                service: {
+                  matchLabels: {
+                    'mcp.kgateway.dev/enabled': 'true',
+                  },
+                },
+              },
+            },
+            // Static targets for specific servers if needed
+            {
+              name: 'echo-mcp-static',
+              static: {
+                host: 'echo-mcp.mcp-servers.svc.cluster.local',
+                port: 8080,
+                protocol: 'SSE',
+              },
+            },
+          ],
         },
-        ports: [
-          {
-            name: 'mcp-http',
-            port: 8080,
-            targetPort: 8080,
-            protocol: 'TCP',
-          },
-          {
-            name: 'mcp-https',
-            port: 8443,
-            targetPort: 8443,
-            protocol: 'TCP',
-          },
-        ],
       },
     });
 
-    // Create Service for HTTP Gateway
+    // Service is automatically created by the Gateway controller
+    // No need to create it manually
+
+    // Service for HTTP Gateway removed
+    /*
     new ApiObject(this, 'http-gateway-service', {
       apiVersion: 'v1',
       kind: 'Service',
@@ -218,6 +201,8 @@ export class KGatewayMCPGatewayChart extends Chart {
       },
     });
 
+    */
+
     // Create Ingress to expose gateways externally
     new ApiObject(this, 'mcp-gateway-ingress', {
       apiVersion: 'networking.k8s.io/v1',
@@ -238,12 +223,6 @@ export class KGatewayMCPGatewayChart extends Chart {
           'nginx.ingress.kubernetes.io/proxy-http-version': '1.1',
           // Enable WebSocket/SSE support for MCP
           'nginx.ingress.kubernetes.io/proxy-buffering': 'off',
-          'nginx.ingress.kubernetes.io/configuration-snippet': `
-            proxy_set_header Accept-Encoding "";
-            proxy_set_header Connection "";
-            proxy_cache off;
-            proxy_set_header X-Accel-Buffering no;
-          `,
         },
       },
       spec: {
@@ -257,26 +236,9 @@ export class KGatewayMCPGatewayChart extends Chart {
                 pathType: 'Prefix',
                 backend: {
                   service: {
-                    name: 'mcp-gateway',
+                    name: 'agentgateway',
                     port: {
                       number: 8080,
-                    },
-                  },
-                },
-              }],
-            },
-          },
-          {
-            host: 'kgateway.cnoe.localtest.me',
-            http: {
-              paths: [{
-                path: '/',
-                pathType: 'Prefix',
-                backend: {
-                  service: {
-                    name: 'http-gateway',
-                    port: {
-                      number: 80,
                     },
                   },
                 },
@@ -288,10 +250,6 @@ export class KGatewayMCPGatewayChart extends Chart {
           {
             hosts: ['mcp-gateway.cnoe.localtest.me'],
             secretName: 'mcp-gateway-tls-ingress',
-          },
-          {
-            hosts: ['kgateway.cnoe.localtest.me'],
-            secretName: 'kgateway-tls-ingress',
           },
         ],
       },

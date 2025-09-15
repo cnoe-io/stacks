@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Enhanced NixOS deployment script with SSH NodePort support
 # Combines the NixOS key handling with SSH port exposure
 

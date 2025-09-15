@@ -17,7 +17,7 @@ export class KGatewayCRDsChart extends Chart {
       helmFlags: [
         '--namespace', namespace,
         '--create-namespace',
-        '--version', 'v2.0.4', // Using stable release matching main controller
+        '--version', 'v2.1.0-main', // Updated to match main controller version
       ],
       values: {
         // CRD-specific configuration if needed
