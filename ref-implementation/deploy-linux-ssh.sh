@@ -4,6 +4,16 @@
 
 set -e
 
+# Fix Docker socket issues on NixOS/Linux with WSL variables
+if [[ -n "${DOCKER_HOST:-}" ]] && [[ "${DOCKER_HOST}" == *"wsl"* ]]; then
+    echo "Detected WSL Docker host environment variable"
+    if [[ -S /var/run/docker.sock ]]; then
+        echo "Native Docker socket found at /var/run/docker.sock, unsetting DOCKER_HOST"
+        unset DOCKER_HOST
+        export DOCKER_HOST=""
+    fi
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -284,43 +294,77 @@ if [ "$STATUS" != "Valid" ]; then
     echo -e "${YELLOW}  3. Check logs: kubectl logs -n external-secrets deploy/external-secrets${NC}"
 fi
 
-# Step 12: Setup VClusters (optional)
-if command -v vcluster &>/dev/null; then
-    echo -e "${GREEN}Setting up VCluster connections...${NC}"
-    
-    # Wait for vclusters to be deployed by ArgoCD
-    echo "  Waiting for vclusters to be ready..."
-    for i in {1..60}; do
-        if kubectl get pod vcluster-dev-helm-0 -n dev-vcluster &>/dev/null 2>&1 && \
-           kubectl get pod vcluster-staging-helm-0 -n staging-vcluster &>/dev/null 2>&1; then
-            echo -e "${GREEN}  VClusters pods found${NC}"
-            break
-        fi
-        [ $i -eq 1 ] && echo -n "  Waiting"
-        echo -n "."
-        sleep 5
-    done
-    echo ""
-    
-    # Setup vcluster contexts
-    VCLUSTER_CONFIGS=(
-        "vcluster-dev-helm:dev-vcluster:dev"
-        "vcluster-staging-helm:staging-vcluster:staging"
-    )
-    
-    for vcluster_config in "${VCLUSTER_CONFIGS[@]}"; do
-        IFS=':' read -r NAME NAMESPACE ENV <<< "${vcluster_config}"
+# Step 12: Setup VClusters with proper kubeconfig generation
+echo -e "${GREEN}Checking for VClusters...${NC}"
+
+# Wait for vclusters to be deployed by ArgoCD
+VCLUSTERS_FOUND=false
+for i in {1..60}; do
+    if kubectl get pod vcluster-dev-helm-0 -n dev-vcluster &>/dev/null 2>&1 || \
+       kubectl get pod vcluster-staging-helm-0 -n staging-vcluster &>/dev/null 2>&1; then
+        VCLUSTERS_FOUND=true
+        echo -e "${GREEN}  VCluster pods found${NC}"
+        break
+    fi
+    [ $i -eq 1 ] && echo -n "  Waiting for VClusters"
+    echo -n "."
+    sleep 5
+done
+echo ""
+
+if [ "$VCLUSTERS_FOUND" = true ]; then
+    # Run the dedicated VCluster setup script
+    if [ -f "${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh" ]; then
+        echo -e "${GREEN}Running VCluster kubeconfig setup...${NC}"
+        ${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh
+    else
+        echo -e "${YELLOW}VCluster setup script not found, attempting basic setup...${NC}"
         
-        if kubectl get pod "${NAME}-0" -n "${NAMESPACE}" &>/dev/null 2>&1; then
-            echo -e "${GREEN}  Setting up ${ENV} vcluster context${NC}"
-            vcluster connect "${NAME}" -n "${NAMESPACE}" \
-                --server "https://${ENV}-vcluster.cnoe.localtest.me:8443" \
-                --insecure --update-current=false 2>/dev/null || true
+        # Fallback: Basic vcluster setup
+        if command -v vcluster &>/dev/null; then
+            VCLUSTER_CONFIGS=(
+                "vcluster-dev-helm:dev-vcluster:dev"
+                "vcluster-staging-helm:staging-vcluster:staging"
+            )
+            
+            for vcluster_config in "${VCLUSTER_CONFIGS[@]}"; do
+                IFS=':' read -r NAME NAMESPACE ENV <<< "${vcluster_config}"
+                
+                if kubectl get pod "${NAME}-0" -n "${NAMESPACE}" &>/dev/null 2>&1; then
+                    echo -e "${GREEN}  Connecting to ${ENV} vcluster...${NC}"
+                    
+                    # Generate kubeconfig
+                    VCLUSTER_KUBECONFIG="/tmp/vcluster-${ENV}.yaml"
+                    if vcluster connect "${NAME}" -n "${NAMESPACE}" \
+                        --server "https://${ENV}-vcluster.cnoe.localtest.me:8443" \
+                        --insecure --update-current=false --print > "${VCLUSTER_KUBECONFIG}" 2>/dev/null; then
+                        
+                        # Merge with main kubeconfig
+                        KUBECONFIG="${HOME}/.kube/config:${VCLUSTER_KUBECONFIG}" \
+                            kubectl config view --flatten > /tmp/merged-config.yaml
+                        mv /tmp/merged-config.yaml ${HOME}/.kube/config
+                        
+                        # Rename context for clarity
+                        kubectl config rename-context \
+                            "vcluster_${NAME}_${NAMESPACE}_kind-localdev" \
+                            "${ENV}-vcluster" 2>/dev/null || true
+                        
+                        echo -e "${GREEN}  ✓ Added ${ENV}-vcluster context${NC}"
+                    fi
+                fi
+            done
+        else
+            echo -e "${YELLOW}vcluster CLI not found. Install it to manage VClusters.${NC}"
+            echo "  curl -L -o vcluster https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-linux-amd64"
+            echo "  chmod +x vcluster && sudo mv vcluster /usr/local/bin/"
         fi
-    done
+    fi
+else
+    echo -e "${YELLOW}No VClusters found. They may be deployed later by ArgoCD.${NC}"
+    echo "Run '${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh' after VClusters are ready."
 fi
 
-# Step 12: Show summary
+# Step 13: Show summary
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Cluster created successfully with SSH support!${NC}"
