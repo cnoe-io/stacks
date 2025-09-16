@@ -63,7 +63,7 @@ export class KGatewayGatewayClassChart extends Chart {
             enabled: true,
             logLevel: 'info',
             image: {
-              tag: 'v2.1.0-main',
+              tag: '0.8.3',
             },
           },
           // Deployment configuration
@@ -280,7 +280,7 @@ export class KGatewayGatewayClassChart extends Chart {
             enabled: true,
             logLevel: 'info',
             image: {
-              tag: 'v2.1.0-main',
+              tag: '0.8.3',
             },
           },
           // Deployment configuration

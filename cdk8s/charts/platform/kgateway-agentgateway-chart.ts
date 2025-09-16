@@ -56,39 +56,6 @@ export class KGatewayAgentGatewayChart extends Chart {
               },
             },
           ],
-          // MCP protocol configuration
-          protocol: {
-            version: 'v1',
-            transport: 'http',
-          },
-          // Server discovery
-          discovery: {
-            enabled: true,
-            refreshInterval: '30s',
-          },
-          // Connection pooling
-          connectionPool: {
-            maxConnections: 100,
-            connectTimeout: '10s',
-            idleTimeout: '60s',
-          },
-          // Health checks
-          healthCheck: {
-            enabled: true,
-            interval: '10s',
-            timeout: '3s',
-            healthyThreshold: 2,
-            unhealthyThreshold: 3,
-          },
-          // Load balancing
-          loadBalancing: {
-            algorithm: 'round_robin',
-            stickySession: {
-              enabled: true,
-              cookieName: 'mcp-session',
-              ttl: '1h',
-            },
-          },
         },
       },
     });
