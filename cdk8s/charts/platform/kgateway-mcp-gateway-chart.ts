@@ -27,6 +27,7 @@ export class KGatewayMCPGatewayChart extends Chart {
         annotations: {
           'argocd.argoproj.io/sync-wave': '20',
           'gateway.kgateway.dev/description': 'AgentGateway for MCP server discovery and routing',
+          'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
         },
       },
       spec: {
@@ -46,7 +47,41 @@ export class KGatewayMCPGatewayChart extends Chart {
               }],
             },
           },
-          // HTTPS listener can be added later if needed
+          {
+            name: 'public-http',
+            protocol: 'HTTP',
+            port: 80,
+            allowedRoutes: {
+              namespaces: {
+                from: 'All',
+              },
+            },
+          },
+          {
+            name: 'public-https',
+            protocol: 'HTTPS',
+            port: 443,
+            tls: {
+              mode: 'Terminate',
+              certificateRefs: [
+                {
+                  name: 'agentgateway-tls',
+                  namespace: kgatewayNamespace,
+                },
+              ],
+            },
+            allowedRoutes: {
+              namespaces: {
+                from: 'All',
+              },
+            },
+          },
+        ],
+        addresses: [
+          {
+            type: 'IPAddress',
+            value: '0.0.0.0',
+          },
         ],
       },
     });
@@ -113,51 +148,6 @@ export class KGatewayMCPGatewayChart extends Chart {
       },
     });
     */
-
-    // Create Backend resource for MCP servers with dynamic discovery
-    new ApiObject(this, 'mcp-backend', {
-      apiVersion: 'gateway.kgateway.dev/v1alpha1',
-      kind: 'Backend',
-      metadata: {
-        name: 'mcp-backend',
-        namespace: kgatewayNamespace,
-        labels: {
-          'app.kubernetes.io/name': 'mcp-backend',
-          'app.kubernetes.io/component': 'backend',
-          'app.kubernetes.io/part-of': 'kgateway',
-        },
-        annotations: {
-          'argocd.argoproj.io/sync-wave': '25',
-        },
-      },
-      spec: {
-        type: 'MCP',
-        mcp: {
-          targets: [
-            // Dynamic discovery using label selectors
-            {
-              name: 'mcp-servers-dynamic',
-              selector: {
-                service: {
-                  matchLabels: {
-                    'mcp.kgateway.dev/enabled': 'true',
-                  },
-                },
-              },
-            },
-            // Static targets for specific servers if needed
-            {
-              name: 'echo-mcp-static',
-              static: {
-                host: 'echo-mcp.mcp-servers.svc.cluster.local',
-                port: 8080,
-                protocol: 'SSE',
-              },
-            },
-          ],
-        },
-      },
-    });
 
     // Service is automatically created by the Gateway controller
     // No need to create it manually

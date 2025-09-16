@@ -3,16 +3,73 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
 
-# Configuration from environment or defaults
+# Source environment variables from wi.env if it exists
+if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then
+    echo "Loading environment from ${STACKS_DIR}/.env-files/wi.env"
+    source "${STACKS_DIR}/.env-files/wi.env"
+fi
+
+# Configuration from environment or defaults (wi.env takes precedence)
 AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT:-oidcissuer65846b7df97b}"
 SERVICE_ACCOUNT_ISSUER="${SERVICE_ACCOUNT_ISSUER:-https://${AZURE_STORAGE_ACCOUNT}.z13.web.core.windows.net/}"
+# Use AZURE_SUBSCRIPTION_ID from wi.env, fallback to subscription name
+if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
+    AZURE_SUBSCRIPTION="${AZURE_SUBSCRIPTION_ID}"
+else
+    AZURE_SUBSCRIPTION="${AZURE_SUBSCRIPTION:-Subscription 2}"
+fi
 
 echo "======================================"
 echo "Syncing JWKS to Azure Storage"
 echo "======================================"
 echo "Storage Account: ${AZURE_STORAGE_ACCOUNT}"
+echo "Resource Group: ${RESOURCE_GROUP}"
 echo "Service Account Issuer: ${SERVICE_ACCOUNT_ISSUER}"
+echo "Subscription ID: ${AZURE_SUBSCRIPTION}"
+echo ""
+
+# Ensure we're using the correct subscription
+echo "Setting Azure subscription..."
+if az account set --subscription "${AZURE_SUBSCRIPTION}" 2>/dev/null; then
+    echo "✅ Using subscription: $(az account show --query name -o tsv) (${AZURE_SUBSCRIPTION})"
+else
+    echo "⚠️  Warning: Could not set subscription to ${AZURE_SUBSCRIPTION}"
+    echo "   Current subscription: $(az account show --query name -o tsv)"
+    echo "   You may need to run: az account set --subscription '${AZURE_SUBSCRIPTION}'"
+    exit 1
+fi
+
+# Check Azure authentication first
+echo "Checking Azure authentication..."
+if ! az account show &>/dev/null; then
+    echo "❌ Error: Not logged in to Azure"
+    echo "Please run: az login"
+    echo "Then re-run this script"
+    exit 1
+fi
+
+# Check if token is valid (not expired or about to expire in next minute)
+TOKEN_EXPIRY=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
+if [ -n "$TOKEN_EXPIRY" ]; then
+    CURRENT_TIME=$(date +%s)
+    EXPIRY_TIME=$(date -d "$TOKEN_EXPIRY" +%s 2>/dev/null || echo 0)
+    TIME_DIFF=$((EXPIRY_TIME - CURRENT_TIME))
+    
+    if [ $TIME_DIFF -lt 60 ]; then
+        echo "❌ Error: Azure token expired or about to expire"
+        echo "Token expires at: $TOKEN_EXPIRY"
+        echo "Please run: az login"
+        exit 1
+    else
+        ACCOUNT=$(az account show --query "user.name" -o tsv)
+        echo "✅ Authenticated as: $ACCOUNT"
+        echo "   Token valid until: $TOKEN_EXPIRY"
+    fi
+else
+    echo "⚠️  Warning: Could not verify token expiry"
+fi
 echo ""
 
 # Check if kubectl is configured
@@ -43,6 +100,7 @@ if ! command -v az &> /dev/null; then
                 --file '${SCRIPT_DIR}/jwks.json' \
                 --name 'openid/v1/jwks' \
                 --account-name '${AZURE_STORAGE_ACCOUNT}' \
+                --auth-mode login \
                 --overwrite \
                 --output table"
     else
@@ -51,12 +109,13 @@ if ! command -v az &> /dev/null; then
         exit 1
     fi
 else
-    echo "Uploading JWKS to Azure storage..."
+    echo "Uploading JWKS to Azure storage using Azure AD authentication..."
     az storage blob upload \
         --container-name '$web' \
         --file "${SCRIPT_DIR}/jwks.json" \
         --name "openid/v1/jwks" \
         --account-name "${AZURE_STORAGE_ACCOUNT}" \
+        --auth-mode login \
         --overwrite \
         --output table
 fi

@@ -701,6 +701,23 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
+    name: 'gateway-api-crds',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'GatewayApiCrdsChart'
+    },
+    argocd: {
+      syncWave: '-60',  // After namespace, before kgateway CRDs
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'gateway-api',
+        'app.kubernetes.io/name': 'gateway-api-crds',
+        'app.kubernetes.io/managed-by': 'argocd'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false', 'Replace=true'])
+    }
+  },
+  {
     name: 'kgateway-crds',
     namespace: 'kgateway-system',
     chart: {
@@ -800,6 +817,40 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/managed-by': 'argocd'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
+    }
+  },
+  {
+    name: 'kgateway-agentgateway',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KGatewayAgentGatewayChart'
+    },
+    argocd: {
+      syncWave: '125',  // After MCP routes
+      labels: {
+        'app.kubernetes.io/component': 'backend',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway-agentgateway',
+        'kgateway.dev/type': 'agentgateway'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
+    }
+  },
+  {
+    name: 'kgateway-ai-services',
+    namespace: 'ai-services',
+    chart: {
+      type: 'KGatewayAIServicesChart'
+    },
+    argocd: {
+      syncWave: '130',  // After AgentGateway
+      labels: {
+        'app.kubernetes.io/component': 'backend',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway-ai-services',
+        'ai.kgateway.dev/type': 'services'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
     }
   },
   {

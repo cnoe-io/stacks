@@ -59,6 +59,13 @@ export class KGatewayGatewayClassChart extends Chart {
       spec: {
         // Use kube mode for Kubernetes deployment
         kube: {
+          agentGateway: {
+            enabled: true,
+            logLevel: 'info',
+            image: {
+              tag: 'v2.1.0-main',
+            },
+          },
           // Deployment configuration
           deployment: {
             replicas: 2,
@@ -269,6 +276,13 @@ export class KGatewayGatewayClassChart extends Chart {
       spec: {
         // Use kube mode for Kubernetes deployment
         kube: {
+          agentGateway: {
+            enabled: true,
+            logLevel: 'info',
+            image: {
+              tag: 'v2.1.0-main',
+            },
+          },
           // Deployment configuration
           deployment: {
             replicas: 2,

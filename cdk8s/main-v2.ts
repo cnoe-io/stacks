@@ -43,6 +43,7 @@ import { BackstageStagingApplicationChart } from './charts/apps/backstage-stagin
 import { BackstageSecretsChart } from './charts/secrets/backstage-secrets-chart';
 import { NextJsDevApplicationChart } from './charts/apps/nextjs-dev-application-chart';
 import { NextJsStagingApplicationChart } from './charts/apps/nextjs-staging-application-chart';
+import { GatewayApiCrdsChart } from './charts/platform/gateway-api-crds-chart';
 import { KGatewayNamespaceChart } from './charts/platform/kgateway-namespace-chart';
 import { KGatewayCRDsChart } from './charts/platform/kgateway-crds-chart';
 import { KGatewayHelmChart } from './charts/platform/kgateway-helm-chart';
@@ -50,6 +51,8 @@ import { KGatewayGatewayClassChart } from './charts/platform/kgateway-gatewaycla
 import { KGatewayMCPServersChart } from './charts/platform/kgateway-mcp-servers-chart';
 import { KGatewayMCPGatewayChart } from './charts/platform/kgateway-mcp-gateway-chart';
 import { KGatewayMCPRoutesChart } from './charts/platform/kgateway-mcp-routes-chart';
+import { KGatewayAIServicesChart } from './charts/platform/kgateway-ai-services-chart';
+import { KGatewayAgentGatewayChart } from './charts/platform/kgateway-agentgateway-chart';
 
 // Register all charts
 IdpBuilderChartFactory.register('BootstrapSecretsChart', BootstrapSecretsChart);
@@ -89,6 +92,7 @@ IdpBuilderChartFactory.register('BackstageSecretsChart', BackstageSecretsChart);
 IdpBuilderChartFactory.register('NextJsDevApplicationChart', NextJsDevApplicationChart);
 IdpBuilderChartFactory.register('NextJsStagingApplicationChart', NextJsStagingApplicationChart);
 IdpBuilderChartFactory.register('ArgoCDConfigChart', ArgoCDConfigChart);
+IdpBuilderChartFactory.register('GatewayApiCrdsChart', GatewayApiCrdsChart);
 IdpBuilderChartFactory.register('KGatewayNamespaceChart', KGatewayNamespaceChart);
 IdpBuilderChartFactory.register('KGatewayCRDsChart', KGatewayCRDsChart);
 IdpBuilderChartFactory.register('KGatewayHelmChart', KGatewayHelmChart);
@@ -96,6 +100,8 @@ IdpBuilderChartFactory.register('KGatewayGatewayClassChart', KGatewayGatewayClas
 IdpBuilderChartFactory.register('KGatewayMCPServersChart', KGatewayMCPServersChart);
 IdpBuilderChartFactory.register('KGatewayMCPGatewayChart', KGatewayMCPGatewayChart);
 IdpBuilderChartFactory.register('KGatewayMCPRoutesChart', KGatewayMCPRoutesChart);
+IdpBuilderChartFactory.register('KGatewayAIServicesChart', KGatewayAIServicesChart);
+IdpBuilderChartFactory.register('KGatewayAgentGatewayChart', KGatewayAgentGatewayChart);
 
 const outputDir = 'dist';
 

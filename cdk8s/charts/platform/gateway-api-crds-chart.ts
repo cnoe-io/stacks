@@ -1,19 +1,25 @@
-import { Chart, ChartProps } from 'cdk8s';
+import { Chart, ChartProps, Include } from 'cdk8s';
 import { Construct } from 'constructs';
-import { Bash } from 'cdk8s';
 
 /**
- * GatewayAPICRDsChart installs the Kubernetes Gateway API CRDs
- * These are required before installing kgateway
+ * GatewayApiCrdsChart installs the standard Kubernetes Gateway API CRDs
+ * This must be installed before kgateway or any Gateway API resources
+ * 
+ * Uses the standard channel which includes stable GA/beta resources:
+ * - GatewayClass
+ * - Gateway  
+ * - HTTPRoute
+ * - GRPCRoute
+ * - ReferenceGrant
  */
-export class GatewayAPICRDsChart extends Chart {
+export class GatewayApiCrdsChart extends Chart {
   constructor(scope: Construct, id: string, props: ChartProps = {}) {
     super(scope, id, props);
-
-    // Install Gateway API CRDs v1.2.0 (stable release)
-    // Using Include to fetch and apply the CRDs
-    new Bash(this, 'gateway-api-crds', {
-      command: `curl -sL https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml | kubectl apply -f -`,
+    
+    // Include Gateway API v1.2.1 standard CRDs
+    // This downloads and includes the official CRDs from the Gateway API project
+    new Include(this, 'gateway-api-crds', {
+      url: 'https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml'
     });
   }
 }

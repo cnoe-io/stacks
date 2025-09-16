@@ -22,8 +22,15 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLUSTER_NAME="localdev"
+STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
+CLUSTER_NAME="local"
 KEYS_DIR="${SCRIPT_DIR}/keys"
+
+# Source environment variables from wi.env if it exists
+if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then
+    echo -e "${GREEN}Loading environment from ${STACKS_DIR}/.env-files/wi.env${NC}"
+    source "${STACKS_DIR}/.env-files/wi.env"
+fi
 
 # Show help if requested
 if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
@@ -156,8 +163,14 @@ nodes:
       certSANs:
       - "localhost"
       - "127.0.0.1"
+      - "nixos-hetzner"
+      - "178.156.202.233"  # Hetzner public IP
+      - "kubernetes"
+      - "kubernetes.default"
+      - "kubernetes.default.svc"
+      - "kubernetes.default.svc.cluster.local"
       extraArgs:
-        service-account-issuer: "https://oidcissuer65846b7df97b.z13.web.core.windows.net/"
+        service-account-issuer: "${SERVICE_ACCOUNT_ISSUER:-https://oidcissuer65846b7df97b.z13.web.core.windows.net/}"
         service-account-key-file: /etc/kubernetes/pki/custom-keys/sa.pub
         service-account-signing-key-file: /etc/kubernetes/pki/custom-keys/sa.key
     controllerManager:
@@ -174,7 +187,8 @@ unset DOCKER_HOST
 unset DOCKER_TLS_VERIFY
 unset DOCKER_CERT_PATH
 
-idpbuilder create --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
+# Explicitly pass the cluster name to idpbuilder
+idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
 
 # Step 5: Wait for cluster to be ready
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
@@ -190,17 +204,36 @@ done
 # Step 6: Get kubeconfig
 echo -e "${GREEN}Updating kubeconfig...${NC}"
 mkdir -p ~/.kube
-kind get kubeconfig --name ${CLUSTER_NAME} > ~/.kube/config
+
+# Try to get kubeconfig, handle if cluster name doesn't match
+if ! kind get kubeconfig --name ${CLUSTER_NAME} > ~/.kube/config 2>/dev/null; then
+    echo -e "${YELLOW}Warning: Could not get kubeconfig for cluster '${CLUSTER_NAME}'${NC}"
+    echo -e "${YELLOW}Attempting to find the correct cluster name...${NC}"
+    
+    # List all kind clusters and try the first one
+    ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | head -1)
+    if [ -n "$ACTUAL_CLUSTER" ]; then
+        echo -e "${GREEN}Found cluster: ${ACTUAL_CLUSTER}${NC}"
+        kind get kubeconfig --name ${ACTUAL_CLUSTER} > ~/.kube/config
+        echo -e "${YELLOW}Note: Cluster was created as '${ACTUAL_CLUSTER}' instead of '${CLUSTER_NAME}'${NC}"
+    else
+        echo -e "${RED}❌ No Kind clusters found${NC}"
+        exit 1
+    fi
+fi
 
 # Step 7: Verify keys are mounted correctly
 echo -e "${GREEN}Verifying service account keys...${NC}"
-if docker exec ${CLUSTER_NAME}-control-plane ls /etc/kubernetes/pki/custom-keys/sa.key &>/dev/null; then
+# Use the actual cluster name if it differs
+CONTAINER_NAME="${ACTUAL_CLUSTER:-$CLUSTER_NAME}-control-plane"
+if docker exec ${CONTAINER_NAME} ls /etc/kubernetes/pki/custom-keys/sa.key &>/dev/null; then
     echo -e "${GREEN}✓ Keys are properly mounted${NC}"
 else
     echo -e "${YELLOW}⚠️  Keys not found, falling back to copy method${NC}"
     # Fallback: Copy keys if mounting failed
-    cat ${KEYS_DIR}/sa.key | docker exec -i ${CLUSTER_NAME}-control-plane tee /etc/kubernetes/pki/custom-keys/sa.key > /dev/null
-    cat ${KEYS_DIR}/sa.pub | docker exec -i ${CLUSTER_NAME}-control-plane tee /etc/kubernetes/pki/custom-keys/sa.pub > /dev/null
+    docker exec ${CONTAINER_NAME} mkdir -p /etc/kubernetes/pki/custom-keys 2>/dev/null || true
+    cat ${KEYS_DIR}/sa.key | docker exec -i ${CONTAINER_NAME} tee /etc/kubernetes/pki/custom-keys/sa.key > /dev/null
+    cat ${KEYS_DIR}/sa.pub | docker exec -i ${CONTAINER_NAME} tee /etc/kubernetes/pki/custom-keys/sa.pub > /dev/null
 fi
 
 # Step 8: Wait for all system pods to be ready
@@ -231,6 +264,37 @@ fi
 
 # Step 10: Sync JWKS to Azure (CRITICAL for External Secrets)
 if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
+    echo -e "${GREEN}Checking Azure authentication for JWKS sync...${NC}"
+    
+    # Pre-check Azure auth to fail fast
+    if ! az account show &>/dev/null; then
+        echo -e "${RED}❌ Azure authentication required for JWKS sync${NC}"
+        echo -e "${YELLOW}The External Secrets Operator requires JWKS to be synced to Azure.${NC}"
+        echo -e "${YELLOW}Please run: az login${NC}"
+        echo -e "${YELLOW}Then re-run this deployment script${NC}"
+        echo ""
+        echo -e "${YELLOW}Note: The cluster has been created but External Secrets will not work.${NC}"
+        echo -e "${YELLOW}After logging in to Azure, you can run:${NC}"
+        echo -e "${YELLOW}  ${SCRIPT_DIR}/sync-jwks-to-azure.sh${NC}"
+        exit 1
+    fi
+    
+    # Check token expiry
+    TOKEN_EXPIRY=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
+    if [ -n "$TOKEN_EXPIRY" ]; then
+        CURRENT_TIME=$(date +%s)
+        EXPIRY_TIME=$(date -d "$TOKEN_EXPIRY" +%s 2>/dev/null || echo 0)
+        TIME_DIFF=$((EXPIRY_TIME - CURRENT_TIME))
+        
+        if [ $TIME_DIFF -lt 60 ]; then
+            echo -e "${RED}❌ Azure token expired or about to expire${NC}"
+            echo -e "${YELLOW}Token expires at: $TOKEN_EXPIRY${NC}"
+            echo -e "${YELLOW}Please run: az login${NC}"
+            echo -e "${YELLOW}Then re-run this deployment script${NC}"
+            exit 1
+        fi
+    fi
+    
     echo -e "${GREEN}Syncing JWKS to Azure (required for External Secrets)...${NC}"
     
     # Wait for API server to be fully ready
@@ -344,10 +408,13 @@ if [ "$VCLUSTERS_FOUND" = true ]; then
                             kubectl config view --flatten > /tmp/merged-config.yaml
                         mv /tmp/merged-config.yaml ${HOME}/.kube/config
                         
-                        # Rename context for clarity
+                        # Rename context for clarity (handle both old and new cluster names)
+                        kubectl config rename-context \
+                            "vcluster_${NAME}_${NAMESPACE}_kind-local" \
+                            "${ENV}" 2>/dev/null || \
                         kubectl config rename-context \
                             "vcluster_${NAME}_${NAMESPACE}_kind-localdev" \
-                            "${ENV}-vcluster" 2>/dev/null || true
+                            "${ENV}" 2>/dev/null || true
                         
                         echo -e "${GREEN}  ✓ Added ${ENV}-vcluster context${NC}"
                     fi
@@ -364,7 +431,13 @@ else
     echo "Run '${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh' after VClusters are ready."
 fi
 
-# Step 13: Show summary
+# Step 13: Setup browser certificates (lightweight, no rebuild needed)
+if [ -f "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" ]; then
+    echo -e "${GREEN}Setting up browser certificates...${NC}"
+    "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
+fi
+
+# Step 14: Show summary
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Cluster created successfully with SSH support!${NC}"
@@ -389,7 +462,7 @@ echo "  Headlamp:  https://headlamp.cnoe.localtest.me:8443"
 echo "  Kargo:     https://kargo.cnoe.localtest.me:8443"
 echo ""
 echo -e "${BLUE}Kubernetes Contexts:${NC}"
-kubectl config get-contexts | grep -E "(CURRENT|kind-localdev|dev-vcluster|staging-vcluster)"
+kubectl config get-contexts | grep -E "(CURRENT|kind-local|kind-localdev|dev|staging)" | grep -v "vcluster_"
 echo ""
 echo -e "${BLUE}SSH Access (after starting DevSpace):${NC}"
 echo "  ssh -p 30022 devspace@localhost    # backstage-dev"

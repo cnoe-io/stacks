@@ -16,7 +16,10 @@
       "TodoWrite",
       "WebSearch"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/etc/nixos"
+    ]
   },
   "enabledMcpjsonServers": [
     "argocd-mcp"

@@ -2,6 +2,7 @@ language: typescript
 app: ts-node main-v2.ts
 imports:
   - k8s@1.32.0
+  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
   - cnoe.io_custompackages:=https://raw.githubusercontent.com/cnoe-io/idpbuilder/main/pkg/controllers/resources/idpbuilder.cnoe.io_custompackages.yaml
   - cnoe.io_gitrepositories:=https://raw.githubusercontent.com/cnoe-io/idpbuilder/main/pkg/controllers/resources/idpbuilder.cnoe.io_gitrepositories.yaml
   - cnoe.io_localbuilds:=https://raw.githubusercontent.com/cnoe-io/idpbuilder/main/pkg/controllers/resources/idpbuilder.cnoe.io_localbuilds.yaml

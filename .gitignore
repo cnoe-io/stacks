@@ -44,3 +44,7 @@ cdk8s/imports/
 .DS_Store
 Thumbs.db
 ref-implementation/jwks.json
+certs/argocd-server-tls.crt
+certs/idpbuilder-ca.crt
+ref-implementation/jwks.json
+certs/kargo-webhooks-server-cert.crt

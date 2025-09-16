@@ -64,7 +64,7 @@ for ENV in "${!VCLUSTERS[@]}"; do
     
     # Generate kubeconfig using vcluster CLI
     echo "  Generating kubeconfig for ${ENV} vcluster..."
-    VCLUSTER_KUBECONFIG="${VCLUSTER_KUBECONFIG_DIR}/${ENV}-vcluster.yaml"
+    VCLUSTER_KUBECONFIG="${VCLUSTER_KUBECONFIG_DIR}/${ENV}.yaml"
     
     # Use vcluster to generate the kubeconfig
     if vcluster connect "${NAME}" \
@@ -76,14 +76,18 @@ for ENV in "${!VCLUSTERS[@]}"; do
         
         echo -e "${GREEN}  ✓ Generated kubeconfig for ${ENV} vcluster${NC}"
         
-        # Update the context name in the generated kubeconfig
+        # Update the context name in the generated kubeconfig (handle both old and new cluster names)
+        kubectl config rename-context \
+            "vcluster_${NAME}_${NAMESPACE}_kind-local" \
+            "${ENV}" \
+            --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || \
         kubectl config rename-context \
             "vcluster_${NAME}_${NAMESPACE}_kind-localdev" \
-            "${ENV}-vcluster" \
+            "${ENV}" \
             --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || true
         
         # Set the current context in the vcluster kubeconfig
-        kubectl config use-context "${ENV}-vcluster" \
+        kubectl config use-context "${ENV}" \
             --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || true
         
         CONFIGURED_VCLUSTERS+=("${ENV}")
@@ -113,15 +117,15 @@ clusters:
 - cluster:
     insecure-skip-tls-verify: true
     server: ${SERVER_URL}
-  name: ${ENV}-vcluster
+  name: ${ENV}
 contexts:
 - context:
-    cluster: ${ENV}-vcluster
-    user: ${ENV}-vcluster
-  name: ${ENV}-vcluster
-current-context: ${ENV}-vcluster
+    cluster: ${ENV}
+    user: ${ENV}
+  name: ${ENV}
+current-context: ${ENV}
 users:
-- name: ${ENV}-vcluster
+- name: ${ENV}
   user:
     token: ${TOKEN}
 EOF
@@ -193,7 +197,7 @@ if [ ${#CONFIGURED_VCLUSTERS[@]} -gt 0 ]; then
     echo ""
     echo -e "${BLUE}Direct access:${NC}"
     for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-        echo "  kubectl --context=${ENV}-vcluster get pods --all-namespaces"
+        echo "  kubectl --context=${ENV} get pods --all-namespaces"
     done
 else
     echo -e "${YELLOW}No VClusters were configured.${NC}"
