@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-platform-engineering-ingress
+  namespace: ai-platform-engineering
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: "nginx"
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /ai-platform-engineering(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-platform-engineering
+                port:
+                  number: 8000
+    - host: cnoe.localtest.me
+      http:
+        paths:
+          - path: /ai-platform-engineering(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-platform-engineering
+                port:
+                  number: 8000
