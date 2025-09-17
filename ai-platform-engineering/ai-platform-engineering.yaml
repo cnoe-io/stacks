@@ -11,14 +11,14 @@ spec:
     # Main chart from GHCR
     - chart: ai-platform-engineering
       repoURL: ghcr.io/cnoe-io/helm-charts
-      targetRevision: 0.1.10
+      targetRevision: 0.2.2
       helm:
         valueFiles:
           - $values/helm/values.yaml
           - $values/helm/values-external-secrets.yaml
     # Values files from Git repository (your custom branch)
     - repoURL: https://github.com/cnoe-io/ai-platform-engineering.git
-      targetRevision: idpbuilder-values
+      targetRevision: idpbuilder-values-0917-v1
       ref: values
     # Raw manifests from Git
     - repoURL: https://github.com/cnoe-io/stacks.git
