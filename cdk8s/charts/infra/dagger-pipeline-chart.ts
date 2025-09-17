@@ -2,6 +2,7 @@ import { Chart } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import { WorkflowTemplate } from '../../imports/argoproj.io';
+import { defaultKubectlImage } from '../../config/images';
 
 export interface DaggerPipelineChartProps {
   namespace?: string;
@@ -450,7 +451,7 @@ echo "Deployment completed successfully"
               ]
             },
             container: {
-              image: 'bitnami/kubectl:latest',
+              image: defaultKubectlImage,
               command: ['kubectl'],
               args: [
                 'set', 'image',

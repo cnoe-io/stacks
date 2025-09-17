@@ -1,6 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../imports/k8s';
+import { defaultKubectlImage } from '../config/images';
 
 /**
  * Creates a CronJob that periodically registers vclusters with ArgoCD
@@ -245,7 +246,7 @@ fi
                 containers: [
                   {
                     name: 'register',
-                    image: 'bitnami/kubectl:1.31',
+                    image: defaultKubectlImage,
                     command: ['/bin/bash'],
                     args: ['/scripts/register-vclusters.sh'],
                     volumeMounts: [

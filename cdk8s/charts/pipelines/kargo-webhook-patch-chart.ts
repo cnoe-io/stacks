@@ -1,6 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import { KubeJob, KubeServiceAccount, KubeClusterRole, KubeClusterRoleBinding, Quantity } from '../../imports/k8s';
+import { defaultKubectlImage } from '../../config/images';
 
 export interface KargoWebhookPatchChartProps extends ChartProps {
   namespace?: string;
@@ -75,7 +76,7 @@ export class KargoWebhookPatchChart extends Chart {
             restartPolicy: 'OnFailure',
             containers: [{
               name: 'patch',
-              image: 'bitnami/kubectl:latest',
+              image: defaultKubectlImage,
               command: ['/bin/bash'],
               resources: {
                 requests: {

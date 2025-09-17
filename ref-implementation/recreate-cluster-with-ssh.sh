@@ -78,6 +78,11 @@ fi
 # Create cluster
 echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
+if [ -x "$HOME/stacks/scripts/remove-core-dns-package.sh" ]; then
+    echo -e "${GREEN}Cleaning legacy CoreDNS overrides (if any)${NC}"
+    "$HOME/stacks/scripts/remove-core-dns-package.sh" || true
+fi
+
 idpbuilder create \
     --kind-config "$SCRIPT_DIR/$KIND_CONFIG" \
     --name "$CLUSTER_NAME" \

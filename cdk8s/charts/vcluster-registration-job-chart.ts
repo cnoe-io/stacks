@@ -1,6 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../imports/k8s';
+import { defaultKubectlImage } from '../config/images';
 
 /**
  * Creates a Kubernetes Job that registers vclusters with ArgoCD
@@ -197,7 +198,7 @@ echo "vCluster registration process completed successfully"
             containers: [
               {
                 name: 'register',
-                image: 'bitnami/kubectl:1.31',
+                image: defaultKubectlImage,
                 command: ['/bin/bash'],
                 args: ['/scripts/register-vclusters.sh'],
                 volumeMounts: [

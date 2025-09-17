@@ -85,6 +85,11 @@ fi
 
 echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
+if [ -x "$STACKS_DIR/scripts/remove-core-dns-package.sh" ]; then
+    echo -e "${GREEN}Cleaning legacy CoreDNS overrides (if any)${NC}"
+    "$STACKS_DIR/scripts/remove-core-dns-package.sh" || true
+fi
+
 idpbuilder create --kind-config "$CONFIG_FILE" --dev-password $IDPBUILDER_ARGS
 
 # Step 4: Wait for cluster to be ready

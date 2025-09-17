@@ -83,6 +83,11 @@ echo -e "${GREEN}Creating Kind cluster...${NC}"
 
 echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
+if [ -x "$STACKS_DIR/scripts/remove-core-dns-package.sh" ]; then
+    echo -e "${GREEN}Cleaning legacy CoreDNS overrides (if any)${NC}"
+    "$STACKS_DIR/scripts/remove-core-dns-package.sh" || true
+fi
+
 idpbuilder create --kind-config ${SCRIPT_DIR}/kind-config-nixos.yaml --dev-password $IDPBUILDER_ARGS
 
 # Determine actual cluster name

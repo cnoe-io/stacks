@@ -371,7 +371,7 @@ synthesize-full:
 # Validation stage
 validate-manifests:
   stage: validate
-  image: bitnami/kubectl:latest
+  image: registry.k8s.io/kubectl:v1.31.4
   needs: ["synthesize-selective", "synthesize-full"]
   script:
     - |

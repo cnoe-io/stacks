@@ -387,7 +387,7 @@ new Job(this, 'vcluster-registration', {
       spec: {
         containers: [{
           name: 'register',
-          image: 'bitnami/kubectl:latest',
+          image: 'registry.k8s.io/kubectl:v1.31.4',
           command: ['bash'],
           args: ['-c', registrationScript]
         }]

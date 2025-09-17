@@ -2,6 +2,7 @@ import { Chart } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import { WorkflowTemplate } from '../../imports/argoproj.io';
+import { defaultKubectlImage } from '../../config/images';
 
 export class DaggerInfraChart extends Chart {
   constructor(scope: Construct, id: string) {
@@ -344,7 +345,7 @@ export class DaggerInfraChart extends Chart {
               ]
             },
             container: {
-              image: 'bitnami/kubectl:latest',
+              image: defaultKubectlImage,
               command: ['sh', '-c'],
               args: [
                 `kubectl set image deployment/backstage backstage={{inputs.parameters.image}} -n backstage`

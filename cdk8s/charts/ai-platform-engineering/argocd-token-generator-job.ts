@@ -1,6 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
+import { defaultKubectlImage } from '../../config/images';
 
 export interface ArgoCDTokenGeneratorJobChartProps extends ChartProps {
   namespace?: string;
@@ -92,7 +93,7 @@ export class ArgoCDTokenGeneratorJobChart extends Chart {
             containers: [
               {
                 name: 'token-generator',
-                image: 'bitnami/kubectl:latest',
+                image: defaultKubectlImage,
                 command: ['/bin/bash'],
                 args: [
                   '-c',

@@ -92,6 +92,12 @@ This command is **idempotent** - it can be run multiple times safely:
 - Environment variables are sourced from `~/stacks/.env-files/wi.env`
 - The cluster name is `localdev` (IDPBuilder default)
 - Kind config includes SSH port mappings for development
+- Override the kubectl helper image (if needed) by exporting `KUBECTL_IMAGE`
+  before running `clu`/`clm`; defaults to `registry.k8s.io/kubectl:v1.31.4`.
+- If you previously deployed the legacy CoreDNS rewrite package, run
+  `~/stacks/scripts/remove-core-dns-package.sh` once before the next
+  `cluster-update` or `cluster-recreate` run. This removes the old
+  custom package so IDPBuilder can manage CoreDNS natively.
 
 ### Activation
 

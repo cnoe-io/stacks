@@ -223,6 +223,11 @@ unset DOCKER_CERT_PATH
 # Create cluster using idpbuilder defaults
 echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
+if [ -x "$STACKS_DIR/scripts/remove-core-dns-package.sh" ]; then
+    echo -e "${GREEN}Cleaning legacy CoreDNS overrides (if any)${NC}"
+    "$STACKS_DIR/scripts/remove-core-dns-package.sh" || true
+fi
+
 idpbuilder create --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
 
 ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | tail -1)
