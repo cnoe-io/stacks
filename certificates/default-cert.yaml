@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: idpbuilder-cert
-  namespace: default
-type: Opaque
-data:
-  ca.crt: 

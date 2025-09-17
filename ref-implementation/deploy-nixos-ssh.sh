@@ -83,22 +83,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
     CONFIG_FILE="${SCRIPT_DIR}/kind-config-nixos.yaml"
 fi
 
-CERT_BASE="$HOME/stacks/certificates"
-CERT_OVERRIDES=()
-if [ -f "$CERT_BASE/nginx-override.yaml" ]; then
-    CERT_OVERRIDES+=("-c" "nginx:$CERT_BASE/nginx-override.yaml")
-fi
-if [ -f "$CERT_BASE/argocd-override.yaml" ]; then
-    CERT_OVERRIDES+=("-c" "argocd:$CERT_BASE/argocd-override.yaml")
-fi
+echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
-if [ ${#CERT_OVERRIDES[@]} -gt 0 ]; then
-    echo -e "${BLUE}Using static certificate overrides for IDPBuilder${NC}"
-else
-    echo -e "${YELLOW}No certificate overrides found; cluster will create a new self-signed cert${NC}"
-fi
-
-idpbuilder create --kind-config "$CONFIG_FILE" ${CERT_OVERRIDES[@]} --dev-password $IDPBUILDER_ARGS
+idpbuilder create --kind-config "$CONFIG_FILE" --dev-password $IDPBUILDER_ARGS
 
 # Step 4: Wait for cluster to be ready
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
@@ -170,6 +157,14 @@ if [ -x "$HOME/stacks/scripts/sync-cluster-certificates.sh" ]; then
     "$HOME/stacks/scripts/sync-cluster-certificates.sh"
 else
     echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
+fi
+
+# Refresh ArgoCD token in 1Password
+if [ -x "$HOME/stacks/scripts/update-argocd-token.sh" ]; then
+    echo -e "${GREEN}Updating ArgoCD token in 1Password...${NC}"
+    if ! "$HOME/stacks/scripts/update-argocd-token.sh"; then
+        echo -e "${YELLOW}⚠️  Unable to store ArgoCD token automatically; check logs above.${NC}"
+    fi
 fi
 
 # Step 11: Deploy SSH services (if CDK8s manifests exist and namespaces are ready)

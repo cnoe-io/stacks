@@ -13,9 +13,10 @@ node_modules/
 cdk8s/idpbuilder-localdev-backstage-manifests/
 temp-backstage-repo/
 certificates/idpbuilder-static-cert.sh
-certificates/tls.key
-certificates/ca.crt
-certificates/tls.crt
+certificates/*.crt
+certificates/*.key
+certificates/*.pem
+certificates/*.yaml
 
 # DevSpace
 .devspace/
@@ -46,5 +47,7 @@ Thumbs.db
 ref-implementation/jwks.json
 certs/argocd-server-tls.crt
 certs/idpbuilder-ca.crt
-ref-implementation/jwks.json
+certs/*.crt
+certs/*.key
+certs/*.pem
 certs/kargo-webhooks-server-cert.crt

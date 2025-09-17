@@ -221,22 +221,9 @@ unset DOCKER_TLS_VERIFY
 unset DOCKER_CERT_PATH
 
 # Create cluster using idpbuilder defaults
-CERT_BASE="$HOME/stacks/certificates"
-CERT_OVERRIDES=()
-if [ -f "$CERT_BASE/nginx-override.yaml" ]; then
-    CERT_OVERRIDES+=("-c" "nginx:$CERT_BASE/nginx-override.yaml")
-fi
-if [ -f "$CERT_BASE/argocd-override.yaml" ]; then
-    CERT_OVERRIDES+=("-c" "argocd:$CERT_BASE/argocd-override.yaml")
-fi
+echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
-if [ ${#CERT_OVERRIDES[@]} -gt 0 ]; then
-    echo -e "${BLUE}Using static certificate overrides for IDPBuilder${NC}"
-else
-    echo -e "${YELLOW}No certificate overrides found; cluster will create a new self-signed cert${NC}"
-fi
-
-idpbuilder create --kind-config "${CONFIG_FILE}" ${CERT_OVERRIDES[@]} --dev-password $IDPBUILDER_ARGS
+idpbuilder create --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
 
 ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | tail -1)
 if [ -z "$ACTUAL_CLUSTER" ]; then
@@ -445,7 +432,15 @@ if [ -f "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" ]; then
     "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
 fi
 
-# Step 14: Show summary
+# Step 14: Refresh ArgoCD token in 1Password
+if [ -x "${SCRIPT_DIR}/../scripts/update-argocd-token.sh" ]; then
+    echo -e "${GREEN}Updating ArgoCD token in 1Password...${NC}"
+    if ! "${SCRIPT_DIR}/../scripts/update-argocd-token.sh"; then
+        echo -e "${YELLOW}⚠️  Unable to store ArgoCD token automatically; check logs above.${NC}"
+    fi
+fi
+
+# Step 15: Show summary
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Cluster created successfully with SSH support!${NC}"

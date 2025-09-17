@@ -11,7 +11,7 @@ CERT_SECRET_NAME="${CERT_SECRET_NAME:-idpbuilder-cert}"
 CERT_NAMESPACE="${CERT_NAMESPACE:-ingress-nginx}"
 REGISTRY_HOST="${REGISTRY_HOST:-gitea.cnoe.localtest.me:8443}"
 STACKS_DIR="${STACKS_DIR:-$HOME/stacks}"
-STATIC_CERT_DIR="$STACKS_DIR/certificates"
+CERT_CACHE_DIR="$STACKS_DIR/certificates"
 SYSTEM_CERT_DIR="$STACKS_DIR/certs"
 BROWSER_SCRIPT="$STACKS_DIR/scripts/setup-browser-certs.sh"
 TARGET_USER="${TARGET_USER:-$(id -un)}"
@@ -150,23 +150,24 @@ for attempt in {1..30}; do
     fi
 done
 
-mkdir -p "$STATIC_CERT_DIR" "$SYSTEM_CERT_DIR"
+mkdir -p "$CERT_CACHE_DIR" "$SYSTEM_CERT_DIR"
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" -o jsonpath='{.data.tls\.crt}' | base64 -d > "$tmpdir/tls.crt"
 kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" -o jsonpath='{.data.tls\.key}' | base64 -d > "$tmpdir/tls.key"
-if kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" -o jsonpath='{.data.ca\.crt}' >/dev/null 2>&1; then
-    kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" -o jsonpath='{.data.ca\.crt}' | base64 -d > "$tmpdir/ca.crt"
+ca_b64=$(kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" -o jsonpath='{.data.ca\.crt}' 2>/dev/null || true)
+if [ -n "$ca_b64" ]; then
+    echo "$ca_b64" | base64 -d > "$tmpdir/ca.crt"
 else
     # Fallback: derive CA from the TLS certificate (self-signed)
     openssl x509 -in "$tmpdir/tls.crt" -out "$tmpdir/ca.crt"
 fi
 
 new_fingerprint=$(openssl x509 -in "$tmpdir/tls.crt" -noout -fingerprint | cut -d= -f2)
-if [ -f "$STATIC_CERT_DIR/tls.crt" ]; then
-    existing_fingerprint=$(openssl x509 -in "$STATIC_CERT_DIR/tls.crt" -noout -fingerprint | cut -d= -f2)
+if [ -f "$CERT_CACHE_DIR/tls.crt" ]; then
+    existing_fingerprint=$(openssl x509 -in "$CERT_CACHE_DIR/tls.crt" -noout -fingerprint | cut -d= -f2)
 else
     existing_fingerprint=""
 fi
@@ -175,31 +176,22 @@ if [ "$existing_fingerprint" = "$new_fingerprint" ] && ! $FORCE_UPDATE; then
     warn "Certificate fingerprint unchanged (${new_fingerprint}). Skipping extraction."
 else
     log "Updating stored certificate (fingerprint ${new_fingerprint})"
-    install -m0644 "$tmpdir/tls.crt" "$STATIC_CERT_DIR/tls.crt"
-    install -m0600 "$tmpdir/tls.key" "$STATIC_CERT_DIR/tls.key"
-    install -m0644 "$tmpdir/ca.crt" "$STATIC_CERT_DIR/ca.crt"
+    install -m0644 "$tmpdir/tls.crt" "$CERT_CACHE_DIR/tls.crt"
+    install -m0600 "$tmpdir/tls.key" "$CERT_CACHE_DIR/tls.key"
+    install -m0644 "$tmpdir/ca.crt" "$CERT_CACHE_DIR/ca.crt"
 
     install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/idpbuilder-ca.crt"
     install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/idpbuilder-tls.crt"
 
     if [ -f /etc/ssl/certs/ca-bundle.crt ]; then
         cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt"
-        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$STATIC_CERT_DIR/ca-bundle-with-idpbuilder.crt"
+        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-idpbuilder.crt"
     fi
 
     if [ "$(id -u)" -ne 0 ] && [ -f "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" ]; then
         mkdir -p "$HOME/.local/share/cluster-certs"
         cp "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" "$HOME/.local/share/cluster-certs/ca-bundle-with-idpbuilder.crt"
     fi
-fi
-
-if [ -x "$STATIC_CERT_DIR/generate-nginx-override.sh" ]; then
-    log "Regenerating nginx overrides"
-    "$STATIC_CERT_DIR/generate-nginx-override.sh"
-fi
-if [ -x "$STATIC_CERT_DIR/generate-argocd-override.sh" ]; then
-    log "Regenerating argocd overrides"
-    "$STATIC_CERT_DIR/generate-argocd-override.sh"
 fi
 
 if [ -x "$BROWSER_SCRIPT" ]; then
