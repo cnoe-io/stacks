@@ -232,6 +232,7 @@ clusters:
               {
                 name: 'backstage',
                 image: imageRef,
+                command: ['/bin/bash', '-c', 'sudo apt-get update && sudo apt-get install -y openssh-server && sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -p 2222'],
                 env: [
                   // SSH Configuration
                   {
