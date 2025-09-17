@@ -387,9 +387,8 @@ new Job(this, 'vcluster-registration', {
       spec: {
         containers: [{
           name: 'register',
-          image: 'registry.k8s.io/kubectl:v1.31.4',
-          command: ['bash'],
-          args: ['-c', registrationScript]
+          image: 'alpine/kubectl:latest',
+          command: ['/bin/sh', '/scripts/register-vclusters.sh']
         }]
       }
     }

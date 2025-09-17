@@ -96,71 +96,99 @@ export class VclusterRegistrationJobChart extends Chart {
     });
 
     // Create the registration script as a ConfigMap
-    const registrationScript = `#!/bin/bash
-set -e
+    const registrationScript = `#!/bin/sh
+set -eu
 
-echo "Starting vCluster registration process..."
+log() {
+  printf '[%s] %s
+' "\$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+}
 
-# Define vClusters to register
-declare -A VCLUSTERS=(
-  ["dev"]="dev-vcluster"
-  ["staging"]="staging-vcluster"
-)
+ENVIRONMENTS="dev staging"
 
-for env in "\${!VCLUSTERS[@]}"; do
-  namespace="\${VCLUSTERS[\$env]}"
-  cluster_name="\$env-vcluster"
-  secret_name="vc-vcluster-\$env-helm"
-  
-  echo "Processing \$cluster_name in namespace \$namespace..."
-  
-  # Check if vcluster secret exists
-  if ! kubectl get secret -n "\$namespace" "\$secret_name" &> /dev/null; then
-    echo "Secret \$secret_name not found in namespace \$namespace, skipping..."
+success_count=0
+skip_count=0
+error_count=0
+
+for env in $ENVIRONMENTS; do
+  namespace="\${env}-vcluster"
+  cluster_name="\${env}-vcluster"
+  secret_name="vc-vcluster-\${env}-helm"
+
+  log "Processing \${cluster_name} in namespace \${namespace}..."
+
+  if ! kubectl get secret -n "$namespace" "$secret_name" >/dev/null 2>&1; then
+    log "Secret \${secret_name} not found in namespace \${namespace}, skipping..."
+    skip_count=$((skip_count + 1))
     continue
   fi
-  
-  echo "Found secret \$secret_name, retrieving credentials..."
-  
-  # Extract credentials from vcluster secret
-  client_key=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "client-key" }}')
-  client_certificate=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "client-certificate" }}')
-  certificate_authority=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "certificate-authority" }}')
-  
-  # Create or update ArgoCD cluster secret
-  echo "Creating/updating ArgoCD cluster secret for \$cluster_name..."
-  
-  cat <<EOF | kubectl apply -f -
+
+  if kubectl get secret -n argocd "cluster-\${cluster_name}" >/dev/null 2>&1; then
+    log "Cluster secret for \${cluster_name} already exists, checking if update needed..."
+    current_server=$(kubectl get secret -n argocd "cluster-\${cluster_name}" -o jsonpath='{.data.server}' 2>/dev/null | base64 -d 2>/dev/null || printf '')
+    expected_server="https://vcluster-\${env}-helm.\${namespace}.svc:443"
+
+    if [ "$current_server" = "$expected_server" ]; then
+      log "Cluster \${cluster_name} registration is up to date"
+      success_count=$((success_count + 1))
+      continue
+    fi
+    log "Updating registration for \${cluster_name} (server endpoint changed)"
+  fi
+
+  log "Retrieving credentials for \${cluster_name}..."
+
+  client_key=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "client-key" }}' 2>/dev/null || printf '')
+  client_certificate=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "client-certificate" }}' 2>/dev/null || printf '')
+  certificate_authority=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "certificate-authority" }}' 2>/dev/null || printf '')
+
+  if [ -z "$client_key" ] || [ -z "$client_certificate" ] || [ -z "$certificate_authority" ]; then
+    log "ERROR: Failed to extract credentials for \${cluster_name}"
+    error_count=$((error_count + 1))
+    continue
+  fi
+
+  if kubectl apply -f - >/dev/null 2>&1 <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cluster-\$cluster_name
+  name: cluster-\${cluster_name}
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: cluster
     cnoe.io.vcluster-class: app-runtime
-    cnoe.io.vcluster-name: \$env
-    environment: \$env
+    cnoe.io.vcluster-name: \${env}
+    environment: \${env}
     azure.workload.identity/enabled: "true"
 type: Opaque
 stringData:
-  name: \$cluster_name
-  server: https://vcluster-\$env-helm.\$namespace.svc:443
+  name: \${cluster_name}
+  server: https://vcluster-\${env}-helm.\${namespace}.svc:443
   config: |
     {
       "tlsClientConfig": {
         "insecure": false,
-        "caData": "\$certificate_authority",
-        "certData": "\$client_certificate",
-        "keyData": "\$client_key"
+        "caData": "\${certificate_authority}",
+        "certData": "\${client_certificate}",
+        "keyData": "\${client_key}"
       }
     }
 EOF
-  
-  echo "Successfully registered \$cluster_name"
+  then
+    log "Successfully registered \${cluster_name}"
+    success_count=$((success_count + 1))
+  else
+    log "ERROR: Failed to register \${cluster_name}"
+    error_count=$((error_count + 1))
+  fi
 done
 
-echo "vCluster registration process completed successfully"
+log "vCluster registration process completed"
+log "Summary: Success: \${success_count}, Skipped: \${skip_count}, Errors: \${error_count}"
+
+if [ "$error_count" -gt 0 ]; then
+  exit 1
+fi
 `;
 
     const configMap = new k8s.KubeConfigMap(this, 'vcluster-registration-script', {
@@ -199,8 +227,7 @@ echo "vCluster registration process completed successfully"
               {
                 name: 'register',
                 image: defaultKubectlImage,
-                command: ['/bin/bash'],
-                args: ['/scripts/register-vclusters.sh'],
+                command: ['/bin/sh', '/scripts/register-vclusters.sh'],
                 volumeMounts: [
                   {
                     name: 'script',

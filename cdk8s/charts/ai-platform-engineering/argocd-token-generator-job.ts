@@ -94,7 +94,7 @@ export class ArgoCDTokenGeneratorJobChart extends Chart {
               {
                 name: 'token-generator',
                 image: defaultKubectlImage,
-                command: ['/bin/bash'],
+                command: ['/bin/sh'],
                 args: [
                   '-c',
                   `

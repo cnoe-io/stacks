@@ -96,108 +96,98 @@ export class VclusterRegistrationCronJobChart extends Chart {
     });
 
     // Create the registration script as a ConfigMap
-    const registrationScript = `#!/bin/bash
-set -e
+    const registrationScript = `#!/bin/sh
+set -eu
 
-echo "[$(date)] Starting vCluster registration process..."
+log() {
+  printf '[%s] %s
+' "\$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+}
 
-# Define vClusters to register
-declare -A VCLUSTERS=(
-  ["dev"]="dev-vcluster"
-  ["staging"]="staging-vcluster"
-)
+ENVIRONMENTS="dev staging"
 
 success_count=0
 skip_count=0
 error_count=0
 
-for env in "\${!VCLUSTERS[@]}"; do
-  namespace="\${VCLUSTERS[\$env]}"
-  cluster_name="\$env-vcluster"
-  secret_name="vc-vcluster-\$env-helm"
-  
-  echo "[$(date)] Processing \$cluster_name in namespace \$namespace..."
-  
-  # Check if vcluster secret exists
-  if ! kubectl get secret -n "\$namespace" "\$secret_name" &> /dev/null; then
-    echo "[$(date)] Secret \$secret_name not found in namespace \$namespace, skipping..."
-    ((skip_count++))
+for env in $ENVIRONMENTS; do
+  namespace="\${env}-vcluster"
+  cluster_name="\${env}-vcluster"
+  secret_name="vc-vcluster-\${env}-helm"
+
+  log "Processing \${cluster_name} in namespace \${namespace}..."
+
+  if ! kubectl get secret -n "$namespace" "$secret_name" >/dev/null 2>&1; then
+    log "Secret \${secret_name} not found in namespace \${namespace}, skipping..."
+    skip_count=$((skip_count + 1))
     continue
   fi
-  
-  # Check if cluster secret already exists and is up to date
-  if kubectl get secret -n argocd "cluster-\$cluster_name" &> /dev/null; then
-    echo "[$(date)] Cluster secret for \$cluster_name already exists, checking if update needed..."
-    
-    # Get current server endpoint
-    current_server=\$(kubectl get secret -n argocd "cluster-\$cluster_name" -o jsonpath='{.data.server}' | base64 -d 2>/dev/null || echo "")
-    expected_server="https://vcluster-\$env-helm.\$namespace.svc:443"
-    
-    if [ "\$current_server" == "\$expected_server" ]; then
-      echo "[$(date)] Cluster \$cluster_name registration is up to date"
-      ((success_count++))
+
+  if kubectl get secret -n argocd "cluster-\${cluster_name}" >/dev/null 2>&1; then
+    log "Cluster secret for \${cluster_name} already exists, checking if update needed..."
+    current_server=$(kubectl get secret -n argocd "cluster-\${cluster_name}" -o jsonpath='{.data.server}' 2>/dev/null | base64 -d 2>/dev/null || printf '')
+    expected_server="https://vcluster-\${env}-helm.\${namespace}.svc:443"
+
+    if [ "$current_server" = "$expected_server" ]; then
+      log "Cluster \${cluster_name} registration is up to date"
+      success_count=$((success_count + 1))
       continue
     fi
-    echo "[$(date)] Updating registration for \$cluster_name (server endpoint changed)"
+    log "Updating registration for \${cluster_name} (server endpoint changed)"
   fi
-  
-  echo "[$(date)] Retrieving credentials for \$cluster_name..."
-  
-  # Extract credentials from vcluster secret with error handling
-  client_key=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "client-key" }}' 2>/dev/null || echo "")
-  client_certificate=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "client-certificate" }}' 2>/dev/null || echo "")
-  certificate_authority=\$(kubectl get secret -n "\$namespace" "\$secret_name" --template='{{index .data "certificate-authority" }}' 2>/dev/null || echo "")
-  
-  if [ -z "\$client_key" ] || [ -z "\$client_certificate" ] || [ -z "\$certificate_authority" ]; then
-    echo "[$(date)] ERROR: Failed to extract credentials for \$cluster_name"
-    ((error_count++))
+
+  log "Retrieving credentials for \${cluster_name}..."
+
+  client_key=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "client-key" }}' 2>/dev/null || printf '')
+  client_certificate=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "client-certificate" }}' 2>/dev/null || printf '')
+  certificate_authority=$(kubectl get secret -n "$namespace" "$secret_name" --template='{{index .data "certificate-authority" }}' 2>/dev/null || printf '')
+
+  if [ -z "$client_key" ] || [ -z "$client_certificate" ] || [ -z "$certificate_authority" ]; then
+    log "ERROR: Failed to extract credentials for \${cluster_name}"
+    error_count=$((error_count + 1))
     continue
   fi
-  
-  # Create or update ArgoCD cluster secret
-  echo "[$(date)] Creating/updating ArgoCD cluster secret for \$cluster_name..."
-  
-  if cat <<EOF | kubectl apply -f - 2>/dev/null
+
+  if kubectl apply -f - >/dev/null 2>&1 <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cluster-\$cluster_name
+  name: cluster-\${cluster_name}
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: cluster
     cnoe.io.vcluster-class: app-runtime
-    cnoe.io.vcluster-name: \$env
-    environment: \$env
+    cnoe.io.vcluster-name: \${env}
+    environment: \${env}
     azure.workload.identity/enabled: "true"
     managed-by: vcluster-registration-cronjob
 type: Opaque
 stringData:
-  name: \$cluster_name
-  server: https://vcluster-\$env-helm.\$namespace.svc:443
+  name: \${cluster_name}
+  server: https://vcluster-\${env}-helm.\${namespace}.svc:443
   config: |
     {
       "tlsClientConfig": {
         "insecure": false,
-        "caData": "\$certificate_authority",
-        "certData": "\$client_certificate",
-        "keyData": "\$client_key"
+        "caData": "\${certificate_authority}",
+        "certData": "\${client_certificate}",
+        "keyData": "\${client_key}"
       }
     }
 EOF
   then
-    echo "[$(date)] Successfully registered \$cluster_name"
-    ((success_count++))
+    log "Successfully registered \${cluster_name}"
+    success_count=$((success_count + 1))
   else
-    echo "[$(date)] ERROR: Failed to register \$cluster_name"
-    ((error_count++))
+    log "ERROR: Failed to register \${cluster_name}"
+    error_count=$((error_count + 1))
   fi
 done
 
-echo "[$(date)] vCluster registration process completed"
-echo "[$(date)] Summary: Success: \$success_count, Skipped: \$skip_count, Errors: \$error_count"
+log "vCluster registration process completed"
+log "Summary: Success: \${success_count}, Skipped: \${skip_count}, Errors: \${error_count}"
 
-# Exit with error if any registrations failed
-if [ \$error_count -gt 0 ]; then
+if [ "$error_count" -gt 0 ]; then
   exit 1
 fi
 `;
@@ -247,8 +237,7 @@ fi
                   {
                     name: 'register',
                     image: defaultKubectlImage,
-                    command: ['/bin/bash'],
-                    args: ['/scripts/register-vclusters.sh'],
+                    command: ['/bin/sh', '/scripts/register-vclusters.sh'],
                     volumeMounts: [
                       {
                         name: 'script',

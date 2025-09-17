@@ -77,7 +77,7 @@ export class KargoWebhookPatchChart extends Chart {
             containers: [{
               name: 'patch',
               image: defaultKubectlImage,
-              command: ['/bin/bash'],
+              command: ['/bin/sh'],
               resources: {
                 requests: {
                   cpu: Quantity.fromString('50m'),
@@ -91,70 +91,85 @@ export class KargoWebhookPatchChart extends Chart {
               args: [
                 '-c',
                 `
-                set -e
+                set -eu
+                
+                if ! command -v jq >/dev/null 2>&1; then
+                  echo "Installing jq (required for webhook patching)..."
+                  apk add --no-cache jq >/dev/null 2>&1
+                fi
+                
                 echo "Patching webhook configurations with CA bundle..."
                 
-                # Wait for the secret to be available
                 echo "Waiting for kargo-webhooks-server-cert secret..."
-                for i in {1..60}; do
-                  if kubectl get secret kargo-webhooks-server-cert -n ${namespace} >/dev/null 2>&1; then
+                i=1
+                while [ "$i" -le 60 ]; do
+                  if kubectl get secret kargo-webhooks-server-cert -n \${namespace} >/dev/null 2>&1; then
                     echo "Secret found!"
                     break
                   fi
                   echo "Waiting for secret... attempt $i/60"
+                  i=$((i + 1))
                   sleep 5
                 done
                 
-                # Extract the CA certificate
-                CA_CERT=$(kubectl get secret kargo-webhooks-server-cert -n ${namespace} -o jsonpath='{.data.tls\\.crt}')
+                if [ "$i" -gt 60 ]; then
+                  echo "ERROR: Timed out waiting for kargo-webhooks-server-cert secret"
+                  exit 1
+                fi
+                
+                CA_CERT=$(kubectl get secret kargo-webhooks-server-cert -n \${namespace} -o jsonpath='{.data.tls\.crt}')
                 
                 if [ -z "$CA_CERT" ]; then
                   echo "ERROR: Failed to extract CA certificate from secret"
                   exit 1
                 fi
                 
-                # Wait for webhook configurations to exist
                 echo "Waiting for webhook configurations..."
-                for i in {1..60}; do
-                  if kubectl get validatingwebhookconfiguration kargo >/dev/null 2>&1 && \\
+                i=1
+                while [ "$i" -le 60 ]; do
+                  if kubectl get validatingwebhookconfiguration kargo >/dev/null 2>&1 && \
                      kubectl get mutatingwebhookconfiguration kargo >/dev/null 2>&1; then
                     echo "Webhook configurations found!"
                     break
                   fi
                   echo "Waiting for webhook configurations... attempt $i/60"
+                  i=$((i + 1))
                   sleep 5
                 done
                 
-                # Patch validating webhook configuration
+                if [ "$i" -gt 60 ]; then
+                  echo "ERROR: Timed out waiting for webhook configurations"
+                  exit 1
+                fi
+                
                 echo "Patching validating webhook configuration..."
-                # Get the number of webhooks
                 WEBHOOK_COUNT=$(kubectl get validatingwebhookconfiguration kargo -o json | jq '.webhooks | length')
                 echo "Found $WEBHOOK_COUNT validating webhooks"
                 
-                # Create patch for all webhooks
                 PATCHES=""
-                for i in $(seq 0 $((WEBHOOK_COUNT-1))); do
+                idx=0
+                while [ "$idx" -lt "$WEBHOOK_COUNT" ]; do
                   if [ -n "$PATCHES" ]; then
                     PATCHES="$PATCHES,"
                   fi
-                  PATCHES="$PATCHES{\"op\": \"add\", \"path\": \"/webhooks/$i/clientConfig/caBundle\", \"value\": \"$CA_CERT\"}"
+                  PATCHES="$PATCHES{\"op\": \"add\", \"path\": \"/webhooks/$idx/clientConfig/caBundle\", \"value\": \"$CA_CERT\"}"
+                  idx=$((idx + 1))
                 done
                 
                 kubectl patch validatingwebhookconfiguration kargo --type='json' -p="[$PATCHES]"
                 
-                # Patch mutating webhook configuration
                 echo "Patching mutating webhook configuration..."
-                # Get the number of webhooks
                 WEBHOOK_COUNT=$(kubectl get mutatingwebhookconfiguration kargo -o json | jq '.webhooks | length')
                 echo "Found $WEBHOOK_COUNT mutating webhooks"
                 
-                # Create patch for all webhooks
                 PATCHES=""
-                for i in $(seq 0 $((WEBHOOK_COUNT-1))); do
+                idx=0
+                while [ "$idx" -lt "$WEBHOOK_COUNT" ]; do
                   if [ -n "$PATCHES" ]; then
                     PATCHES="$PATCHES,"
                   fi
-                  PATCHES="$PATCHES{\"op\": \"add\", \"path\": \"/webhooks/$i/clientConfig/caBundle\", \"value\": \"$CA_CERT\"}"
+                  PATCHES="$PATCHES{\"op\": \"add\", \"path\": \"/webhooks/$idx/clientConfig/caBundle\", \"value\": \"$CA_CERT\"}"
+                  idx=$((idx + 1))
                 done
                 
                 kubectl patch mutatingwebhookconfiguration kargo --type='json' -p="[$PATCHES]"
