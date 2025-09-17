@@ -140,8 +140,8 @@ This script:
 1. Open Headlamp Desktop
 2. Check that all clusters appear:
    - `kind-localdev` (host cluster)
-   - `dev-vcluster` 
-   - `staging-vcluster`
+   - `dev` context 
+   - `staging`
 3. Click on each cluster to verify connectivity
 
 ## Usage
@@ -288,7 +288,7 @@ vcluster list
 kubectl config get-contexts
 
 # Test vcluster connectivity
-kubectl --context dev-vcluster get ns
+kubectl --context dev get ns
 
 # Check port-forward processes
 ps aux | grep port-forward
@@ -325,7 +325,7 @@ Example:
 vcluster connect vcluster-dev-helm \
   --namespace dev-vcluster \
   --server https://localhost:8443 \
-  --kube-config-context-name dev-vcluster \
+  --kube-config-context-name dev \
   --insecure \
   --print
 ```
@@ -417,7 +417,7 @@ The consolidated kubeconfig includes:
 
 ## Related Documentation
 
-- [VCluster Connectivity with WSL2](./vcluster-connectivity-wsl2.md)
+- [VCluster Connectivity](./vcluster-connectivity.md)
 - [VCluster Architecture](./vcluster-architecture.md)
 - [GitOps Architecture Overview](./gitops-architecture-overview.md)
 - [Development Workflow](./development-workflow.md)

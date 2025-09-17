@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Generate nginx override file with static certificates for IDPBuilder
 
 CERT_DIR="$HOME/stacks/certificates"

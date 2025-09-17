@@ -83,7 +83,22 @@ if [ ! -f "$CONFIG_FILE" ]; then
     CONFIG_FILE="${SCRIPT_DIR}/kind-config-nixos.yaml"
 fi
 
-idpbuilder create --kind-config "$CONFIG_FILE" --dev-password $IDPBUILDER_ARGS
+CERT_BASE="$HOME/stacks/certificates"
+CERT_OVERRIDES=()
+if [ -f "$CERT_BASE/nginx-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "nginx:$CERT_BASE/nginx-override.yaml")
+fi
+if [ -f "$CERT_BASE/argocd-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "argocd:$CERT_BASE/argocd-override.yaml")
+fi
+
+if [ ${#CERT_OVERRIDES[@]} -gt 0 ]; then
+    echo -e "${BLUE}Using static certificate overrides for IDPBuilder${NC}"
+else
+    echo -e "${YELLOW}No certificate overrides found; cluster will create a new self-signed cert${NC}"
+fi
+
+idpbuilder create --kind-config "$CONFIG_FILE" ${CERT_OVERRIDES[@]} --dev-password $IDPBUILDER_ARGS
 
 # Step 4: Wait for cluster to be ready
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
@@ -148,6 +163,14 @@ kubectl delete pod -n kube-system -l component=kube-controller-manager --force -
 # Step 10: Wait for all system pods to be ready
 echo -e "${GREEN}Waiting for system pods...${NC}"
 kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
+
+# Sync certificates into local/system trust stores
+if [ -x "$HOME/stacks/scripts/sync-cluster-certificates.sh" ]; then
+    echo -e "${GREEN}Syncing IDPBuilder certificates to local trust stores...${NC}"
+    "$HOME/stacks/scripts/sync-cluster-certificates.sh"
+else
+    echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
+fi
 
 # Step 11: Deploy SSH services (if CDK8s manifests exist and namespaces are ready)
 if [ -d "/home/vpittamp/stacks/cdk8s/dist" ]; then

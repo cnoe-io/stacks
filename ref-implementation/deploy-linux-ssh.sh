@@ -23,7 +23,6 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
-CLUSTER_NAME="local"
 KEYS_DIR="${SCRIPT_DIR}/keys"
 
 # Source environment variables from wi.env if it exists
@@ -72,10 +71,44 @@ fi
 echo ""
 
 # Step 1: Delete existing cluster if it exists
-if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
-    echo -e "${YELLOW}⚠️  Deleting existing cluster...${NC}"
-    idpbuilder delete || kind delete cluster --name ${CLUSTER_NAME} || true
-fi
+cleanup_kind_artifacts() {
+    local containers networks
+    containers=$(docker ps -aq --filter "label=io.x-k8s.kind.cluster")
+    if [ -n "$containers" ]; then
+        echo -e "${YELLOW}⚠️  Removing lingering kind containers...${NC}"
+        docker rm -f $containers >/dev/null 2>&1 || true
+    fi
+
+    if ! kind get clusters >/dev/null 2>&1; then
+        networks=$(docker network ls --filter name=^kind$ --format '{{.ID}}')
+        if [ -n "$networks" ]; then
+            docker network rm kind >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+ensure_kind_ports_free() {
+    local ports=(8443 32222 30022 30023 30024 30025 30026 30027)
+    if ! command -v ss >/dev/null 2>&1; then
+        return
+    fi
+    for port in "${ports[@]}"; do
+        if ss -Htanl | grep -qE "[:.]${port} "; then
+            error "Port ${port} is in use. Please free it before recreating the cluster."
+            exit 1
+        fi
+    done
+}
+
+mapfile -t EXISTING_CLUSTERS < <(kind get clusters 2>/dev/null || true)
+for cluster in "${EXISTING_CLUSTERS[@]}"; do
+    [ -n "$cluster" ] || continue
+    echo -e "${YELLOW}⚠️  Deleting existing cluster (${cluster})...${NC}"
+    idpbuilder delete || kind delete cluster --name "$cluster" || true
+done
+
+cleanup_kind_artifacts
+ensure_kind_ports_free
 
 # Step 2: Generate or check service account keys
 mkdir -p "${KEYS_DIR}"
@@ -187,13 +220,35 @@ unset DOCKER_HOST
 unset DOCKER_TLS_VERIFY
 unset DOCKER_CERT_PATH
 
-# Explicitly pass the cluster name to idpbuilder
-idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
+# Create cluster using idpbuilder defaults
+CERT_BASE="$HOME/stacks/certificates"
+CERT_OVERRIDES=()
+if [ -f "$CERT_BASE/nginx-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "nginx:$CERT_BASE/nginx-override.yaml")
+fi
+if [ -f "$CERT_BASE/argocd-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "argocd:$CERT_BASE/argocd-override.yaml")
+fi
+
+if [ ${#CERT_OVERRIDES[@]} -gt 0 ]; then
+    echo -e "${BLUE}Using static certificate overrides for IDPBuilder${NC}"
+else
+    echo -e "${YELLOW}No certificate overrides found; cluster will create a new self-signed cert${NC}"
+fi
+
+idpbuilder create --kind-config "${CONFIG_FILE}" ${CERT_OVERRIDES[@]} --dev-password $IDPBUILDER_ARGS
+
+ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | tail -1)
+if [ -z "$ACTUAL_CLUSTER" ]; then
+    echo -e "${RED}❌ Kind cluster was not created successfully${NC}"
+    exit 1
+fi
+HOST_CONTEXT="kind-${ACTUAL_CLUSTER}"
 
 # Step 5: Wait for cluster to be ready
 echo -e "${GREEN}Waiting for cluster to be ready...${NC}"
 for i in {1..30}; do
-    if kubectl get nodes &>/dev/null; then
+    if docker exec ${ACTUAL_CLUSTER}-control-plane kubectl get nodes &>/dev/null; then
         echo -e "${GREEN}✓ Cluster nodes are ready${NC}"
         break
     fi
@@ -205,27 +260,15 @@ done
 echo -e "${GREEN}Updating kubeconfig...${NC}"
 mkdir -p ~/.kube
 
-# Try to get kubeconfig, handle if cluster name doesn't match
-if ! kind get kubeconfig --name ${CLUSTER_NAME} > ~/.kube/config 2>/dev/null; then
-    echo -e "${YELLOW}Warning: Could not get kubeconfig for cluster '${CLUSTER_NAME}'${NC}"
-    echo -e "${YELLOW}Attempting to find the correct cluster name...${NC}"
-    
-    # List all kind clusters and try the first one
-    ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | head -1)
-    if [ -n "$ACTUAL_CLUSTER" ]; then
-        echo -e "${GREEN}Found cluster: ${ACTUAL_CLUSTER}${NC}"
-        kind get kubeconfig --name ${ACTUAL_CLUSTER} > ~/.kube/config
-        echo -e "${YELLOW}Note: Cluster was created as '${ACTUAL_CLUSTER}' instead of '${CLUSTER_NAME}'${NC}"
-    else
-        echo -e "${RED}❌ No Kind clusters found${NC}"
-        exit 1
-    fi
+if ! kind get kubeconfig --name ${ACTUAL_CLUSTER} > ~/.kube/config 2>/dev/null; then
+    echo -e "${RED}❌ Failed to write kubeconfig for cluster '${ACTUAL_CLUSTER}'${NC}"
+    exit 1
 fi
 
 # Step 7: Verify keys are mounted correctly
 echo -e "${GREEN}Verifying service account keys...${NC}"
-# Use the actual cluster name if it differs
-CONTAINER_NAME="${ACTUAL_CLUSTER:-$CLUSTER_NAME}-control-plane"
+# Use the actual cluster name
+CONTAINER_NAME="${ACTUAL_CLUSTER}-control-plane"
 if docker exec ${CONTAINER_NAME} ls /etc/kubernetes/pki/custom-keys/sa.key &>/dev/null; then
     echo -e "${GREEN}✓ Keys are properly mounted${NC}"
 else
@@ -239,6 +282,13 @@ fi
 # Step 8: Wait for all system pods to be ready
 echo -e "${GREEN}Waiting for system pods...${NC}"
 kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
+
+if [ -x "$HOME/stacks/scripts/sync-cluster-certificates.sh" ]; then
+    echo -e "${GREEN}Syncing IDPBuilder certificates to local trust stores...${NC}"
+    "$HOME/stacks/scripts/sync-cluster-certificates.sh"
+else
+    echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
+fi
 
 # Step 9: Deploy SSH services (if CDK8s manifests exist)
 CDK8S_DIST="/home/vpittamp/stacks/cdk8s/dist"
@@ -358,10 +408,9 @@ if [ "$STATUS" != "Valid" ]; then
     echo -e "${YELLOW}  3. Check logs: kubectl logs -n external-secrets deploy/external-secrets${NC}"
 fi
 
-# Step 12: Setup VClusters with proper kubeconfig generation
+# Step 12: Setup VClusters with native kubeconfig generation
 echo -e "${GREEN}Checking for VClusters...${NC}"
 
-# Wait for vclusters to be deployed by ArgoCD
 VCLUSTERS_FOUND=false
 for i in {1..60}; do
     if kubectl get pod vcluster-dev-helm-0 -n dev-vcluster &>/dev/null 2>&1 || \
@@ -377,57 +426,16 @@ done
 echo ""
 
 if [ "$VCLUSTERS_FOUND" = true ]; then
-    # Run the dedicated VCluster setup script
-    if [ -f "${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh" ]; then
+    if [ -x "${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh" ]; then
         echo -e "${GREEN}Running VCluster kubeconfig setup...${NC}"
-        ${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh
-    else
-        echo -e "${YELLOW}VCluster setup script not found, attempting basic setup...${NC}"
-        
-        # Fallback: Basic vcluster setup
-        if command -v vcluster &>/dev/null; then
-            VCLUSTER_CONFIGS=(
-                "vcluster-dev-helm:dev-vcluster:dev"
-                "vcluster-staging-helm:staging-vcluster:staging"
-            )
-            
-            for vcluster_config in "${VCLUSTER_CONFIGS[@]}"; do
-                IFS=':' read -r NAME NAMESPACE ENV <<< "${vcluster_config}"
-                
-                if kubectl get pod "${NAME}-0" -n "${NAMESPACE}" &>/dev/null 2>&1; then
-                    echo -e "${GREEN}  Connecting to ${ENV} vcluster...${NC}"
-                    
-                    # Generate kubeconfig
-                    VCLUSTER_KUBECONFIG="/tmp/vcluster-${ENV}.yaml"
-                    if vcluster connect "${NAME}" -n "${NAMESPACE}" \
-                        --server "https://${ENV}-vcluster.cnoe.localtest.me:8443" \
-                        --insecure --update-current=false --print > "${VCLUSTER_KUBECONFIG}" 2>/dev/null; then
-                        
-                        # Merge with main kubeconfig
-                        KUBECONFIG="${HOME}/.kube/config:${VCLUSTER_KUBECONFIG}" \
-                            kubectl config view --flatten > /tmp/merged-config.yaml
-                        mv /tmp/merged-config.yaml ${HOME}/.kube/config
-                        
-                        # Rename context for clarity (handle both old and new cluster names)
-                        kubectl config rename-context \
-                            "vcluster_${NAME}_${NAMESPACE}_kind-local" \
-                            "${ENV}" 2>/dev/null || \
-                        kubectl config rename-context \
-                            "vcluster_${NAME}_${NAMESPACE}_kind-localdev" \
-                            "${ENV}" 2>/dev/null || true
-                        
-                        echo -e "${GREEN}  ✓ Added ${ENV}-vcluster context${NC}"
-                    fi
-                fi
-            done
-        else
-            echo -e "${YELLOW}vcluster CLI not found. Install it to manage VClusters.${NC}"
-            echo "  curl -L -o vcluster https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-linux-amd64"
-            echo "  chmod +x vcluster && sudo mv vcluster /usr/local/bin/"
+        if ! HOST_CONTEXT_OVERRIDE="${HOST_CONTEXT}" ${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh; then
+            echo -e "${YELLOW}⚠️  VCluster kubeconfig setup completed with warnings${NC}"
         fi
+    else
+        echo -e "${YELLOW}⚠️  setup-vcluster-kubeconfigs.sh not found or not executable${NC}"
     fi
 else
-    echo -e "${YELLOW}No VClusters found. They may be deployed later by ArgoCD.${NC}"
+    echo -e "${YELLOW}No VClusters found yet. They may be deployed later by ArgoCD.${NC}"
     echo "Run '${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh' after VClusters are ready."
 fi
 
@@ -462,7 +470,7 @@ echo "  Headlamp:  https://headlamp.cnoe.localtest.me:8443"
 echo "  Kargo:     https://kargo.cnoe.localtest.me:8443"
 echo ""
 echo -e "${BLUE}Kubernetes Contexts:${NC}"
-kubectl config get-contexts | grep -E "(CURRENT|kind-local|kind-localdev|dev|staging)" | grep -v "vcluster_"
+kubectl config get-contexts | grep -E "(CURRENT|kind-|dev|staging)" | grep -v "vcluster_"
 echo ""
 echo -e "${BLUE}SSH Access (after starting DevSpace):${NC}"
 echo "  ssh -p 30022 devspace@localhost    # backstage-dev"

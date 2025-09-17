@@ -400,7 +400,7 @@ type: kubernetes.io/dockerconfigjson
 3. **Automatically appears in vcluster:**
 ```bash
 # In vcluster
-kubectl --context dev-vcluster get secret -n backstage ghcr-dockercfg
+kubectl --context dev get secret -n backstage ghcr-dockercfg
 ```
 
 ### Synced Secret Naming

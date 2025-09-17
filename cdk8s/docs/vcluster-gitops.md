@@ -47,11 +47,10 @@ Argo CD will install vclusters and automatically register them via the ExternalS
 3) Merge kubeconfigs locally (optional)
 
 ```
-# For kind on Windows/WSL2, host often maps 0.0.0.0:8443->443
-HOST_PORT_OVERRIDE=8443 bash cdk8s/scripts/merge-vcluster-kubeconfigs.sh
+bash ref-implementation/setup-vcluster-kubeconfigs.sh
 
 # Then use the context
-kubectl config use-context staging-vcluster
+kubectl config use-context staging
 ```
 
 If name resolution prefers IPv6 (::1), add to your `/etc/hosts`:

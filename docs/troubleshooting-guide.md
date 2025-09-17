@@ -336,7 +336,7 @@ controller:
 
 3. **For WSL2/Windows with port mapping:**
 ```bash
-HOST_PORT_OVERRIDE=8443 bash scripts/merge-vcluster-kubeconfigs.sh
+bash ref-implementation/setup-vcluster-kubeconfigs.sh
 ```
 
 ## Kargo Pipeline Issues

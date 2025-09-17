@@ -1,19 +1,19 @@
 {
   "dev": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "docker.io/vpittamp23/nixos-dev:v1.21.0-essential",
+    "backstage": "docker.io/vpittamp23/backstage-nix:v3.0",
     "flagdUi": "ghcr.io/vpittamp/devspace-containers/typescript:20",
     "claudecodeui": "ghcr.io/vpittamp/devspace-containers/typescript:20"
   },
   "staging": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "ghcr.io/pittampalliorg/backstage-cnoe:latest",
+    "backstage": "docker.io/vpittamp23/backstage-nix:v3.0",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   },
   "production": {
     "nextjs": "ghcr.io/pittampalliorg/chat:78",
-    "backstage": "ghcr.io/pittampalliorg/backstage-cnoe:v126-production",
+    "backstage": "docker.io/vpittamp23/backstage-nix:v3.0",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   }

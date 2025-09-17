@@ -76,9 +76,25 @@ if [ ! -f "$SCRIPT_DIR/$KIND_CONFIG" ]; then
 fi
 
 # Create cluster
+CERT_BASE="$HOME/stacks/certificates"
+CERT_OVERRIDES=()
+if [ -f "$CERT_BASE/nginx-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "nginx:$CERT_BASE/nginx-override.yaml")
+fi
+if [ -f "$CERT_BASE/argocd-override.yaml" ]; then
+    CERT_OVERRIDES+=("-c" "argocd:$CERT_BASE/argocd-override.yaml")
+fi
+
+if [ ${#CERT_OVERRIDES[@]} -gt 0 ]; then
+    echo -e "${BLUE}Using static certificate overrides for IDPBuilder${NC}"
+else
+    echo -e "${YELLOW}No certificate overrides found; cluster will create a new self-signed cert${NC}"
+fi
+
 idpbuilder create \
     --kind-config "$SCRIPT_DIR/$KIND_CONFIG" \
     --name "$CLUSTER_NAME" \
+    ${CERT_OVERRIDES[@]} \
     --dev-password
 
 # Step 4: Handle NixOS key replacement if needed
@@ -122,6 +138,13 @@ fi
 # Step 5: Wait for cluster to be ready
 echo -e "${BLUE}Step 4: Waiting for cluster to be ready...${NC}"
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
+
+if [ -x "$HOME/stacks/scripts/sync-cluster-certificates.sh" ]; then
+    echo -e "${GREEN}Syncing IDPBuilder certificates to local trust stores...${NC}"
+    "$HOME/stacks/scripts/sync-cluster-certificates.sh"
+else
+    echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
+fi
 
 # Step 6: Apply CDK8s manifests with SSH services
 echo -e "${BLUE}Step 5: Applying SSH service configurations...${NC}"

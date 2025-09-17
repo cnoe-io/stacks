@@ -1,217 +1,213 @@
 #!/usr/bin/env bash
-# Setup VCluster kubeconfigs and merge them into the main kubeconfig
-# This script properly generates and manages VCluster contexts
+set -euo pipefail
 
-set -e
+# Rebuild local kubeconfigs for vclusters when running on native Linux.
+# Prioritises straightforward context names (dev, staging) and merges them
+# into the standard kubeconfig without WSL-specific tweaks.
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Stages to configure
+VCLUSTER_STAGES=("dev" "staging")
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}   VCluster Kubeconfig Setup${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-# Check prerequisites
-if ! command -v vcluster &>/dev/null; then
-    echo -e "${RED}vcluster CLI not found. Installing...${NC}"
-    curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-linux-amd64"
-    chmod +x vcluster
-    sudo mv vcluster /usr/local/bin/
-fi
-
-if ! kubectl cluster-info &>/dev/null 2>&1; then
-    echo -e "${RED}Cannot connect to host cluster. Please ensure cluster is running.${NC}"
-    exit 1
-fi
-
-# VCluster configurations
-declare -A VCLUSTERS=(
-    ["dev"]="vcluster-dev-helm:dev-vcluster:https://dev-vcluster.cnoe.localtest.me:8443"
-    ["staging"]="vcluster-staging-helm:staging-vcluster:https://staging-vcluster.cnoe.localtest.me:8443"
-)
-
-# Create directory for vcluster kubeconfigs
-VCLUSTER_KUBECONFIG_DIR="${HOME}/.kube/vclusters"
-mkdir -p "${VCLUSTER_KUBECONFIG_DIR}"
-
-# Track successful configurations
-CONFIGURED_VCLUSTERS=()
-
-for ENV in "${!VCLUSTERS[@]}"; do
-    IFS=':' read -r NAME NAMESPACE SERVER_URL <<< "${VCLUSTERS[$ENV]}"
-    
-    echo -e "${BLUE}Processing ${ENV} vcluster...${NC}"
-    
-    # Check if vcluster pod exists
-    if ! kubectl get pod "${NAME}-0" -n "${NAMESPACE}" &>/dev/null 2>&1; then
-        echo -e "${YELLOW}  ${ENV} vcluster not found. It may not be deployed yet.${NC}"
-        continue
-    fi
-    
-    # Wait for vcluster to be ready
-    echo "  Waiting for ${ENV} vcluster to be ready..."
-    if ! kubectl wait --for=condition=Ready pod "${NAME}-0" -n "${NAMESPACE}" --timeout=60s &>/dev/null 2>&1; then
-        echo -e "${YELLOW}  ${ENV} vcluster pod not ready after 60s${NC}"
-        continue
-    fi
-    
-    # Generate kubeconfig using vcluster CLI
-    echo "  Generating kubeconfig for ${ENV} vcluster..."
-    VCLUSTER_KUBECONFIG="${VCLUSTER_KUBECONFIG_DIR}/${ENV}.yaml"
-    
-    # Use vcluster to generate the kubeconfig
-    if vcluster connect "${NAME}" \
-        -n "${NAMESPACE}" \
-        --server "${SERVER_URL}" \
-        --insecure \
-        --update-current=false \
-        --kube-config="${VCLUSTER_KUBECONFIG}" &>/dev/null 2>&1; then
-        
-        echo -e "${GREEN}  ✓ Generated kubeconfig for ${ENV} vcluster${NC}"
-        
-        # Update the context name in the generated kubeconfig (handle both old and new cluster names)
-        kubectl config rename-context \
-            "vcluster_${NAME}_${NAMESPACE}_kind-local" \
-            "${ENV}" \
-            --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || \
-        kubectl config rename-context \
-            "vcluster_${NAME}_${NAMESPACE}_kind-localdev" \
-            "${ENV}" \
-            --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || true
-        
-        # Set the current context in the vcluster kubeconfig
-        kubectl config use-context "${ENV}" \
-            --kubeconfig="${VCLUSTER_KUBECONFIG}" 2>/dev/null || true
-        
-        CONFIGURED_VCLUSTERS+=("${ENV}")
-    else
-        echo -e "${YELLOW}  Failed to generate kubeconfig for ${ENV} vcluster${NC}"
-        
-        # Alternative method: Extract service account token directly
-        echo "  Trying alternative method..."
-        
-        # Get the service account token
-        SECRET_NAME=$(kubectl get sa vc-${NAME} -n ${NAMESPACE} -o jsonpath='{.secrets[0].name}' 2>/dev/null || echo "")
-        
-        if [ -z "$SECRET_NAME" ]; then
-            # For newer Kubernetes versions, create a token
-            echo "  Creating service account token..."
-            TOKEN=$(kubectl create token vc-${NAME} -n ${NAMESPACE} --duration=87600h 2>/dev/null || echo "")
-        else
-            TOKEN=$(kubectl get secret ${SECRET_NAME} -n ${NAMESPACE} -o jsonpath='{.data.token}' 2>/dev/null | base64 -d)
-        fi
-        
-        if [ -n "$TOKEN" ]; then
-            # Create kubeconfig manually
-            cat > "${VCLUSTER_KUBECONFIG}" <<EOF
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    insecure-skip-tls-verify: true
-    server: ${SERVER_URL}
-  name: ${ENV}
-contexts:
-- context:
-    cluster: ${ENV}
-    user: ${ENV}
-  name: ${ENV}
-current-context: ${ENV}
-users:
-- name: ${ENV}
-  user:
-    token: ${TOKEN}
-EOF
-            echo -e "${GREEN}  ✓ Created kubeconfig for ${ENV} vcluster (alternative method)${NC}"
-            CONFIGURED_VCLUSTERS+=("${ENV}")
-        else
-            echo -e "${RED}  Failed to create kubeconfig for ${ENV} vcluster${NC}"
-        fi
-    fi
-done
-
-# Merge vcluster kubeconfigs with main kubeconfig
-if [ ${#CONFIGURED_VCLUSTERS[@]} -gt 0 ]; then
-    echo ""
-    echo -e "${GREEN}Merging VCluster kubeconfigs...${NC}"
-    
-    # Backup current kubeconfig
-    cp ~/.kube/config ~/.kube/config.backup.$(date +%Y%m%d_%H%M%S)
-    
-    # Build KUBECONFIG path list
-    KUBECONFIG_LIST="${HOME}/.kube/config"
-    for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-        KUBECONFIG_LIST="${KUBECONFIG_LIST}:${VCLUSTER_KUBECONFIG_DIR}/${ENV}-vcluster.yaml"
-    done
-    
-    # Merge all kubeconfigs
-    KUBECONFIG="${KUBECONFIG_LIST}" kubectl config view --flatten > ~/.kube/config.merged
-    mv ~/.kube/config.merged ~/.kube/config
-    
-    echo -e "${GREEN}✓ Kubeconfigs merged successfully${NC}"
-fi
-
-# Test connections
-echo ""
-echo -e "${GREEN}Testing VCluster connections...${NC}"
-for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-    echo -n "  Testing ${ENV}-vcluster: "
-    if kubectl get ns --context="${ENV}-vcluster" &>/dev/null 2>&1; then
-        NODE_COUNT=$(kubectl get nodes --context="${ENV}-vcluster" 2>/dev/null | tail -n +2 | wc -l)
-        NS_COUNT=$(kubectl get ns --context="${ENV}-vcluster" 2>/dev/null | tail -n +2 | wc -l)
-        echo -e "${GREEN}✓ Connected (${NODE_COUNT} nodes, ${NS_COUNT} namespaces)${NC}"
-    else
-        echo -e "${RED}✗ Connection failed${NC}"
-    fi
-done
-
-# Show summary
-echo ""
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}✓ VCluster Setup Complete${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-if [ ${#CONFIGURED_VCLUSTERS[@]} -gt 0 ]; then
-    echo -e "${BLUE}Configured VClusters:${NC}"
-    for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-        echo "  - ${ENV}-vcluster"
-    done
-    echo ""
-    echo -e "${BLUE}Kubeconfig locations:${NC}"
-    echo "  Main: ~/.kube/config"
-    echo "  VClusters: ${VCLUSTER_KUBECONFIG_DIR}/"
-    echo ""
-    echo -e "${BLUE}Switch contexts:${NC}"
-    echo "  kubectl config use-context kind-localdev     # Host cluster"
-    for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-        echo "  kubectl config use-context ${ENV}-vcluster   # ${ENV^} environment"
-    done
-    echo ""
-    echo -e "${BLUE}Direct access:${NC}"
-    for ENV in "${CONFIGURED_VCLUSTERS[@]}"; do
-        echo "  kubectl --context=${ENV} get pods --all-namespaces"
-    done
+# Preferred host-cluster context(s) to fall back to after merging
+if [ -n "${HOST_CONTEXT_OVERRIDE:-}" ]; then
+  HOST_CONTEXT_CANDIDATES=(${HOST_CONTEXT_OVERRIDE})
 else
-    echo -e "${YELLOW}No VClusters were configured.${NC}"
-    echo "This could mean:"
-    echo "  1. VClusters are not deployed yet (check ArgoCD)"
-    echo "  2. VClusters are still initializing"
-    echo "  3. There's an issue with the vcluster CLI"
-    echo ""
-    echo "Check VCluster status:"
-    echo "  kubectl get pods -n dev-vcluster"
-    echo "  kubectl get pods -n staging-vcluster"
+  HOST_CONTEXT_CANDIDATES=()
 fi
+HOST_CONTEXT_CANDIDATES+=("kind-local" "kind-localdev" "kind-kind")
+HOST_CONTEXT=""
 
-# Show current contexts
-echo ""
-echo -e "${BLUE}Current contexts:${NC}"
-kubectl config get-contexts | grep -E "(CURRENT|kind-localdev|dev-vcluster|staging-vcluster)" || true
+# Base domain/port for the ingress endpoints that front the vcluster apiservers
+VCLUSTER_BASE_DOMAIN=${VCLUSTER_BASE_DOMAIN:-cnoe.localtest.me}
+VCLUSTER_TLS_PORT=${VCLUSTER_TLS_PORT:-8443}
+
+# Main kubeconfig location (respects KUBECONFIG if set)
+MAIN_KUBECONFIG=${KUBECONFIG:-$HOME/.kube/config}
+
+# Utilities
+log() { printf '\033[0;32m%s\033[0m\n' "$1"; }
+warn() { printf '\033[1;33m%s\033[0m\n' "$1"; }
+error() { printf '\033[0;31m%s\033[0m\n' "$1"; }
+
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    error "Missing required command: $1"
+    exit 1
+  fi
+}
+
+ensure_host_cluster() {
+  local current=$(kubectl config current-context 2>/dev/null || echo "")
+  if [ -n "$current" ]; then
+    for candidate in "${HOST_CONTEXT_CANDIDATES[@]}"; do
+      if [ "$current" = "$candidate" ] && kubectl --context "$candidate" cluster-info >/dev/null 2>&1; then
+        HOST_CONTEXT="$candidate"
+        return
+      fi
+    done
+  fi
+
+  for candidate in "${HOST_CONTEXT_CANDIDATES[@]}"; do
+    [ -n "$candidate" ] || continue
+    if kubectl --context "$candidate" cluster-info >/dev/null 2>&1; then
+      HOST_CONTEXT="$candidate"
+      KUBECONFIG="$MAIN_KUBECONFIG" kubectl config use-context "$candidate" >/dev/null 2>&1 || true
+      return
+    fi
+  done
+
+  error "Cannot reach the host cluster. Is Kind running?"
+  exit 1
+}
+
+wait_for_vcluster_pod() {
+  local env=$1
+  local namespace="${env}-vcluster"
+  local pod="vcluster-${env}-helm-0"
+
+  for _ in {1..60}; do
+    if kubectl --context "$HOST_CONTEXT" get pod "$pod" -n "$namespace" >/dev/null 2>&1; then
+      local phase
+      phase=$(kubectl --context "$HOST_CONTEXT" get pod "$pod" -n "$namespace" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+      if [[ "$phase" == "Running" ]]; then
+        return 0
+      fi
+    fi
+    sleep 2
+  done
+
+  return 1
+}
+
+build_ingress_server() {
+  local env=$1
+  printf 'https://%s-vcluster.%s:%s' "$env" "$VCLUSTER_BASE_DOMAIN" "$VCLUSTER_TLS_PORT"
+}
+
+apply_vcluster_context() {
+  local env=$1
+  local cluster_name="vcluster-${env}"
+  local user_name="vcluster-${env}"
+  local namespace="${env}-vcluster"
+  local secret_name="vc-vcluster-${env}-helm"
+  local server
+
+  server=$(build_ingress_server "$env")
+
+  local ca client key
+  ca=$(kubectl --context "$HOST_CONTEXT" get secret "$secret_name" -n "$namespace" -o jsonpath='{.data.certificate-authority}' 2>/dev/null || echo "")
+  client=$(kubectl --context "$HOST_CONTEXT" get secret "$secret_name" -n "$namespace" -o jsonpath='{.data.client-certificate}' 2>/dev/null || echo "")
+  key=$(kubectl --context "$HOST_CONTEXT" get secret "$secret_name" -n "$namespace" -o jsonpath='{.data.client-key}' 2>/dev/null || echo "")
+
+  if [[ -z "$ca" || -z "$client" || -z "$key" ]]; then
+    error "Required certificates missing in secret ${secret_name} (env: ${env})"
+    return 1
+  fi
+
+  local ca_file="${TEMP_DIR}/${env}-ca.crt"
+  local cert_file="${TEMP_DIR}/${env}-client.crt"
+  local key_file="${TEMP_DIR}/${env}-client.key"
+
+  echo "$ca" | base64 -d > "$ca_file"
+  echo "$client" | base64 -d > "$cert_file"
+  echo "$key" | base64 -d > "$key_file"
+
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config delete-context "$env" >/dev/null 2>&1 || true
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config delete-cluster "$cluster_name" >/dev/null 2>&1 || true
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config delete-user "$user_name" >/dev/null 2>&1 || true
+
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config set-cluster "$cluster_name" \
+    --server="$server" \
+    --certificate-authority="$ca_file" \
+    --embed-certs=true >/dev/null
+
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config set-credentials "$user_name" \
+    --client-certificate="$cert_file" \
+    --client-key="$key_file" \
+    --embed-certs=true >/dev/null
+
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config set-context "$env" \
+    --cluster="$cluster_name" \
+    --user="$user_name" \
+    --namespace=default >/dev/null
+
+  log "✓ Configured context '${env}'"
+}
+
+verify_contexts() {
+  local contexts=($@)
+  for env in "${contexts[@]}"; do
+    printf 'Validating context %s... ' "$env"
+    if kubectl --context "$env" get ns >/dev/null 2>&1; then
+      printf '\033[0;32mok\033[0m\n'
+    else
+      printf '\033[1;33mwarning (unable to connect)\033[0m\n'
+    fi
+  done
+}
+
+set_default_context() {
+  local configured=($@)
+  local candidates=("${HOST_CONTEXT_CANDIDATES[@]}" "${configured[@]}")
+
+  for candidate in "${candidates[@]}"; do
+    [ -n "$candidate" ] || continue
+    if KUBECONFIG="$MAIN_KUBECONFIG" kubectl config get-contexts "$candidate" >/dev/null 2>&1; then
+      if KUBECONFIG="$MAIN_KUBECONFIG" kubectl config use-context "$candidate" >/dev/null 2>&1; then
+        log "Default context set to ${candidate}"
+        return
+      fi
+    fi
+  done
+
+  warn "Unable to set default kube context automatically"
+}
+
+main() {
+  require kubectl
+
+  ensure_host_cluster
+  mkdir -p "$(dirname "$MAIN_KUBECONFIG")"
+  touch "$MAIN_KUBECONFIG"
+
+  local timestamp
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  local backup="${MAIN_KUBECONFIG}.bak.${timestamp}"
+  cp "$MAIN_KUBECONFIG" "$backup"
+  log "Backup of existing kubeconfig: ${backup}"
+
+  # Remove stale current-context before re-applying entries
+  KUBECONFIG="$MAIN_KUBECONFIG" kubectl config unset current-context >/dev/null 2>&1 || true
+
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TEMP_DIR"' EXIT
+
+  local configured=()
+
+  for env in "${VCLUSTER_STAGES[@]}"; do
+    log "Configuring ${env} vcluster"
+    if ! wait_for_vcluster_pod "$env"; then
+      warn "${env} vcluster is not ready; skipping"
+      continue
+    fi
+
+    if apply_vcluster_context "$env"; then
+      configured+=("$env")
+    else
+      warn "Skipped ${env} due to missing credentials"
+    fi
+  done
+
+  if [[ ${#configured[@]} -eq 0 ]]; then
+    warn "No vcluster kubeconfigs were generated"
+    exit 0
+  fi
+
+  verify_contexts "${configured[@]}"
+  set_default_context "${configured[@]}"
+
+  echo
+  log "Contexts available: ${configured[*]}"
+}
+
+main "$@"

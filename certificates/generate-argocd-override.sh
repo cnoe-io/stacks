@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to generate ArgoCD override file with static certificate for TLS trust
 
 CERT_DIR="$(dirname "$0")"

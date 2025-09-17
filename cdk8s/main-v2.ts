@@ -53,6 +53,7 @@ import { KGatewayMCPGatewayChart } from './charts/platform/kgateway-mcp-gateway-
 import { KGatewayMCPRoutesChart } from './charts/platform/kgateway-mcp-routes-chart';
 import { KGatewayAIServicesChart } from './charts/platform/kgateway-ai-services-chart';
 import { KGatewayAgentGatewayChart } from './charts/platform/kgateway-agentgateway-chart';
+import { CoreDnsRewriteChart } from './charts/platform/core-dns-rewrite-chart';
 
 // Register all charts
 IdpBuilderChartFactory.register('BootstrapSecretsChart', BootstrapSecretsChart);
@@ -102,6 +103,7 @@ IdpBuilderChartFactory.register('KGatewayMCPGatewayChart', KGatewayMCPGatewayCha
 IdpBuilderChartFactory.register('KGatewayMCPRoutesChart', KGatewayMCPRoutesChart);
 IdpBuilderChartFactory.register('KGatewayAIServicesChart', KGatewayAIServicesChart);
 IdpBuilderChartFactory.register('KGatewayAgentGatewayChart', KGatewayAgentGatewayChart);
+IdpBuilderChartFactory.register('CoreDnsRewriteChart', CoreDnsRewriteChart);
 
 const outputDir = 'dist';
 

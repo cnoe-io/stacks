@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script updates ArgoCD's TLS certificates ConfigMap with the static certificate
 
 CERT_FILE="/home/vpittamp/stacks/certificates/tls.crt"

@@ -6,6 +6,22 @@ import { automatedSyncWithOptions } from '../lib/argocd-sync-builders';
  * Add new applications here to have them automatically synthesized
  */
 export const applicationConfigs: ApplicationConfig[] = [
+  {
+    name: 'core-dns-rewrite',
+    namespace: 'kube-system',
+    chart: {
+      type: 'CoreDnsRewriteChart'
+    },
+    argocd: {
+      syncWave: '-150',
+      labels: {
+        'app.kubernetes.io/name': 'core-dns-rewrite',
+        'app.kubernetes.io/part-of': 'platform',
+        'app.kubernetes.io/component': 'dns'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
   // ArgoCD Configuration - DISABLED
   // IDPBuilder manages ArgoCD directly. To customize ArgoCD's ConfigMap, use:
   // idpbuilder create -c argocd:/path/to/argocd-cm-override.yaml

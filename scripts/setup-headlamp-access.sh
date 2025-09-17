@@ -15,7 +15,23 @@ NC='\033[0m' # No Color
 
 # Configuration
 VCLUSTER_ENVS=("dev" "staging")
-HOST_CONTEXT="kind-localdev"  # The actual host cluster context
+detect_host_context() {
+  if [ -n "${HOST_CONTEXT:-}" ]; then
+    echo "$HOST_CONTEXT"
+    return
+  fi
+  local ctx
+  ctx=$(kubectl config get-contexts -o name 2>/dev/null | grep '^kind-' | tail -1)
+  if [ -z "$ctx" ]; then
+    ctx=$(kubectl config current-context 2>/dev/null || echo "")
+  fi
+  if [ -z "$ctx" ]; then
+    ctx="kind-localdev"
+  fi
+  echo "$ctx"
+}
+
+HOST_CONTEXT=$(detect_host_context)
 WINDOWS_HOME="/mnt/c/Users/VinodPittampalli"  # Windows username is different from WSL username
 OUTPUT_DIR="${HOME}/.kube/headlamp"
 OUTPUT_FILE="${OUTPUT_DIR}/config"

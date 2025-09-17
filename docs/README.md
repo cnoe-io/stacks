@@ -21,7 +21,7 @@ Welcome. This index points to the most useful guides for working with our CDK8s 
 
 - Operations
   - Troubleshooting Guide: ./troubleshooting-guide.md
-  - VCluster Connectivity (WSL2): ./vcluster-connectivity-wsl2.md
+  - VCluster Connectivity: ./vcluster-connectivity.md
 
 Quick IdpBuilder notes:
 - Synthesize packages: from `cdk8s/` run `npx ts-node main-v2.ts`.
