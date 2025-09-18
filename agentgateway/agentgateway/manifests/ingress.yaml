@@ -13,6 +13,13 @@ spec:
     - host: agentgateway.cnoe.localtest.me
       http:
         paths:
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: agentgateway
+                port:
+                  number: 3000
           - path: /
             pathType: Prefix
             backend:
