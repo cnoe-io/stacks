@@ -23,7 +23,6 @@ spec:
         ports:
         - containerPort: 15000
           name: ui
-        command: ["agentgateway"]
         args: ["-f", "/etc/agentgateway/config.yaml"]
         volumeMounts:
         - name: config
