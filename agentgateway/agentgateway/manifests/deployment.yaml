@@ -24,6 +24,14 @@ spec:
         - containerPort: 15000
           name: ui
         args: ["-f", "/etc/agentgateway/config.yaml"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532
         volumeMounts:
         - name: config
           mountPath: /etc/agentgateway
@@ -35,6 +43,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+            ephemeral-storage: "1Gi"
         livenessProbe:
           httpGet:
             path: /health
