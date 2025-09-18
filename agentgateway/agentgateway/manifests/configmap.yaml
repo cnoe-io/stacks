@@ -7,10 +7,23 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 data:
   config.yaml: |
-    adminAddr:
-      SocketAddr: "0.0.0.0:15000"
-    statsAddr:
-      SocketAddr: "0.0.0.0:15020"
-    readinessAddr:
-      SocketAddr: "0.0.0.0:15021"
+    binds:
+    - port: 3000
+      listeners:
+      - routes:
+        - policies:
+            cors:
+              allowOrigins:
+                - "*"
+              allowHeaders:
+                - mcp-protocol-version
+                - content-type
+                - cache-control
+          backends:
+          - mcp:
+              targets:
+              - name: everything
+                stdio:
+                  cmd: npx
+                  args: ["@modelcontextprotocol/server-everything"]
 
