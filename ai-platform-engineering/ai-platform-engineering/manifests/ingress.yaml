@@ -16,7 +16,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: ai-platform-engineering
+                name: ai-platform-engineering-supervisor-agent
                 port:
                   number: 8000
     - host: cnoe.localtest.me
@@ -26,6 +26,6 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: ai-platform-engineering
+                name: ai-platform-engineering-supervisor-agent
                 port:
                   number: 8000
