@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-platform-engineering-values
+  namespace: ai-platform-engineering
+data:
+  values.yaml: |
+    global:
+      llmSecrets:
+        externalSecrets:
+          target: vault
