@@ -26,6 +26,9 @@ spec:
         - containerPort: 3000
           name: proxy
         args: ["-f", "/etc/agentgateway/config.yaml"]
+        env:
+        - name: ADMIN_ADDR
+          value: "0.0.0.0:15000"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
