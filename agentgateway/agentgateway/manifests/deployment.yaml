@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentgateway
+  namespace: agentgateway
+  labels:
+    app: agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agentgateway
+  template:
+    metadata:
+      labels:
+        app: agentgateway
+    spec:
+      containers:
+      - name: agentgateway
+        image: ghcr.io/agentgateway/agentgateway:0.8.3
+        ports:
+        - containerPort: 15000
+          name: ui
+        command: ["agentgateway"]
+        args: ["-f", "/etc/agentgateway/config.yaml"]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/agentgateway
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 15000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 15000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: agentgateway-config
+

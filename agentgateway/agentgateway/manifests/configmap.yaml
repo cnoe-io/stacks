@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentgateway-config
+  namespace: agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  config.yaml: |
+    binds:
+    - port: 8000
+      listeners:
+      - routes:
+        - policies:
+            cors:
+              allowOrigins:
+                - "*"
+              allowHeaders:
+                - mcp-protocol-version
+                - content-type
+                - cache-control
+          backends:
+          - mcp:
+              targets:
+              - name: everything
+                stdio:
+                  cmd: npx
+                  args: ["@modelcontextprotocol/server-everything"]
+
