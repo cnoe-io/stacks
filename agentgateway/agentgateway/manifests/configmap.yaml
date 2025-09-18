@@ -24,8 +24,9 @@ data:
           backends:
           - mcp:
               targets:
-              - name: everything
-                stdio:
-                  cmd: npx
-                  args: ["@modelcontextprotocol/server-everything"]
+              - mcp:
+                  host: weather.outshift.io
+                  path: /mcp
+                  port: 443
+                name: weather
 
