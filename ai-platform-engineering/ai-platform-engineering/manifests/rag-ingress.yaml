@@ -5,24 +5,21 @@ metadata:
   namespace: ai-platform-engineering
   annotations:
     argocd.argoproj.io/sync-wave: "0"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      sub_filter '</head>' '<base href="/kb-rag/"></head>';
-      sub_filter_once on;
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
   ingressClassName: "nginx"
   rules:
-    - host: localhost
+    - host: kb-rag.cnoe.localtest.me
       http:
         paths:
-          - path: /kb-rag(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: ai-platform-engineering-kb-rag-web
                 port:
                   number: 80
-    - host: cnoe.localtest.me
+    - host: localhost
       http:
         paths:
           - path: /kb-rag(/|$)(.*)
