@@ -15,7 +15,7 @@ spec:
       helm:
         valueFiles:
           - $values/helm/values.yaml
-          - $values/helm/values-external-secrets.yaml
+          - $values/helm/idpbuilder/caipe/override.yaml
     # Values files from Git repository (your custom branch)
     - repoURL: https://github.com/cnoe-io/ai-platform-engineering.git
       targetRevision: idpbuilder-values-0917-v1
