@@ -384,15 +384,15 @@ clusters:
                   },
                   {
                     name: 'APP_CONFIG_app_baseUrl',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'http://localhost:3000' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_baseUrl',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'http://localhost:7007' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_cors_origin',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'http://localhost:7007' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   }
                 ],
                 ports: [
