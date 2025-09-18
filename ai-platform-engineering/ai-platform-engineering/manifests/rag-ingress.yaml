@@ -6,6 +6,9 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      sub_filter '</head>' '<base href="/kb-rag/"></head>';
+      sub_filter_once on;
 spec:
   ingressClassName: "nginx"
   rules:
