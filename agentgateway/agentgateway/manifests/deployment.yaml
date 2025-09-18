@@ -23,7 +23,7 @@ spec:
         ports:
         - containerPort: 15000
           name: ui
-        args: ["-f", "/etc/agentgateway/config.yaml"]
+        args: []
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
