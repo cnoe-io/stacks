@@ -23,7 +23,9 @@ spec:
         ports:
         - containerPort: 15000
           name: ui
-        args: []
+        - containerPort: 3000
+          name: proxy
+        args: ["-f", "/etc/agentgateway/config.yaml"]
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -44,18 +46,6 @@ spec:
             memory: "512Mi"
             cpu: "500m"
             ephemeral-storage: "1Gi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 15000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 15000
-          initialDelaySeconds: 5
-          periodSeconds: 5
       volumes:
       - name: config
         configMap:

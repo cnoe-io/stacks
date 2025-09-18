@@ -14,6 +14,10 @@ spec:
     targetPort: 15000
     protocol: TCP
     name: ui
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: proxy
   selector:
     app: agentgateway
 
