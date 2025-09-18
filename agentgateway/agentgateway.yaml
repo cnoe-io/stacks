@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/sraradhy/stacks.git
+    repoURL: https://github.com/sriaradhyula/stacks.git
     targetRevision: main
-    path: agentgateway/cluster/manifests
+    path: agentgateway/agentgateway/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: agentgateway
