@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kb-rag-ingress
+  namespace: ai-platform-engineering
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  ingressClassName: "nginx"
+  rules:
+    - host: kb-rag.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-platform-engineering-kb-rag-web
+                port:
+                  number: 80
+    - host: localhost
+      http:
+        paths:
+          - path: /kb-rag(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-platform-engineering-kb-rag-web
+                port:
+                  number: 80
