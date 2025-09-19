@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentgateway
+  namespace: agentgateway
+  labels:
+    app: agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agentgateway
+  template:
+    metadata:
+      labels:
+        app: agentgateway
+    spec:
+      containers:
+      - name: agentgateway
+        image: ghcr.io/agentgateway/agentgateway:0.8.3
+        ports:
+        - containerPort: 15000
+          name: ui
+        - containerPort: 3000
+          name: proxy
+        args: ["-f", "/etc/agentgateway/config.yaml"]
+        env:
+        - name: ADMIN_ADDR
+          value: "0.0.0.0:15000"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532
+        volumeMounts:
+        - name: config
+          mountPath: /etc/agentgateway
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+            ephemeral-storage: "1Gi"
+      volumes:
+      - name: config
+        configMap:
+          name: agentgateway-config
+
