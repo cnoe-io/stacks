@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Certificate setup for Chromium - imports IDPBuilder CA into browser trust store
+# Certificate setup for browsers - imports IDPBuilder CA into Firefox and Chromium trust stores
 set -euo pipefail
 
 GREEN='\033[0;32m'
@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${GREEN}======================================"
-echo -e "IDPBuilder Certificate Import for Chromium"
+echo -e "IDPBuilder Certificate Import for Browsers"
 echo -e "======================================${NC}"
 
 mkdir -p "$CERT_DIR" "$CHROMIUM_POLICIES_DIR"
@@ -103,18 +103,43 @@ run_certutil() {
     certutil "$@"
 }
 
-echo -e "${GREEN}Importing certificate to browser trust store...${NC}"
+echo -e "${GREEN}Importing certificate to browser trust stores...${NC}"
 if [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
     if command -v certutil &>/dev/null; then
-        echo "  Using certutil to import certificate..."
+        # Import for Chromium (uses shared NSS database)
+        echo "  Importing to Chromium NSS database..."
         if [[ ! -d "$HOME/.pki/nssdb" ]]; then
             mkdir -p "$HOME/.pki/nssdb"
             run_certutil -N -d sql:$HOME/.pki/nssdb --empty-password
         fi
         run_certutil -D -n "IDPBuilder-CA" -d sql:$HOME/.pki/nssdb 2>/dev/null || true
         run_certutil -A -n "IDPBuilder-CA" -t "C,," -d sql:$HOME/.pki/nssdb -i "$CERT_DIR/idpbuilder.crt"
-        echo "  ✓ Certificate imported to NSS database"
-        echo "  ✓ Chromium will now trust *.cnoe.localtest.me certificates"
+        echo "  ✓ Certificate imported to Chromium NSS database"
+
+        # Import for Firefox (each profile has its own cert database)
+        echo "  Importing to Firefox profiles..."
+        FIREFOX_IMPORTED=false
+        for profile_dir in "$HOME"/.mozilla/firefox/*.default* "$HOME"/.mozilla/firefox/*.dev-edition-default*; do
+            if [[ -d "$profile_dir" ]]; then
+                profile_name=$(basename "$profile_dir")
+                echo "    Processing Firefox profile: $profile_name"
+                # Remove old certificate if exists
+                run_certutil -D -n "IDPBuilder-CA" -d sql:"$profile_dir" 2>/dev/null || true
+                # Add new certificate
+                run_certutil -A -n "IDPBuilder-CA" -t "TC,C,C" -d sql:"$profile_dir" -i "$CERT_DIR/idpbuilder.crt"
+                echo "    ✓ Certificate imported to Firefox profile: $profile_name"
+                FIREFOX_IMPORTED=true
+            fi
+        done
+
+        if [[ "$FIREFOX_IMPORTED" == false ]]; then
+            echo -e "${YELLOW}  ⚠️  No Firefox profiles found${NC}"
+            echo -e "${YELLOW}     Start Firefox once to create a profile, then run this script again${NC}"
+        else
+            echo "  ✓ Firefox will now trust *.cnoe.localtest.me certificates"
+        fi
+
+        echo "  ✓ Browsers will now trust *.cnoe.localtest.me certificates"
     else
         echo -e "${YELLOW}  ⚠️  certutil not found${NC}"
         echo -e "${YELLOW}     Please install the nss tools package to provide certutil${NC}"
@@ -177,8 +202,15 @@ if command -v certutil &>/dev/null && [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
     echo -e "${BLUE}✅ Certificate successfully imported!${NC}"
     echo
     echo -e "${BLUE}Usage:${NC}"
-    echo "  Just use regular Chromium - it will now trust IDPBuilder certificates!"
-    echo "  $ chromium"
+    echo "  Your browsers will now trust IDPBuilder certificates!"
+    echo "  $ firefox       # Use Firefox as your default browser"
+    echo "  $ chromium      # Or use Chromium"
+    echo
+    echo -e "${BLUE}Access your services:${NC}"
+    echo "  • ArgoCD:     https://argocd.cnoe.localtest.me:8443"
+    echo "  • Gitea:      https://gitea.cnoe.localtest.me:8443"
+    echo "  • Headlamp:   https://headlamp.cnoe.localtest.me:8443"
+    echo "  • Keycloak:   https://cnoe.localtest.me:8443"
 else
     echo -e "${YELLOW}⚠️  Certificate import was not completed${NC}"
 fi

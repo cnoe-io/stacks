@@ -195,7 +195,7 @@ else
 fi
 
 if [ -x "$BROWSER_SCRIPT" ]; then
-    log "Importing certificate into Chromium profile"
+    log "Importing certificate into browser profiles (Firefox and Chromium)"
     "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/idpbuilder-ca.crt" --no-cluster-check
 else
     warn "Browser import script not found at $BROWSER_SCRIPT"
