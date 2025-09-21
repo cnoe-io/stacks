@@ -24,7 +24,7 @@ spec:
 
               # Install required tools
               apt-get update -qq
-              apt-get install -y -qq curl netcat-openbsd wget jq libcap2-bin
+              apt-get install -y -qq curl netcat-openbsd wget jq libcap2-bin gnupg
 
               # Install Vault CLI
               wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
