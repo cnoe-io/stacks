@@ -82,9 +82,9 @@ spec:
           # ArgoCD agent secrets
           echo "Creating argocd-secret..."
           vault kv put secret/ai-platform-engineering/argocd-secret \
-            ARGOCD_TOKEN="" \
-            ARGOCD_API_URL="" \
-            ARGOCD_VERIFY_SSL="true"
+            ARGOCD_TOKEN="tbd" \
+            ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local" \
+            ARGOCD_VERIFY_SSL="false"
           
           # PagerDuty agent secrets
           echo "Creating pagerduty-secret..."
@@ -105,10 +105,12 @@ spec:
             ATLASSIAN_API_URL="" \
             ATLASSIAN_VERIFY_SSL="true"
           
-          # Backstage agent secrets (empty data as per example)
+          # Backstage agent secrets
           echo "Creating backstage-secret..."
+          BACKSTAGE_API_TOKEN=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
           vault kv put secret/ai-platform-engineering/backstage-secret \
-            placeholder="empty"
+            BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
+            BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
           
           # Slack agent secrets
           echo "Creating slack-secret..."

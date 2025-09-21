@@ -262,6 +262,8 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
+            - secretRef:
+                name: backstage-api-token
           image: ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b
           name: backstage
           ports:
@@ -428,6 +430,24 @@ spec:
       remoteRef:
         key: gitea-credential
         property: password
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: backstage-api-token
+  namespace: backstage
+spec:
+  secretStoreRef:
+    name: vault-secret-store
+    kind: ClusterSecretStore
+  refreshInterval: "0"
+  target:
+    name: backstage-api-token
+  data:
+    - secretKey: BACKSTAGE_API_TOKEN
+      remoteRef:
+        key: ai-platform-engineering/backstage-secret
+        property: BACKSTAGE_API_TOKEN
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
