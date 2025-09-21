@@ -10,17 +10,20 @@ metadata:
 spec:
   ingressClassName: "nginx"
   rules:
-    - host: agentgateway.cnoe.localtest.me
+    - host: localhost
       http:
         paths:
-          - path: /mcp
+          - path: /agentgateway
             pathType: Prefix
             backend:
               service:
                 name: agentgateway
                 port:
-                  number: 3000
-          - path: /
+                  number: 15000
+    - host: cnoe.localtest.me
+      http:
+        paths:
+          - path: /agentgateway
             pathType: Prefix
             backend:
               service:

@@ -7,6 +7,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 data:
   config.yaml: |
+    adminAddr:
+      SocketAddr: "0.0.0.0:15000"
     binds:
     - port: 3000
       listeners:
@@ -22,9 +24,8 @@ data:
           backends:
           - mcp:
               targets:
-              - mcp:
-                  host: weather.outshift.io
-                  path: /mcp
-                  port: 443
-                name: weather
+              - name: everything
+                stdio:
+                  cmd: npx
+                  args: ["@modelcontextprotocol/server-everything"]
 
