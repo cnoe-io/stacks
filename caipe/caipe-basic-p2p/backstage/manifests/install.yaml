@@ -77,9 +77,9 @@ data:
       # Used for enabling authentication, secret is shared by all backend plugins
       # See https://backstage.io/docs/tutorials/backend-to-backend-auth for
       # information on the format
-      # auth:
-      #   keys:
-      #     - secret: ${BACKEND_SECRET}
+      auth:
+        keys:
+          - secret: ${BACKSTAGE_API_TOKEN}
       baseUrl: https://cnoe.localtest.me:8443
       listen:
         port: 7007
@@ -387,6 +387,7 @@ spec:
         ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
         ARGO_CD_URL: 'https://argocd-server.argocd.svc.cluster.local/api/v1/'
         AGENT_FORGE_URL: https://cnoe.localtest.me:8443/ai-platform-engineering
+        BACKSTAGE_API_TOKEN: "{{.BACKSTAGE_API_TOKEN}}"
   data:
     - secretKey: ARGOCD_SESSION_TOKEN
       remoteRef:
