@@ -32,7 +32,12 @@ log "🔑 Retrieving API tokens..."
 ARGOCD_TOKEN=$(vault kv get -field=ARGOCD_TOKEN secret/ai-platform-engineering/argocd-secret)
 BACKSTAGE_TOKEN=$(vault kv get -field=BACKSTAGE_API_TOKEN secret/ai-platform-engineering/backstage-secret)
 BACKSTAGE_URL=$(vault kv get -field=BACKSTAGE_URL secret/ai-platform-engineering/backstage-secret)
-ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local"
+
+# Start ArgoCD port forward
+log "🔗 Starting ArgoCD port forward..."
+kubectl port-forward -n argocd svc/argocd-server 8080:80 &
+ARGOCD_PID=$!
+sleep 3
 
 # Start Backstage port forward
 log "🔗 Starting Backstage port forward..."
@@ -45,7 +50,7 @@ argocd_api() {
     local endpoint="$1"
     curl -s -H "Authorization: Bearer $ARGOCD_TOKEN" \
          -H "Content-Type: application/json" \
-         "$ARGOCD_API_URL$endpoint"
+         "http://localhost:8080$endpoint"
 }
 
 # Function to call Backstage API
@@ -188,6 +193,6 @@ backstage_api "POST" "/api/catalog/entities" "$system_entity"
 log "✅ CAIPE platform system entity created"
 
 # Cleanup
-kill $VAULT_PID $BACKSTAGE_PID 2>/dev/null
+kill $VAULT_PID $BACKSTAGE_PID $ARGOCD_PID 2>/dev/null
 log "🎉 Backstage catalog population complete!"
 log "🔍 View catalog at: https://cnoe.localtest.me:8443/backstage/catalog"
