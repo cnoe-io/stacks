@@ -43,14 +43,15 @@ prompt_with_env() {
     if [[ -n "$env_value" ]]; then
         if [[ "$is_secret" == "true" ]]; then
             local hint="${env_value:0:5}..."
-            read -p "$prompt (env: $hint) [Enter to use, or type new]: " -s result
+            printf "%s" "$prompt (env: $hint) [Enter to use, or type new]: "
+            IFS= read -rs result
             echo ""
             # Clean immediately after read
-            result=$(printf '%s' "$result" | tr -d '\n\r' | sed 's/\\n//g')
+            result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
         else
             read -p "$prompt (env: $env_value) [Enter to use, or type new]: " result
             # Clean immediately after read  
-            result=$(printf '%s' "$result" | tr -d '\n\r' | sed 's/\\n//g')
+            result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
         fi
         if [[ -z "$result" ]]; then
             result="$env_value"
