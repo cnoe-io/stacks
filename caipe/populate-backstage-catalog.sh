@@ -20,6 +20,16 @@ done
 
 log "🔧 Populating Backstage catalog with basic CAIPE entities"
 
+# Get Backstage API token from Kubernetes secret
+log "🔑 Retrieving Backstage API token..."
+BACKSTAGE_TOKEN=$(kubectl get secret backstage-api-token -n backstage -o jsonpath='{.data.BACKSTAGE_API_TOKEN}' | base64 -d)
+
+if [[ -z "$BACKSTAGE_TOKEN" ]]; then
+    warn "No Backstage API token found, API calls may fail"
+else
+    log "✅ Backstage API token retrieved (${#BACKSTAGE_TOKEN} chars)"
+fi
+
 # Start Backstage port forward
 log "🔗 Starting Backstage port forward..."
 kubectl port-forward -n backstage svc/backstage 3000:7007 &
@@ -32,13 +42,20 @@ backstage_api() {
     local endpoint="$2"
     local data="$3"
     
+    local auth_header=""
+    if [[ -n "$BACKSTAGE_TOKEN" ]]; then
+        auth_header="-H \"Authorization: Bearer $BACKSTAGE_TOKEN\""
+    fi
+    
     if [[ -n "$data" ]]; then
-        curl -s -X "$method" \
+        eval curl -s -X "$method" \
+             $auth_header \
              -H "Content-Type: application/json" \
-             -d "$data" \
+             -d "'$data'" \
              "http://localhost:3000$endpoint"
     else
-        curl -s -X "$method" \
+        eval curl -s -X "$method" \
+             $auth_header \
              -H "Content-Type: application/json" \
              "http://localhost:3000$endpoint"
     fi
