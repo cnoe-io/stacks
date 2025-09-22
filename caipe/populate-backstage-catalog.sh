@@ -32,7 +32,7 @@ fi
 
 # Start Backstage port forward
 log "🔗 Starting Backstage port forward..."
-kubectl port-forward -n backstage svc/backstage 3000:7007 &
+kubectl port-forward -n backstage svc/backstage 7007:7007 &
 BACKSTAGE_PID=$!
 sleep 3
 
@@ -52,12 +52,12 @@ backstage_api() {
              $auth_header \
              -H "Content-Type: application/json" \
              -d "'$data'" \
-             "http://localhost:3000$endpoint"
+             "http://localhost:7007$endpoint"
     else
         eval curl -s -X "$method" \
              $auth_header \
              -H "Content-Type: application/json" \
-             "http://localhost:3000$endpoint"
+             "http://localhost:7007$endpoint"
     fi
 }
 
