@@ -7,11 +7,11 @@ global:
     confluence: true
     github: true
     jira: true
+    komodor: true
     pagerduty: true
     slack: true
     splunk: true
     webex: true
-    weather: true
 
   slim:
     enabled: false
@@ -139,6 +139,21 @@ agent-jira:
           key: secret/ai-platform-engineering/jira-secret
           property: ATLASSIAN_API_URL
 
+agent-komodor:
+  nameOverride: "agent-komodor"
+  agentSecrets:
+    secretName: "agent-komodor-secret"
+    externalSecrets:
+      data:
+      - secretKey: KOMODOR_API_KEY
+        remoteRef:
+          key: secret/ai-platform-engineering/komodor-secret
+          property: KOMODOR_API_KEY
+      - secretKey: KOMODOR_API_URL
+        remoteRef:
+          key: secret/ai-platform-engineering/komodor-secret
+          property: KOMODOR_API_URL
+
 agent-pagerduty:
   nameOverride: "agent-pagerduty"
   agentSecrets:
@@ -182,21 +197,52 @@ agent-slack:
           property: SLACK_TEAM_ID
 
 graphrag:
-  enabled: true
+  enabled: false
 
-# neo4j configuration for kind cluster
-neo4j:
-  volumes:
-    data:
-      mode: "dynamic"
-      dynamic:
-        storageClassName: standard
-        requests:
-          storage: 1Gi
-
-# KB-RAG Stack with 1Gi storage for kind
+# KB-RAG Stack enabled for complete deployment
 kb-rag-stack:
-  enabled: false  # Disabled for kind cluster
+  enabled: true
+  
+  # KB-RAG Web configuration
+  kb-rag-web:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # KB-RAG Server configuration  
+  kb-rag-server:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # KB-RAG Agent configuration
+  kb-rag-agent:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+
+  # KB-RAG Redis configuration
+  kb-rag-redis:
+    enabled: true
+
+# neo4j configuration for kind cluster (disabled since graphrag is disabled)
+neo4j:
+  enabled: false
 
 # Milvus with 1Gi storage for kind
 milvus:
