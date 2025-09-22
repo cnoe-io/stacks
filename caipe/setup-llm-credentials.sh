@@ -83,6 +83,11 @@ prompt_with_env() {
     local env_value="${!var_name}"
     local result=""
     
+    # Strip newlines from env value too
+    if [[ -n "$env_value" ]]; then
+        env_value=$(echo "$env_value" | tr -d '\n\r' | xargs)
+    fi
+    
     if [[ -n "$env_value" ]]; then
         if [[ "$is_secret" == "true" ]]; then
             local hint="${env_value:0:5}..."
@@ -112,7 +117,7 @@ prompt_with_env() {
             fi
         fi
     fi
-    # Strip newlines and whitespace
+    # Strip newlines and whitespace from result
     result=$(echo "$result" | tr -d '\n\r' | xargs)
     echo "$result"
 }
