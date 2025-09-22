@@ -302,33 +302,120 @@ done
 
 # Store all secrets in Vault
 log "💾 Storing agent secrets in Vault..."
-vault kv put secret/ai-platform-engineering/agent-secrets \
-    GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
-    GITHUB_WEBHOOK_SECRET="$GITHUB_WEBHOOK_SECRET" \
-    JIRA_API_TOKEN="$JIRA_API_TOKEN" \
-    JIRA_BASE_URL="$JIRA_BASE_URL" \
-    JIRA_USERNAME="$JIRA_USERNAME" \
-    SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
-    SLACK_APP_TOKEN="$SLACK_APP_TOKEN" \
-    SLACK_SIGNING_SECRET="$SLACK_SIGNING_SECRET" \
-    AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-    AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    AWS_REGION="$AWS_REGION" \
-    ARGOCD_API_TOKEN="$ARGOCD_API_TOKEN" \
-    ARGOCD_SERVER_URL="$ARGOCD_SERVER_URL" \
-    BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
-    BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
-    PAGERDUTY_API_TOKEN="$PAGERDUTY_API_TOKEN" \
-    CONFLUENCE_API_TOKEN="$CONFLUENCE_API_TOKEN" \
-    CONFLUENCE_BASE_URL="$CONFLUENCE_BASE_URL" \
-    CONFLUENCE_USERNAME="$CONFLUENCE_USERNAME" \
-    SPLUNK_API_TOKEN="$SPLUNK_API_TOKEN" \
-    SPLUNK_BASE_URL="$SPLUNK_BASE_URL" \
-    WEBEX_ACCESS_TOKEN="$WEBEX_ACCESS_TOKEN" \
-    KOMODOR_API_TOKEN="$KOMODOR_API_TOKEN" >/dev/null
+
+# Store secrets individually for each active agent
+for agent in "${active_agents[@]}"; do
+    case $agent in
+        "github")
+            if [[ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/github-secret \
+                    GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
+                    GITHUB_WEBHOOK_SECRET="$GITHUB_WEBHOOK_SECRET" >/dev/null
+                log "✅ GitHub secrets stored"
+            fi
+            ;;
+        "jira")
+            if [[ -n "$JIRA_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/jira-secret \
+                    JIRA_API_TOKEN="$JIRA_API_TOKEN" \
+                    JIRA_BASE_URL="$JIRA_BASE_URL" \
+                    JIRA_USERNAME="$JIRA_USERNAME" >/dev/null
+                log "✅ Jira secrets stored"
+            fi
+            ;;
+        "slack")
+            if [[ -n "$SLACK_BOT_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/slack-secret \
+                    SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
+                    SLACK_APP_TOKEN="$SLACK_APP_TOKEN" \
+                    SLACK_SIGNING_SECRET="$SLACK_SIGNING_SECRET" >/dev/null
+                log "✅ Slack secrets stored"
+            fi
+            ;;
+        "aws")
+            if [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
+                vault kv put secret/ai-platform-engineering/aws-secret \
+                    AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+                    AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+                    AWS_REGION="$AWS_REGION" >/dev/null
+                log "✅ AWS secrets stored"
+            fi
+            ;;
+        "argocd")
+            if [[ -n "$ARGOCD_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/argocd-agent-secret \
+                    ARGOCD_API_TOKEN="$ARGOCD_API_TOKEN" \
+                    ARGOCD_SERVER_URL="$ARGOCD_SERVER_URL" >/dev/null
+                log "✅ ArgoCD secrets stored"
+            fi
+            ;;
+        "backstage")
+            if [[ -n "$BACKSTAGE_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/backstage-agent-secret \
+                    BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
+                    BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" >/dev/null
+                log "✅ Backstage secrets stored"
+            fi
+            ;;
+        "pagerduty")
+            if [[ -n "$PAGERDUTY_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/pagerduty-secret \
+                    PAGERDUTY_API_TOKEN="$PAGERDUTY_API_TOKEN" >/dev/null
+                log "✅ PagerDuty secrets stored"
+            fi
+            ;;
+        "confluence")
+            if [[ -n "$CONFLUENCE_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/confluence-secret \
+                    CONFLUENCE_API_TOKEN="$CONFLUENCE_API_TOKEN" \
+                    CONFLUENCE_BASE_URL="$CONFLUENCE_BASE_URL" \
+                    CONFLUENCE_USERNAME="$CONFLUENCE_USERNAME" >/dev/null
+                log "✅ Confluence secrets stored"
+            fi
+            ;;
+        "splunk")
+            if [[ -n "$SPLUNK_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/splunk-secret \
+                    SPLUNK_API_TOKEN="$SPLUNK_API_TOKEN" \
+                    SPLUNK_BASE_URL="$SPLUNK_BASE_URL" >/dev/null
+                log "✅ Splunk secrets stored"
+            fi
+            ;;
+        "webex")
+            if [[ -n "$WEBEX_ACCESS_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/webex-secret \
+                    WEBEX_ACCESS_TOKEN="$WEBEX_ACCESS_TOKEN" >/dev/null
+                log "✅ Webex secrets stored"
+            fi
+            ;;
+        "komodor")
+            if [[ -n "$KOMODOR_API_TOKEN" ]]; then
+                vault kv put secret/ai-platform-engineering/komodor-secret \
+                    KOMODOR_API_TOKEN="$KOMODOR_API_TOKEN" >/dev/null
+                log "✅ Komodor secrets stored"
+            fi
+            ;;
+    esac
+done
 
 log "✅ Agent secrets successfully stored in Vault"
-log "🔍 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fagent-secrets"
+echo ""
+log "🔍 You can verify individual agent secrets at:"
+for agent in "${active_agents[@]}"; do
+    case $agent in
+        "github") log "  🐙 GitHub: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fgithub-secret" ;;
+        "jira") log "  🎫 Jira: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fjira-secret" ;;
+        "slack") log "  💬 Slack: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fslack-secret" ;;
+        "aws") log "  ☁️  AWS: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Faws-secret" ;;
+        "argocd") log "  🚀 ArgoCD: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fargocd-agent-secret" ;;
+        "backstage") log "  🎭 Backstage: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fbackstage-agent-secret" ;;
+        "pagerduty") log "  📟 PagerDuty: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fpagerduty-secret" ;;
+        "confluence") log "  📚 Confluence: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fconfluence-secret" ;;
+        "splunk") log "  🔍 Splunk: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fsplunk-secret" ;;
+        "webex") log "  📹 Webex: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fwebex-secret" ;;
+        "komodor") log "  🔧 Komodor: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fkomodor-secret" ;;
+    esac
+done
 
 # Create Kubernetes secret for agents
 log "🔄 Creating Kubernetes secret for agents..."
