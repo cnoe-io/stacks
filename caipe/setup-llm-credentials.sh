@@ -112,6 +112,8 @@ prompt_with_env() {
             fi
         fi
     fi
+    # Strip newlines and whitespace
+    result=$(echo "$result" | tr -d '\n\r' | xargs)
     echo "$result"
 }
 
