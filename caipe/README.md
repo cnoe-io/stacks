@@ -26,6 +26,8 @@ chmod +x setup-llm-credentials.sh
 ./setup-llm-credentials.sh
 ```
 
+**Note**: The script uses clean input handling - simply type or paste your credentials and press Enter. No special key combinations needed.
+
 The script supports the following LLM providers:
 
 #### Azure OpenAI
@@ -66,6 +68,8 @@ chmod +x setup-agent-secrets.sh
 # Run the setup script
 ./setup-agent-secrets.sh
 ```
+
+**Note**: The script uses clean input handling - simply type or paste your credentials and press Enter. No special key combinations needed.
 
 The script supports the following agents and their required credentials:
 
@@ -156,6 +160,8 @@ curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup
 chmod +x setup-agent-secrets.sh
 ./setup-agent-secrets.sh
 ```
+
+**Note**: Both scripts use clean input handling - simply type or paste your credentials and press Enter. No special key combinations needed.
 
 ## Troubleshooting
 
