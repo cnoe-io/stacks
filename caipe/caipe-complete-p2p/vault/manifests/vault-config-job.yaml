@@ -19,13 +19,11 @@ spec:
         - |
           #!/bin/bash
 
-          set -ex -o pipefail
-
           # Install required tools FIRST
           echo "Installing required tools..."
           apt-get update -qq || { echo "ERROR: apt-get update failed"; exit 1; }
           apt-get install -y -qq curl netcat-openbsd software-properties-common wget jq libcap2-bin || { echo "ERROR: package installation failed"; exit 1; }
-          
+
           # Install Vault CLI
           echo "Installing Vault CLI..."
           wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -33,13 +31,13 @@ spec:
           apt-get update
           apt-get install vault -y
           setcap cap_ipc_lock= /usr/bin/vault
-          
+
           # Install kubectl
           echo "Installing kubectl..."
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" || { echo "ERROR: kubectl download failed"; exit 1; }
           chmod +x kubectl
           mv kubectl /usr/local/bin/
-          
+
           echo "Tools installed successfully. Checking connectivity..."
 
           # Wait for the root token to be available
@@ -51,17 +49,15 @@ spec:
           echo "Vault root token available. Authenticating..."
           # Authenticate to Vault
           export VAULT_ADDR="http://vault:8200"
-          set +x # Disable logging for this line
           export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.token}' | base64 -d)
-          set -x # Re-enable logging
 
           # Enable KV v2 secrets engine (idempotent)
           echo "Enabling KV v2 secrets engine at path 'secret'..."
-          vault secrets enable -path=secret kv-v2 || echo "Secrets engine 'secret' already enabled."
+          vault secrets enable -path=secret kv-v2 >/dev/null 2>&1 || echo "Secrets engine 'secret' already enabled."
 
           # Create agent-specific secrets based on values-secrets.yaml.example structure
           echo "Creating agent-specific secrets..."
-          
+
           # Global secrets (shared across all agents)
           echo "Creating global secrets..."
           vault kv put secret/ai-platform-engineering/global \
@@ -77,39 +73,74 @@ spec:
             AWS_SECRET_ACCESS_KEY="" \
             AWS_REGION="" \
             AWS_BEDROCK_MODEL_ID="" \
-            AWS_BEDROCK_PROVIDER=""
-          
+            AWS_BEDROCK_PROVIDER="" >/dev/null
+
           # ArgoCD agent secrets
           echo "Creating argocd-secret..."
           vault kv put secret/ai-platform-engineering/argocd-secret \
-            ARGOCD_TOKEN="" \
-            ARGOCD_API_URL="" \
-            ARGOCD_VERIFY_SSL="true"
-          
-          # PagerDuty agent secrets
-          echo "Creating pagerduty-secret..."
-          vault kv put secret/ai-platform-engineering/pagerduty-secret \
-            PAGERDUTY_API_KEY="" \
-            PAGERDUTY_API_URL=""
-          
-          # GitHub agent secrets
-          echo "Creating github-secret..."
-          vault kv put secret/ai-platform-engineering/github-secret \
-            GITHUB_PERSONAL_ACCESS_TOKEN=""
-          
+            ARGOCD_TOKEN="tbd" \
+            ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local" \
+            ARGOCD_VERIFY_SSL="false" >/dev/null
+
+          # AWS agent secrets
+          echo "Creating aws-secret..."
+          vault kv put secret/ai-platform-engineering/aws-secret \
+            AWS_ACCESS_KEY_ID="" \
+            AWS_SECRET_ACCESS_KEY="" \
+            AWS_REGION="" >/dev/null
+
+          # Backstage agent secrets
+          echo "Creating backstage-secret..."
+          BACKSTAGE_API_TOKEN=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+          vault kv put secret/ai-platform-engineering/backstage-secret \
+            BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
+            BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007" >/dev/null
+
+
+          # Confluence agent secrets
+          echo "Creating confluence-secret..."
+          vault kv put secret/ai-platform-engineering/confluence-secret \
+            CONFLUENCE_API_URL="" \
+            ATLASSIAN_TOKEN="" \
+            ATLASSIAN_EMAIL="" \
+            ATLASSIAN_VERIFY_SSL="true" >/dev/null
+
           # Jira agent secrets
           echo "Creating jira-secret..."
           vault kv put secret/ai-platform-engineering/jira-secret \
             ATLASSIAN_TOKEN="" \
             ATLASSIAN_EMAIL="" \
             ATLASSIAN_API_URL="" \
-            ATLASSIAN_VERIFY_SSL="true"
-          
-          # Backstage agent secrets (empty data as per example)
-          echo "Creating backstage-secret..."
-          vault kv put secret/ai-platform-engineering/backstage-secret \
-            placeholder="empty"
-          
+            ATLASSIAN_VERIFY_SSL="true" >/dev/null
+
+          # Komodor agent secrets
+          echo "Creating komodor-secret..."
+          vault kv put secret/ai-platform-engineering/komodor-secret \
+            KOMODOR_API_KEY="" \
+            KOMODOR_API_URL="" >/dev/null
+
+          # GitHub agent secrets
+          echo "Creating github-secret..."
+          vault kv put secret/ai-platform-engineering/github-secret \
+            GITHUB_PERSONAL_ACCESS_TOKEN="" >/dev/null
+
+          # Jira agent secrets
+          echo "Creating jira-secret..."
+          vault kv put secret/ai-platform-engineering/jira-secret \
+            ATLASSIAN_TOKEN="" \
+            ATLASSIAN_EMAIL="" \
+            ATLASSIAN_API_URL="" \
+            ATLASSIAN_VERIFY_SSL="true" >/dev/null
+
+
+
+          # PagerDuty agent secrets
+          echo "Creating pagerduty-secret..."
+          vault kv put secret/ai-platform-engineering/pagerduty-secret \
+            PAGERDUTY_API_KEY="" \
+            PAGERDUTY_API_URL="" >/dev/null
+
+
           # Slack agent secrets
           echo "Creating slack-secret..."
           vault kv put secret/ai-platform-engineering/slack-secret \
@@ -117,7 +148,20 @@ spec:
             SLACK_APP_TOKEN="" \
             SLACK_SIGNING_SECRET="" \
             SLACK_CLIENT_SECRET="" \
-            SLACK_TEAM_ID=""
+            SLACK_TEAM_ID="" >/dev/null
+
+          # Splunk agent secrets
+          echo "Creating splunk-secret..."
+          vault kv put secret/ai-platform-engineering/splunk-secret \
+            SPLUNK_API_TOKEN="" \
+            SPLUNK_URL="" >/dev/null
+
+          # Webex agent secrets
+          echo "Creating webex-secret..."
+          vault kv put secret/ai-platform-engineering/webex-secret \
+            WEBEX_BOT_TOKEN="" \
+            WEBEX_WEBHOOK_SECRET="" \
+            WEBEX_TOKEN="" >/dev/null
 
           echo "Vault configuration complete."
 ---
