@@ -40,7 +40,9 @@ spec:
 
               # Authenticate to Vault
               export VAULT_ADDR="http://vault:8200"
+              set +x  # Disable command echoing for sensitive operations
               export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.token}' | base64 -d)
+              set -x  # Re-enable command echoing
 
               # Wait for ArgoCD to be ready (max 5 minutes)
               echo "Waiting for ArgoCD to be ready..."
