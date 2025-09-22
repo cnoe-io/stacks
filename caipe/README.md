@@ -92,10 +92,15 @@ CAIPE includes:
 
 ## Raw Script Access
 
-You can also download and run the setup script directly:
+Download and run the setup script directly:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup-llm-credentials.sh | bash
+# Download the script
+curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup-llm-credentials.sh -o setup-llm-credentials.sh
+
+# Make it executable and run
+chmod +x setup-llm-credentials.sh
+./setup-llm-credentials.sh
 ```
 
 ## Troubleshooting
