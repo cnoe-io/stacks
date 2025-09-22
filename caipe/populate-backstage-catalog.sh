@@ -6,6 +6,10 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
+warn() {
+    echo "⚠️  $1"
+}
+
 # Check dependencies
 for cmd in kubectl vault jq curl; do
     if ! command -v $cmd &> /dev/null; then
