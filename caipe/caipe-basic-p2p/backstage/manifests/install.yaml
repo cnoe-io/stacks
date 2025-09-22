@@ -78,6 +78,11 @@ data:
       # See https://backstage.io/docs/tutorials/backend-to-backend-auth for
       # information on the format
       auth:
+        externalAccess:
+        - options:
+            subject: caipe-api-access
+            token: ${BACKSTAGE_API_TOKEN}
+          type: static
         keys:
           - secret: ${BACKSTAGE_API_TOKEN}
       baseUrl: https://cnoe.localtest.me:8443
