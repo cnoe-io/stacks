@@ -35,29 +35,21 @@ prompt_with_env() {
     local env_value="${!var_name}"
     local result=""
     
-    # Strip newlines from env value - enhanced for copy/paste
+    # Use env value as-is, no cleanup
     if [[ -n "$env_value" ]]; then
-        env_value=$(printf '%s' "$env_value" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr -d '\0')
+        # Keep env value unchanged
+        true
     fi
     
     if [[ -n "$env_value" ]]; then
         if [[ "$is_secret" == "true" ]]; then
             local hint="${env_value:0:5}..."
-            printf "%s" "$prompt (env: $hint) [Enter to use, or type new, Ctrl+D to end]: "
-            IFS= read -rs -d '' result
+            printf "%s" "$prompt (env: $hint) [Enter to use, or type new]: "
+            IFS= read -rs result < /dev/tty
             echo ""
-            # DEBUG: Show what was read
-            echo "DEBUG: Raw input length: ${#result}"
-            echo "DEBUG: Raw input (first 50 chars): '${result:0:50}'"
-            printf "DEBUG: Raw input hex: "
-            printf '%s' "$result" | od -tx1 -An | head -1
-            # Clean immediately after read
-            result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
-            echo "DEBUG: Cleaned input: '$result'"
         else
-            read -p "$prompt (env: $env_value) [Enter to use, or type new]: " result
-            # Clean immediately after read  
-            result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
+            printf "%s" "$prompt (env: $env_value) [Enter to use, or type new]: "
+            IFS= read -r result < /dev/tty
         fi
         if [[ -z "$result" ]]; then
             result="$env_value"
@@ -70,9 +62,7 @@ prompt_with_env() {
             read -p "$prompt: " result
         fi
     fi
-    # Strip newlines and whitespace from result - enhanced for copy/paste
-    # Handle all possible newline scenarios including those added by terminals
-    result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr -d '\0')
+    # Return result as-is, no cleanup
     echo "$result"
 }
 
@@ -333,8 +323,6 @@ for agent in "${active_agents[@]}"; do
     case $agent in
         "github")
             if [[ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]]; then
-                echo "DEBUG: Storing GitHub secret with token: '${GITHUB_PERSONAL_ACCESS_TOKEN:0:10}...'"
-                echo "DEBUG: Vault command: vault kv put secret/ai-platform-engineering/github-secret GITHUB_PERSONAL_ACCESS_TOKEN=\"$GITHUB_PERSONAL_ACCESS_TOKEN\""
                 vault kv put secret/ai-platform-engineering/github-secret \
                     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" >/dev/null
                 log "✅ GitHub secrets stored"
@@ -342,8 +330,6 @@ for agent in "${active_agents[@]}"; do
             ;;
         "jira")
             if [[ -n "$ATLASSIAN_TOKEN" ]]; then
-                echo "DEBUG: Storing Jira secret with token: '${ATLASSIAN_TOKEN:0:10}...'"
-                echo "DEBUG: Vault command: vault kv put secret/ai-platform-engineering/jira-secret ..."
                 vault kv put secret/ai-platform-engineering/jira-secret \
                     ATLASSIAN_TOKEN="$ATLASSIAN_TOKEN" \
                     ATLASSIAN_API_URL="$ATLASSIAN_API_URL" \
@@ -354,8 +340,6 @@ for agent in "${active_agents[@]}"; do
             ;;
         "slack")
             if [[ -n "$SLACK_BOT_TOKEN" ]]; then
-                echo "DEBUG: Storing Slack secret with bot token: '${SLACK_BOT_TOKEN:0:10}...'"
-                echo "DEBUG: Vault command: vault kv put secret/ai-platform-engineering/slack-secret ..."
                 vault kv put secret/ai-platform-engineering/slack-secret \
                     SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
                     SLACK_TOKEN="$SLACK_TOKEN" \
