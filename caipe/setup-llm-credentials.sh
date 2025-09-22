@@ -52,6 +52,8 @@ case $provider_choice in
 esac
 
 log "📝 Selected provider: $LLM_PROVIDER"
+echo ""
+log "🔒 Note: Sensitive credentials will not be displayed on screen"
 
 # Initialize all fields as empty
 AZURE_OPENAI_API_KEY=""
@@ -94,7 +96,8 @@ case $LLM_PROVIDER in
         ;;
     "aws-bedrock")
         echo ""
-        read -p "AWS Access Key ID: " AWS_ACCESS_KEY_ID
+        read -p "AWS Access Key ID: " -s AWS_ACCESS_KEY_ID
+        echo ""
         read -p "AWS Secret Access Key: " -s AWS_SECRET_ACCESS_KEY
         echo ""
         read -p "AWS Region (default: us-east-1): " AWS_REGION
