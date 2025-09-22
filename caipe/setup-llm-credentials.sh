@@ -84,7 +84,7 @@ prompt_with_env() {
     local result=""
     
     if [[ -n "$env_value" ]]; then
-        local hint="${env_value:0:3}..."
+        local hint="${env_value:0:5}..."
         if [[ "$is_secret" == "true" ]]; then
             read -p "$prompt (env: $hint) [Enter to use, or type new]: " -s result
             echo ""
@@ -132,7 +132,7 @@ case $LLM_PROVIDER in
         ;;
     "aws-bedrock")
         echo ""
-        AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "true")
+        AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
         AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
         AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
         AWS_BEDROCK_MODEL_ID=$(prompt_with_env "AWS Bedrock Model ID" "AWS_BEDROCK_MODEL_ID" "false" "anthropic.claude-3-sonnet-20240229-v1:0")
