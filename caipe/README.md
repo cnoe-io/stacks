@@ -55,7 +55,44 @@ The script supports the following LLM providers:
 - Location (default: us-central1)
 - Model Name (default: gemini-pro)
 
-### 3. Access Services
+### 3. Setup Agent Secrets
+
+Configure API keys and tokens for active agents:
+
+```bash
+# Make the script executable
+chmod +x setup-agent-secrets.sh
+
+# Run the setup script
+./setup-agent-secrets.sh
+```
+
+The script supports the following agents and their required credentials:
+
+#### GitHub Agent
+- **Personal Access Token**: GitHub API access token with repo permissions
+- **Webhook Secret**: Optional secret for webhook validation
+
+#### GitLab Agent  
+- **Personal Access Token**: GitLab API access token
+- **Webhook Secret**: Optional secret for webhook validation
+
+#### Jira Agent
+- **API Token**: Jira API token for authentication
+- **Base URL**: Jira instance URL (e.g., https://company.atlassian.net)
+- **Username**: Jira username/email
+
+#### Slack Agent
+- **Bot Token**: Slack bot token (xoxb-...)
+- **App Token**: Slack app token (xapp-...)
+- **Signing Secret**: Slack signing secret for request verification
+
+#### AWS Agent
+- **Access Key ID**: AWS access key ID
+- **Secret Access Key**: AWS secret access key
+- **Region**: AWS region (default: us-east-1)
+
+### 4. Access Services
 
 After deployment, access the platform services:
 
@@ -64,13 +101,19 @@ After deployment, access the platform services:
 - **Vault**: https://vault.cnoe.localtest.me:8443/ui
 - **Gitea**: https://gitea.cnoe.localtest.me:8443
 
-### 4. Verify Setup
+### 5. Verify Setup
 
-Check that your LLM credentials are properly stored:
+Check that your credentials are properly stored:
 
+#### LLM Credentials
 1. Access Vault UI: https://vault.cnoe.localtest.me:8443/ui
 2. Navigate to: `secret/ai-platform-engineering/global`
 3. Verify your LLM provider configuration
+
+#### Agent Secrets
+1. Access Vault UI: https://vault.cnoe.localtest.me:8443/ui
+2. Navigate to: `secret/ai-platform-engineering/agent-secrets`
+3. Verify your agent API keys and tokens
 
 ## Architecture
 
@@ -92,8 +135,9 @@ CAIPE includes:
 
 ## Raw Script Access
 
-Download and run the setup script directly:
+Download and run the setup scripts directly:
 
+### LLM Credentials Setup
 ```bash
 # Download the script
 curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup-llm-credentials.sh -o setup-llm-credentials.sh
@@ -101,6 +145,16 @@ curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup
 # Make it executable and run
 chmod +x setup-llm-credentials.sh
 ./setup-llm-credentials.sh
+```
+
+### Agent Secrets Setup
+```bash
+# Download the script
+curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/setup-agent-secrets.sh -o setup-agent-secrets.sh
+
+# Make it executable and run
+chmod +x setup-agent-secrets.sh
+./setup-agent-secrets.sh
 ```
 
 ## Troubleshooting
