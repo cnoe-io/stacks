@@ -84,12 +84,12 @@ prompt_with_env() {
     local result=""
     
     if [[ -n "$env_value" ]]; then
-        local hint="${env_value:0:5}..."
         if [[ "$is_secret" == "true" ]]; then
+            local hint="${env_value:0:5}..."
             read -p "$prompt (env: $hint) [Enter to use, or type new]: " -s result
             echo ""
         else
-            read -p "$prompt (env: $hint) [Enter to use, or type new]: " result
+            read -p "$prompt (env: $env_value) [Enter to use, or type new]: " result
         fi
         if [[ -z "$result" ]]; then
             result="$env_value"
