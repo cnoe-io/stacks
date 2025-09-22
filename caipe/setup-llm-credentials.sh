@@ -85,7 +85,7 @@ prompt_with_env() {
     
     # Strip newlines from env value too
     if [[ -n "$env_value" ]]; then
-        env_value=$(echo "$env_value" | tr -d '\n\r' | xargs)
+        env_value=$(echo "$env_value" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
     fi
     
     if [[ -n "$env_value" ]]; then
@@ -118,7 +118,7 @@ prompt_with_env() {
         fi
     fi
     # Strip newlines and whitespace from result
-    result=$(echo "$result" | tr -d '\n\r' | xargs)
+    result=$(echo "$result" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
     echo "$result"
 }
 
