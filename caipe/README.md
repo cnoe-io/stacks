@@ -137,6 +137,46 @@ CAIPE includes:
 - RBAC for cross-namespace access
 - No secrets exposed in logs
 
+## Utility Scripts
+
+### Refresh Secrets and Restart Deployments
+
+After updating secrets in Vault, use this script to refresh Kubernetes secrets and restart deployments:
+
+```bash
+# Make the script executable
+chmod +x refresh-secrets.sh
+
+# Run the refresh script
+./refresh-secrets.sh
+```
+
+This script will:
+- Check if Vault secrets exist and have data
+- Delete Kubernetes secrets and wait for External Secrets to recreate them
+- Restart corresponding deployments with rollout status verification
+
+### Sync ArgoCD Applications
+
+Ensure all ArgoCD applications are synced and healthy:
+
+```bash
+# Make the script executable
+chmod +x sync-apps.sh
+
+# Run the sync script
+./sync-apps.sh
+```
+
+This script will sync:
+- **backstage** - Developer portal
+- **vault** - Secret management  
+- **argocd** - GitOps controller
+- **ai-platform-engineering** - CAIPE stack
+- **external-secrets** - Secret synchronization
+- **ingress-nginx** - Ingress controller
+- **gitea** - Git repository
+
 ## Raw Script Access
 
 Download and run the setup scripts directly:
@@ -162,6 +202,22 @@ chmod +x setup-agent-secrets.sh
 ```
 
 **Note**: Both scripts use clean input handling - simply type or paste your credentials and press Enter. No special key combinations needed.
+
+### Utility Scripts
+
+#### Refresh Secrets
+```bash
+curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/refresh-secrets.sh -o refresh-secrets.sh
+chmod +x refresh-secrets.sh
+./refresh-secrets.sh
+```
+
+#### Sync Applications
+```bash
+curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/sync-apps.sh -o sync-apps.sh
+chmod +x sync-apps.sh
+./sync-apps.sh
+```
 
 ## Troubleshooting
 
