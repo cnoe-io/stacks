@@ -61,13 +61,11 @@ backstage_api() {
     
     if [[ -n "$data" ]]; then
         curl -s -X "$method" \
-             -H "Authorization: Bearer $BACKSTAGE_TOKEN" \
              -H "Content-Type: application/json" \
              -d "$data" \
              "http://localhost:7007$endpoint"
     else
         curl -s -X "$method" \
-             -H "Authorization: Bearer $BACKSTAGE_TOKEN" \
              -H "Content-Type: application/json" \
              "http://localhost:7007$endpoint"
     fi
