@@ -74,53 +74,80 @@ GCP_PROJECT_ID=""
 GCP_LOCATION=""
 GCP_MODEL_NAME=""
 
+# Helper function to prompt with env var hint
+prompt_with_env() {
+    local prompt="$1"
+    local var_name="$2"
+    local is_secret="$3"
+    local default="$4"
+    local env_value="${!var_name}"
+    local result=""
+    
+    if [[ -n "$env_value" ]]; then
+        local hint="${env_value:0:3}..."
+        if [[ "$is_secret" == "true" ]]; then
+            read -p "$prompt (env: $hint) [Enter to use, or type new]: " -s result
+            echo ""
+        else
+            read -p "$prompt (env: $hint) [Enter to use, or type new]: " result
+        fi
+        if [[ -z "$result" ]]; then
+            result="$env_value"
+        fi
+    else
+        if [[ -n "$default" ]]; then
+            if [[ "$is_secret" == "true" ]]; then
+                read -p "$prompt (default: $default): " -s result
+                echo ""
+            else
+                read -p "$prompt (default: $default): " result
+            fi
+            result=${result:-"$default"}
+        else
+            if [[ "$is_secret" == "true" ]]; then
+                read -p "$prompt: " -s result
+                echo ""
+            else
+                read -p "$prompt: " result
+            fi
+        fi
+    fi
+    echo "$result"
+}
+
 # Collect credentials based on provider
 case $LLM_PROVIDER in
     "azure-openai")
         echo ""
-        read -p "Azure OpenAI API Key: " -s AZURE_OPENAI_API_KEY
-        echo ""
-        read -p "Azure OpenAI Endpoint: " AZURE_OPENAI_ENDPOINT
-        read -p "Azure OpenAI API Version (default: 2024-02-15-preview): " AZURE_OPENAI_API_VERSION
-        AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-"2024-02-15-preview"}
-        read -p "Azure OpenAI Deployment Name: " AZURE_OPENAI_DEPLOYMENT
+        AZURE_OPENAI_API_KEY=$(prompt_with_env "Azure OpenAI API Key" "AZURE_OPENAI_API_KEY" "true")
+        AZURE_OPENAI_ENDPOINT=$(prompt_with_env "Azure OpenAI Endpoint" "AZURE_OPENAI_ENDPOINT" "false")
+        AZURE_OPENAI_API_VERSION=$(prompt_with_env "Azure OpenAI API Version" "AZURE_OPENAI_API_VERSION" "false" "2024-02-15-preview")
+        AZURE_OPENAI_DEPLOYMENT=$(prompt_with_env "Azure OpenAI Deployment Name" "AZURE_OPENAI_DEPLOYMENT" "false")
         ;;
     "openai")
         echo ""
-        read -p "OpenAI API Key: " -s OPENAI_API_KEY
-        echo ""
-        read -p "OpenAI Endpoint (default: https://api.openai.com/v1): " OPENAI_ENDPOINT
-        OPENAI_ENDPOINT=${OPENAI_ENDPOINT:-"https://api.openai.com/v1"}
-        read -p "OpenAI Model Name (default: gpt-4): " OPENAI_MODEL_NAME
-        OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-"gpt-4"}
+        OPENAI_API_KEY=$(prompt_with_env "OpenAI API Key" "OPENAI_API_KEY" "true")
+        OPENAI_ENDPOINT=$(prompt_with_env "OpenAI Endpoint" "OPENAI_ENDPOINT" "false" "https://api.openai.com/v1")
+        OPENAI_MODEL_NAME=$(prompt_with_env "OpenAI Model Name" "OPENAI_MODEL_NAME" "false" "gpt-4")
         ;;
     "aws-bedrock")
         echo ""
-        read -p "AWS Access Key ID: " -s AWS_ACCESS_KEY_ID
-        echo ""
-        read -p "AWS Secret Access Key: " -s AWS_SECRET_ACCESS_KEY
-        echo ""
-        read -p "AWS Region (default: us-east-1): " AWS_REGION
-        AWS_REGION=${AWS_REGION:-"us-east-1"}
-        read -p "AWS Bedrock Model ID (default: anthropic.claude-3-sonnet-20240229-v1:0): " AWS_BEDROCK_MODEL_ID
-        AWS_BEDROCK_MODEL_ID=${AWS_BEDROCK_MODEL_ID:-"anthropic.claude-3-sonnet-20240229-v1:0"}
-        read -p "AWS Bedrock Provider (default: anthropic): " AWS_BEDROCK_PROVIDER
-        AWS_BEDROCK_PROVIDER=${AWS_BEDROCK_PROVIDER:-"anthropic"}
+        AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "true")
+        AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
+        AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
+        AWS_BEDROCK_MODEL_ID=$(prompt_with_env "AWS Bedrock Model ID" "AWS_BEDROCK_MODEL_ID" "false" "anthropic.claude-3-sonnet-20240229-v1:0")
+        AWS_BEDROCK_PROVIDER=$(prompt_with_env "AWS Bedrock Provider" "AWS_BEDROCK_PROVIDER" "false" "anthropic")
         ;;
     "google-gemini")
         echo ""
-        read -p "Google API Key: " -s GOOGLE_API_KEY
-        echo ""
-        read -p "Google Model Name (default: gemini-pro): " GOOGLE_MODEL_NAME
-        GOOGLE_MODEL_NAME=${GOOGLE_MODEL_NAME:-"gemini-pro"}
+        GOOGLE_API_KEY=$(prompt_with_env "Google API Key" "GOOGLE_API_KEY" "true")
+        GOOGLE_MODEL_NAME=$(prompt_with_env "Google Model Name" "GOOGLE_MODEL_NAME" "false" "gemini-pro")
         ;;
     "gcp-vertex")
         echo ""
-        read -p "GCP Project ID: " GCP_PROJECT_ID
-        read -p "GCP Location (default: us-central1): " GCP_LOCATION
-        GCP_LOCATION=${GCP_LOCATION:-"us-central1"}
-        read -p "GCP Model Name (default: gemini-pro): " GCP_MODEL_NAME
-        GCP_MODEL_NAME=${GCP_MODEL_NAME:-"gemini-pro"}
+        GCP_PROJECT_ID=$(prompt_with_env "GCP Project ID" "GCP_PROJECT_ID" "false")
+        GCP_LOCATION=$(prompt_with_env "GCP Location" "GCP_LOCATION" "false" "us-central1")
+        GCP_MODEL_NAME=$(prompt_with_env "GCP Model Name" "GCP_MODEL_NAME" "false" "gemini-pro")
         ;;
 esac
 
