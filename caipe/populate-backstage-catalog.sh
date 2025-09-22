@@ -27,11 +27,20 @@ kubectl port-forward -n vault svc/vault 8200:8200 &
 VAULT_PID=$!
 sleep 3
 
-# Get ArgoCD and Backstage tokens
-log "🔑 Retrieving API tokens..."
-ARGOCD_TOKEN=$(vault kv get -field=ARGOCD_TOKEN secret/ai-platform-engineering/argocd-secret)
-BACKSTAGE_TOKEN=$(vault kv get -field=BACKSTAGE_API_TOKEN secret/ai-platform-engineering/backstage-secret)
-BACKSTAGE_URL=$(vault kv get -field=BACKSTAGE_URL secret/ai-platform-engineering/backstage-secret)
+# Get ArgoCD admin password and Backstage tokens
+log "🔑 Retrieving API credentials..."
+ARGOCD_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 -d)
+ARGOCD_USERNAME="admin"
+
+# Try to get Backstage credentials from Vault, fallback to defaults
+if vault kv get secret/ai-platform-engineering/backstage-agent-secret >/dev/null 2>&1; then
+    BACKSTAGE_TOKEN=$(vault kv get -field=BACKSTAGE_API_TOKEN secret/ai-platform-engineering/backstage-agent-secret 2>/dev/null || echo "")
+    BACKSTAGE_URL=$(vault kv get -field=BACKSTAGE_URL secret/ai-platform-engineering/backstage-agent-secret 2>/dev/null || echo "http://backstage.backstage.svc.cluster.local:7007")
+else
+    warn "Backstage secrets not found in Vault, using defaults"
+    BACKSTAGE_TOKEN=""
+    BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
+fi
 
 # Start ArgoCD port forward
 log "🔗 Starting ArgoCD port forward..."
@@ -48,7 +57,7 @@ sleep 3
 # Function to call ArgoCD API
 argocd_api() {
     local endpoint="$1"
-    curl -s -H "Authorization: Bearer $ARGOCD_TOKEN" \
+    curl -s -u "$ARGOCD_USERNAME:$ARGOCD_PASSWORD" \
          -H "Content-Type: application/json" \
          "http://localhost:8080$endpoint"
 }
@@ -59,15 +68,22 @@ backstage_api() {
     local endpoint="$2"
     local data="$3"
     
+    local auth_header=""
+    if [[ -n "$BACKSTAGE_TOKEN" ]]; then
+        auth_header="-H \"Authorization: Bearer $BACKSTAGE_TOKEN\""
+    fi
+    
     if [[ -n "$data" ]]; then
-        curl -s -X "$method" \
+        eval curl -s -X "$method" \
+             $auth_header \
              -H "Content-Type: application/json" \
-             -d "$data" \
-             "http://localhost:7007$endpoint"
+             -d "'$data'" \
+             "http://localhost:3000$endpoint"
     else
-        curl -s -X "$method" \
+        eval curl -s -X "$method" \
+             $auth_header \
              -H "Content-Type: application/json" \
-             "http://localhost:7007$endpoint"
+             "http://localhost:3000$endpoint"
     fi
 }
 
