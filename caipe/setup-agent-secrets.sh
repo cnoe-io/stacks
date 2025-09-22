@@ -37,7 +37,7 @@ prompt_with_env() {
     
     # Strip newlines from env value - enhanced for copy/paste
     if [[ -n "$env_value" ]]; then
-        env_value=$(echo "$env_value" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+        env_value=$(printf '%s' "$env_value" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr -d '\0')
     fi
     
     if [[ -n "$env_value" ]]; then
@@ -60,7 +60,8 @@ prompt_with_env() {
         fi
     fi
     # Strip newlines and whitespace from result - enhanced for copy/paste
-    result=$(echo "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    # Handle all possible newline scenarios including those added by terminals
+    result=$(printf '%s' "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr -d '\0')
     echo "$result"
 }
 
