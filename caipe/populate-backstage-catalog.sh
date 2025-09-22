@@ -10,7 +10,7 @@ warn() {
     echo "⚠️  $1"
 }
 
-log "🔧 Populating Backstage catalog with CAIPE components from ArgoCD"
+log "🔧 Registering CAIPE catalog location in Backstage"
 
 # Get Backstage API token from Kubernetes secret
 log "🔑 Retrieving Backstage API token..."
@@ -49,131 +49,69 @@ backstage_api() {
     fi
 }
 
-# Create CAIPE platform system entity
-log "🏗️  Creating CAIPE platform system entity..."
+# Register GitHub catalog-info.yaml as a location
+log "📍 Registering CAIPE catalog location..."
 
-system_entity=$(cat <<EOF
-{
-  "apiVersion": "backstage.io/v1alpha1",
-  "kind": "System",
-  "metadata": {
-    "name": "caipe-platform",
-    "description": "Cloud AI Platform Engineering - Complete AI-powered platform engineering solution",
-    "labels": {
-      "platform": "caipe",
-      "environment": "production"
-    },
-    "annotations": {
-      "argocd/app-name": "ai-platform-engineering"
-    }
-  },
-  "spec": {
-    "owner": "platform-team",
-    "domain": "platform-engineering"
-  }
-}
-EOF
-)
+location_data='{
+  "type": "url",
+  "target": "https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/catalog-info.yaml"
+}'
 
-response=$(backstage_api "POST" "/api/catalog/entities" "$system_entity")
-if echo "$response" | jq -e '.metadata.name' >/dev/null 2>&1; then
-    log "✅ CAIPE platform system entity created"
-elif echo "$response" | grep -q "already exists"; then
-    log "✅ CAIPE platform system entity already exists"
+response=$(backstage_api "POST" "/api/catalog/locations" "$location_data")
+
+if echo "$response" | jq -e '.location.id' >/dev/null 2>&1; then
+    location_id=$(echo "$response" | jq -r '.location.id')
+    log "✅ Successfully registered CAIPE catalog location: $location_id"
 else
-    log "⚠️  System entity response: $response"
+    log "⚠️  Location registration response: $response"
 fi
 
-# Define CAIPE components based on actual ArgoCD deployments
-log "🏗️  Creating CAIPE component entities..."
+# Trigger catalog refresh to process the new location
+log "🔄 Triggering catalog refresh..."
+refresh_response=$(backstage_api "POST" "/api/catalog/refresh")
+log "✅ Catalog refresh triggered"
 
-declare -A CAIPE_COMPONENTS=(
-    ["agent-argocd"]="ArgoCD Agent - GitOps deployment automation and management"
-    ["agent-argocd-mcp"]="ArgoCD MCP Agent - Model Context Protocol integration for ArgoCD"
-    ["agent-backstage"]="Backstage Agent - Developer portal integration and catalog management"
-    ["agent-backstage-mcp"]="Backstage MCP Agent - Model Context Protocol integration for Backstage"
-    ["agent-github"]="GitHub Agent - Repository management and automation"
-    ["backstage-plugin-agent-forge"]="Agent Forge Plugin - Backstage plugin for AI agent management"
-    ["supervisor-agent"]="Supervisor Agent - Orchestrates and monitors all CAIPE agents"
-)
+# Wait a moment for processing
+sleep 5
 
-for component_name in "${!CAIPE_COMPONENTS[@]}"; do
-    description="${CAIPE_COMPONENTS[$component_name]}"
-    
-    log "📦 Creating component: $component_name"
-    
-    catalog_entity=$(cat <<EOF
-{
-  "apiVersion": "backstage.io/v1alpha1",
-  "kind": "Component",
-  "metadata": {
-    "name": "$component_name",
-    "description": "$description",
-    "labels": {
-      "platform": "caipe",
-      "environment": "production",
-      "component-type": "agent"
-    },
-    "annotations": {
-      "backstage.io/managed-by-location": "url:https://github.com/sriaradhyula/stacks/tree/main/caipe",
-      "argocd/app-name": "ai-platform-engineering",
-      "kubernetes.io/deployment": "ai-platform-engineering-$component_name"
-    }
-  },
-  "spec": {
-    "type": "service",
-    "lifecycle": "production",
-    "owner": "platform-team",
-    "system": "caipe-platform"
-  }
-}
-EOF
-)
+# Check current locations
+log "📋 Checking registered locations..."
+locations=$(backstage_api "GET" "/api/catalog/locations")
+github_locations=$(echo "$locations" | jq -r '.[] | select(.target | contains("github.com/sriaradhyula/stacks")) | .target' 2>/dev/null || echo "")
 
-    # Register with Backstage catalog
-    response=$(backstage_api "POST" "/api/catalog/entities" "$catalog_entity")
-    
-    if echo "$response" | jq -e '.metadata.name' >/dev/null 2>&1; then
-        log "✅ Successfully registered $component_name in Backstage catalog"
-    elif echo "$response" | grep -q "already exists"; then
-        log "✅ Component $component_name already exists in catalog"
-    else
-        log "⚠️  Response for $component_name: $response"
-    fi
-    
-    sleep 1  # Rate limiting
-done
+if [[ -n "$github_locations" ]]; then
+    log "✅ Found GitHub CAIPE location:"
+    echo "$github_locations"
+else
+    log "⚠️  GitHub CAIPE location not found in registered locations"
+fi
 
-# Test API access and list entities
-log "📋 Listing CAIPE entities from catalog..."
+# List all entities to see if CAIPE components are now available
+log "📊 Checking catalog entities..."
 all_entities=$(backstage_api "GET" "/api/catalog/entities")
+total_entities=$(echo "$all_entities" | jq '. | length' 2>/dev/null || echo "0")
+log "📊 Total entities in catalog: $total_entities"
+
+# Look for CAIPE entities
 caipe_entities=$(echo "$all_entities" | jq -r '.[] | select(.metadata.labels.platform == "caipe") | "\(.kind): \(.metadata.name) - \(.metadata.description // "No description")"' 2>/dev/null || echo "")
 
 if [[ -n "$caipe_entities" ]]; then
     log "✅ Found CAIPE entities:"
     echo "$caipe_entities"
 else
-    log "⚠️  No CAIPE entities found via API"
+    log "⚠️  CAIPE entities not yet visible (may take a few minutes to process)"
+    # Show any entities that might be related
+    echo "$all_entities" | jq -r '.[] | select(.metadata.name | contains("caipe") or contains("agent")) | "\(.kind): \(.metadata.name)"' 2>/dev/null | head -5 || echo "No related entities found"
 fi
-
-# Show total entity count
-total_entities=$(echo "$all_entities" | jq '. | length' 2>/dev/null || echo "0")
-log "📊 Total entities in catalog: $total_entities"
 
 # Cleanup
 kill $BACKSTAGE_PID 2>/dev/null || true
 
 echo ""
-echo "✅ CAIPE COMPONENTS ADDED:"
-echo "- System: caipe-platform"
-echo "- Agents: agent-argocd, agent-backstage, agent-github"
-echo "- MCP Agents: agent-argocd-mcp, agent-backstage-mcp"
-echo "- Plugins: backstage-plugin-agent-forge"
-echo "- Orchestration: supervisor-agent"
+echo "✅ CAIPE CATALOG REGISTRATION COMPLETE:"
+echo "- Location: https://raw.githubusercontent.com/sriaradhyula/stacks/main/caipe/catalog-info.yaml"
+echo "- Entities will appear in UI within a few minutes"
+echo "- Web UI: https://cnoe.localtest.me:8443/backstage/catalog"
+echo "- Filter by: platform=caipe"
 
-echo ""
-echo "🔍 VIEW ENTITIES:"
-echo "Web UI: https://cnoe.localtest.me:8443/backstage/catalog"
-echo "Filter by: platform=caipe"
-
-log "🎉 Backstage catalog population complete!"
+log "🎉 Backstage catalog location registration complete!"
