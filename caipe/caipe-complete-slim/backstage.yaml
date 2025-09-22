@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://backstage/manifests
+    repoURL: cnoe://backstage
     targetRevision: HEAD
-    path: "."
+    path: manifests
   destination:
     server: "https://kubernetes.default.svc"
     namespace: backstage

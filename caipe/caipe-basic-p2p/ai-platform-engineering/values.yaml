@@ -2,16 +2,18 @@
 global:
   enabledSubAgents:
     argocd: true
-    aws: true
+    aws: false
     backstage: true
-    confluence: true
+    confluence: false
     github: true
-    jira: true
-    pagerduty: true
-    slack: true
-    splunk: true
-    webex: true
-    weather: true
+    jira: false
+    komodor: false
+    pagerduty: false
+    slack: false
+    splunk: false
+    weather: false
+    webex: false
+    kb-rag: false
 
   slim:
     enabled: false
@@ -55,6 +57,34 @@ supervisor-agent:
   nameOverride: "supervisor-agent"
   env:
     EXTERNAL_URL: "https://cnoe.localtest.me:8443/ai-platform-engineering"
+    ARGOCD_AGENT_HOST: "ai-platform-engineering-agent-argocd"
+    AWS_AGENT_HOST: "ai-platform-engineering-agent-aws"
+    BACKSTAGE_AGENT_HOST: "ai-platform-engineering-agent-backstage"
+    CONFLUENCE_AGENT_HOST: "ai-platform-engineering-agent-confluence"
+    GITHUB_AGENT_HOST: "ai-platform-engineering-agent-github"
+    JIRA_AGENT_HOST: "ai-platform-engineering-agent-jira"
+    KB_RAG_AGENT_HOST: "ai-platform-engineering-kb-rag-agent"
+    KB-RAG_AGENT_HOST: "ai-platform-engineering-kb-rag-agent"
+    KOMODOR_AGENT_HOST: "ai-platform-engineering-agent-komodor"
+    PAGERDUTY_AGENT_HOST: "ai-platform-engineering-agent-pagerduty"
+    SLACK_AGENT_HOST: "ai-platform-engineering-agent-slack"
+    SPLUNK_AGENT_HOST: "ai-platform-engineering-agent-splunk"
+    WEBEX_AGENT_HOST: "ai-platform-engineering-agent-webex"
+    ENABLE_ARGOCD: "true"
+    ENABLE_AWS: "false"
+    ENABLE_BACKSTAGE: "true"
+    ENABLE_CONFLUENCE: "false"
+    ENABLE_GITHUB: "true"
+    ENABLE_JIRA: "false"
+    ENABLE_KOMODOR: "false"
+    ENABLE_PAGERDUTY: "false"
+    ENABLE_SLACK: "false"
+    ENABLE_SPLUNK: "false"
+    ENABLE_WEBEX_AGENT: "false"
+    ENABLE_KB_RAG: "false"
+    ENABLE_WEATHER_AGENT: "false"
+    ENABLE_PETSTORE_AGENT: "false"
+    ENABLE_GRAPH_RAG: "false"
 
 agent-argocd:
   nameOverride: "agent-argocd"
@@ -90,24 +120,6 @@ agent-backstage:
           key: secret/ai-platform-engineering/backstage-secret
           property: BACKSTAGE_URL
 
-agent-confluence:
-  nameOverride: "agent-confluence"
-  agentSecrets:
-    secretName: "agent-confluence-secret"
-    externalSecrets:
-      data:
-      - secretKey: ATLASSIAN_TOKEN
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_TOKEN
-      - secretKey: ATLASSIAN_EMAIL
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_EMAIL
-      - secretKey: ATLASSIAN_API_URL
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_API_URL
 
 agent-github:
   nameOverride: "agent-github"
@@ -119,67 +131,6 @@ agent-github:
         remoteRef:
           key: secret/ai-platform-engineering/github-secret
           property: GITHUB_PERSONAL_ACCESS_TOKEN
-
-agent-jira:
-  nameOverride: "agent-jira"
-  agentSecrets:
-    secretName: "agent-jira-secret"
-    externalSecrets:
-      data:
-      - secretKey: ATLASSIAN_TOKEN
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_TOKEN
-      - secretKey: ATLASSIAN_EMAIL
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_EMAIL
-      - secretKey: ATLASSIAN_API_URL
-        remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_API_URL
-
-agent-pagerduty:
-  nameOverride: "agent-pagerduty"
-  agentSecrets:
-    secretName: "agent-pagerduty-secret"
-    externalSecrets:
-      data:
-      - secretKey: PAGERDUTY_API_KEY
-        remoteRef:
-          key: secret/ai-platform-engineering/pagerduty-secret
-          property: PAGERDUTY_API_KEY
-      - secretKey: PAGERDUTY_API_URL
-        remoteRef:
-          key: secret/ai-platform-engineering/pagerduty-secret
-          property: PAGERDUTY_API_URL
-
-agent-slack:
-  nameOverride: "agent-slack"
-  agentSecrets:
-    secretName: "agent-slack-secret"
-    externalSecrets:
-      data:
-      - secretKey: SLACK_BOT_TOKEN
-        remoteRef:
-          key: secret/ai-platform-engineering/slack-secret
-          property: SLACK_BOT_TOKEN
-      - secretKey: SLACK_APP_TOKEN
-        remoteRef:
-          key: secret/ai-platform-engineering/slack-secret
-          property: SLACK_APP_TOKEN
-      - secretKey: SLACK_SIGNING_SECRET
-        remoteRef:
-          key: secret/ai-platform-engineering/slack-secret
-          property: SLACK_SIGNING_SECRET
-      - secretKey: SLACK_CLIENT_SECRET
-        remoteRef:
-          key: secret/ai-platform-engineering/slack-secret
-          property: SLACK_CLIENT_SECRET
-      - secretKey: SLACK_TEAM_ID
-        remoteRef:
-          key: secret/ai-platform-engineering/slack-secret
-          property: SLACK_TEAM_ID
 
 graphrag:
   enabled: true

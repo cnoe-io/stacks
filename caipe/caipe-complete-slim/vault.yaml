@@ -13,10 +13,10 @@ spec:
       targetRevision: "0.27.0"
       helm:
         valueFiles:
-          - $values/ai-platform-engineering/vault/values.yaml
-    - repoURL: https://github.com/cnoe-io/stacks.git
-      targetRevision: main
-      path: ai-platform-engineering/vault/manifests
+          - $values/values.yaml
+    - repoURL: cnoe://vault
+      targetRevision: HEAD
+      path: manifests
       ref: values
   destination:
     server: https://kubernetes.default.svc

@@ -77,9 +77,14 @@ data:
       # Used for enabling authentication, secret is shared by all backend plugins
       # See https://backstage.io/docs/tutorials/backend-to-backend-auth for
       # information on the format
-      # auth:
-      #   keys:
-      #     - secret: ${BACKEND_SECRET}
+      auth:
+        externalAccess:
+        - options:
+            subject: caipe-api-access
+            token: ${BACKSTAGE_API_TOKEN}
+          type: static
+        keys:
+          - secret: ${BACKSTAGE_API_TOKEN}
       baseUrl: https://cnoe.localtest.me:8443
       listen:
         port: 7007
@@ -262,6 +267,8 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
+            - secretRef:
+                name: backstage-api-token
           image: ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b
           name: backstage
           ports:
@@ -387,6 +394,7 @@ spec:
         ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
         ARGO_CD_URL: 'https://argocd-server.argocd.svc.cluster.local/api/v1/'
         AGENT_FORGE_URL: https://cnoe.localtest.me:8443/ai-platform-engineering
+        BACKSTAGE_API_TOKEN: "{{.BACKSTAGE_API_TOKEN}}"
   data:
     - secretKey: ARGOCD_SESSION_TOKEN
       remoteRef:
@@ -427,6 +435,24 @@ spec:
       remoteRef:
         key: gitea-credential
         property: password
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: backstage-api-token
+  namespace: backstage
+spec:
+  secretStoreRef:
+    name: vault-secret-store
+    kind: ClusterSecretStore
+  refreshInterval: "0"
+  target:
+    name: backstage-api-token
+  data:
+    - secretKey: BACKSTAGE_API_TOKEN
+      remoteRef:
+        key: ai-platform-engineering/backstage-secret
+        property: BACKSTAGE_API_TOKEN
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

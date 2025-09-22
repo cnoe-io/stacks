@@ -7,15 +7,16 @@ global:
     confluence: true
     github: true
     jira: true
+    komodor: true
     pagerduty: true
     slack: true
     splunk: true
+    weather: false
     webex: true
-    komodor: true
     kb-rag: true
 
   slim:
-    enabled: true
+    enabled: false
 
   externalSecrets:
     enabled: true
@@ -75,11 +76,11 @@ supervisor-agent:
     ENABLE_CONFLUENCE: "true"
     ENABLE_GITHUB: "true"
     ENABLE_JIRA: "true"
+    ENABLE_KOMODOR: "true"
     ENABLE_PAGERDUTY: "true"
     ENABLE_SLACK: "true"
     ENABLE_SPLUNK: "true"
     ENABLE_WEBEX_AGENT: "true"
-    ENABLE_KOMODOR: "true"
     ENABLE_KB_RAG: "true"
     ENABLE_WEATHER_AGENT: "false"
     ENABLE_PETSTORE_AGENT: "false"
@@ -167,6 +168,21 @@ agent-jira:
         remoteRef:
           key: secret/ai-platform-engineering/jira-secret
           property: ATLASSIAN_API_URL
+
+agent-komodor:
+  nameOverride: "agent-komodor"
+  agentSecrets:
+    secretName: "agent-komodor-secret"
+    externalSecrets:
+      data:
+      - secretKey: KOMODOR_API_KEY
+        remoteRef:
+          key: secret/ai-platform-engineering/komodor-secret
+          property: KOMODOR_API_KEY
+      - secretKey: KOMODOR_API_URL
+        remoteRef:
+          key: secret/ai-platform-engineering/komodor-secret
+          property: KOMODOR_API_URL
 
 agent-pagerduty:
   nameOverride: "agent-pagerduty"
@@ -259,21 +275,6 @@ agent-webex:
           key: secret/ai-platform-engineering/webex-secret
           property: WEBEX_WEBHOOK_SECRET
 
-agent-komodor:
-  nameOverride: "agent-komodor"
-  agentSecrets:
-    secretName: "agent-komodor-secret"
-    externalSecrets:
-      data:
-      - secretKey: KOMODOR_API_KEY
-        remoteRef:
-          key: secret/ai-platform-engineering/komodor-secret
-          property: KOMODOR_API_KEY
-      - secretKey: KOMODOR_API_URL
-        remoteRef:
-          key: secret/ai-platform-engineering/komodor-secret
-          property: KOMODOR_API_URL
-
 graphrag:
   enabled: false
 
@@ -300,6 +301,14 @@ kb-rag-stack:
             key: secret/ai-platform-engineering/kb-rag-secret
             property: MILVUS_SECRET
 
+  # KB-RAG Redis configuration
+  kb-rag-redis:
+    enabled: true
+
+  # KB-RAG Server configuration
+  kb-rag-server:
+    enabled: true
+
 # Milvus with 1Gi storage for kind
 milvus:
   enabled: true
@@ -316,7 +325,7 @@ milvus:
     persistence:
       size: 1Gi
       storageClass: standard
-  # etcd configuration  
+  # etcd configuration
   etcd:
     persistence:
       size: 1Gi
