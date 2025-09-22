@@ -11,60 +11,20 @@ warn() {
 }
 
 # Check dependencies
-for cmd in kubectl vault jq curl; do
+for cmd in kubectl jq curl; do
     if ! command -v $cmd &> /dev/null; then
         log "❌ $cmd is required but not installed"
         exit 1
     fi
 done
 
-log "🔧 Populating Backstage catalog with ArgoCD deployment details"
-
-# Setup Vault connection
-VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.token}' | base64 -d)
-export VAULT_ADDR="http://localhost:8200"
-export VAULT_TOKEN
-
-# Start port forward
-log "🔗 Starting Vault port forward..."
-kubectl port-forward -n vault svc/vault 8200:8200 &
-VAULT_PID=$!
-sleep 3
-
-# Get ArgoCD admin password and Backstage tokens
-log "🔑 Retrieving API credentials..."
-ARGOCD_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 -d)
-ARGOCD_USERNAME="admin"
-
-# Try to get Backstage credentials from Vault, fallback to defaults
-if vault kv get secret/ai-platform-engineering/backstage-agent-secret >/dev/null 2>&1; then
-    BACKSTAGE_TOKEN=$(vault kv get -field=BACKSTAGE_API_TOKEN secret/ai-platform-engineering/backstage-agent-secret 2>/dev/null || echo "")
-    BACKSTAGE_URL=$(vault kv get -field=BACKSTAGE_URL secret/ai-platform-engineering/backstage-agent-secret 2>/dev/null || echo "http://backstage.backstage.svc.cluster.local:7007")
-else
-    warn "Backstage secrets not found in Vault, using defaults"
-    BACKSTAGE_TOKEN=""
-    BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
-fi
-
-# Start ArgoCD port forward
-log "🔗 Starting ArgoCD port forward..."
-kubectl port-forward -n argocd svc/argocd-server 8080:80 &
-ARGOCD_PID=$!
-sleep 3
+log "🔧 Populating Backstage catalog with basic CAIPE entities"
 
 # Start Backstage port forward
 log "🔗 Starting Backstage port forward..."
-kubectl port-forward -n backstage svc/backstage 7007:7007 &
+kubectl port-forward -n backstage svc/backstage 3000:7007 &
 BACKSTAGE_PID=$!
 sleep 3
-
-# Function to call ArgoCD API
-argocd_api() {
-    local endpoint="$1"
-    curl -s -u "$ARGOCD_USERNAME:$ARGOCD_PASSWORD" \
-         -H "Content-Type: application/json" \
-         "http://localhost:8080$endpoint"
-}
 
 # Function to call Backstage API
 backstage_api() {
@@ -72,96 +32,58 @@ backstage_api() {
     local endpoint="$2"
     local data="$3"
     
-    local auth_header=""
-    if [[ -n "$BACKSTAGE_TOKEN" ]]; then
-        auth_header="-H \"Authorization: Bearer $BACKSTAGE_TOKEN\""
-    fi
-    
     if [[ -n "$data" ]]; then
-        eval curl -s -X "$method" \
-             $auth_header \
+        curl -s -X "$method" \
              -H "Content-Type: application/json" \
-             -d "'$data'" \
+             -d "$data" \
              "http://localhost:3000$endpoint"
     else
-        eval curl -s -X "$method" \
-             $auth_header \
+        curl -s -X "$method" \
              -H "Content-Type: application/json" \
              "http://localhost:3000$endpoint"
     fi
 }
 
-# Get ArgoCD applications
-log "📊 Fetching ArgoCD applications..."
-applications=$(argocd_api "/api/v1/applications")
+# Create basic CAIPE applications as Backstage components
+log "🏗️  Creating CAIPE application components..."
 
-if [[ -z "$applications" ]]; then
-    log "❌ Failed to fetch ArgoCD applications"
-    kill $VAULT_PID $BACKSTAGE_PID 2>/dev/null
-    exit 1
-fi
+# Define basic CAIPE applications
+declare -A CAIPE_APPS=(
+    ["ai-platform-engineering"]="AI Platform Engineering - Main CAIPE stack"
+    ["github-agent"]="GitHub Agent - Repository management"
+    ["jira-agent"]="Jira Agent - Issue tracking integration"
+    ["slack-agent"]="Slack Agent - Team communication"
+    ["aws-agent"]="AWS Agent - Cloud resource management"
+    ["argocd-agent"]="ArgoCD Agent - GitOps deployment"
+    ["backstage-agent"]="Backstage Agent - Developer portal integration"
+)
 
-# Process each application
-echo "$applications" | jq -r '.items[] | @base64' | while IFS= read -r app_data; do
-    app=$(echo "$app_data" | base64 -d)
+for app_name in "${!CAIPE_APPS[@]}"; do
+    description="${CAIPE_APPS[$app_name]}"
     
-    app_name=$(echo "$app" | jq -r '.metadata.name')
-    app_namespace=$(echo "$app" | jq -r '.metadata.namespace // "argocd"')
-    sync_status=$(echo "$app" | jq -r '.status.sync.status // "Unknown"')
-    health_status=$(echo "$app" | jq -r '.status.health.status // "Unknown"')
-    repo_url=$(echo "$app" | jq -r '.spec.source.repoURL // "Unknown"')
-    target_revision=$(echo "$app" | jq -r '.spec.source.targetRevision // "HEAD"')
-    path=$(echo "$app" | jq -r '.spec.source.path // "."')
+    log "📦 Creating component: $app_name"
     
-    log "📝 Processing application: $app_name"
-    
-    # Create Backstage catalog entity
     catalog_entity=$(cat <<EOF
 {
   "apiVersion": "backstage.io/v1alpha1",
   "kind": "Component",
   "metadata": {
     "name": "$app_name",
-    "title": "$app_name",
-    "description": "ArgoCD managed application: $app_name",
-    "annotations": {
-      "argocd.argoproj.io/app-name": "$app_name",
-      "argocd.argoproj.io/app-namespace": "$app_namespace",
-      "backstage.io/managed-by-location": "argocd:$app_name",
-      "backstage.io/source-location": "url:$repo_url"
+    "description": "$description",
+    "labels": {
+      "platform": "caipe",
+      "environment": "production"
     },
-    "tags": [
-      "argocd",
-      "gitops",
-      "kubernetes",
-      "deployment"
-    ],
-    "links": [
-      {
-        "url": "https://cnoe.localtest.me:8443/argocd/applications/$app_name",
-        "title": "ArgoCD Application",
-        "icon": "dashboard"
-      }
-    ]
+    "annotations": {
+      "backstage.io/managed-by-location": "url:https://github.com/sriaradhyula/stacks/tree/main/caipe",
+      "argocd/app-name": "$app_name"
+    }
   },
   "spec": {
     "type": "service",
     "lifecycle": "production",
     "owner": "platform-team",
-    "system": "caipe-platform",
-    "providesApis": [],
-    "consumesApis": [],
-    "dependsOn": []
-  },
-  "status": {
-    "argocd": {
-      "syncStatus": "$sync_status",
-      "healthStatus": "$health_status",
-      "repoUrl": "$repo_url",
-      "targetRevision": "$target_revision",
-      "path": "$path",
-      "lastUpdated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    }
+    "system": "caipe-platform"
   }
 }
 EOF
@@ -173,31 +95,25 @@ EOF
     if echo "$response" | jq -e '.metadata.name' >/dev/null 2>&1; then
         log "✅ Successfully registered $app_name in Backstage catalog"
     else
-        log "⚠️  Failed to register $app_name: $response"
+        log "⚠️  Response for $app_name: $response"
     fi
     
     sleep 1  # Rate limiting
 done
 
-# Create system entity for CAIPE platform
+# Create CAIPE platform system entity
 log "🏗️  Creating CAIPE platform system entity..."
+
 system_entity=$(cat <<EOF
 {
   "apiVersion": "backstage.io/v1alpha1",
   "kind": "System",
   "metadata": {
     "name": "caipe-platform",
-    "title": "CAIPE Platform",
-    "description": "Cloud AI Platform Engineering - Complete internal developer platform",
-    "annotations": {
-      "backstage.io/managed-by-location": "argocd:caipe-platform"
-    },
-    "tags": [
-      "platform",
-      "ai",
-      "gitops",
-      "kubernetes"
-    ]
+    "description": "Cloud AI Platform Engineering - Complete AI-powered platform engineering solution",
+    "labels": {
+      "platform": "caipe"
+    }
   },
   "spec": {
     "owner": "platform-team",
@@ -207,10 +123,14 @@ system_entity=$(cat <<EOF
 EOF
 )
 
-backstage_api "POST" "/api/catalog/entities" "$system_entity"
-log "✅ CAIPE platform system entity created"
+response=$(backstage_api "POST" "/api/catalog/entities" "$system_entity")
+if echo "$response" | jq -e '.metadata.name' >/dev/null 2>&1; then
+    log "✅ CAIPE platform system entity created"
+else
+    log "⚠️  System entity response: $response"
+fi
 
 # Cleanup
-kill $VAULT_PID $BACKSTAGE_PID $ARGOCD_PID 2>/dev/null
+kill $BACKSTAGE_PID 2>/dev/null || true
 log "🎉 Backstage catalog population complete!"
 log "🔍 View catalog at: https://cnoe.localtest.me:8443/backstage/catalog"
