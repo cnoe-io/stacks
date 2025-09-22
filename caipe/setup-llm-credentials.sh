@@ -74,87 +74,80 @@ GCP_PROJECT_ID=""
 GCP_LOCATION=""
 GCP_MODEL_NAME=""
 
-# Helper function to prompt with env var hint
+# Single-line, exact-byte prompt helper (no newline added, no stripping)
+# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret
 prompt_with_env() {
-    local prompt="$1"
-    local var_name="$2"
-    local is_secret="$3"
-    local default="$4"
-    local env_value="${!var_name}"
-    local result=""
-    
-    # Strip newlines from env value too
-    if [[ -n "$env_value" ]]; then
-        env_value=$(echo "$env_value" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
-    fi
-    
-    if [[ -n "$env_value" ]]; then
-        if [[ "$is_secret" == "true" ]]; then
-            local hint="${env_value:0:5}..."
-            read -p "$prompt (env: $hint) [Enter to use, or type new]: " -s result
-            echo ""
-        else
-            read -p "$prompt (env: $env_value) [Enter to use, or type new]: " result
-        fi
-        if [[ -z "$result" ]]; then
-            result="$env_value"
-        fi
+  local prompt="$1" var_name="$2" is_secret="$3"
+  local env_value="${!var_name}" result
+
+  if [[ -n "$env_value" ]]; then
+    if [[ "$is_secret" == "true" ]]; then
+      local hint="${env_value:0:5}..."
+      printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
+      IFS= read -r choice < /dev/tty
+      if [[ -z "$choice" ]]; then
+        result="$env_value"
+      else
+        IFS= read -rs -p "$prompt: " result < /dev/tty
+        printf "\n" > /dev/tty
+      fi
     else
-        if [[ -n "$default" ]]; then
-            if [[ "$is_secret" == "true" ]]; then
-                read -p "$prompt (default: $default): " -s result
-                echo ""
-            else
-                read -p "$prompt (default: $default): " result
-            fi
-            result=${result:-"$default"}
-        else
-            if [[ "$is_secret" == "true" ]]; then
-                read -p "$prompt: " -s result
-                echo ""
-            else
-                read -p "$prompt: " result
-            fi
-        fi
+      IFS= read -r -p "$prompt (env: $env_value) [Enter to use, type new]: " choice < /dev/tty
+      if [[ -z "$choice" ]]; then
+        result="$env_value"
+      else
+        IFS= read -r -p "$prompt: " result < /dev/tty
+      fi
     fi
-    # Strip newlines and whitespace from result
-    result=$(echo "$result" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
-    echo "$result"
+  else
+    if [[ "$is_secret" == "true" ]]; then
+      IFS= read -rs -p "$prompt: " result < /dev/tty
+      printf "\n" > /dev/tty
+    else
+      IFS= read -r -p "$prompt: " result < /dev/tty
+    fi
+  fi
+
+  # Normalize only a trailing CR (some terminals send \r)
+  result=${result%$'\r'}
+
+  # Output EXACTLY the bytes, no newline
+  printf '%s' "$result"
 }
 
 # Collect credentials based on provider
 case $LLM_PROVIDER in
     "azure-openai")
         echo ""
-        AZURE_OPENAI_API_KEY=$(prompt_with_env "Azure OpenAI API Key" "AZURE_OPENAI_API_KEY" "true")
-        AZURE_OPENAI_ENDPOINT=$(prompt_with_env "Azure OpenAI Endpoint" "AZURE_OPENAI_ENDPOINT" "false")
-        AZURE_OPENAI_API_VERSION=$(prompt_with_env "Azure OpenAI API Version" "AZURE_OPENAI_API_VERSION" "false" "2024-02-15-preview")
-        AZURE_OPENAI_DEPLOYMENT=$(prompt_with_env "Azure OpenAI Deployment Name" "AZURE_OPENAI_DEPLOYMENT" "false")
+        AZURE_OPENAI_API_KEY="$(prompt_with_env 'Azure OpenAI API Key' 'AZURE_OPENAI_API_KEY' 'true')"
+        AZURE_OPENAI_ENDPOINT="$(prompt_with_env 'Azure OpenAI Endpoint' 'AZURE_OPENAI_ENDPOINT' 'false')"
+        AZURE_OPENAI_API_VERSION="$(prompt_with_env 'Azure OpenAI API Version' 'AZURE_OPENAI_API_VERSION' 'false')"
+        AZURE_OPENAI_DEPLOYMENT="$(prompt_with_env 'Azure OpenAI Deployment Name' 'AZURE_OPENAI_DEPLOYMENT' 'false')"
         ;;
     "openai")
         echo ""
-        OPENAI_API_KEY=$(prompt_with_env "OpenAI API Key" "OPENAI_API_KEY" "true")
-        OPENAI_ENDPOINT=$(prompt_with_env "OpenAI Endpoint" "OPENAI_ENDPOINT" "false" "https://api.openai.com/v1")
-        OPENAI_MODEL_NAME=$(prompt_with_env "OpenAI Model Name" "OPENAI_MODEL_NAME" "false" "gpt-4")
+        OPENAI_API_KEY="$(prompt_with_env 'OpenAI API Key' 'OPENAI_API_KEY' 'true')"
+        OPENAI_ENDPOINT="$(prompt_with_env 'OpenAI Endpoint' 'OPENAI_ENDPOINT' 'false')"
+        OPENAI_MODEL_NAME="$(prompt_with_env 'OpenAI Model Name' 'OPENAI_MODEL_NAME' 'false')"
         ;;
     "aws-bedrock")
         echo ""
-        AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
-        AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
-        AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
-        AWS_BEDROCK_MODEL_ID=$(prompt_with_env "AWS Bedrock Model ID" "AWS_BEDROCK_MODEL_ID" "false" "anthropic.claude-3-sonnet-20240229-v1:0")
-        AWS_BEDROCK_PROVIDER=$(prompt_with_env "AWS Bedrock Provider" "AWS_BEDROCK_PROVIDER" "false" "anthropic")
+        AWS_ACCESS_KEY_ID="$(prompt_with_env 'AWS Access Key ID' 'AWS_ACCESS_KEY_ID' 'false')"
+        AWS_SECRET_ACCESS_KEY="$(prompt_with_env 'AWS Secret Access Key' 'AWS_SECRET_ACCESS_KEY' 'true')"
+        AWS_REGION="$(prompt_with_env 'AWS Region' 'AWS_REGION' 'false')"
+        AWS_BEDROCK_MODEL_ID="$(prompt_with_env 'AWS Bedrock Model ID' 'AWS_BEDROCK_MODEL_ID' 'false')"
+        AWS_BEDROCK_PROVIDER="$(prompt_with_env 'AWS Bedrock Provider' 'AWS_BEDROCK_PROVIDER' 'false')"
         ;;
     "google-gemini")
         echo ""
-        GOOGLE_API_KEY=$(prompt_with_env "Google API Key" "GOOGLE_API_KEY" "true")
-        GOOGLE_MODEL_NAME=$(prompt_with_env "Google Model Name" "GOOGLE_MODEL_NAME" "false" "gemini-pro")
+        GOOGLE_API_KEY="$(prompt_with_env 'Google API Key' 'GOOGLE_API_KEY' 'true')"
+        GOOGLE_MODEL_NAME="$(prompt_with_env 'Google Model Name' 'GOOGLE_MODEL_NAME' 'false')"
         ;;
     "gcp-vertex")
         echo ""
-        GCP_PROJECT_ID=$(prompt_with_env "GCP Project ID" "GCP_PROJECT_ID" "false")
-        GCP_LOCATION=$(prompt_with_env "GCP Location" "GCP_LOCATION" "false" "us-central1")
-        GCP_MODEL_NAME=$(prompt_with_env "GCP Model Name" "GCP_MODEL_NAME" "false" "gemini-pro")
+        GCP_PROJECT_ID="$(prompt_with_env 'GCP Project ID' 'GCP_PROJECT_ID' 'false')"
+        GCP_LOCATION="$(prompt_with_env 'GCP Location' 'GCP_LOCATION' 'false')"
+        GCP_MODEL_NAME="$(prompt_with_env 'GCP Model Name' 'GCP_MODEL_NAME' 'false')"
         ;;
 esac
 
