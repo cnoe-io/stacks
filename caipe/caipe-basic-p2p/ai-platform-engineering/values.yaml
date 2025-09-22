@@ -2,12 +2,15 @@
 global:
   enabledSubAgents:
     argocd: true
+    aws: true
     backstage: true
-    confluence: false
+    confluence: true
     github: true
-    jira: false
-    pagerduty: false
-    slack: false
+    jira: true
+    pagerduty: true
+    slack: true
+    splunk: true
+    webex: true
     weather: true
 
   slim:
@@ -55,10 +58,6 @@ supervisor-agent:
 
 agent-argocd:
   nameOverride: "agent-argocd"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-argocd-secret"
     externalSecrets:
@@ -78,10 +77,6 @@ agent-argocd:
 
 agent-backstage:
   nameOverride: "agent-backstage"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-backstage"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-backstage-secret"
     externalSecrets:
@@ -97,10 +92,6 @@ agent-backstage:
 
 agent-confluence:
   nameOverride: "agent-confluence"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-confluence"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-confluence-secret"
     externalSecrets:
@@ -120,10 +111,6 @@ agent-confluence:
 
 agent-github:
   nameOverride: "agent-github"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-github"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-github-secret"
     externalSecrets:
@@ -135,10 +122,6 @@ agent-github:
 
 agent-jira:
   nameOverride: "agent-jira"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-jira"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-jira-secret"
     externalSecrets:
@@ -158,10 +141,6 @@ agent-jira:
 
 agent-pagerduty:
   nameOverride: "agent-pagerduty"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-pagerduty"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-pagerduty-secret"
     externalSecrets:
@@ -177,10 +156,6 @@ agent-pagerduty:
 
 agent-slack:
   nameOverride: "agent-slack"
-  image:
-    repository: "ghcr.io/cnoe-io/agent-slack"
-    pullPolicy: "Always"
-    tag: "0.1.15"
   agentSecrets:
     secretName: "agent-slack-secret"
     externalSecrets:
@@ -207,7 +182,7 @@ agent-slack:
           property: SLACK_TEAM_ID
 
 graphrag:
-  enabled: false
+  enabled: true
 
 # neo4j configuration for kind cluster
 neo4j:
