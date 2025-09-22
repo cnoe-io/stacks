@@ -79,7 +79,7 @@ agent-argocd:
 agent-backstage:
   nameOverride: "agent-backstage"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-backstage"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
@@ -98,7 +98,7 @@ agent-backstage:
 agent-confluence:
   nameOverride: "agent-confluence"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-confluence"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
@@ -121,7 +121,7 @@ agent-confluence:
 agent-github:
   nameOverride: "agent-github"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-github"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
@@ -136,7 +136,7 @@ agent-github:
 agent-jira:
   nameOverride: "agent-jira"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-jira"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
@@ -159,7 +159,7 @@ agent-jira:
 agent-pagerduty:
   nameOverride: "agent-pagerduty"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-pagerduty"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
@@ -178,7 +178,7 @@ agent-pagerduty:
 agent-slack:
   nameOverride: "agent-slack"
   image:
-    repository: "ghcr.io/cnoe-io/agent-argocd"
+    repository: "ghcr.io/cnoe-io/agent-slack"
     pullPolicy: "Always"
     tag: "0.1.15"
   agentSecrets:
