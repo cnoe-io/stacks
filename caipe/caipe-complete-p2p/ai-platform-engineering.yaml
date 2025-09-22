@@ -14,16 +14,11 @@ spec:
       targetRevision: 0.2.3
       helm:
         valueFiles:
-          - $values/helm/values.yaml
-          - $values/deploy/idpbuilder/caipe-complete-p2p.yaml
+          - $values/values.yaml
     # Values files from Git repository (your custom branch)
-    - repoURL: https://github.com/cnoe-io/ai-platform-engineering.git
-      targetRevision: idpbuilder-values-0917-v1
+    - repoURL: cnoe://ai-platform-engineering
+      path: manifests
       ref: values
-    # Raw manifests from Git
-    - repoURL: https://github.com/sriaradhyula/stacks.git
-      targetRevision: main
-      path: ai-platform-engineering/ai-platform-engineering/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: ai-platform-engineering
