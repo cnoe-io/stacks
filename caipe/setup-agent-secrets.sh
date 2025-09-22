@@ -82,6 +82,13 @@ if kubectl get deployment -n ai-platform-engineering gitlab-agent 2>/dev/null ||
     log "✅ GitLab agent detected"
 fi
 
+# Check for GitLab agent
+if kubectl get deployment -n ai-platform-engineering gitlab-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i gitlab >/dev/null 2>&1; then
+    active_agents+=("gitlab")
+    log "✅ GitLab agent detected"
+fi
+
 # Check for Jira agent
 if kubectl get deployment -n ai-platform-engineering jira-agent 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i jira >/dev/null 2>&1; then
@@ -103,17 +110,72 @@ if kubectl get deployment -n ai-platform-engineering aws-agent 2>/dev/null || \
     log "✅ AWS agent detected"
 fi
 
+# Check for ArgoCD agent
+if kubectl get deployment -n ai-platform-engineering argocd-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i argocd >/dev/null 2>&1; then
+    active_agents+=("argocd")
+    log "✅ ArgoCD agent detected"
+fi
+
+# Check for Backstage agent
+if kubectl get deployment -n ai-platform-engineering backstage-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i backstage >/dev/null 2>&1; then
+    active_agents+=("backstage")
+    log "✅ Backstage agent detected"
+fi
+
+# Check for PagerDuty agent
+if kubectl get deployment -n ai-platform-engineering pagerduty-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i pagerduty >/dev/null 2>&1; then
+    active_agents+=("pagerduty")
+    log "✅ PagerDuty agent detected"
+fi
+
+# Check for Confluence agent
+if kubectl get deployment -n ai-platform-engineering confluence-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i confluence >/dev/null 2>&1; then
+    active_agents+=("confluence")
+    log "✅ Confluence agent detected"
+fi
+
+# Check for Splunk agent
+if kubectl get deployment -n ai-platform-engineering splunk-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i splunk >/dev/null 2>&1; then
+    active_agents+=("splunk")
+    log "✅ Splunk agent detected"
+fi
+
+# Check for Webex agent
+if kubectl get deployment -n ai-platform-engineering webex-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i webex >/dev/null 2>&1; then
+    active_agents+=("webex")
+    log "✅ Webex agent detected"
+fi
+
+# Check for Komodor agent
+if kubectl get deployment -n ai-platform-engineering komodor-agent 2>/dev/null || \
+   kubectl get configmap -n ai-platform-engineering | grep -i komodor >/dev/null 2>&1; then
+    active_agents+=("komodor")
+    log "✅ Komodor agent detected"
+fi
+
 # If no agents detected, ask user to select
 if [[ ${#active_agents[@]} -eq 0 ]]; then
     log "🤔 No active agents detected. Please select which agents to configure:"
     echo ""
     echo "Available agents:"
     echo "1) GitHub"
-    echo "2) GitLab" 
-    echo "3) Jira"
-    echo "4) Slack"
-    echo "5) AWS"
-    echo "6) All of the above"
+    echo "2) Jira"
+    echo "3) Slack"
+    echo "4) AWS"
+    echo "5) ArgoCD"
+    echo "6) Backstage"
+    echo "7) PagerDuty"
+    echo "8) Confluence"
+    echo "9) Splunk"
+    echo "10) Webex"
+    echo "11) Komodor"
+    echo "12) All of the above"
     echo ""
     read -p "Select agents (comma-separated numbers, e.g., 1,3,4): " agent_selection
     
@@ -121,11 +183,17 @@ if [[ ${#active_agents[@]} -eq 0 ]]; then
     for choice in "${selected[@]}"; do
         case $choice in
             1) active_agents+=("github") ;;
-            2) active_agents+=("gitlab") ;;
-            3) active_agents+=("jira") ;;
-            4) active_agents+=("slack") ;;
-            5) active_agents+=("aws") ;;
-            6) active_agents=("github" "gitlab" "jira" "slack" "aws") ;;
+            2) active_agents+=("jira") ;;
+            3) active_agents+=("slack") ;;
+            4) active_agents+=("aws") ;;
+            5) active_agents+=("argocd") ;;
+            6) active_agents+=("backstage") ;;
+            7) active_agents+=("pagerduty") ;;
+            8) active_agents+=("confluence") ;;
+            9) active_agents+=("splunk") ;;
+            10) active_agents+=("webex") ;;
+            11) active_agents+=("komodor") ;;
+            12) active_agents=("github" "jira" "slack" "aws" "argocd" "backstage" "pagerduty" "confluence" "splunk" "webex" "komodor") ;;
         esac
     done
 fi
@@ -137,8 +205,6 @@ log "🔒 Note: Sensitive credentials will not be displayed on screen"
 # Initialize all fields as empty
 GITHUB_PERSONAL_ACCESS_TOKEN=""
 GITHUB_WEBHOOK_SECRET=""
-GITLAB_PERSONAL_ACCESS_TOKEN=""
-GITLAB_WEBHOOK_SECRET=""
 JIRA_API_TOKEN=""
 JIRA_BASE_URL=""
 JIRA_USERNAME=""
@@ -148,6 +214,18 @@ SLACK_SIGNING_SECRET=""
 AWS_ACCESS_KEY_ID=""
 AWS_SECRET_ACCESS_KEY=""
 AWS_REGION=""
+ARGOCD_API_TOKEN=""
+ARGOCD_SERVER_URL=""
+BACKSTAGE_API_TOKEN=""
+BACKSTAGE_BASE_URL=""
+PAGERDUTY_API_TOKEN=""
+CONFLUENCE_API_TOKEN=""
+CONFLUENCE_BASE_URL=""
+CONFLUENCE_USERNAME=""
+SPLUNK_API_TOKEN=""
+SPLUNK_BASE_URL=""
+WEBEX_ACCESS_TOKEN=""
+KOMODOR_API_TOKEN=""
 
 # Collect credentials based on active agents
 for agent in "${active_agents[@]}"; do
@@ -157,12 +235,6 @@ for agent in "${active_agents[@]}"; do
             log "🐙 Configuring GitHub agent secrets..."
             GITHUB_PERSONAL_ACCESS_TOKEN=$(prompt_with_env "GitHub Personal Access Token" "GITHUB_PERSONAL_ACCESS_TOKEN" "true")
             GITHUB_WEBHOOK_SECRET=$(prompt_with_env "GitHub Webhook Secret (optional)" "GITHUB_WEBHOOK_SECRET" "true")
-            ;;
-        "gitlab")
-            echo ""
-            log "🦊 Configuring GitLab agent secrets..."
-            GITLAB_PERSONAL_ACCESS_TOKEN=$(prompt_with_env "GitLab Personal Access Token" "GITLAB_PERSONAL_ACCESS_TOKEN" "true")
-            GITLAB_WEBHOOK_SECRET=$(prompt_with_env "GitLab Webhook Secret (optional)" "GITLAB_WEBHOOK_SECRET" "true")
             ;;
         "jira")
             echo ""
@@ -185,6 +257,46 @@ for agent in "${active_agents[@]}"; do
             AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
             AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
             ;;
+        "argocd")
+            echo ""
+            log "🚀 Configuring ArgoCD agent secrets..."
+            ARGOCD_API_TOKEN=$(prompt_with_env "ArgoCD API Token" "ARGOCD_API_TOKEN" "true")
+            ARGOCD_SERVER_URL=$(prompt_with_env "ArgoCD Server URL" "ARGOCD_SERVER_URL" "false" "http://argocd-server.argocd.svc.cluster.local")
+            ;;
+        "backstage")
+            echo ""
+            log "🎭 Configuring Backstage agent secrets..."
+            BACKSTAGE_API_TOKEN=$(prompt_with_env "Backstage API Token" "BACKSTAGE_API_TOKEN" "true")
+            BACKSTAGE_BASE_URL=$(prompt_with_env "Backstage Base URL" "BACKSTAGE_BASE_URL" "false" "http://backstage.backstage.svc.cluster.local:7007")
+            ;;
+        "pagerduty")
+            echo ""
+            log "📟 Configuring PagerDuty agent secrets..."
+            PAGERDUTY_API_TOKEN=$(prompt_with_env "PagerDuty API Token" "PAGERDUTY_API_TOKEN" "true")
+            ;;
+        "confluence")
+            echo ""
+            log "📚 Configuring Confluence agent secrets..."
+            CONFLUENCE_API_TOKEN=$(prompt_with_env "Confluence API Token" "CONFLUENCE_API_TOKEN" "true")
+            CONFLUENCE_BASE_URL=$(prompt_with_env "Confluence Base URL (e.g., https://company.atlassian.net/wiki)" "CONFLUENCE_BASE_URL" "false")
+            CONFLUENCE_USERNAME=$(prompt_with_env "Confluence Username/Email" "CONFLUENCE_USERNAME" "false")
+            ;;
+        "splunk")
+            echo ""
+            log "🔍 Configuring Splunk agent secrets..."
+            SPLUNK_API_TOKEN=$(prompt_with_env "Splunk API Token" "SPLUNK_API_TOKEN" "true")
+            SPLUNK_BASE_URL=$(prompt_with_env "Splunk Base URL (e.g., https://splunk.company.com)" "SPLUNK_BASE_URL" "false")
+            ;;
+        "webex")
+            echo ""
+            log "📹 Configuring Webex agent secrets..."
+            WEBEX_ACCESS_TOKEN=$(prompt_with_env "Webex Access Token" "WEBEX_ACCESS_TOKEN" "true")
+            ;;
+        "komodor")
+            echo ""
+            log "🔧 Configuring Komodor agent secrets..."
+            KOMODOR_API_TOKEN=$(prompt_with_env "Komodor API Token" "KOMODOR_API_TOKEN" "true")
+            ;;
     esac
 done
 
@@ -193,8 +305,6 @@ log "💾 Storing agent secrets in Vault..."
 vault kv put secret/ai-platform-engineering/agent-secrets \
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     GITHUB_WEBHOOK_SECRET="$GITHUB_WEBHOOK_SECRET" \
-    GITLAB_PERSONAL_ACCESS_TOKEN="$GITLAB_PERSONAL_ACCESS_TOKEN" \
-    GITLAB_WEBHOOK_SECRET="$GITLAB_WEBHOOK_SECRET" \
     JIRA_API_TOKEN="$JIRA_API_TOKEN" \
     JIRA_BASE_URL="$JIRA_BASE_URL" \
     JIRA_USERNAME="$JIRA_USERNAME" \
@@ -203,7 +313,19 @@ vault kv put secret/ai-platform-engineering/agent-secrets \
     SLACK_SIGNING_SECRET="$SLACK_SIGNING_SECRET" \
     AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
     AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    AWS_REGION="$AWS_REGION" >/dev/null
+    AWS_REGION="$AWS_REGION" \
+    ARGOCD_API_TOKEN="$ARGOCD_API_TOKEN" \
+    ARGOCD_SERVER_URL="$ARGOCD_SERVER_URL" \
+    BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
+    BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
+    PAGERDUTY_API_TOKEN="$PAGERDUTY_API_TOKEN" \
+    CONFLUENCE_API_TOKEN="$CONFLUENCE_API_TOKEN" \
+    CONFLUENCE_BASE_URL="$CONFLUENCE_BASE_URL" \
+    CONFLUENCE_USERNAME="$CONFLUENCE_USERNAME" \
+    SPLUNK_API_TOKEN="$SPLUNK_API_TOKEN" \
+    SPLUNK_BASE_URL="$SPLUNK_BASE_URL" \
+    WEBEX_ACCESS_TOKEN="$WEBEX_ACCESS_TOKEN" \
+    KOMODOR_API_TOKEN="$KOMODOR_API_TOKEN" >/dev/null
 
 log "✅ Agent secrets successfully stored in Vault"
 log "🔍 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fagent-secrets"
@@ -213,8 +335,6 @@ log "🔄 Creating Kubernetes secret for agents..."
 kubectl create secret generic agent-secrets -n ai-platform-engineering \
     --from-literal=GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     --from-literal=GITHUB_WEBHOOK_SECRET="$GITHUB_WEBHOOK_SECRET" \
-    --from-literal=GITLAB_PERSONAL_ACCESS_TOKEN="$GITLAB_PERSONAL_ACCESS_TOKEN" \
-    --from-literal=GITLAB_WEBHOOK_SECRET="$GITLAB_WEBHOOK_SECRET" \
     --from-literal=JIRA_API_TOKEN="$JIRA_API_TOKEN" \
     --from-literal=JIRA_BASE_URL="$JIRA_BASE_URL" \
     --from-literal=JIRA_USERNAME="$JIRA_USERNAME" \
@@ -224,6 +344,18 @@ kubectl create secret generic agent-secrets -n ai-platform-engineering \
     --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
     --from-literal=AWS_REGION="$AWS_REGION" \
+    --from-literal=ARGOCD_API_TOKEN="$ARGOCD_API_TOKEN" \
+    --from-literal=ARGOCD_SERVER_URL="$ARGOCD_SERVER_URL" \
+    --from-literal=BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
+    --from-literal=BACKSTAGE_BASE_URL="$BACKSTAGE_BASE_URL" \
+    --from-literal=PAGERDUTY_API_TOKEN="$PAGERDUTY_API_TOKEN" \
+    --from-literal=CONFLUENCE_API_TOKEN="$CONFLUENCE_API_TOKEN" \
+    --from-literal=CONFLUENCE_BASE_URL="$CONFLUENCE_BASE_URL" \
+    --from-literal=CONFLUENCE_USERNAME="$CONFLUENCE_USERNAME" \
+    --from-literal=SPLUNK_API_TOKEN="$SPLUNK_API_TOKEN" \
+    --from-literal=SPLUNK_BASE_URL="$SPLUNK_BASE_URL" \
+    --from-literal=WEBEX_ACCESS_TOKEN="$WEBEX_ACCESS_TOKEN" \
+    --from-literal=KOMODOR_API_TOKEN="$KOMODOR_API_TOKEN" \
     --dry-run=client -o yaml | kubectl apply -f -
 
 log "✅ Kubernetes secret created/updated"
@@ -234,10 +366,16 @@ log "📊 Configuration Summary:"
 for agent in "${active_agents[@]}"; do
     case $agent in
         "github") log "  🐙 GitHub: Personal Access Token configured" ;;
-        "gitlab") log "  🦊 GitLab: Personal Access Token configured" ;;
         "jira") log "  🎫 Jira: API Token and Base URL configured" ;;
         "slack") log "  💬 Slack: Bot Token and App Token configured" ;;
         "aws") log "  ☁️  AWS: Access Keys and Region configured" ;;
+        "argocd") log "  🚀 ArgoCD: API Token and Server URL configured" ;;
+        "backstage") log "  🎭 Backstage: API Token and Base URL configured" ;;
+        "pagerduty") log "  📟 PagerDuty: API Token configured" ;;
+        "confluence") log "  📚 Confluence: API Token and Base URL configured" ;;
+        "splunk") log "  🔍 Splunk: API Token and Base URL configured" ;;
+        "webex") log "  📹 Webex: Access Token configured" ;;
+        "komodor") log "  🔧 Komodor: API Token configured" ;;
     esac
 done
 
