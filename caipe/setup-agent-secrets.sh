@@ -27,43 +27,45 @@ kubectl port-forward -n vault svc/vault 8200:8200 &
 VAULT_PID=$!
 sleep 3
 
-# Helper function to prompt with env var hint
+# Single-line, exact-byte prompt helper (no newline added, no stripping)
+# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret
 prompt_with_env() {
-    local prompt="$1"
-    local var_name="$2"
-    local is_secret="$3"
-    local env_value="${!var_name}"
-    local result=""
-    
-    # Use env value as-is, no cleanup
-    if [[ -n "$env_value" ]]; then
-        # Keep env value unchanged
-        true
-    fi
-    
-    if [[ -n "$env_value" ]]; then
-        if [[ "$is_secret" == "true" ]]; then
-            local hint="${env_value:0:5}..."
-            printf "%s" "$prompt (env: $hint) [Enter to use, or type new]: "
-            IFS= read -rs result < /dev/tty
-            echo ""
-        else
-            printf "%s" "$prompt (env: $env_value) [Enter to use, or type new]: "
-            IFS= read -r result < /dev/tty
-        fi
-        if [[ -z "$result" ]]; then
-            result="$env_value"
-        fi
+  local prompt="$1" var_name="$2" is_secret="$3"
+  local env_value="${!var_name}" result
+
+  if [[ -n "$env_value" ]]; then
+    if [[ "$is_secret" == "true" ]]; then
+      local hint="${env_value:0:5}..."
+      printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
+      IFS= read -r choice < /dev/tty
+      if [[ -z "$choice" ]]; then
+        result="$env_value"
+      else
+        IFS= read -rs -p "$prompt: " result < /dev/tty
+        printf "\n" > /dev/tty
+      fi
     else
-        if [[ "$is_secret" == "true" ]]; then
-            read -p "$prompt: " -s result
-            echo ""
-        else
-            read -p "$prompt: " result
-        fi
+      IFS= read -r -p "$prompt (env: $env_value) [Enter to use, type new]: " choice < /dev/tty
+      if [[ -z "$choice" ]]; then
+        result="$env_value"
+      else
+        IFS= read -r -p "$prompt: " result < /dev/tty
+      fi
     fi
-    # Return result as-is, no cleanup
-    echo "$result"
+  else
+    if [[ "$is_secret" == "true" ]]; then
+      IFS= read -rs -p "$prompt: " result < /dev/tty
+      printf "\n" > /dev/tty
+    else
+      IFS= read -r -p "$prompt: " result < /dev/tty
+    fi
+  fi
+
+  # Normalize only a trailing CR (some terminals send \r)
+  result=${result%$'\r'}
+
+  # Output EXACTLY the bytes, no newline
+  printf '%s' "$result"
 }
 
 # Check which agents are active
@@ -239,7 +241,7 @@ for agent in "${active_agents[@]}"; do
         "github")
             echo ""
             log "🐙 Configuring GitHub agent secrets..."
-            GITHUB_PERSONAL_ACCESS_TOKEN=$(prompt_with_env "GitHub Personal Access Token" "GITHUB_PERSONAL_ACCESS_TOKEN" "true")
+            GITHUB_PERSONAL_ACCESS_TOKEN="$(prompt_with_env 'GitHub Personal Access Token' 'GITHUB_PERSONAL_ACCESS_TOKEN' 'true')"
             ;;
         "jira")
             echo ""
