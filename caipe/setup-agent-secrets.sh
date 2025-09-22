@@ -35,9 +35,9 @@ prompt_with_env() {
     local env_value="${!var_name}"
     local result=""
     
-    # Strip newlines from env value
+    # Strip newlines from env value - enhanced for copy/paste
     if [[ -n "$env_value" ]]; then
-        env_value=$(echo "$env_value" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
+        env_value=$(echo "$env_value" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
     fi
     
     if [[ -n "$env_value" ]]; then
@@ -59,8 +59,8 @@ prompt_with_env() {
             read -p "$prompt: " result
         fi
     fi
-    # Strip newlines and whitespace from result
-    result=$(echo "$result" | tr -d '\n\r' | sed 's/\\n//g' | sed 's/\\r//g' | xargs)
+    # Strip newlines and whitespace from result - enhanced for copy/paste
+    result=$(echo "$result" | tr -d '\n\r\t' | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
     echo "$result"
 }
 
