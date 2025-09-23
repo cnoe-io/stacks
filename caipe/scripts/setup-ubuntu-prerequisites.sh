@@ -1,0 +1,340 @@
+#!/bin/bash
+# Complete CAIPE + i3 VNC Setup Script
+# Combines i3 desktop environment with IDPBuilder platform setup
+# Run with: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash
+
+set -e
+
+echo "🚀 Setting up Complete CAIPE + i3 VNC environment..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+   print_error "This script should not be run as root"
+   exit 1
+fi
+
+# Detect OS
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    OS="linux"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS="mac"
+else
+    print_error "Unsupported OS: $OSTYPE"
+    exit 1
+fi
+
+print_status "Detected OS: $OS"
+
+# =============================================================================
+# PART 1: SYSTEM PREREQUISITES
+# =============================================================================
+
+print_status "Installing system prerequisites..."
+
+if [[ "$OS" == "linux" ]]; then
+    # Update package lists
+    sudo apt update
+
+    # Install basic tools
+    sudo apt install -y vim jq software-properties-common curl wget
+
+    # Install Docker
+    print_status "Installing Docker..."
+    sudo apt install -y ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Add user to docker group
+    sudo groupadd docker 2>/dev/null || true
+    sudo usermod -aG docker $USER
+
+    # Install kubectl
+    print_status "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin/
+
+    # Install Vault
+    print_status "Installing Vault..."
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+    sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+    sudo apt-get update
+    sudo apt-get install vault -y
+
+    # Install GitHub CLI
+    print_status "Installing GitHub CLI..."
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    sudo apt update
+    sudo apt install gh -y
+
+    # Install K9s
+    print_status "Installing K9s..."
+    wget https://github.com/derailed/k9s/releases/download/v0.50.12/k9s_linux_amd64.deb
+    sudo dpkg -i k9s_linux_amd64.deb
+    rm k9s_linux_amd64.deb
+
+elif [[ "$OS" == "mac" ]]; then
+    # Check if Homebrew is installed
+    if ! command -v brew &> /dev/null; then
+        print_status "Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+
+    # Install tools via Homebrew
+    brew install docker kind kubectl vault gh k9s
+fi
+
+# Install IDPBuilder
+print_status "Installing IDPBuilder..."
+if [[ "$OS" == "mac" ]]; then
+    brew install cnoe-io/tap/idpbuilder
+else
+    arch=$(if [[ "$(uname -m)" == "x86_64" ]]; then echo "amd64"; else uname -m; fi)
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    idpbuilder_latest_tag=$(curl --silent "https://api.github.com/repos/cnoe-io/idpbuilder/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    curl -LO https://github.com/cnoe-io/idpbuilder/releases/download/$idpbuilder_latest_tag/idpbuilder-$os-$arch.tar.gz
+    tar xvzf idpbuilder-$os-$arch.tar.gz
+    chmod +x idpbuilder
+    sudo mv idpbuilder /usr/local/bin
+    rm idpbuilder-linux-amd64.tar.gz LICENSE README.md 2>/dev/null || true
+fi
+
+# Install Kind
+print_status "Installing Kind..."
+if [[ "$OS" == "mac" ]]; then
+    brew install kind
+else
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+    chmod +x ./kind
+    sudo mv ./kind /usr/local/bin/kind
+fi
+
+print_success "System prerequisites installed!"
+
+# =============================================================================
+# PART 2: i3 DESKTOP ENVIRONMENT SETUP
+# =============================================================================
+
+if [[ "$OS" == "linux" ]]; then
+    print_status "Setting up i3 desktop environment..."
+
+    # Remove GNOME (if present)
+    sudo apt remove --purge ubuntu-desktop gnome-shell gnome-session gdm3 -y 2>/dev/null || true
+    sudo apt autoremove --purge -y
+
+    # Install i3 and VNC packages
+    sudo apt install -y \
+        i3 i3status i3lock dmenu rofi \
+        xorg lightdm xterm terminator \
+        xclip parcellite \
+        firefox \
+        tigervnc-standalone-server
+
+    # Create i3 config
+    print_status "Creating i3 configuration..."
+    mkdir -p ~/.config/i3
+    cat > ~/.config/i3/config << 'EOF'
+# i3 config - Mac compatible (Alt key)
+set $mod Mod1
+font pango:monospace 8
+floating_modifier $mod
+
+# Terminal shortcuts
+bindsym $mod+Return exec terminator
+bindsym $mod+t exec terminator
+
+# Application shortcuts
+bindsym $mod+Shift+q kill
+bindsym $mod+d exec rofi -show run
+bindsym $mod+space exec rofi -show drun
+bindsym $mod+f exec firefox
+
+# Navigation
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# Move windows
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Splits and layout
+bindsym $mod+h split h
+bindsym $mod+v split v
+bindsym $mod+F11 fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+Tab focus mode_toggle
+
+# Workspaces
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+
+# System
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
+
+# Status bar
+bar {
+    status_command i3status
+}
+EOF
+
+    # Create VNC startup script
+    print_status "Setting up VNC..."
+    mkdir -p ~/.vnc
+    cat > ~/.vnc/xstartup << 'EOF'
+#!/bin/bash
+export DISPLAY=:1
+xhost +local: &
+xsetroot -solid grey &
+parcellite &
+terminator -g 80x24+10+10 &
+firefox &
+exec i3
+EOF
+    chmod +x ~/.vnc/xstartup
+
+    # Set VNC password
+    print_status "Setting VNC password (you'll be prompted)..."
+    vncpasswd
+
+    # Start VNC server
+    print_status "Starting VNC server..."
+    vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
+
+    print_success "i3 desktop environment configured and VNC server started!"
+fi
+
+# =============================================================================
+# PART 3: IDPBuilder CLUSTER CREATION
+# =============================================================================
+
+print_status "Creating IDPBuilder cluster with CAIPE..."
+
+# Create the cluster with CAIPE complete-p2p profile
+idpbuilder create \
+  --use-path-routing \
+  --package https://github.com/cnoe-io/stacks//ref-implementation \
+  --package https://github.com/sriaradhyula/stacks//caipe/caipe-complete-p2p
+
+print_success "IDPBuilder cluster created!"
+
+# =============================================================================
+# PART 4: VERIFICATION AND ACCESS INFORMATION
+# =============================================================================
+
+print_status "Verifying cluster setup..."
+
+# Check cluster status
+kubectl get nodes
+kubectl get pods --all-namespaces
+
+print_success "Setup complete! 🎉"
+echo ""
+echo "============================================================================="
+echo "🚀 CAIPE + i3 VNC Environment Ready!"
+echo "============================================================================="
+echo ""
+
+if [[ "$OS" == "linux" ]]; then
+    echo "🖥️  VNC Desktop Access:"
+    echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
+    echo "   SSH Tunnel: ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "   VNC Client: Connect to localhost:5903"
+    echo ""
+    echo "⌨️  i3 Keyboard Shortcuts (Alt = Mod key):"
+    echo "   Alt+Return - Terminal"
+    echo "   Alt+d - App launcher"
+    echo "   Alt+Space - App menu"
+    echo "   Alt+f - Firefox"
+    echo "   Alt+1,2,3,4,5 - Workspaces"
+    echo ""
+fi
+
+echo "🌐 Platform Access URLs:"
+echo "   ArgoCD: https://cnoe.localtest.me:8443/argocd/"
+echo "   Backstage: https://cnoe.localtest.me:8443/"
+echo "   Vault: https://vault.cnoe.localtest.me:8443/"
+echo "   Keycloak: https://cnoe.localtest.me:8443/keycloak/admin/master/console/"
+echo "   Gitea: https://cnoe.localtest.me:8443/gitea/"
+echo ""
+
+echo "🔐 Getting Credentials:"
+echo "   ArgoCD Admin Password:"
+idpbuilder get secrets -p argocd
+echo ""
+echo "   Backstage User Password:"
+idpbuilder get secrets | grep USER_PASSWORD | sed 's/.*USER_PASSWORD=\([^,]*\).*/\1/'
+echo ""
+
+echo "🔧 Vault Configuration:"
+echo "   Root Token:"
+kubectl get secret vault-root-token -n vault -o jsonpath="{.data}" | \
+  jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"'
+echo ""
+
+echo "📚 Next Steps:"
+echo "   1. Access Vault UI and configure LLM provider secrets"
+echo "   2. Login to Backstage and test the AI agent"
+echo "   3. Explore the platform components via ArgoCD"
+echo ""
+
+echo "🧹 Cleanup (when done):"
+echo "   kind delete cluster --name localdev"
+echo ""
+
+print_success "Happy platform engineering! 🚀"
