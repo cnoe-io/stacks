@@ -8,6 +8,15 @@ metadata:
 spec:
   ingressClassName: "nginx"
   rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
     - host: vault.cnoe.localtest.me
       http:
         paths:
