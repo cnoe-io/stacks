@@ -7,7 +7,7 @@
   },
   "staging": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "docker.io/vpittamp23/backstage-nix:v3.0",
+    "backstage": "ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   },
