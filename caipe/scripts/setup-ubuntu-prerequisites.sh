@@ -31,6 +31,35 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to handle package installation with error recovery
+install_package() {
+    local package_name="$1"
+    local description="${2:-$package_name}"
+
+    print_status "Installing $description..."
+    if sudo apt install -y "$package_name"; then
+        print_success "$description installed successfully"
+    else
+        print_warning "Failed to install $description, attempting to fix dependencies..."
+        sudo apt --fix-broken install -y || true
+        sudo apt install -y "$package_name" || print_error "Failed to install $description after dependency fix"
+    fi
+}
+
+# Function to handle command execution with error recovery
+run_command() {
+    local description="$1"
+    local command="$2"
+
+    print_status "$description..."
+    if eval "$command"; then
+        print_success "$description completed successfully"
+    else
+        print_warning "$description failed, continuing..."
+        return 1
+    fi
+}
+
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
    print_error "This script should not be run as root"
@@ -56,11 +85,15 @@ print_status "Detected OS: $OS"
 print_status "Installing system prerequisites..."
 
 if [[ "$OS" == "linux" ]]; then
+    # Fix any broken dependencies first
+    print_status "Fixing broken dependencies..."
+    sudo apt --fix-broken install -y || true
+
     # Update package lists
     sudo apt update
 
     # Install basic tools
-    sudo apt install -y vim jq software-properties-common curl wget
+    install_package "vim jq software-properties-common curl wget" "basic tools"
 
     # Install Docker
     print_status "Installing Docker..."
@@ -75,7 +108,7 @@ if [[ "$OS" == "linux" ]]; then
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     sudo apt update
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    install_package "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "Docker packages"
 
     # Add user to docker group
     sudo groupadd docker 2>/dev/null || true
@@ -89,10 +122,11 @@ if [[ "$OS" == "linux" ]]; then
 
     # Install Vault
     print_status "Installing Vault..."
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-    sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-    sudo apt-get update
-    sudo apt-get install vault -y
+    # Use modern keyring method instead of deprecated apt-key
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt update
+    install_package "vault" "HashiCorp Vault"
 
     # Install GitHub CLI
     print_status "Installing GitHub CLI..."
@@ -100,13 +134,13 @@ if [[ "$OS" == "linux" ]]; then
     sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     sudo apt update
-    sudo apt install gh -y
+    install_package "gh" "GitHub CLI"
 
     # Install K9s
     print_status "Installing K9s..."
-    wget https://github.com/derailed/k9s/releases/download/v0.50.12/k9s_linux_amd64.deb
-    sudo dpkg -i k9s_linux_amd64.deb
-    rm k9s_linux_amd64.deb
+    run_command "Downloading K9s" "wget https://github.com/derailed/k9s/releases/download/v0.50.12/k9s_linux_amd64.deb"
+    run_command "Installing K9s" "sudo dpkg -i k9s_linux_amd64.deb || sudo apt --fix-broken install -y"
+    rm -f k9s_linux_amd64.deb
 
 elif [[ "$OS" == "mac" ]]; then
     # Check if Homebrew is installed
@@ -158,12 +192,14 @@ if [[ "$OS" == "linux" ]]; then
     sudo apt autoremove --purge -y
 
     # Install i3 and VNC packages
-    sudo apt install -y \
-        i3 i3status i3lock dmenu rofi \
-        xorg lightdm xterm terminator \
-        xclip parcellite \
-        firefox \
-        tigervnc-standalone-server
+    # Remove conflicting packages first
+    print_status "Removing conflicting packages..."
+    sudo apt remove -y amazon-q 2>/dev/null || true
+
+    # Install required dependencies for webkit
+    sudo apt install -y libwebkit2gtk-4.1-0 || true
+
+    install_package "i3 i3status i3lock dmenu rofi xorg lightdm xterm terminator xclip parcellite firefox tigervnc-standalone-server" "i3 desktop environment and VNC packages"
 
     # Create i3 config
     print_status "Creating i3 configuration..."
@@ -282,6 +318,26 @@ print_status "Verifying cluster setup..."
 # Check cluster status
 kubectl get nodes
 kubectl get pods --all-namespaces
+
+# Final cleanup and verification
+print_status "Performing final cleanup and verification..."
+
+# Fix any remaining broken dependencies
+sudo apt --fix-broken install -y || true
+
+# Clean up package cache
+sudo apt autoremove -y
+sudo apt autoclean
+
+# Verify critical tools are installed
+print_status "Verifying installation..."
+for tool in docker kubectl vault gh k9s idpbuilder kind; do
+    if command -v "$tool" &> /dev/null; then
+        print_success "$tool is installed"
+    else
+        print_warning "$tool is not installed or not in PATH"
+    fi
+done
 
 print_success "Setup complete! 🎉"
 echo ""
