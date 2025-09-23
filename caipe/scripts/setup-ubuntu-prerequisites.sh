@@ -90,20 +90,50 @@ run_command() {
 cleanup_conflicting_packages() {
     print_status "Cleaning up conflicting packages..."
 
-    # Remove amazon-q and related packages
-    sudo apt remove -y amazon-q 2>/dev/null || true
-    sudo apt remove -y amazon-workspaces-client 2>/dev/null || true
-    sudo apt remove -y amazon-ssm-agent 2>/dev/null || true
+    # Check if amazon-q is causing issues
+    if dpkg -l | grep -q amazon-q; then
+        print_status "Found amazon-q package, attempting removal..."
 
-    # Clean up any broken dependencies
-    sudo apt --fix-broken install -y || true
-    sudo apt autoremove -y || true
-    sudo apt autoclean || true
+        # First, try to fix broken dependencies
+        print_status "Fixing broken dependencies..."
+        sudo apt --fix-broken install -y || true
 
-    # Update package lists
-    sudo apt update || true
+        # Try normal removal first
+        print_status "Attempting normal removal of Amazon packages..."
+        sudo apt remove --purge -y amazon-q amazon-workspaces-client amazon-ssm-agent || true
 
-    print_success "Package cleanup completed"
+        # Force remove if normal removal failed
+        print_status "Force removing Amazon packages..."
+        sudo dpkg --remove --force-remove-reinstreq amazon-q 2>/dev/null || true
+        sudo dpkg --remove --force-remove-reinstreq amazon-workspaces-client 2>/dev/null || true
+        sudo dpkg --remove --force-remove-reinstreq amazon-ssm-agent 2>/dev/null || true
+
+        # Alternative: Install the missing dependency to resolve the conflict
+        print_status "Installing missing WebKit dependency to resolve conflict..."
+        sudo apt install -y libwebkit2gtk-4.1-0 || true
+
+        # Clean up any remaining broken dependencies
+        print_status "Final cleanup of broken dependencies..."
+        sudo apt --fix-broken install -y || true
+        sudo apt autoremove -y || true
+        sudo apt autoclean || true
+
+        # Update package lists
+        sudo apt update || true
+
+        # Verify the fix worked
+        if sudo apt install -y curl >/dev/null 2>&1; then
+            print_success "Package cleanup completed successfully"
+        else
+            print_warning "Package cleanup completed with warnings - some issues may persist"
+        fi
+    else
+        print_status "No conflicting Amazon packages found, performing standard cleanup..."
+        sudo apt --fix-broken install -y || true
+        sudo apt autoremove -y || true
+        sudo apt update || true
+        print_success "Standard cleanup completed"
+    fi
 }
 
 # Check if running as root
@@ -123,6 +153,22 @@ else
 fi
 
 print_status "Detected OS: $OS"
+
+# =============================================================================
+# PRE-FLIGHT: FIX ANY EXISTING DEPENDENCY ISSUES
+# =============================================================================
+
+if [[ "$OS" == "linux" ]]; then
+    print_status "Performing pre-flight dependency check..."
+
+    # Check for broken dependencies
+    if ! sudo apt install -y curl >/dev/null 2>&1; then
+        print_warning "Detected broken dependencies, attempting to fix..."
+        cleanup_conflicting_packages
+    else
+        print_success "No dependency issues detected"
+    fi
+fi
 
 # =============================================================================
 # PART 1: SYSTEM PREREQUISITES
