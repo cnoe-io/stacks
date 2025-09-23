@@ -108,7 +108,8 @@ spec:
           # Backstage agent secrets (empty data as per example)
           echo "Creating backstage-secret..."
           vault kv put secret/ai-platform-engineering/backstage-secret \
-            placeholder="empty"
+            BACKSTAGE_API_TOKEN="" \
+            BACKSTAGE_URL=""
           
           # Slack agent secrets
           echo "Creating slack-secret..."

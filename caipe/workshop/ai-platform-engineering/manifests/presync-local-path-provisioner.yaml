@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-path-provisioner-service-account
+  namespace: ai-platform-engineering
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-2"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-path-provisioner-service-account-cluster-admin
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: ai-platform-engineering
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: install-local-path-provisioner
+  namespace: ai-platform-engineering
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: local-path-provisioner-service-account
+      restartPolicy: Never
+      containers:
+        - name: kubectl
+          image: alpine/k8s:1.29.0 # move back to docker.io/bitnami/kubectl
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              echo "Applying local-path-provisioner manifests..."
+              kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+              echo "Waiting for local-path-provisioner to be ready..."
+              kubectl -n local-path-storage rollout status deployment/local-path-provisioner --timeout=180s || \
+              kubectl -n local-path-storage rollout status daemonset/local-path-provisioner --timeout=180s || true
+              echo "Setting local-path as default StorageClass..."
+              kubectl annotate sc local-path storageclass.kubernetes.io/is-default-class=true --overwrite || true
+              echo "Current StorageClasses:"
+              kubectl get sc -o wide
+
