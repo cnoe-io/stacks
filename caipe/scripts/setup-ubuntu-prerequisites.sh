@@ -37,13 +37,39 @@ install_package() {
     local description="${2:-$package_name}"
 
     print_status "Installing $description..."
+
+    # First attempt
     if sudo apt install -y "$package_name"; then
         print_success "$description installed successfully"
-    else
-        print_warning "Failed to install $description, attempting to fix dependencies..."
-        sudo apt --fix-broken install -y || true
-        sudo apt install -y "$package_name" || print_error "Failed to install $description after dependency fix"
+        return 0
     fi
+
+    # If first attempt fails, try to fix dependencies
+    print_warning "Failed to install $description, attempting to fix dependencies..."
+    sudo apt --fix-broken install -y || true
+    sudo apt autoremove -y || true
+    sudo apt update || true
+
+    # Second attempt
+    if sudo apt install -y "$package_name"; then
+        print_success "$description installed successfully on second attempt"
+        return 0
+    fi
+
+    # If still failing, try to remove conflicting packages and retry
+    print_warning "Still failing, attempting to remove conflicting packages..."
+    sudo apt remove -y amazon-q 2>/dev/null || true
+    sudo apt autoremove -y || true
+    sudo apt --fix-broken install -y || true
+
+    # Third attempt
+    if sudo apt install -y "$package_name"; then
+        print_success "$description installed successfully after cleanup"
+        return 0
+    fi
+
+    print_error "Failed to install $description after multiple attempts"
+    return 1
 }
 
 # Function to handle command execution with error recovery
@@ -58,6 +84,26 @@ run_command() {
         print_warning "$description failed, continuing..."
         return 1
     fi
+}
+
+# Function to aggressively clean up conflicting packages
+cleanup_conflicting_packages() {
+    print_status "Cleaning up conflicting packages..."
+
+    # Remove amazon-q and related packages
+    sudo apt remove -y amazon-q 2>/dev/null || true
+    sudo apt remove -y amazon-workspaces-client 2>/dev/null || true
+    sudo apt remove -y amazon-ssm-agent 2>/dev/null || true
+
+    # Clean up any broken dependencies
+    sudo apt --fix-broken install -y || true
+    sudo apt autoremove -y || true
+    sudo apt autoclean || true
+
+    # Update package lists
+    sudo apt update || true
+
+    print_success "Package cleanup completed"
 }
 
 # Check if running as root
@@ -85,12 +131,8 @@ print_status "Detected OS: $OS"
 print_status "Installing system prerequisites..."
 
 if [[ "$OS" == "linux" ]]; then
-    # Fix any broken dependencies first
-    print_status "Fixing broken dependencies..."
-    sudo apt --fix-broken install -y || true
-
-    # Update package lists
-    sudo apt update
+    # Aggressively clean up conflicting packages first
+    cleanup_conflicting_packages
 
     # Install basic tools
     install_package "vim jq software-properties-common curl wget" "basic tools"
@@ -192,12 +234,8 @@ if [[ "$OS" == "linux" ]]; then
     sudo apt autoremove --purge -y
 
     # Install i3 and VNC packages
-    # Remove conflicting packages first
-    print_status "Removing conflicting packages..."
-    sudo apt remove -y amazon-q 2>/dev/null || true
-
-    # Install required dependencies for webkit
-    sudo apt install -y libwebkit2gtk-4.1-0 || true
+    # Install required dependencies for webkit first
+    install_package "libwebkit2gtk-4.1-0" "WebKit dependencies"
 
     install_package "i3 i3status i3lock dmenu rofi xorg lightdm xterm terminator xclip parcellite firefox tigervnc-standalone-server" "i3 desktop environment and VNC packages"
 
