@@ -36,6 +36,12 @@ install_package() {
     local package_name="$1"
     local description="${2:-$package_name}"
 
+    # Check if package is already installed
+    if dpkg -l | grep -q "^ii.*$package_name "; then
+        print_success "$description is already installed"
+        return 0
+    fi
+
     print_status "Installing $description..."
 
     # First attempt
@@ -100,13 +106,11 @@ cleanup_conflicting_packages() {
 
         # Try normal removal first
         print_status "Attempting normal removal of Amazon packages..."
-        sudo apt remove --purge -y amazon-q amazon-workspaces-client amazon-ssm-agent || true
+        sudo apt remove --purge -y amazon-q || true
 
         # Force remove if normal removal failed
         print_status "Force removing Amazon packages..."
         sudo dpkg --remove --force-remove-reinstreq amazon-q 2>/dev/null || true
-        sudo dpkg --remove --force-remove-reinstreq amazon-workspaces-client 2>/dev/null || true
-        sudo dpkg --remove --force-remove-reinstreq amazon-ssm-agent 2>/dev/null || true
 
         # Alternative: Install the missing dependency to resolve the conflict
         print_status "Installing missing WebKit dependency to resolve conflict..."
@@ -181,7 +185,11 @@ if [[ "$OS" == "linux" ]]; then
     cleanup_conflicting_packages
 
     # Install basic tools
-    install_package "vim jq software-properties-common curl wget" "basic tools"
+    install_package "vim" "vim"
+    install_package "jq" "jq"
+    install_package "software-properties-common" "software-properties-common"
+    install_package "curl" "curl"
+    install_package "wget" "wget"
 
     # Install Docker
     print_status "Installing Docker..."
@@ -196,7 +204,11 @@ if [[ "$OS" == "linux" ]]; then
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     sudo apt update
-    install_package "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "Docker packages"
+    install_package "docker-ce" "Docker CE"
+    install_package "docker-ce-cli" "Docker CLI"
+    install_package "containerd.io" "containerd"
+    install_package "docker-buildx-plugin" "Docker Buildx"
+    install_package "docker-compose-plugin" "Docker Compose"
 
     # Add user to docker group
     sudo groupadd docker 2>/dev/null || true
@@ -283,7 +295,19 @@ if [[ "$OS" == "linux" ]]; then
     # Install required dependencies for webkit first
     install_package "libwebkit2gtk-4.1-0" "WebKit dependencies"
 
-    install_package "i3 i3status i3lock dmenu rofi xorg lightdm xterm terminator xclip parcellite firefox tigervnc-standalone-server" "i3 desktop environment and VNC packages"
+    install_package "i3" "i3 window manager"
+    install_package "i3status" "i3 status bar"
+    install_package "i3lock" "i3 screen locker"
+    install_package "dmenu" "dmenu"
+    install_package "rofi" "rofi launcher"
+    install_package "xorg" "X.Org server"
+    install_package "lightdm" "LightDM display manager"
+    install_package "xterm" "xterm terminal"
+    install_package "terminator" "Terminator terminal"
+    install_package "xclip" "xclip clipboard utility"
+    install_package "parcellite" "Parcellite clipboard manager"
+    install_package "firefox" "Firefox browser"
+    install_package "tigervnc-standalone-server" "TigerVNC server"
 
     # Create i3 config
     print_status "Creating i3 configuration..."
