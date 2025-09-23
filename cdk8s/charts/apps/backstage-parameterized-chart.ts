@@ -2,7 +2,6 @@ import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import * as images from '../../../.env-files/images.json';
-import { DevSpaceSSHConstruct, SSHNodePortAllocator } from '../../lib/devspace-ssh-construct';
 
 export interface BackstageParameterizedChartProps extends ChartProps {
   environmentName: string;
@@ -114,15 +113,6 @@ export class BackstageParameterizedChart extends Chart {
           environment: envName,
         }
       }
-    });
-
-    // DevSpace SSH Service using reusable construct
-    // This follows our standard pattern for SSH access to development containers
-    new DevSpaceSSHConstruct(this, `${envName}-backstage-ssh`, {
-      namespace: namespace,
-      appName: 'backstage',
-      environment: envName,
-      nodePort: SSHNodePortAllocator.getPort('backstage', envName)
     });
 
     // PostgreSQL Service (each environment gets its own database)
@@ -263,9 +253,6 @@ clusters:
       }
     });
 
-    // External Secrets are now managed by BackstageSecretsChart in the parent cluster
-    // They will be synced to vcluster automatically
-
     // Backstage Deployment
     new k8s.KubeDeployment(this, `${envName}-backstage-deployment`, {
       metadata: {
@@ -316,7 +303,8 @@ clusters:
               {
                 name: 'backstage',
                 image: imageRef,
-                command: ['/bin/bash', '-c', 'sudo apt-get update && sudo apt-get install -y openssh-server && sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -p 2222'],
+                // Dev containers sleep by default for development
+                ...(envName === 'dev' ? { command: ['sleep', 'infinity'] } : {}),
                 env: [
                   {
                     name: 'LOG_LEVEL',
@@ -333,34 +321,6 @@ clusters:
                   {
                     name: 'ENVIRONMENT',
                     value: envName
-                  },
-                  // NixOS devcontainer activation
-                  {
-                    name: 'NIXOS_CONFIG_ACTIVATE',
-                    value: 'true'
-                  },
-                  {
-                    name: 'NIXOS_CONFIG_GITHUB',
-                    value: 'https://github.com/vpittamp/nixos-config'
-                  },
-                  {
-                    name: 'NIXOS_PACKAGES',
-                    value: 'essential,nodejs_20,yarn,kubectl,devspace,gh'
-                  },
-                  // SSH configuration for container
-                  {
-                    name: 'CONTAINER_SSH_ENABLED',
-                    value: envName === 'dev' ? 'true' : 'false'  // Enable SSH only for dev
-                  },
-                  {
-                    name: 'CONTAINER_SSH_PORT',
-                    value: '2222'
-                  },
-                  // NIX_LD configuration for VS Code compatibility
-                  // These will be dynamically set by the entrypoint script
-                  {
-                    name: 'SETUP_NIX_LD',
-                    value: 'true'  // Trigger entrypoint to set up NIX_LD
                   },
                   {
                     name: 'POSTGRES_HOST',
@@ -384,15 +344,15 @@ clusters:
                   },
                   {
                     name: 'APP_CONFIG_app_baseUrl',
-                    value: envName === 'dev' ? 'http://localhost:3000' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_baseUrl',
-                    value: envName === 'dev' ? 'http://localhost:7007' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_cors_origin',
-                    value: envName === 'dev' ? 'http://localhost:7007' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   }
                 ],
                 ports: [
@@ -400,39 +360,14 @@ clusters:
                     name: 'http',
                     containerPort: 7007,
                     protocol: 'TCP'
-                  },
-                  // SSH port for development access
-                  ...(envName === 'dev' ? [{
-                    name: 'ssh',
-                    containerPort: 2222,
-                    protocol: 'TCP'
-                  }] : [])
+                  }
                 ],
                 volumeMounts: [
                   {
                     name: 'k8s-config',
-                    mountPath: '/etc/backstage/k8s-config.yaml',
+                    mountPath: '/app/k8s-config.yaml',
                     subPath: 'k8s-config.yaml'
-                  },
-                  // Mount SSH keys for development
-                  ...(envName === 'dev' ? [
-                    {
-                      name: 'ssh-keys',
-                      mountPath: '/ssh-keys',
-                      readOnly: true
-                    },
-                    {
-                      name: 'ssh-host-keys',
-                      mountPath: '/ssh-host-keys',
-                      readOnly: true
-                    },
-                    {
-                      name: 'idpbuilder-cert',
-                      mountPath: '/etc/ssl/certs/idpbuilder-ca.crt',
-                      subPath: 'ca.crt',
-                      readOnly: true
-                    }
-                  ] : [])
+                  }
                 ],
                 resources: {
                   requests: {
@@ -445,25 +380,8 @@ clusters:
                   }
                 },
                 imagePullPolicy: 'Always',
-                // Health probes - use TCP check on SSH port for dev, HTTP for others
-                ...(envName === 'dev' ? {
-                  livenessProbe: {
-                    tcpSocket: {
-                      port: k8s.IntOrString.fromNumber(2222)  // Check SSH port for dev container
-                    },
-                    initialDelaySeconds: 60,
-                    periodSeconds: 30,
-                    timeoutSeconds: 10
-                  },
-                  readinessProbe: {
-                    tcpSocket: {
-                      port: k8s.IntOrString.fromNumber(2222)  // Check SSH port for dev container
-                    },
-                    initialDelaySeconds: 30,
-                    periodSeconds: 10,
-                    timeoutSeconds: 5
-                  }
-                } : {
+                // Only add health probes for non-dev environments
+                ...(envName !== 'dev' ? {
                   livenessProbe: {
                     httpGet: {
                       path: '/healthcheck',
@@ -482,7 +400,7 @@ clusters:
                     periodSeconds: 10,
                     timeoutSeconds: 5
                   }
-                })
+                } : {})
               }
             ],
             volumes: [
@@ -491,31 +409,7 @@ clusters:
                 secret: {
                   secretName: `k8s-config-${envName}`
                 }
-              },
-              // SSH volumes for development
-              ...(envName === 'dev' ? [
-                {
-                  name: 'ssh-keys',
-                  secret: {
-                    secretName: `backstage-ssh-keys-${envName}`,
-                    defaultMode: 0o600
-                  }
-                },
-                {
-                  name: 'ssh-host-keys',
-                  secret: {
-                    secretName: `backstage-ssh-host-keys-${envName}`,
-                    defaultMode: 0o600
-                  }
-                },
-                {
-                  name: 'idpbuilder-cert',
-                  secret: {
-                    secretName: 'idpbuilder-cert',
-                    optional: true  // Make it optional in case the secret doesn't exist
-                  }
-                }
-              ] : [])
+              }
             ]
           }
         }
@@ -563,5 +457,4 @@ clusters:
       }
     });
   }
-
 }
