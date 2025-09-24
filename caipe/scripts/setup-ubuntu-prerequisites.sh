@@ -188,6 +188,12 @@ if [[ "$OS" == "linux" ]]; then
     # Clean up duplicate repositories first
     cleanup_duplicate_repositories
 
+    # Force remove any remaining duplicate repository files
+    print_status "Removing any remaining duplicate repository files..."
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_apt_releases_hashicorp_com-*.list
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_cli_github_com_packages-*.list
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_download_docker_com_linux_ubuntu-*.list
+
     # Check for broken dependencies
     if ! sudo apt install -y curl >/dev/null 2>&1; then
         print_warning "Detected broken dependencies, attempting to fix..."
@@ -250,7 +256,7 @@ if [[ "$OS" == "linux" ]]; then
     sudo rm -f /etc/apt/sources.list.d/hashicorp.list
 
     # Use modern keyring method instead of deprecated apt-key
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor --yes -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
     sudo apt update
     install_package "vault" "HashiCorp Vault"
