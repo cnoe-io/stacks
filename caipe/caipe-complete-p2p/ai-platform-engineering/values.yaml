@@ -86,7 +86,9 @@ agent-aws:
     pullPolicy: "Always"
     tag: "0.1.15"
   mcp:
-    useRemoteMcpServer: true
+    image: # HOT FIX: will be modified in the helm chart itself in the future
+      repository: "public.ecr.aws/awslabs-mcp/awslabs/eks-mcp-server"
+      tag: "sha-e18497bbc401f08334ea8b966db1f235b647bfed"
   agentSecrets:
     secretName: "agent-aws-secret"
     externalSecrets:

@@ -132,14 +132,11 @@ spec:
             ATLASSIAN_API_URL="" \
             ATLASSIAN_VERIFY_SSL="true" >/dev/null
 
-
-
           # PagerDuty agent secrets
           echo "Creating pagerduty-secret..."
           vault kv put secret/ai-platform-engineering/pagerduty-secret \
             PAGERDUTY_API_KEY="" \
             PAGERDUTY_API_URL="" >/dev/null
-
 
           # Slack agent secrets
           echo "Creating slack-secret..."
@@ -162,6 +159,12 @@ spec:
             WEBEX_BOT_TOKEN="" \
             WEBEX_WEBHOOK_SECRET="" \
             WEBEX_TOKEN="" >/dev/null
+
+          # KB RAG agent secrets
+          # This is a fake secret as for now MILVUS does not actually utilise a secret
+          echo "Creating kb-rag-secret..."
+          vault kv put secret/ai-platform-engineering/kb-rag-secret \
+            MILVUS_SECRET="foo" >/dev/null
 
           echo "Vault configuration complete."
 ---
