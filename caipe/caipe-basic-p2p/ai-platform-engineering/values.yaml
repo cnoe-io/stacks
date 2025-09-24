@@ -199,7 +199,7 @@ agent-github:
           property: GITHUB_PERSONAL_ACCESS_TOKEN
 
 graphrag:
-  enabled: true
+  enabled: false # this will be deprecated soon and new unified rag will replace it
 
 # neo4j configuration for kind cluster
 neo4j:
