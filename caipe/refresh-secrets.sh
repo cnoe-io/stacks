@@ -9,8 +9,8 @@ echo "🔑 Deleting all secrets in ai-platform-engineering namespace..."
 kubectl delete secret --all -n ai-platform-engineering
 
 echo ""
-echo "⏱️  Waiting 1 second for cleanup to complete..."
-sleep 1
+echo "⏱️  Waiting 5 second for cleanup to complete..."
+sleep 5
 
 echo ""
 echo "📝 Command executed: kubectl delete secret --all -n ai-platform-engineering"

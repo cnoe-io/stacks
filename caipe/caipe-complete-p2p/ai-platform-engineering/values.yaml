@@ -133,19 +133,19 @@ agent-confluence:
       data:
       - secretKey: ATLASSIAN_TOKEN
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_TOKEN
       - secretKey: ATLASSIAN_EMAIL
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_EMAIL
       - secretKey: ATLASSIAN_API_URL
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_API_URL
       - secretKey: CONFLUENCE_API_URL
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: CONFLUENCE_API_URL
 
 agent-github:
