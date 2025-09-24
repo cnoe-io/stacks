@@ -143,10 +143,6 @@ agent-confluence:
         remoteRef:
           key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_EMAIL
-      - secretKey: ATLASSIAN_API_URL
-        remoteRef:
-          key: secret/ai-platform-engineering/confluence-secret
-          property: ATLASSIAN_API_URL
       - secretKey: CONFLUENCE_API_URL
         remoteRef:
           key: secret/ai-platform-engineering/confluence-secret
