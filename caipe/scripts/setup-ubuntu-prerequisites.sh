@@ -106,6 +106,7 @@ cleanup_conflicting_packages() {
 
         # Try normal removal first
         print_status "Attempting normal removal of Amazon packages..."
+        print_status "Removing only amazon-q package (other Amazon packages are snaps)..."
         sudo apt remove --purge -y amazon-q || true
 
         # Force remove if normal removal failed
