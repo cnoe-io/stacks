@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-token-writer
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-token-secret-manager
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-token-secret-manager-binding
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+subjects:
+- kind: ServiceAccount
+  name: argocd-token-writer
+  namespace: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-token-secret-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-read-admin-and-deploy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["argocd-initial-admin-secret"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  resourceNames: ["argocd-server"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-read-admin-and-deploy-binding
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+subjects:
+- kind: ServiceAccount
+  name: argocd-token-writer
+  namespace: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-read-admin-and-deploy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-namespace-reader
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  resourceNames: ["argocd"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-namespace-reader-binding
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+subjects:
+- kind: ServiceAccount
+  name: argocd-token-writer
+  namespace: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-namespace-reader
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-token
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: argocd-token
+    spec:
+      serviceAccountName: argocd-token-writer
+      restartPolicy: OnFailure
+      containers:
+      - name: generate-token
+        image: dtzar/helm-kubectl:3.14.4
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          set -eu
+          echo "Waiting for namespace 'argocd' to exist..."
+          until kubectl get ns argocd >/dev/null 2>&1; do
+            echo "Waiting for namespace 'argocd' to exist... WTF"
+            echo "printing kubectl get ns argocd output"
+            kubectl get ns argocd
+            sleep 5
+          done
+
+          echo "Waiting for Argo CD server deployment to exist..."
+          until kubectl -n argocd get deploy argocd-server >/dev/null 2>&1; do
+            sleep 5
+          done
+
+          echo "Waiting for Argo CD server to be available..."
+          kubectl -n argocd rollout status deploy/argocd-server --timeout=600s
+
+          echo "Fetching initial admin password..."
+          ADMIN_PWD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d || true)
+          if [ -z "$ADMIN_PWD" ]; then
+            echo "Admin password not found. Exiting."
+            exit 1
+          fi
+
+          echo "Requesting Argo CD auth token..."
+          API_URL="https://argocd-server.argocd.svc/api/v1"
+          if command -v curl >/dev/null 2>&1; then
+            RESPONSE=$(curl -ksS -X POST "$API_URL/session" \
+              -H "Content-Type: application/json" \
+              -d "{\"username\":\"admin\",\"password\":\"${ADMIN_PWD}\"}" || true)
+            TOKEN=$(echo "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            if [ -z "$TOKEN" ]; then
+              echo "HTTPS request failed or no token found, falling back to HTTP..."
+              API_URL="http://argocd-server.argocd.svc/api/v1"
+              RESPONSE=$(curl -sS -X POST "$API_URL/session" \
+                -H "Content-Type: application/json" \
+                -d "{\"username\":\"admin\",\"password\":\"${ADMIN_PWD}\"}" || true)
+              TOKEN=$(echo "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            fi
+          elif command -v wget >/dev/null 2>&1; then
+            RESPONSE=$(wget -qO- --no-check-certificate --header="Content-Type: application/json" \
+              --post-data="{\"username\":\"admin\",\"password\":\"${ADMIN_PWD}\"}" \
+              "$API_URL/session" || true)
+            TOKEN=$(echo "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            if [ -z "$TOKEN" ]; then
+              echo "HTTPS request failed or no token found, falling back to HTTP..."
+              API_URL="http://argocd-server.argocd.svc/api/v1"
+              RESPONSE=$(wget -qO- --header="Content-Type: application/json" \
+                --post-data="{\"username\":\"admin\",\"password\":\"${ADMIN_PWD}\"}" \
+                "$API_URL/session" || true)
+              TOKEN=$(echo "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            fi
+          else
+            echo "Neither curl nor wget found in the container."
+            exit 1
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to obtain token over HTTPS and HTTP. Last response: $RESPONSE"
+            exit 1
+          fi
+
+          echo "Writing token to secret 'argocd-admin-token' in namespace 'vault'..."
+          kubectl -n vault create secret generic argocd-admin-token \
+            --from-literal=token="$TOKEN" \
+            --from-literal=apiUrl="http://argocd-server.argocd.svc:443" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "Done."
+

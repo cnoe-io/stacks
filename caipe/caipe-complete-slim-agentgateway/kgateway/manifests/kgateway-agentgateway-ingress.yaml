@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kgateway-agentgateway
+  namespace: kgateway-system
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: cnoe.localtest.me
+    http:
+      paths:
+      - path: /kgateway(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: agentgateway
+            port:
+              number: 8080
