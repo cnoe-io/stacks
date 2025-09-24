@@ -2,12 +2,12 @@
 # Complete CAIPE + i3 VNC Setup Script
 # Combines i3 desktop environment with IDPBuilder platform setup
 # Run with: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash
-# Or with profile: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-complete-p2p
+# Or with profile: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p
 
 set -e
 
 # Default values
-CAIPE_PROFILE="caipe-complete-p2p"
+CAIPE_PROFILE=""
 SHOW_HELP=false
 
 # Parse command line arguments
@@ -34,24 +34,23 @@ if [[ "$SHOW_HELP" == "true" ]]; then
     echo "CAIPE + i3 VNC Setup Script"
     echo ""
     echo "Usage:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash"
     echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
     echo ""
     echo "Options:"
-    echo "  --profile <name>    CAIPE profile to use (default: caipe-complete-p2p)"
+    echo "  --profile <name>    CAIPE profile to use (REQUIRED)"
     echo "  --help, -h          Show this help message"
     echo ""
     echo "Available CAIPE Profiles:"
     echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-    echo "  caipe-basic-p2     Basic CAIPE platform with P2P networking"
+    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
     echo "  caipe-minimal      Minimal CAIPE setup"
     echo ""
     echo "Examples:"
-    echo "  # Use default profile (caipe-complete-p2p)"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash"
+    echo "  # Use complete profile"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-complete-p2p"
     echo ""
-    echo "  # Use specific profile"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2"
+    echo "  # Use basic profile"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
     exit 0
 fi
 
@@ -232,11 +231,30 @@ print_status "Detected OS: $OS"
 # PROFILE VALIDATION
 # =============================================================================
 
+# Check if profile is specified
+if [[ -z "$CAIPE_PROFILE" ]]; then
+    print_error "No CAIPE profile specified!"
+    echo ""
+    echo "Usage:"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
+    echo ""
+    echo "Available CAIPE Profiles:"
+    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
+    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
+    echo "  caipe-minimal      Minimal CAIPE setup"
+    echo ""
+    echo "Examples:"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
+    echo ""
+    echo "Use --help for more information"
+    exit 1
+fi
+
 # Validate CAIPE profile
 validate_profile() {
     local profile="$1"
     case "$profile" in
-        caipe-complete-p2p|caipe-basic-p2|caipe-minimal)
+        caipe-complete-p2p|caipe-basic-p2p|caipe-minimal)
             return 0
             ;;
         *)
@@ -244,7 +262,7 @@ validate_profile() {
             echo ""
             echo "Available profiles:"
             echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-            echo "  caipe-basic-p2     Basic CAIPE platform with P2P networking"
+            echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
             echo "  caipe-minimal      Minimal CAIPE setup"
             echo ""
             echo "Use --help for more information"
