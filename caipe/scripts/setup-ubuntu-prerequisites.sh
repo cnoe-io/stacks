@@ -393,15 +393,7 @@ exec i3
 EOF
     chmod +x ~/.vnc/xstartup
 
-    # Set VNC password
-    print_status "Setting VNC password (you'll be prompted)..."
-    vncpasswd
-
-    # Start VNC server
-    print_status "Starting VNC server..."
-    vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
-
-    print_success "i3 desktop environment configured and VNC server started!"
+    print_success "i3 desktop environment configured!"
 fi
 
 # =============================================================================
@@ -503,3 +495,27 @@ echo "   kind delete cluster --name localdev"
 echo ""
 
 print_success "Happy platform engineering! 🚀"
+
+# =============================================================================
+# PART 5: VNC SETUP (FINAL STEP)
+# =============================================================================
+
+if [[ "$OS" == "linux" ]]; then
+    print_status "Setting up VNC access..."
+
+    # Set VNC password
+    print_status "Setting VNC password (you'll be prompted)..."
+    vncpasswd
+
+    # Start VNC server
+    print_status "Starting VNC server..."
+    vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
+
+    print_success "VNC server started successfully!"
+    echo ""
+    echo "🖥️  VNC Desktop Access:"
+    echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
+    echo "   SSH Tunnel: ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "   VNC Client: Connect to localhost:5903"
+    echo ""
+fi
