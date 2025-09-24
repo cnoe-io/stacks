@@ -1,10 +1,34 @@
 #!/bin/bash
 # Complete CAIPE + i3 VNC Setup Script
 # Combines i3 desktop environment with IDPBuilder platform setup
-# Run with: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash
-# Or with profile: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p
+# Run with: bash setup-ubuntu-prerequisites.sh --profile <profile>
+# Example: bash setup-ubuntu-prerequisites.sh --profile caipe-basic-p2p
 
 set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
 # Default values
 CAIPE_PROFILE=""
@@ -39,43 +63,50 @@ done
 
 # Show help if requested
 if [[ "$SHOW_HELP" == "true" ]]; then
-    echo "CAIPE + i3 VNC Setup Script"
+    echo "CAIPE + IDPBuilder Setup Script"
     echo ""
     echo "Usage:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile>"
     echo ""
     echo "Options:"
-    echo "  --profile <name>    CAIPE profile to use (REQUIRED)"
+    echo "  --profile <name>    CAIPE profile to use (MANDATORY)"
     echo "  --help, -h          Show this help message"
     echo ""
     echo "Available CAIPE Profiles:"
-    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
-    echo "  caipe-minimal      Minimal CAIPE setup"
+    echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
+    echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
+    echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
+    echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
+    echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
     echo ""
     echo "Examples:"
-    echo "  # Use complete profile"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-complete-p2p"
+    echo "  # Use basic profile (recommended for testing)"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-basic-p2p"
     echo ""
-    echo "  # Use basic profile"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
+    echo "  # Use complete profile (full-featured)"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-complete-p2p"
+    echo ""
+    echo "  # Use slim profile (with SLIM pub/sub)"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-complete-slim"
     exit 0
 fi
 
 # Check if profile is specified immediately after parsing arguments
 if [[ -z "$CAIPE_PROFILE" ]]; then
-    print_error "No CAIPE profile specified!"
+    print_error "CAIPE profile is MANDATORY - no profile specified!"
     echo ""
     echo "Usage:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile>"
     echo ""
     echo "Available CAIPE Profiles:"
-    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
-    echo "  caipe-minimal      Minimal CAIPE setup"
+    echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
+    echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
+    echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
+    echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
+    echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
     echo ""
     echo "Examples:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
+    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile> -s -- --profile caipe-basic-p2p"
     echo ""
     echo "Use --help for more information"
     echo ""
@@ -83,31 +114,7 @@ if [[ -z "$CAIPE_PROFILE" ]]; then
     cleanup_and_exit 1
 fi
 
-echo "🚀 Setting up Complete CAIPE + i3 VNC environment..."
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+echo "🚀 Setting up Complete CAIPE IDPBuilder with i3 VNC environment..."
 
 # Function to handle package installation with error recovery
 install_package() {
@@ -267,16 +274,18 @@ print_status "Parsed CAIPE_PROFILE: '$CAIPE_PROFILE'"
 validate_profile() {
     local profile="$1"
     case "$profile" in
-        caipe-complete-p2p|caipe-basic-p2p|caipe-minimal)
+        caipe-basic-p2p|caipe-complete-p2p|caipe-complete-slim|caipe-complete-agentgateway|caipe-complete-slim-agentgateway)
             return 0
             ;;
         *)
             print_error "Invalid CAIPE profile: $profile"
             echo ""
             echo "Available profiles:"
-            echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-            echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
-            echo "  caipe-minimal      Minimal CAIPE setup"
+            echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
+            echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
+            echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
+            echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
+            echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
             echo ""
             echo "Use --help for more information"
             cleanup_and_exit 1
@@ -592,7 +601,7 @@ echo ""
 if [[ "$OS" == "linux" ]]; then
     echo "🖥️  VNC Desktop Access:"
     echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
-    echo "   SSH Tunnel: ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "   SSH Tunnel: ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
     echo "   VNC Client: Connect to localhost:5903"
     echo ""
     echo "⌨️  i3 Keyboard Shortcuts (Alt = Mod key):"
@@ -657,7 +666,7 @@ if [[ "$OS" == "linux" ]]; then
     echo ""
     echo "🖥️  VNC Desktop Access:"
     echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
-    echo "   SSH Tunnel: ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "   SSH Tunnel: ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
     echo "   VNC Client: Connect to localhost:5903"
     echo ""
 
@@ -679,7 +688,7 @@ if [[ "$OS" == "linux" ]]; then
     echo ""
     echo "🔒 For better security and compression, tunnel VNC via SSH:"
     echo "   Example command:"
-    echo "      ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "      ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
     echo "   This forwards your local port 5903 to the remote VNC server's port 5901."
     echo "   Then connect your VNC client to localhost:5903."
     echo ""
