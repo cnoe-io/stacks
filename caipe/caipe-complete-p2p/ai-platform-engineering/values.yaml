@@ -287,10 +287,10 @@ agent-webex:
     secretName: "agent-webex-secret"
     externalSecrets:
       data:
-      - secretKey: WEBEX_BOT_TOKEN
+      - secretKey: WEBEX_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/webex-secret
-          property: WEBEX_BOT_TOKEN
+          property: WEBEX_TOKEN
 
 graphrag:
   enabled: false
