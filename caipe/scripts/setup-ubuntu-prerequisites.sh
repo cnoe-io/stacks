@@ -1,8 +1,7 @@
 #!/bin/bash
 # Complete CAIPE + i3 VNC Setup Script
 # Combines i3 desktop environment with IDPBuilder platform setup
-# Run with: bash setup-ubuntu-prerequisites.sh --profile <profile>
-# Example: bash setup-ubuntu-prerequisites.sh --profile caipe-basic-p2p
+# Run with: bash setup-ubuntu-prerequisites.sh
 
 set -e
 
@@ -30,91 +29,7 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Default values
-CAIPE_PROFILE=""
-SHOW_HELP=false
-
-# Function to handle script exit
-cleanup_and_exit() {
-    local exit_code=$1
-    echo ""
-    print_error "Script exiting with code: $exit_code"
-    exit $exit_code
-}
-
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --profile)
-            CAIPE_PROFILE="$2"
-            shift 2
-            ;;
-        --help|-h)
-            SHOW_HELP=true
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Use --help for usage information"
-            exit 1
-            ;;
-    esac
-done
-
-# Show help if requested
-if [[ "$SHOW_HELP" == "true" ]]; then
-    echo "CAIPE + IDPBuilder Setup Script"
-    echo ""
-    echo "Usage:"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile>"
-    echo ""
-    echo "Options:"
-    echo "  --profile <name>    CAIPE profile to use (MANDATORY)"
-    echo "  --help, -h          Show this help message"
-    echo ""
-    echo "Available CAIPE Profiles:"
-    echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
-    echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
-    echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
-    echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
-    echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
-    echo ""
-    echo "Examples:"
-    echo "  # Use basic profile (recommended for testing)"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-basic-p2p"
-    echo ""
-    echo "  # Use complete profile (full-featured)"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-complete-p2p"
-    echo ""
-    echo "  # Use slim profile (with SLIM pub/sub)"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile caipe-complete-slim"
-    exit 0
-fi
-
-# Check if profile is specified immediately after parsing arguments
-if [[ -z "$CAIPE_PROFILE" ]]; then
-    print_error "CAIPE profile is MANDATORY - no profile specified!"
-    echo ""
-    echo "Usage:"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile>"
-    echo ""
-    echo "Available CAIPE Profiles:"
-    echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
-    echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
-    echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
-    echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
-    echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
-    echo ""
-    echo "Examples:"
-    echo "  bash setup-ubuntu-prerequisites.sh --profile <profile> -s -- --profile caipe-basic-p2p"
-    echo ""
-    echo "Use --help for more information"
-    echo ""
-    print_error "Exiting due to missing required profile parameter"
-    cleanup_and_exit 1
-fi
-
-echo "🚀 Setting up Complete CAIPE IDPBuilder with i3 VNC environment..."
+echo "🚀 Setting up CAIPE Ubuntu prerequisites..."
 
 # Function to handle package installation with error recovery
 install_package() {
@@ -262,40 +177,6 @@ else
 fi
 
 print_status "Detected OS: $OS"
-
-# =============================================================================
-# PROFILE VALIDATION
-# =============================================================================
-
-# Debug: Show what profile was parsed
-print_status "Parsed CAIPE_PROFILE: '$CAIPE_PROFILE'"
-
-# Validate CAIPE profile
-validate_profile() {
-    local profile="$1"
-    case "$profile" in
-        caipe-basic-p2p|caipe-complete-p2p|caipe-complete-slim|caipe-complete-agentgateway|caipe-complete-slim-agentgateway)
-            return 0
-            ;;
-        *)
-            print_error "Invalid CAIPE profile: $profile"
-            echo ""
-            echo "Available profiles:"
-            echo "  caipe-basic-p2p                    Basic peer-to-peer AI platform with essential components"
-            echo "  caipe-complete-p2p                 Full-featured platform with all AI agents and integrations"
-            echo "  caipe-complete-slim                Complete platform with SLIM pub/sub"
-            echo "  caipe-complete-agentgateway        Complete platform with agentgateway.dev for MCP proxy"
-            echo "  caipe-complete-slim-agentgateway   Lightweight version with agent gateway"
-            echo ""
-            echo "Use --help for more information"
-            cleanup_and_exit 1
-            ;;
-    esac
-}
-
-# Validate the selected profile
-validate_profile "$CAIPE_PROFILE"
-print_success "Using CAIPE profile: $CAIPE_PROFILE"
 
 # =============================================================================
 # PRE-FLIGHT: FIX ANY EXISTING DEPENDENCY ISSUES
@@ -551,25 +432,14 @@ fi
 # PART 3: IDPBuilder CLUSTER CREATION
 # =============================================================================
 
-print_status "Creating IDPBuilder cluster with CAIPE profile: $CAIPE_PROFILE..."
-
-# Create the cluster with the selected CAIPE profile
-idpbuilder create \
-  --use-path-routing \
-  --package https://github.com/cnoe-io/stacks//ref-implementation \
-  --package https://github.com/sriaradhyula/stacks//caipe/$CAIPE_PROFILE
-
-print_success "IDPBuilder cluster created with profile: $CAIPE_PROFILE!"
+print_status "IDPBuilder cluster creation will be handled separately by the user"
+print_status "To create a cluster, run: idpbuilder create --use-path-routing --package <your-package>"
 
 # =============================================================================
 # PART 4: VERIFICATION AND ACCESS INFORMATION
 # =============================================================================
 
-print_status "Verifying cluster setup..."
-
-# Check cluster status
-kubectl get nodes
-kubectl get pods --all-namespaces
+print_status "Verifying system setup..."
 
 # Final cleanup and verification
 print_status "Performing final cleanup and verification..."
@@ -591,107 +461,51 @@ for tool in docker kubectl vault gh k9s idpbuilder kind; do
     fi
 done
 
-print_success "Setup complete! 🎉"
-echo ""
-echo "============================================================================="
-echo "🚀 CAIPE + i3 VNC Environment Ready!"
-echo "============================================================================="
-echo ""
-
-if [[ "$OS" == "linux" ]]; then
-    echo "🖥️  VNC Desktop Access:"
-    echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
-    echo "   SSH Tunnel: ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
-    echo "   VNC Client: Connect to localhost:5903"
-    echo ""
-    echo "⌨️  i3 Keyboard Shortcuts (Alt = Mod key):"
-    echo "   Alt+Return - Terminal"
-    echo "   Alt+d - App launcher"
-    echo "   Alt+Space - App menu"
-    echo "   Alt+f - Firefox"
-    echo "   Alt+1,2,3,4,5 - Workspaces"
-    echo ""
-fi
-
-echo "🌐 Platform Access URLs:"
-echo "   ArgoCD: https://cnoe.localtest.me:8443/argocd/"
-echo "   Backstage: https://cnoe.localtest.me:8443/"
-echo "   Vault: https://vault.cnoe.localtest.me:8443/"
-echo "   Keycloak: https://cnoe.localtest.me:8443/keycloak/admin/master/console/"
-echo "   Gitea: https://cnoe.localtest.me:8443/gitea/"
-echo ""
-
-echo "🔐 Getting Credentials:"
-echo "   ArgoCD Admin Password:"
-idpbuilder get secrets -p argocd
-echo ""
-echo "   Backstage User Password:"
-idpbuilder get secrets | grep USER_PASSWORD | sed 's/.*USER_PASSWORD=\([^,]*\).*/\1/'
-echo ""
-
-echo "🔧 Vault Configuration:"
-echo "   Root Token:"
-kubectl get secret vault-root-token -n vault -o jsonpath="{.data}" | \
-  jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"'
-echo ""
-
-echo "📚 Next Steps:"
-echo "   1. Access Vault UI and configure LLM provider secrets"
-echo "   2. Login to Backstage and test the AI agent"
-echo "   3. Explore the platform components via ArgoCD"
-echo ""
-
-echo "🧹 Cleanup (when done):"
-echo "   kind delete cluster --name localdev"
-echo ""
-
-print_success "Happy platform engineering! 🚀"
+print_success "Prerequisites setup complete! 🎉"
 
 # =============================================================================
 # PART 5: VNC SETUP (FINAL STEP)
 # =============================================================================
 
-if [[ "$OS" == "linux" ]]; then
-    print_status "Setting up VNC access..."
+print_status "Setting up VNC access..."
 
-    # # Set VNC password
-    # print_status "Setting VNC password (you'll be prompted)..."
-    # vncpasswd
+# # Set VNC password
+# print_status "Setting VNC password (you'll be prompted)..."
+# vncpasswd
 
-    # Start VNC server
-    print_status "Starting VNC server..."
-    vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
+# Start VNC server
+print_status "Starting VNC server..."
+vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
 
-    print_success "VNC server started successfully!"
-    echo ""
-    echo "🖥️  VNC Desktop Access:"
-    echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
-    echo "   SSH Tunnel: ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
-    echo "   VNC Client: Connect to localhost:5903"
-    echo ""
+print_success "VNC server started successfully!"
+echo ""
+echo "🖥️  VNC Desktop Access:"
+echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
+echo "   SSH Tunnel: ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
+echo "   VNC Client: Connect to localhost:5903"
+echo ""
 
-    echo "======================================================================"
-    echo "        🖥️  VNC ACCESS INSTRUCTIONS & SECURITY RECOMMENDATIONS        "
-    echo "======================================================================"
-    echo ""
-    echo "🔑 NOTE: You must set a VNC password before connecting with TigerVNC, VNC Viewer, or using screen sharing clients."
-    echo "   To set your VNC password, run:"
-    echo "      vncpasswd"
-    echo ""
-    echo "💻 To connect from your local machine:"
-    echo "   - On Mac:"
-    echo "       1. Open Finder, press Cmd+K, and enter: vnc://localhost:5903"
-    echo "       2. Or use a VNC client like TigerVNC or RealVNC Viewer and connect to localhost:5903"
-    echo "   - On Windows:"
-    echo "       1. Download and install TigerVNC or RealVNC Viewer"
-    echo "       2. Connect to: localhost:5903"
-    echo ""
-    echo "🔒 For better security and compression, tunnel VNC via SSH:"
-    echo "   Example command:"
-    echo "      ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
-    echo "   This forwards your local port 5903 to the remote VNC server's port 5901."
-    echo "   Then connect your VNC client to localhost:5903."
-    echo ""
-    echo "   (Make sure to set up the SSH tunnel as shown above before connecting!)"
-    echo "======================================================================"
-fi
+echo "======================================================================"
+echo "        🖥️  VNC ACCESS INSTRUCTIONS & SECURITY RECOMMENDATIONS        "
+echo "======================================================================"
+echo ""
+echo "🔑 NOTE: You must set a VNC password before connecting with TigerVNC, VNC Viewer, or using screen sharing clients."
+echo "   To set your VNC password, run:"
+echo "      vncpasswd"
+echo ""
+echo "💻 To connect from your local machine:"
+echo "   - On Mac:"
+echo "       1. Open Finder, press Cmd+K, and enter: vnc://localhost:5903"
+echo "       2. Or use a VNC client like TigerVNC or RealVNC Viewer and connect to localhost:5903"
+echo "   - On Windows:"
+echo "       1. Download and install TigerVNC or RealVNC Viewer"
+echo "       2. Connect to: localhost:5903"
+echo ""
+echo "🔒 For better security and compression, tunnel VNC via SSH:"
+echo "   Example command:"
+echo "      ssh -i ~/.ssh/private.pem -L 5903:localhost:5901 ubuntu@<YOUR UBUNTU IP> -f -N"
+echo "   This forwards your local port 5903 to the remote VNC server's port 5901."
+echo "   Then connect your VNC client to localhost:5903."
+echo ""
+echo "   (Make sure to set up the SSH tunnel as shown above before connecting!)"
+echo "======================================================================"
