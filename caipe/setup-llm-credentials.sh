@@ -18,6 +18,64 @@ if ! command -v vault &> /dev/null; then
     exit 1
 fi
 
+ENV_FILE=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --envFile)
+            ENV_FILE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--envFile <path>]"
+            echo ""
+            echo "Options:"
+            echo "  --envFile <path>     Read environment variables from specified file"
+            echo "  -h, --help           Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# Function to read and load environment variables from file
+load_env_file() {
+    local env_file="$1"
+    if [[ -n "$env_file" ]]; then
+        if [[ -f "$env_file" ]]; then
+            log "📄 Loading environment variables from: $env_file"
+            # Read the file line by line and export variables
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                # Skip empty lines and comments
+                if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
+                    # Check if line contains =
+                    if [[ "$line" =~ ^[[:space:]]*([^=]+)=(.*)$ ]]; then
+                        local var_name="${BASH_REMATCH[1]// /}"  # Remove spaces
+                        local var_value="${BASH_REMATCH[2]}"
+
+                        # Remove quotes if present
+                        if [[ "$var_value" =~ ^\"(.*)\"$ ]] || [[ "$var_value" =~ ^\'(.*)\'$ ]]; then
+                            var_value="${BASH_REMATCH[1]}"
+                        fi
+
+                        # Export the variable if it's not already set or if we have a value
+                        if [[ -n "$var_value" ]]; then
+                            export "$var_name"="$var_value"
+                            log "  ✓ Loaded $var_name from env file"
+                        fi
+                    fi
+                fi
+            done < "$env_file"
+        else
+            log "⚠️  Environment file not found: $env_file"
+            exit 1
+        fi
+    fi
+}
+
 log "🔧 Setting up LLM credentials for AI Platform Engineering"
 
 # Get vault token and setup connection
@@ -30,30 +88,6 @@ log "🔗 Starting Vault port forward..."
 kubectl port-forward -n vault svc/vault 8200:8200 &
 VAULT_PID=$!
 sleep 3
-
-# Prompt for LLM provider
-echo ""
-echo "Supported LLM Providers:"
-echo "1) azure-openai"
-echo "2) openai"
-echo "3) aws-bedrock"
-echo "4) google-gemini"
-echo "5) gcp-vertex"
-echo ""
-read -p "Select LLM provider (1-5): " provider_choice
-
-case $provider_choice in
-    1) LLM_PROVIDER="azure-openai" ;;
-    2) LLM_PROVIDER="openai" ;;
-    3) LLM_PROVIDER="aws-bedrock" ;;
-    4) LLM_PROVIDER="google-gemini" ;;
-    5) LLM_PROVIDER="gcp-vertex" ;;
-    *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
-esac
-
-log "📝 Selected provider: $LLM_PROVIDER"
-echo ""
-log "🔒 Note: Sensitive credentials will not be displayed on screen"
 
 # Initialize all fields as empty
 AZURE_OPENAI_API_KEY=""
@@ -74,13 +108,55 @@ GCP_PROJECT_ID=""
 GCP_LOCATION=""
 GCP_MODEL_NAME=""
 
+if [[ -n "$ENV_FILE" ]]; then
+    load_env_file "$ENV_FILE"
+fi
+
+# see if LLM_PROVIDER is set in the env file
+if [[ -n "${LLM_PROVIDER:-}" ]]; then
+    LLM_PROVIDER="$LLM_PROVIDER"
+    log "📝 Using provider from env file: $LLM_PROVIDER"
+else
+    # Prompt for LLM provider
+    echo ""
+    echo "Supported LLM Providers:"
+    echo "1) azure-openai"
+    echo "2) openai"
+    echo "3) aws-bedrock"
+    echo "4) google-gemini"
+    echo "5) gcp-vertex"
+    echo ""
+    read -p "Select LLM provider (1-5): " provider_choice
+
+    case $provider_choice in
+        1) LLM_PROVIDER="azure-openai" ;;
+        2) LLM_PROVIDER="openai" ;;
+        3) LLM_PROVIDER="aws-bedrock" ;;
+        4) LLM_PROVIDER="google-gemini" ;;
+        5) LLM_PROVIDER="gcp-vertex" ;;
+        *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
+    esac
+
+    log "📝 Selected provider: $LLM_PROVIDER"
+fi
+
+echo ""
+log "🔒 Note: Sensitive credentials will not be displayed on screen"
+
+# Load environment file if specified (after initialization)
+load_env_file "$ENV_FILE"
+
 # Single-line, exact-byte prompt helper (no newline added, no stripping)
 # Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret
 prompt_with_env() {
-  local prompt="$1" var_name="$2" is_secret="$3"
+  local prompt="$1" var_name="$2" is_secret="$3" default_value="$4"
   local env_value="${!var_name}" result
 
-  if [[ -n "$env_value" ]]; then
+  # If we have an env file and the variable has a value, auto-populate
+  if [[ -n "$ENV_FILE" && -n "$env_value" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')]   ✓ Using existing value detected for $prompt in env file. Auto-populating..." >&2
+    result="$env_value"
+  elif [[ -n "$env_value" ]]; then
     if [[ "$is_secret" == "true" ]]; then
       local hint="${env_value:0:5}..."
       printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
@@ -110,6 +186,11 @@ prompt_with_env() {
 
   # Normalize only a trailing CR (some terminals send \r)
   result=${result%$'\r'}
+
+  # Use default value if result is empty and default is provided
+  if [[ -z "$result" && -n "$default_value" ]]; then
+    result="$default_value"
+  fi
 
   # Output EXACTLY the bytes, no newline
   printf '%s' "$result"

@@ -85,6 +85,8 @@ agent-aws:
     repository: "ghcr.io/cnoe-io/agent-aws"
     pullPolicy: "Always"
     tag: "0.1.15"
+  mcp:
+    useRemoteMcpServer: true
   agentSecrets:
     secretName: "agent-aws-secret"
     externalSecrets:
