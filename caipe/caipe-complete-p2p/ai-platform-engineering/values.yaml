@@ -199,10 +199,10 @@ agent-komodor:
     secretName: "agent-komodor-secret"
     externalSecrets:
       data:
-      - secretKey: KOMODOR_API_KEY
+      - secretKey: KOMODOR_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/komodor-secret
-          property: KOMODOR_API_KEY
+          property: KOMODOR_TOKEN
       - secretKey: KOMODOR_API_URL
         remoteRef:
           key: secret/ai-platform-engineering/komodor-secret
