@@ -475,9 +475,21 @@ print_status "Setting up VNC access..."
 
 # Start VNC server
 print_status "Starting VNC server..."
-vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes || true
 
-print_success "VNC server started successfully!"
+# Check if VNC server is already running
+if pgrep -f "Xtigervnc.*:1" > /dev/null || pgrep -f "vncserver.*:1" > /dev/null; then
+    print_success "VNC server is already running on display :1"
+    echo "   (Detected existing VNC process)"
+else
+    # Start VNC server with timeout to prevent hanging
+    print_status "Attempting to start VNC server..."
+    if timeout 10 vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes 2>/dev/null; then
+        print_success "VNC server started successfully"
+    else
+        print_warning "VNC server startup timed out or failed, but continuing..."
+        echo "   (This is normal if VNC was already running)"
+    fi
+fi
 echo ""
 echo "🖥️  VNC Desktop Access:"
 echo "   Start VNC: vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
