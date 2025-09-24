@@ -92,6 +92,25 @@ run_command() {
     fi
 }
 
+# Function to clean up duplicate repositories
+cleanup_duplicate_repositories() {
+    print_status "Cleaning up duplicate repositories..."
+
+    # Remove duplicate HashiCorp repositories
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_apt_releases_hashicorp_com-*.list
+    sudo rm -f /etc/apt/sources.list.d/hashicorp.list
+
+    # Remove duplicate GitHub CLI repositories
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_cli_github_com_packages-*.list
+    sudo rm -f /etc/apt/sources.list.d/github-cli.list
+
+    # Remove duplicate Docker repositories
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_download_docker_com_linux_ubuntu-*.list
+    sudo rm -f /etc/apt/sources.list.d/docker.list
+
+    print_success "Repository cleanup completed"
+}
+
 # Function to aggressively clean up conflicting packages
 cleanup_conflicting_packages() {
     print_status "Cleaning up conflicting packages..."
@@ -166,6 +185,9 @@ print_status "Detected OS: $OS"
 if [[ "$OS" == "linux" ]]; then
     print_status "Performing pre-flight dependency check..."
 
+    # Clean up duplicate repositories first
+    cleanup_duplicate_repositories
+
     # Check for broken dependencies
     if ! sudo apt install -y curl >/dev/null 2>&1; then
         print_warning "Detected broken dependencies, attempting to fix..."
@@ -223,6 +245,10 @@ if [[ "$OS" == "linux" ]]; then
 
     # Install Vault
     print_status "Installing Vault..."
+    # Clean up any existing HashiCorp repositories to avoid duplicates
+    sudo rm -f /etc/apt/sources.list.d/archive_uri-https_apt_releases_hashicorp_com-*.list
+    sudo rm -f /etc/apt/sources.list.d/hashicorp.list
+
     # Use modern keyring method instead of deprecated apt-key
     curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
