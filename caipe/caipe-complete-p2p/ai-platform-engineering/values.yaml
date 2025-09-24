@@ -268,14 +268,14 @@ agent-splunk:
     secretName: "agent-splunk-secret"
     externalSecrets:
       data:
-      - secretKey: SPLUNK_API_TOKEN
+      - secretKey: SPLUNK_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/splunk-secret
-          property: SPLUNK_API_TOKEN
-      - secretKey: SPLUNK_URL
+          property: SPLUNK_TOKEN
+      - secretKey: SPLUNK_API_URL
         remoteRef:
           key: secret/ai-platform-engineering/splunk-secret
-          property: SPLUNK_URL
+          property: SPLUNK_API_URL
 
 agent-webex:
   nameOverride: "agent-webex"
