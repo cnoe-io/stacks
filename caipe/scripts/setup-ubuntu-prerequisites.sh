@@ -247,6 +247,8 @@ if [[ -z "$CAIPE_PROFILE" ]]; then
     echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
     echo ""
     echo "Use --help for more information"
+    echo ""
+    print_error "Exiting due to missing required profile parameter"
     exit 1
 fi
 
