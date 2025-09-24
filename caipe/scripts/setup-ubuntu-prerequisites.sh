@@ -2,8 +2,58 @@
 # Complete CAIPE + i3 VNC Setup Script
 # Combines i3 desktop environment with IDPBuilder platform setup
 # Run with: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash
+# Or with profile: curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-complete-p2p
 
 set -e
+
+# Default values
+CAIPE_PROFILE="caipe-complete-p2p"
+SHOW_HELP=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --profile)
+            CAIPE_PROFILE="$2"
+            shift 2
+            ;;
+        --help|-h)
+            SHOW_HELP=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# Show help if requested
+if [[ "$SHOW_HELP" == "true" ]]; then
+    echo "CAIPE + i3 VNC Setup Script"
+    echo ""
+    echo "Usage:"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>    CAIPE profile to use (default: caipe-complete-p2p)"
+    echo "  --help, -h          Show this help message"
+    echo ""
+    echo "Available CAIPE Profiles:"
+    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
+    echo "  caipe-basic-p2     Basic CAIPE platform with P2P networking"
+    echo "  caipe-minimal      Minimal CAIPE setup"
+    echo ""
+    echo "Examples:"
+    echo "  # Use default profile (caipe-complete-p2p)"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash"
+    echo ""
+    echo "  # Use specific profile"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2"
+    exit 0
+fi
 
 echo "🚀 Setting up Complete CAIPE + i3 VNC environment..."
 
@@ -177,6 +227,35 @@ else
 fi
 
 print_status "Detected OS: $OS"
+
+# =============================================================================
+# PROFILE VALIDATION
+# =============================================================================
+
+# Validate CAIPE profile
+validate_profile() {
+    local profile="$1"
+    case "$profile" in
+        caipe-complete-p2p|caipe-basic-p2|caipe-minimal)
+            return 0
+            ;;
+        *)
+            print_error "Invalid CAIPE profile: $profile"
+            echo ""
+            echo "Available profiles:"
+            echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
+            echo "  caipe-basic-p2     Basic CAIPE platform with P2P networking"
+            echo "  caipe-minimal      Minimal CAIPE setup"
+            echo ""
+            echo "Use --help for more information"
+            exit 1
+            ;;
+    esac
+}
+
+# Validate the selected profile
+validate_profile "$CAIPE_PROFILE"
+print_success "Using CAIPE profile: $CAIPE_PROFILE"
 
 # =============================================================================
 # PRE-FLIGHT: FIX ANY EXISTING DEPENDENCY ISSUES
@@ -432,15 +511,15 @@ fi
 # PART 3: IDPBuilder CLUSTER CREATION
 # =============================================================================
 
-print_status "Creating IDPBuilder cluster with CAIPE..."
+print_status "Creating IDPBuilder cluster with CAIPE profile: $CAIPE_PROFILE..."
 
-# Create the cluster with CAIPE complete-p2p profile
+# Create the cluster with the selected CAIPE profile
 idpbuilder create \
   --use-path-routing \
   --package https://github.com/cnoe-io/stacks//ref-implementation \
-  --package https://github.com/sriaradhyula/stacks//caipe/caipe-complete-p2p
+  --package https://github.com/sriaradhyula/stacks//caipe/$CAIPE_PROFILE
 
-print_success "IDPBuilder cluster created!"
+print_success "IDPBuilder cluster created with profile: $CAIPE_PROFILE!"
 
 # =============================================================================
 # PART 4: VERIFICATION AND ACCESS INFORMATION
@@ -535,9 +614,9 @@ print_success "Happy platform engineering! 🚀"
 if [[ "$OS" == "linux" ]]; then
     print_status "Setting up VNC access..."
 
-    # Set VNC password
-    print_status "Setting VNC password (you'll be prompted)..."
-    vncpasswd
+    # # Set VNC password
+    # print_status "Setting VNC password (you'll be prompted)..."
+    # vncpasswd
 
     # Start VNC server
     print_status "Starting VNC server..."
@@ -550,4 +629,29 @@ if [[ "$OS" == "linux" ]]; then
     echo "   SSH Tunnel: ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
     echo "   VNC Client: Connect to localhost:5903"
     echo ""
+
+    echo "======================================================================"
+    echo "        🖥️  VNC ACCESS INSTRUCTIONS & SECURITY RECOMMENDATIONS        "
+    echo "======================================================================"
+    echo ""
+    echo "🔑 NOTE: You must set a VNC password before connecting with TigerVNC, VNC Viewer, or using screen sharing clients."
+    echo "   To set your VNC password, run:"
+    echo "      vncpasswd"
+    echo ""
+    echo "💻 To connect from your local machine:"
+    echo "   - On Mac:"
+    echo "       1. Open Finder, press Cmd+K, and enter: vnc://localhost:5903"
+    echo "       2. Or use a VNC client like TigerVNC or RealVNC Viewer and connect to localhost:5903"
+    echo "   - On Windows:"
+    echo "       1. Download and install TigerVNC or RealVNC Viewer"
+    echo "       2. Connect to: localhost:5903"
+    echo ""
+    echo "🔒 For better security and compression, tunnel VNC via SSH:"
+    echo "   Example command:"
+    echo "      ssh -i ~/.ssh/caipe-complete-p2p.pem -L 5903:localhost:5901 ubuntu@3.142.69.179 -f -N"
+    echo "   This forwards your local port 5903 to the remote VNC server's port 5901."
+    echo "   Then connect your VNC client to localhost:5903."
+    echo ""
+    echo "   (Make sure to set up the SSH tunnel as shown above before connecting!)"
+    echo "======================================================================"
 fi
