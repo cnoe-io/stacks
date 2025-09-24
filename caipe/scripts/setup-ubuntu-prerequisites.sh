@@ -10,6 +10,14 @@ set -e
 CAIPE_PROFILE=""
 SHOW_HELP=false
 
+# Function to handle script exit
+cleanup_and_exit() {
+    local exit_code=$1
+    echo ""
+    print_error "Script exiting with code: $exit_code"
+    exit $exit_code
+}
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -52,6 +60,27 @@ if [[ "$SHOW_HELP" == "true" ]]; then
     echo "  # Use basic profile"
     echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
     exit 0
+fi
+
+# Check if profile is specified immediately after parsing arguments
+if [[ -z "$CAIPE_PROFILE" ]]; then
+    print_error "No CAIPE profile specified!"
+    echo ""
+    echo "Usage:"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
+    echo ""
+    echo "Available CAIPE Profiles:"
+    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
+    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
+    echo "  caipe-minimal      Minimal CAIPE setup"
+    echo ""
+    echo "Examples:"
+    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
+    echo ""
+    echo "Use --help for more information"
+    echo ""
+    print_error "Exiting due to missing required profile parameter"
+    cleanup_and_exit 1
 fi
 
 echo "🚀 Setting up Complete CAIPE + i3 VNC environment..."
@@ -231,26 +260,8 @@ print_status "Detected OS: $OS"
 # PROFILE VALIDATION
 # =============================================================================
 
-# Check if profile is specified
-if [[ -z "$CAIPE_PROFILE" ]]; then
-    print_error "No CAIPE profile specified!"
-    echo ""
-    echo "Usage:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile <profile>"
-    echo ""
-    echo "Available CAIPE Profiles:"
-    echo "  caipe-complete-p2p  Complete CAIPE platform with P2P networking"
-    echo "  caipe-basic-p2p     Basic CAIPE platform with P2P networking"
-    echo "  caipe-minimal      Minimal CAIPE setup"
-    echo ""
-    echo "Examples:"
-    echo "  curl -sSL https://raw.githubusercontent.com/sriaradhyula/stacks/caipe/setup-ubuntu-prerequisites.sh | bash -s -- --profile caipe-basic-p2p"
-    echo ""
-    echo "Use --help for more information"
-    echo ""
-    print_error "Exiting due to missing required profile parameter"
-    exit 1
-fi
+# Debug: Show what profile was parsed
+print_status "Parsed CAIPE_PROFILE: '$CAIPE_PROFILE'"
 
 # Validate CAIPE profile
 validate_profile() {
@@ -268,7 +279,7 @@ validate_profile() {
             echo "  caipe-minimal      Minimal CAIPE setup"
             echo ""
             echo "Use --help for more information"
-            exit 1
+            cleanup_and_exit 1
             ;;
     esac
 }
