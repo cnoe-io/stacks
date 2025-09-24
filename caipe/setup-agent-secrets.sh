@@ -16,27 +16,68 @@ done
 
 # Parse command line arguments
 OVERRIDE_ALL=false
-for arg in "$@"; do
-    case $arg in
+ENV_FILE=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --override-all)
             OVERRIDE_ALL=true
             shift
             ;;
+        --envFile)
+            ENV_FILE="$2"
+            shift 2
+            ;;
         -h|--help)
-            echo "Usage: $0 [--override-all]"
+            echo "Usage: $0 [--override-all] [--envFile <path>]"
             echo ""
             echo "Options:"
-            echo "  --override-all    Prompt for ArgoCD and Backstage secrets even if they exist"
-            echo "  -h, --help        Show this help message"
+            echo "  --override-all       Prompt for ArgoCD and Backstage secrets even if they exist"
+            echo "  --envFile <path>     Read environment variables from specified file"
+            echo "  -h, --help           Show this help message"
             exit 0
             ;;
         *)
-            echo "Unknown option: $arg"
+            echo "Unknown option: $1"
             echo "Use --help for usage information"
             exit 1
             ;;
     esac
 done
+
+# Function to read and load environment variables from file
+load_env_file() {
+    local env_file="$1"
+    if [[ -n "$env_file" ]]; then
+        if [[ -f "$env_file" ]]; then
+            log "📄 Loading environment variables from: $env_file"
+            # Read the file line by line and export variables
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                # Skip empty lines and comments
+                if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
+                    # Check if line contains =
+                    if [[ "$line" =~ ^[[:space:]]*([^=]+)=(.*)$ ]]; then
+                        local var_name="${BASH_REMATCH[1]// /}"  # Remove spaces
+                        local var_value="${BASH_REMATCH[2]}"
+
+                        # Remove quotes if present
+                        if [[ "$var_value" =~ ^\"(.*)\"$ ]] || [[ "$var_value" =~ ^\'(.*)\'$ ]]; then
+                            var_value="${BASH_REMATCH[1]}"
+                        fi
+
+                        # Export the variable if it's not already set or if we have a value
+                        if [[ -n "$var_value" ]]; then
+                            export "$var_name"="$var_value"
+                            log "  ✓ Loaded $var_name from env file"
+                        fi
+                    fi
+                fi
+            done < "$env_file"
+        else
+            log "⚠️  Environment file not found: $env_file"
+            exit 1
+        fi
+    fi
+}
 
 log "🔧 Setting up agent secrets based on active agents"
 
@@ -52,12 +93,16 @@ VAULT_PID=$!
 sleep 3
 
 # Single-line, exact-byte prompt helper (no newline added, no stripping)
-# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret
+# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret [default_value]
 prompt_with_env() {
-  local prompt="$1" var_name="$2" is_secret="$3"
+  local prompt="$1" var_name="$2" is_secret="$3" default_value="$4"
   local env_value="${!var_name}" result
 
-  if [[ -n "$env_value" ]]; then
+  # If we have an env file and the variable has a value, auto-populate
+  if [[ -n "$ENV_FILE" && -n "$env_value" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')]   ✓ Using existing value detected for $prompt in env file. Auto-populating..." >&2
+    result="$env_value"
+  elif [[ -n "$env_value" ]]; then
     if [[ "$is_secret" == "true" ]]; then
       local hint="${env_value:0:5}..."
       printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
@@ -87,6 +132,11 @@ prompt_with_env() {
 
   # Normalize only a trailing CR (some terminals send \r)
   result=${result%$'\r'}
+
+  # Use default value if result is empty and default is provided
+  if [[ -z "$result" && -n "$default_value" ]]; then
+    result="$default_value"
+  fi
 
   # Output EXACTLY the bytes, no newline
   printf '%s' "$result"
@@ -283,6 +333,9 @@ WEBEX_TOKEN=""
 KOMODOR_TOKEN=""
 KOMODOR_API_URL=""
 
+# Load environment file if specified (after initialization)
+load_env_file "$ENV_FILE"
+
 # Collect credentials based on active agents
 for agent in "${active_agents[@]}"; do
     case $agent in
@@ -330,11 +383,17 @@ for agent in "${active_agents[@]}"; do
             if [[ -z "$existing_token" ]]; then
                 should_prompt_token=true
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
-                if confirm_override "ArgoCD Token"; then
-                    should_prompt_token=true
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_TOKEN:-}" ]]; then
+                    log "  Using ArgoCD Token from env file (override-all mode)"
+                    # Value already loaded from env file
                 else
-                    log "  Keeping existing ArgoCD Token from Vault"
-                    ARGOCD_TOKEN="$existing_token"
+                    if confirm_override "ArgoCD Token"; then
+                        should_prompt_token=true
+                    else
+                        log "  Keeping existing ArgoCD Token from Vault"
+                        ARGOCD_TOKEN="$existing_token"
+                    fi
                 fi
             else
                 log "  Using existing ArgoCD Token from Vault"
@@ -351,11 +410,17 @@ for agent in "${active_agents[@]}"; do
             if [[ -z "$existing_api_url" ]]; then
                 should_prompt_url=true
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
-                if confirm_override "ArgoCD API URL"; then
-                    should_prompt_url=true
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_API_URL:-}" ]]; then
+                    log "  Using ArgoCD API URL from env file (override-all mode)"
+                    # Value already loaded from env file
                 else
-                    log "  Keeping existing ArgoCD API URL from Vault"
-                    ARGOCD_API_URL="$existing_api_url"
+                    if confirm_override "ArgoCD API URL"; then
+                        should_prompt_url=true
+                    else
+                        log "  Keeping existing ArgoCD API URL from Vault"
+                        ARGOCD_API_URL="$existing_api_url"
+                    fi
                 fi
             else
                 log "  Using existing ArgoCD API URL from Vault"
@@ -373,11 +438,17 @@ for agent in "${active_agents[@]}"; do
             if [[ -z "$existing_verify_ssl" ]]; then
                 should_prompt_ssl=true
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
-                if confirm_override "ArgoCD Verify SSL setting"; then
-                    should_prompt_ssl=true
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_VERIFY_SSL:-}" ]]; then
+                    log "  Using ArgoCD Verify SSL setting from env file (override-all mode)"
+                    # Value already loaded from env file
                 else
-                    log "  Keeping existing ArgoCD Verify SSL setting from Vault"
-                    ARGOCD_VERIFY_SSL="$existing_verify_ssl"
+                    if confirm_override "ArgoCD Verify SSL setting"; then
+                        should_prompt_ssl=true
+                    else
+                        log "  Keeping existing ArgoCD Verify SSL setting from Vault"
+                        ARGOCD_VERIFY_SSL="$existing_verify_ssl"
+                    fi
                 fi
             else
                 log "  Using existing ArgoCD Verify SSL setting from Vault"
@@ -403,11 +474,17 @@ for agent in "${active_agents[@]}"; do
             if [[ -z "$existing_api_token" ]]; then
                 should_prompt_token=true
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
-                if confirm_override "Backstage API Token"; then
-                    should_prompt_token=true
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_API_TOKEN:-}" ]]; then
+                    log "  Using Backstage API Token from env file (override-all mode)"
+                    # Value already loaded from env file
                 else
-                    log "  Keeping existing Backstage API Token from Vault"
-                    BACKSTAGE_API_TOKEN="$existing_api_token"
+                    if confirm_override "Backstage API Token"; then
+                        should_prompt_token=true
+                    else
+                        log "  Keeping existing Backstage API Token from Vault"
+                        BACKSTAGE_API_TOKEN="$existing_api_token"
+                    fi
                 fi
             else
                 log "  Using existing Backstage API Token from Vault"
@@ -424,11 +501,17 @@ for agent in "${active_agents[@]}"; do
             if [[ -z "$existing_url" ]]; then
                 should_prompt_url=true
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
-                if confirm_override "Backstage URL"; then
-                    should_prompt_url=true
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_URL:-}" ]]; then
+                    log "  Using Backstage URL from env file (override-all mode)"
+                    # Value already loaded from env file
                 else
-                    log "  Keeping existing Backstage URL from Vault"
-                    BACKSTAGE_URL="$existing_url"
+                    if confirm_override "Backstage URL"; then
+                        should_prompt_url=true
+                    else
+                        log "  Keeping existing Backstage URL from Vault"
+                        BACKSTAGE_URL="$existing_url"
+                    fi
                 fi
             else
                 log "  Using existing Backstage URL from Vault"
