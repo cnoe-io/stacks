@@ -318,7 +318,7 @@ SLACK_CLIENT_SECRET=""
 SLACK_TEAM_ID=""
 AWS_ACCESS_KEY_ID=""
 AWS_SECRET_ACCESS_KEY=""
-AWS_REGION=""
+AWS_DEFAULT_REGION=""
 ARGOCD_TOKEN=""
 ARGOCD_API_URL=""
 ARGOCD_VERIFY_SSL=""
@@ -367,7 +367,7 @@ for agent in "${active_agents[@]}"; do
             log "☁️  Configuring AWS agent secrets..."
             AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
             AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
-            AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
+            AWS_DEFAULT_REGION=$(prompt_with_env "AWS Region" "AWS_DEFAULT_REGION" "false" "us-east-1")
             ;;
         "argocd")
             echo ""
@@ -600,7 +600,7 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/aws-secret \
                     AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
                     AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-                    AWS_REGION="$AWS_REGION" >/dev/null
+                    AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" >/dev/null
                 log "✅ AWS secrets stored"
             fi
             ;;
@@ -700,7 +700,7 @@ kubectl create secret generic agent-secrets -n ai-platform-engineering \
     --from-literal=SLACK_TEAM_ID="$SLACK_TEAM_ID" \
     --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    --from-literal=AWS_REGION="$AWS_REGION" \
+    --from-literal=AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
     --from-literal=ARGOCD_TOKEN="$ARGOCD_TOKEN" \
     --from-literal=ARGOCD_API_URL="$ARGOCD_API_URL" \
     --from-literal=ARGOCD_VERIFY_SSL="$ARGOCD_VERIFY_SSL" \
