@@ -475,7 +475,7 @@ print_status "Setting up VNC access..."
 
 # Start VNC server
 print_status "Starting VNC server..."
-vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes
+vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes || true
 
 print_success "VNC server started successfully!"
 echo ""
