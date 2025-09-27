@@ -281,7 +281,7 @@ spec:
                 name: argocd-credentials
             - secretRef:
                 name: backstage-api-token
-          image: ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b
+          image: ghcr.io/suwhang-cisco/backstage-app:9d33ad6175e2ed30a23310ccc9d44594d6b63a07
           name: backstage
           ports:
             - containerPort: 7007
