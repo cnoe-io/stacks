@@ -2,17 +2,23 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: backstage
   namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: backstage-argo-worfklows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
   - apiGroups:
       - argoproj.io
@@ -25,6 +31,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: read-all
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
   - apiGroups:
       - '*'
@@ -39,6 +47,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: backstage-argo-worfklows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -52,6 +62,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: backstage-read-all
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -353,6 +365,51 @@ spec:
       resources:
         requests:
           storage: "500Mi"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backstage-dependency-wait
+  namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  template:
+    spec:
+      serviceAccountName: backstage
+      containers:
+      - name: dependency-wait
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Waiting for dependencies to be ready..."
+
+          while true; do
+            echo "Checking vault-config job status in vault namespace..."
+
+            # Check if vault-config job exists and is complete
+            VAULT_JOB_STATUS=$(kubectl get job vault-config -n vault -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "NotFound")
+
+            echo "Checking keycloak deployment status in keycloak namespace..."
+
+            # Check if keycloak deployment exists and is ready
+            KEYCLOAK_READY=$(kubectl get deployment keycloak -n keycloak -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || echo "NotFound")
+
+            echo "Vault job status: $VAULT_JOB_STATUS"
+            echo "Keycloak deployment ready: $KEYCLOAK_READY"
+
+            if [[ "$VAULT_JOB_STATUS" == "True" && "$KEYCLOAK_READY" == "True" ]]; then
+              echo "All dependencies are ready! Exiting..."
+              exit 0
+            else
+              echo "Dependencies not ready yet. Waiting 30 seconds before next check..."
+              sleep 30
+            fi
+          done
+      restartPolicy: OnFailure
+  backoffLimit: 60  # Allow retries for up to 30 minutes
 ---
 apiVersion: generators.external-secrets.io/v1alpha1
 kind: Password

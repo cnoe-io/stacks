@@ -1,23 +1,5 @@
 # Override values for idpbuilder local deployment
 global:
-  enabledSubAgents:
-    argocd: true
-    aws: true
-    backstage: true
-    confluence: true
-    github: true
-    jira: true
-    komodor: true
-    pagerduty: true
-    slack: true
-    splunk: true
-    weather: false
-    webex: true
-    kb-rag: true
-
-  slim:
-    enabled: false
-
   externalSecrets:
     enabled: true
     secretStoreRef:
@@ -55,39 +37,21 @@ global:
 
 supervisor-agent:
   nameOverride: "supervisor-agent"
+  image:
+    repository: "ghcr.io/cnoe-io/ai-platform-engineering"
+    tag: "latest"
   env:
     EXTERNAL_URL: "https://cnoe.localtest.me:8443/ai-platform-engineering"
-    ARGOCD_AGENT_HOST: "ai-platform-engineering-agent-argocd"
-    AWS_AGENT_HOST: "ai-platform-engineering-agent-aws"
-    BACKSTAGE_AGENT_HOST: "ai-platform-engineering-agent-backstage"
-    CONFLUENCE_AGENT_HOST: "ai-platform-engineering-agent-confluence"
-    GITHUB_AGENT_HOST: "ai-platform-engineering-agent-github"
-    JIRA_AGENT_HOST: "ai-platform-engineering-agent-jira"
-    KB_RAG_AGENT_HOST: "ai-platform-engineering-kb-rag-agent"
-    KB-RAG_AGENT_HOST: "ai-platform-engineering-kb-rag-agent"
-    KOMODOR_AGENT_HOST: "ai-platform-engineering-agent-komodor"
-    PAGERDUTY_AGENT_HOST: "ai-platform-engineering-agent-pagerduty"
-    SLACK_AGENT_HOST: "ai-platform-engineering-agent-slack"
-    SPLUNK_AGENT_HOST: "ai-platform-engineering-agent-splunk"
-    WEBEX_AGENT_HOST: "ai-platform-engineering-agent-webex"
-    ENABLE_ARGOCD: "true"
-    ENABLE_AWS: "true"
-    ENABLE_BACKSTAGE: "true"
-    ENABLE_CONFLUENCE: "true"
-    ENABLE_GITHUB: "true"
-    ENABLE_JIRA: "true"
-    ENABLE_KOMODOR: "true"
-    ENABLE_PAGERDUTY: "true"
-    ENABLE_SLACK: "true"
-    ENABLE_SPLUNK: "true"
-    ENABLE_WEBEX_AGENT: "true"
-    ENABLE_KB_RAG: "true"
-    ENABLE_WEATHER_AGENT: "false"
-    ENABLE_PETSTORE_AGENT: "false"
-    ENABLE_GRAPH_RAG: "false"
 
 agent-argocd:
   nameOverride: "agent-argocd"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-argocd"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-argocd-secret"
     externalSecrets:
@@ -105,8 +69,43 @@ agent-argocd:
           key: secret/ai-platform-engineering/argocd-secret
           property: ARGOCD_VERIFY_SSL
 
+agent-aws:
+  nameOverride: "agent-aws"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-aws"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    mode: "stdio"
+    # image: # HOT FIX: will be modified in the helm chart itself in the future
+    #   repository: "public.ecr.aws/awslabs-mcp/awslabs/eks-mcp-server"
+    #   tag: "sha-e18497bbc401f08334ea8b966db1f235b647bfed"
+  agentSecrets:
+    secretName: "agent-aws-secret"
+    externalSecrets:
+      data:
+      - secretKey: AWS_ACCESS_KEY_ID
+        remoteRef:
+          key: secret/ai-platform-engineering/aws-secret
+          property: AWS_ACCESS_KEY_ID
+      - secretKey: AWS_SECRET_ACCESS_KEY
+        remoteRef:
+          key: secret/ai-platform-engineering/aws-secret
+          property: AWS_SECRET_ACCESS_KEY
+      - secretKey: AWS_DEFAULT_REGION
+        remoteRef:
+          key: secret/ai-platform-engineering/aws-secret
+          property: AWS_DEFAULT_REGION
+
 agent-backstage:
   nameOverride: "agent-backstage"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-backstage"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-backstage-secret"
     externalSecrets:
@@ -122,25 +121,39 @@ agent-backstage:
 
 agent-confluence:
   nameOverride: "agent-confluence"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-confluence"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-confluence-secret"
     externalSecrets:
       data:
       - secretKey: ATLASSIAN_TOKEN
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_TOKEN
       - secretKey: ATLASSIAN_EMAIL
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
+          key: secret/ai-platform-engineering/confluence-secret
           property: ATLASSIAN_EMAIL
-      - secretKey: ATLASSIAN_API_URL
+      - secretKey: CONFLUENCE_API_URL
         remoteRef:
-          key: secret/ai-platform-engineering/jira-secret
-          property: ATLASSIAN_API_URL
+          key: secret/ai-platform-engineering/confluence-secret
+          property: CONFLUENCE_API_URL
 
 agent-github:
   nameOverride: "agent-github"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-github"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-github-secret"
     externalSecrets:
@@ -152,6 +165,13 @@ agent-github:
 
 agent-jira:
   nameOverride: "agent-jira"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-jira"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-jira-secret"
     externalSecrets:
@@ -169,16 +189,24 @@ agent-jira:
           key: secret/ai-platform-engineering/jira-secret
           property: ATLASSIAN_API_URL
 
+
 agent-komodor:
   nameOverride: "agent-komodor"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-komodor"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-komodor-secret"
     externalSecrets:
       data:
-      - secretKey: KOMODOR_API_KEY
+      - secretKey: KOMODOR_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/komodor-secret
-          property: KOMODOR_API_KEY
+          property: KOMODOR_TOKEN
       - secretKey: KOMODOR_API_URL
         remoteRef:
           key: secret/ai-platform-engineering/komodor-secret
@@ -186,6 +214,13 @@ agent-komodor:
 
 agent-pagerduty:
   nameOverride: "agent-pagerduty"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-pagerduty"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-pagerduty-secret"
     externalSecrets:
@@ -201,6 +236,13 @@ agent-pagerduty:
 
 agent-slack:
   nameOverride: "agent-slack"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-slack"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-slack-secret"
     externalSecrets:
@@ -226,107 +268,42 @@ agent-slack:
           key: secret/ai-platform-engineering/slack-secret
           property: SLACK_TEAM_ID
 
-agent-aws:
-  nameOverride: "agent-aws"
-  agentSecrets:
-    secretName: "agent-aws-secret"
-    externalSecrets:
-      data:
-      - secretKey: AWS_ACCESS_KEY_ID
-        remoteRef:
-          key: secret/ai-platform-engineering/aws-secret
-          property: AWS_ACCESS_KEY_ID
-      - secretKey: AWS_SECRET_ACCESS_KEY
-        remoteRef:
-          key: secret/ai-platform-engineering/aws-secret
-          property: AWS_SECRET_ACCESS_KEY
-      - secretKey: AWS_DEFAULT_REGION
-        remoteRef:
-          key: secret/ai-platform-engineering/aws-secret
-          property: AWS_DEFAULT_REGION
-
 agent-splunk:
   nameOverride: "agent-splunk"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-splunk"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-splunk-secret"
     externalSecrets:
       data:
-      - secretKey: SPLUNK_API_TOKEN
+      - secretKey: SPLUNK_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/splunk-secret
-          property: SPLUNK_API_TOKEN
-      - secretKey: SPLUNK_URL
+          property: SPLUNK_TOKEN
+      - secretKey: SPLUNK_API_URL
         remoteRef:
           key: secret/ai-platform-engineering/splunk-secret
-          property: SPLUNK_URL
+          property: SPLUNK_API_URL
 
 agent-webex:
   nameOverride: "agent-webex"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-webex"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      tag: "0.1.15"
   agentSecrets:
     secretName: "agent-webex-secret"
     externalSecrets:
       data:
-      - secretKey: WEBEX_BOT_TOKEN
+      - secretKey: WEBEX_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/webex-secret
-          property: WEBEX_BOT_TOKEN
-      - secretKey: WEBEX_WEBHOOK_SECRET
-        remoteRef:
-          key: secret/ai-platform-engineering/webex-secret
-          property: WEBEX_WEBHOOK_SECRET
-
-graphrag:
-  enabled: false
-
-# neo4j configuration for kind cluster
-neo4j:
-  volumes:
-    data:
-      mode: "dynamic"
-      dynamic:
-        storageClassName: standard
-        requests:
-          storage: 1Gi
-
-# KB-RAG Stack with 1Gi storage for kind
-kb-rag-stack:
-  enabled: true
-  kb-rag-agent:
-    agentSecrets:
-      secretName: "kb-rag-agent-secret"
-      externalSecrets:
-        data:
-        - secretKey: MILVUS_SECRET
-          remoteRef:
-            key: secret/ai-platform-engineering/kb-rag-secret
-            property: MILVUS_SECRET
-
-  # KB-RAG Redis configuration
-  kb-rag-redis:
-    enabled: true
-
-  # KB-RAG Server configuration
-  kb-rag-server:
-    enabled: true
-
-# Milvus with 1Gi storage for kind
-milvus:
-  enabled: true
-  volumes:
-    data:
-      mode: "dynamic"
-      dynamic:
-        storageClassName: standard
-        requests:
-          storage: 1Gi
-  # MinIO configuration
-  minio:
-    replicas: 2
-    persistence:
-      size: 1Gi
-      storageClass: standard
-  # etcd configuration
-  etcd:
-    persistence:
-      size: 1Gi
-      storageClass: standard
+          property: WEBEX_TOKEN
