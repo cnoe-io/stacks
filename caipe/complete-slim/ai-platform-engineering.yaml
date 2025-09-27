@@ -11,12 +11,17 @@ spec:
     # Main chart from GHCR
     - chart: ai-platform-engineering
       repoURL: ghcr.io/cnoe-io/helm-charts
-      targetRevision: 0.2.3
+      targetRevision: 0.2.5
       helm:
+        parameters:
+        - name: tags.complete
+          value: "true"
+        - name: global.slim.enabled # TODO: maybe move this to tag and we make cm called slim-env
+          value: "true"
         valueFiles:
           - $values/values.yaml
     # Values files from Git repository (your custom branch)
-    - repoURL: cnoe://ai-platform-engineering
+    - repoURL: cnoe://../base/ai-platform-engineering
       path: manifests
       ref: values
   destination:

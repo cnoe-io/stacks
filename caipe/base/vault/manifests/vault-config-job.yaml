@@ -87,7 +87,7 @@ spec:
           vault kv put secret/ai-platform-engineering/aws-secret \
             AWS_ACCESS_KEY_ID="" \
             AWS_SECRET_ACCESS_KEY="" \
-            AWS_REGION="" >/dev/null
+            AWS_DEFAULT_REGION="" >/dev/null
 
           # Backstage agent secrets
           echo "Creating backstage-secret..."
@@ -116,7 +116,7 @@ spec:
           # Komodor agent secrets
           echo "Creating komodor-secret..."
           vault kv put secret/ai-platform-engineering/komodor-secret \
-            KOMODOR_API_KEY="" \
+            KOMODOR_TOKEN="" \
             KOMODOR_API_URL="" >/dev/null
 
           # GitHub agent secrets
@@ -150,8 +150,8 @@ spec:
           # Splunk agent secrets
           echo "Creating splunk-secret..."
           vault kv put secret/ai-platform-engineering/splunk-secret \
-            SPLUNK_API_TOKEN="" \
-            SPLUNK_URL="" >/dev/null
+            SPLUNK_TOKEN="" \
+            SPLUNK_API_URL="" >/dev/null
 
           # Webex agent secrets
           echo "Creating webex-secret..."
