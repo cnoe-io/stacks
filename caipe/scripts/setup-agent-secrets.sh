@@ -14,6 +14,71 @@ for cmd in kubectl vault jq; do
     fi
 done
 
+# Parse command line arguments
+OVERRIDE_ALL=false
+ENV_FILE=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --override-all)
+            OVERRIDE_ALL=true
+            shift
+            ;;
+        --envFile)
+            ENV_FILE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--override-all] [--envFile <path>]"
+            echo ""
+            echo "Options:"
+            echo "  --override-all       Prompt for ArgoCD and Backstage secrets even if they exist"
+            echo "  --envFile <path>     Read environment variables from specified file"
+            echo "  -h, --help           Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# Function to read and load environment variables from file
+load_env_file() {
+    local env_file="$1"
+    if [[ -n "$env_file" ]]; then
+        if [[ -f "$env_file" ]]; then
+            log "📄 Loading environment variables from: $env_file"
+            # Read the file line by line and export variables
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                # Skip empty lines and comments
+                if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
+                    # Check if line contains =
+                    if [[ "$line" =~ ^[[:space:]]*([^=]+)=(.*)$ ]]; then
+                        local var_name="${BASH_REMATCH[1]// /}"  # Remove spaces
+                        local var_value="${BASH_REMATCH[2]}"
+
+                        # Remove quotes if present
+                        if [[ "$var_value" =~ ^\"(.*)\"$ ]] || [[ "$var_value" =~ ^\'(.*)\'$ ]]; then
+                            var_value="${BASH_REMATCH[1]}"
+                        fi
+
+                        # Export the variable if it's not already set or if we have a value
+                        if [[ -n "$var_value" ]]; then
+                            export "$var_name"="$var_value"
+                            log "  ✓ Loaded $var_name from env file"
+                        fi
+                    fi
+                fi
+            done < "$env_file"
+        else
+            log "⚠️  Environment file not found: $env_file"
+            exit 1
+        fi
+    fi
+}
+
 log "🔧 Setting up agent secrets based on active agents"
 
 # Setup Vault connection
@@ -28,12 +93,16 @@ VAULT_PID=$!
 sleep 3
 
 # Single-line, exact-byte prompt helper (no newline added, no stripping)
-# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret
+# Usage: prompt_with_env "<Prompt>" VAR_NAME is_secret [default_value]
 prompt_with_env() {
-  local prompt="$1" var_name="$2" is_secret="$3"
+  local prompt="$1" var_name="$2" is_secret="$3" default_value="$4"
   local env_value="${!var_name}" result
 
-  if [[ -n "$env_value" ]]; then
+  # If we have an env file and the variable has a value, auto-populate
+  if [[ -n "$ENV_FILE" && -n "$env_value" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')]   ✓ Using existing value detected for $prompt in env file. Auto-populating..." >&2
+    result="$env_value"
+  elif [[ -n "$env_value" ]]; then
     if [[ "$is_secret" == "true" ]]; then
       local hint="${env_value:0:5}..."
       printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
@@ -64,8 +133,44 @@ prompt_with_env() {
   # Normalize only a trailing CR (some terminals send \r)
   result=${result%$'\r'}
 
+  # Use default value if result is empty and default is provided
+  if [[ -z "$result" && -n "$default_value" ]]; then
+    result="$default_value"
+  fi
+
   # Output EXACTLY the bytes, no newline
   printf '%s' "$result"
+}
+
+# Helper function to fetch existing secrets from Vault
+# Usage: fetch_vault_secret "<vault_path>" "<field_name>"
+fetch_vault_secret() {
+  local vault_path="$1" field_name="$2"
+  local value
+
+  # Try to fetch the secret, suppress errors if it doesn't exist
+  value=$(vault kv get -field="$field_name" "$vault_path" 2>/dev/null || echo "")
+  printf '%s' "$value"
+}
+
+# Helper function to confirm override when value exists
+# Usage: confirm_override "<field_description>"
+# Returns: 0 if user wants to override, 1 if not
+confirm_override() {
+  local field_desc="$1"
+  local choice
+
+  printf "%s is already populated. Are you sure you want to override? (Y/N): " "$field_desc" > /dev/tty
+  IFS= read -r choice < /dev/tty
+
+  case "${choice,,}" in  # Convert to lowercase
+    y|yes)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 # Check which agents are active
@@ -73,91 +178,84 @@ log "🔍 Checking active agents..."
 active_agents=()
 
 # Check for GitHub agent (look for GitHub-related deployments or configs)
-if kubectl get deployment -n ai-platform-engineering github-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-github 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i github >/dev/null 2>&1; then
     active_agents+=("github")
     log "✅ GitHub agent detected"
 fi
 
 # Check for GitLab agent
-if kubectl get deployment -n ai-platform-engineering gitlab-agent 2>/dev/null || \
-   kubectl get configmap -n ai-platform-engineering | grep -i gitlab >/dev/null 2>&1; then
-    active_agents+=("gitlab")
-    log "✅ GitLab agent detected"
-fi
-
-# Check for GitLab agent
-if kubectl get deployment -n ai-platform-engineering gitlab-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-gitlab 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i gitlab >/dev/null 2>&1; then
     active_agents+=("gitlab")
     log "✅ GitLab agent detected"
 fi
 
 # Check for Jira agent
-if kubectl get deployment -n ai-platform-engineering jira-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-jira 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i jira >/dev/null 2>&1; then
     active_agents+=("jira")
     log "✅ Jira agent detected"
 fi
 
 # Check for Slack agent
-if kubectl get deployment -n ai-platform-engineering slack-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-slack 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i slack >/dev/null 2>&1; then
     active_agents+=("slack")
     log "✅ Slack agent detected"
 fi
 
 # Check for AWS agent
-if kubectl get deployment -n ai-platform-engineering aws-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-aws 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i aws >/dev/null 2>&1; then
     active_agents+=("aws")
     log "✅ AWS agent detected"
 fi
 
 # Check for ArgoCD agent
-if kubectl get deployment -n ai-platform-engineering argocd-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-argocd 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i argocd >/dev/null 2>&1; then
     active_agents+=("argocd")
     log "✅ ArgoCD agent detected"
 fi
 
 # Check for Backstage agent
-if kubectl get deployment -n ai-platform-engineering backstage-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-backstage 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i backstage >/dev/null 2>&1; then
     active_agents+=("backstage")
     log "✅ Backstage agent detected"
 fi
 
 # Check for PagerDuty agent
-if kubectl get deployment -n ai-platform-engineering pagerduty-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-pagerduty 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i pagerduty >/dev/null 2>&1; then
     active_agents+=("pagerduty")
     log "✅ PagerDuty agent detected"
 fi
 
 # Check for Confluence agent
-if kubectl get deployment -n ai-platform-engineering confluence-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-confluence 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i confluence >/dev/null 2>&1; then
     active_agents+=("confluence")
     log "✅ Confluence agent detected"
 fi
 
 # Check for Splunk agent
-if kubectl get deployment -n ai-platform-engineering splunk-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-splunk 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i splunk >/dev/null 2>&1; then
     active_agents+=("splunk")
     log "✅ Splunk agent detected"
 fi
 
 # Check for Webex agent
-if kubectl get deployment -n ai-platform-engineering webex-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-webex 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i webex >/dev/null 2>&1; then
     active_agents+=("webex")
     log "✅ Webex agent detected"
 fi
 
 # Check for Komodor agent
-if kubectl get deployment -n ai-platform-engineering komodor-agent 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-komodor 2>/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i komodor >/dev/null 2>&1; then
     active_agents+=("komodor")
     log "✅ Komodor agent detected"
@@ -182,7 +280,7 @@ if [[ ${#active_agents[@]} -eq 0 ]]; then
     echo "12) All of the above"
     echo ""
     read -p "Select agents (comma-separated numbers, e.g., 1,3,4): " agent_selection
-    
+
     IFS=',' read -ra selected <<< "$agent_selection"
     for choice in "${selected[@]}"; do
         case $choice in
@@ -220,7 +318,7 @@ SLACK_CLIENT_SECRET=""
 SLACK_TEAM_ID=""
 AWS_ACCESS_KEY_ID=""
 AWS_SECRET_ACCESS_KEY=""
-AWS_REGION=""
+AWS_DEFAULT_REGION=""
 ARGOCD_TOKEN=""
 ARGOCD_API_URL=""
 ARGOCD_VERIFY_SSL=""
@@ -234,6 +332,9 @@ SPLUNK_TOKEN=""
 WEBEX_TOKEN=""
 KOMODOR_TOKEN=""
 KOMODOR_API_URL=""
+
+# Load environment file if specified (after initialization)
+load_env_file "$ENV_FILE"
 
 # Collect credentials based on active agents
 for agent in "${active_agents[@]}"; do
@@ -266,20 +367,162 @@ for agent in "${active_agents[@]}"; do
             log "☁️  Configuring AWS agent secrets..."
             AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
             AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
-            AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
+            AWS_DEFAULT_REGION=$(prompt_with_env "AWS Region" "AWS_DEFAULT_REGION" "false" "us-east-1")
             ;;
         "argocd")
             echo ""
             log "🚀 Configuring ArgoCD agent secrets..."
-            ARGOCD_TOKEN=$(prompt_with_env "ArgoCD Token" "ARGOCD_TOKEN" "true")
-            ARGOCD_API_URL=$(prompt_with_env "ArgoCD API URL" "ARGOCD_API_URL" "false" "http://argocd-server.argocd.svc.cluster.local")
-            ARGOCD_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ARGOCD_VERIFY_SSL" "false" "false")
+
+            # Try to fetch existing secrets from Vault first
+            existing_token=$(fetch_vault_secret "secret/ai-platform-engineering/argocd-secret" "ARGOCD_TOKEN")
+            existing_api_url=$(fetch_vault_secret "secret/ai-platform-engineering/argocd-secret" "ARGOCD_API_URL")
+            existing_verify_ssl=$(fetch_vault_secret "secret/ai-platform-engineering/argocd-secret" "ARGOCD_VERIFY_SSL")
+
+            # Handle ArgoCD Token
+            should_prompt_token=false
+            if [[ -z "$existing_token" ]]; then
+                should_prompt_token=true
+            elif [[ "$OVERRIDE_ALL" == "true" ]]; then
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_TOKEN:-}" ]]; then
+                    log "  Using ArgoCD Token from env file (override-all mode)"
+                    # Value already loaded from env file
+                else
+                    if confirm_override "ArgoCD Token"; then
+                        should_prompt_token=true
+                    else
+                        log "  Keeping existing ArgoCD Token from Vault"
+                        ARGOCD_TOKEN="$existing_token"
+                    fi
+                fi
+            else
+                log "  Using existing ArgoCD Token from Vault"
+                ARGOCD_TOKEN="$existing_token"
+            fi
+
+            if [[ "$should_prompt_token" == "true" ]]; then
+                [[ -n "$existing_token" ]] && export ARGOCD_TOKEN="$existing_token"
+                ARGOCD_TOKEN=$(prompt_with_env "ArgoCD Token" "ARGOCD_TOKEN" "true")
+            fi
+
+            # Handle ArgoCD API URL
+            should_prompt_url=false
+            if [[ -z "$existing_api_url" ]]; then
+                should_prompt_url=true
+            elif [[ "$OVERRIDE_ALL" == "true" ]]; then
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_API_URL:-}" ]]; then
+                    log "  Using ArgoCD API URL from env file (override-all mode)"
+                    # Value already loaded from env file
+                else
+                    if confirm_override "ArgoCD API URL"; then
+                        should_prompt_url=true
+                    else
+                        log "  Keeping existing ArgoCD API URL from Vault"
+                        ARGOCD_API_URL="$existing_api_url"
+                    fi
+                fi
+            else
+                log "  Using existing ArgoCD API URL from Vault"
+                ARGOCD_API_URL="$existing_api_url"
+            fi
+
+            if [[ "$should_prompt_url" == "true" ]]; then
+                [[ -n "$existing_api_url" ]] && export ARGOCD_API_URL="$existing_api_url"
+                ARGOCD_API_URL=$(prompt_with_env "ArgoCD API URL" "ARGOCD_API_URL" "false")
+                [[ -z "$ARGOCD_API_URL" ]] && ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local"
+            fi
+
+            # Handle ArgoCD Verify SSL
+            should_prompt_ssl=false
+            if [[ -z "$existing_verify_ssl" ]]; then
+                should_prompt_ssl=true
+            elif [[ "$OVERRIDE_ALL" == "true" ]]; then
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${ARGOCD_VERIFY_SSL:-}" ]]; then
+                    log "  Using ArgoCD Verify SSL setting from env file (override-all mode)"
+                    # Value already loaded from env file
+                else
+                    if confirm_override "ArgoCD Verify SSL setting"; then
+                        should_prompt_ssl=true
+                    else
+                        log "  Keeping existing ArgoCD Verify SSL setting from Vault"
+                        ARGOCD_VERIFY_SSL="$existing_verify_ssl"
+                    fi
+                fi
+            else
+                log "  Using existing ArgoCD Verify SSL setting from Vault"
+                ARGOCD_VERIFY_SSL="$existing_verify_ssl"
+            fi
+
+            if [[ "$should_prompt_ssl" == "true" ]]; then
+                [[ -n "$existing_verify_ssl" ]] && export ARGOCD_VERIFY_SSL="$existing_verify_ssl"
+                ARGOCD_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ARGOCD_VERIFY_SSL" "false")
+                [[ -z "$ARGOCD_VERIFY_SSL" ]] && ARGOCD_VERIFY_SSL="false"
+            fi
             ;;
         "backstage")
             echo ""
             log "🎭 Configuring Backstage agent secrets..."
-            BACKSTAGE_API_TOKEN=$(prompt_with_env "Backstage API Token" "BACKSTAGE_API_TOKEN" "true")
-            BACKSTAGE_URL=$(prompt_with_env "Backstage URL" "BACKSTAGE_URL" "false" "http://backstage.backstage.svc.cluster.local:7007")
+
+            # Try to fetch existing secrets from Vault first
+            existing_api_token=$(fetch_vault_secret "secret/ai-platform-engineering/backstage-secret" "BACKSTAGE_API_TOKEN")
+            existing_url=$(fetch_vault_secret "secret/ai-platform-engineering/backstage-secret" "BACKSTAGE_URL")
+
+            # Handle Backstage API Token
+            should_prompt_token=false
+            if [[ -z "$existing_api_token" ]]; then
+                should_prompt_token=true
+            elif [[ "$OVERRIDE_ALL" == "true" ]]; then
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_API_TOKEN:-}" ]]; then
+                    log "  Using Backstage API Token from env file (override-all mode)"
+                    # Value already loaded from env file
+                else
+                    if confirm_override "Backstage API Token"; then
+                        should_prompt_token=true
+                    else
+                        log "  Keeping existing Backstage API Token from Vault"
+                        BACKSTAGE_API_TOKEN="$existing_api_token"
+                    fi
+                fi
+            else
+                log "  Using existing Backstage API Token from Vault"
+                BACKSTAGE_API_TOKEN="$existing_api_token"
+            fi
+
+            if [[ "$should_prompt_token" == "true" ]]; then
+                [[ -n "$existing_api_token" ]] && export BACKSTAGE_API_TOKEN="$existing_api_token"
+                BACKSTAGE_API_TOKEN=$(prompt_with_env "Backstage API Token" "BACKSTAGE_API_TOKEN" "true")
+            fi
+
+            # Handle Backstage URL
+            should_prompt_url=false
+            if [[ -z "$existing_url" ]]; then
+                should_prompt_url=true
+            elif [[ "$OVERRIDE_ALL" == "true" ]]; then
+                # Check if we have env file value and should use it
+                if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_URL:-}" ]]; then
+                    log "  Using Backstage URL from env file (override-all mode)"
+                    # Value already loaded from env file
+                else
+                    if confirm_override "Backstage URL"; then
+                        should_prompt_url=true
+                    else
+                        log "  Keeping existing Backstage URL from Vault"
+                        BACKSTAGE_URL="$existing_url"
+                    fi
+                fi
+            else
+                log "  Using existing Backstage URL from Vault"
+                BACKSTAGE_URL="$existing_url"
+            fi
+
+            if [[ "$should_prompt_url" == "true" ]]; then
+                [[ -n "$existing_url" ]] && export BACKSTAGE_URL="$existing_url"
+                BACKSTAGE_URL=$(prompt_with_env "Backstage URL" "BACKSTAGE_URL" "false")
+                [[ -z "$BACKSTAGE_URL" ]] && BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
+            fi
             ;;
         "pagerduty")
             echo ""
@@ -357,13 +600,13 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/aws-secret \
                     AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
                     AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-                    AWS_REGION="$AWS_REGION" >/dev/null
+                    AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" >/dev/null
                 log "✅ AWS secrets stored"
             fi
             ;;
         "argocd")
             if [[ -n "$ARGOCD_TOKEN" ]]; then
-                vault kv put secret/ai-platform-engineering/argocd-agent-secret \
+                vault kv put secret/ai-platform-engineering/argocd-secret \
                     ARGOCD_TOKEN="$ARGOCD_TOKEN" \
                     ARGOCD_API_URL="$ARGOCD_API_URL" \
                     ARGOCD_VERIFY_SSL="$ARGOCD_VERIFY_SSL" >/dev/null
@@ -372,7 +615,7 @@ for agent in "${active_agents[@]}"; do
             ;;
         "backstage")
             if [[ -n "$BACKSTAGE_API_TOKEN" ]]; then
-                vault kv put secret/ai-platform-engineering/backstage-agent-secret \
+                vault kv put secret/ai-platform-engineering/backstage-secret \
                     BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
                     BACKSTAGE_URL="$BACKSTAGE_URL" >/dev/null
                 log "✅ Backstage secrets stored"
@@ -431,8 +674,8 @@ for agent in "${active_agents[@]}"; do
         "jira") log "  🎫 Jira: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fjira-secret" ;;
         "slack") log "  💬 Slack: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fslack-secret" ;;
         "aws") log "  ☁️  AWS: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Faws-secret" ;;
-        "argocd") log "  🚀 ArgoCD: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fargocd-agent-secret" ;;
-        "backstage") log "  🎭 Backstage: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fbackstage-agent-secret" ;;
+        "argocd") log "  🚀 ArgoCD: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fargocd-secret" ;;
+        "backstage") log "  🎭 Backstage: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fbackstage-secret" ;;
         "pagerduty") log "  📟 PagerDuty: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fpagerduty-secret" ;;
         "confluence") log "  📚 Confluence: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fconfluence-secret" ;;
         "splunk") log "  🔍 Splunk: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fsplunk-secret" ;;
@@ -457,7 +700,7 @@ kubectl create secret generic agent-secrets -n ai-platform-engineering \
     --from-literal=SLACK_TEAM_ID="$SLACK_TEAM_ID" \
     --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    --from-literal=AWS_REGION="$AWS_REGION" \
+    --from-literal=AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
     --from-literal=ARGOCD_TOKEN="$ARGOCD_TOKEN" \
     --from-literal=ARGOCD_API_URL="$ARGOCD_API_URL" \
     --from-literal=ARGOCD_VERIFY_SSL="$ARGOCD_VERIFY_SSL" \
