@@ -4,7 +4,7 @@ import * as k8s from '../../imports/k8s';
 
 /**
  * Host-cluster ingress that exposes the dev Backstage service synced from the vcluster.
- * Routes requests from /backstage on cnoe.localtest.me to the vcluster-managed service.
+ * Routes requests arriving at backstage-dev.cnoe.localtest.me to the vcluster-managed service.
  */
 export class BackstageDevHostIngressChart extends Chart {
   constructor(scope: Construct, id: string, props?: ChartProps) {
@@ -30,11 +30,11 @@ export class BackstageDevHostIngressChart extends Chart {
         ingressClassName: 'nginx',
         rules: [
           {
-            host: 'cnoe.localtest.me',
+            host: 'backstage-dev.cnoe.localtest.me',
             http: {
               paths: [
                 {
-                  path: '/backstage',
+                  path: '/',
                   pathType: 'Prefix',
                   backend: {
                     service: {

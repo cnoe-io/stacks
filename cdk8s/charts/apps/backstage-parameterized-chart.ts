@@ -373,21 +373,21 @@ clusters:
                     name: 'APP_CONFIG_app_baseUrl',
                     value:
                       envName === 'dev'
-                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        ? 'https://backstage-dev.cnoe.localtest.me:8443'
                         : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_baseUrl',
                     value:
                       envName === 'dev'
-                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        ? 'https://backstage-dev.cnoe.localtest.me:8443'
                         : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_cors_origin',
                     value:
                       envName === 'dev'
-                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        ? 'https://backstage-dev.cnoe.localtest.me:8443'
                         : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   }
                 ],

@@ -174,11 +174,12 @@ data:
       "rootUrl": "",
       "baseUrl": "",
       "redirectUris": [
-        "https://cnoe.localtest.me:8443/api/auth/keycloak-oidc/handler/frame",
+        "https://backstage-dev.cnoe.localtest.me:8443/api/auth/keycloak-oidc/handler/frame",
         "http://localhost:7007/api/auth/keycloak-oidc/handler/frame"
       ],
       "webOrigins": [
-        "/*"
+        "https://backstage-dev.cnoe.localtest.me:8443",
+        "http://localhost:7007"
       ]
     }
 
