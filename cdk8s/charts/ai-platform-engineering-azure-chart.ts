@@ -37,9 +37,7 @@ export class AiPlatformEngineeringAzureChart extends Chart {
           image: {
             repository: 'ghcr.io/cnoe-io/ai-platform-engineering',
             tag: 'stable',
-            pullPolicy: 'Always',
-            command: ['poetry', 'run', 'ai-platform-engineering'],
-            args: ['platform-engineer']
+            pullPolicy: 'Always'
           },
           multiAgentConfig: {
             protocol: 'a2a',
@@ -149,6 +147,10 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         '/spec/template/spec/containers/0/env/0/value',
         process.env.EXTERNAL_URL || 'https://ai-platform-engineering.cnoe.localtest.me:8443'
       ));
+
+      // Remove command/args overrides so the image entrypoint is used (poetry is unavailable in the container)
+      deployment.addJsonPatch(JsonPatch.remove('/spec/template/spec/containers/0/command'));
+      deployment.addJsonPatch(JsonPatch.replace('/spec/template/spec/containers/0/args', ['platform-engineer']));
     }
 
     // Create additional ingress resources if needed

@@ -332,6 +332,11 @@ clusters:
                       command: ['node', 'packages/backend', '--config', 'app-config.yaml'],
                     }
                   : {}),
+                envFrom: [
+                  {
+                    secretRef: { name: 'backstage-env-vars' },
+                  },
+                ],
                 env: [
                   {
                     name: 'LOG_LEVEL',
@@ -389,6 +394,25 @@ clusters:
                       envName === 'dev'
                         ? 'https://backstage-dev.cnoe.localtest.me:8443'
                         : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                  },
+                  {
+                    name: 'APP_CONFIG_app_signIn_provider',
+                    value: 'keycloak-oidc'
+                  },
+                  {
+                    name: 'APP_CONFIG_app_signIn_auto',
+                    value: 'true'
+                  },
+                  {
+                    name: 'APP_CONFIG_auth_environment',
+                    value: envName === 'dev' ? 'development' : 'production'
+                  },
+                  {
+                    name: 'APP_CONFIG_agentForge_baseUrl',
+                    value:
+                      envName === 'dev'
+                        ? 'https://ai-platform-engineering.cnoe.localtest.me:8443'
+                        : 'http://localhost:8000'
                   }
                 ],
                 ports: [

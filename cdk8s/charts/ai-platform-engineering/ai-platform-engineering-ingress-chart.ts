@@ -19,6 +19,11 @@ export class AiPlatformEngineeringIngressChart extends Chart {
         namespace: namespace,
         annotations: {
           'argocd.argoproj.io/sync-wave': '0',
+          'nginx.ingress.kubernetes.io/enable-cors': 'true',
+          'nginx.ingress.kubernetes.io/cors-allow-origin': 'https://backstage-dev.cnoe.localtest.me:8443',
+          'nginx.ingress.kubernetes.io/cors-allow-methods': 'GET,OPTIONS',
+          'nginx.ingress.kubernetes.io/cors-allow-credentials': 'true',
+          'nginx.ingress.kubernetes.io/cors-allow-headers': 'Authorization,Content-Type,X-Requested-With',
         },
       },
       spec: {
