@@ -1039,6 +1039,22 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
+    name: 'backstage-dev-host-ingress',
+    namespace: 'dev-vcluster',
+    chart: {
+      type: 'BackstageDevHostIngressChart'
+    },
+    argocd: {
+      syncWave: '32',
+      labels: {
+        'app.kubernetes.io/component': 'ingress',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-dev-host-ingress'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
+    }
+  },
+  {
     name: 'backstage-staging',
     namespace: 'backstage',
     chart: { 

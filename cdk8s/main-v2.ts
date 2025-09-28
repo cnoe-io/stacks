@@ -37,6 +37,7 @@ import { VclusterRegistrationJobChart } from './charts/vcluster-registration-job
 import { VclusterRegistrationCronJobChart } from './charts/vcluster-registration-cronjob-chart';
 import { NextJsParameterizedChart } from './charts/apps/nextjs-parameterized-chart';
 import { BackstageParameterizedChart } from './charts/apps/backstage-parameterized-chart';
+import { BackstageDevHostIngressChart } from './charts/apps/backstage-dev-host-ingress-chart';
 import { BackstageEnhancedChart } from './charts/apps/backstage-enhanced-chart';
 import { BackstageDevApplicationChart } from './charts/apps/backstage-dev-application-chart';
 import { BackstageStagingApplicationChart } from './charts/apps/backstage-staging-application-chart';
@@ -85,6 +86,7 @@ IdpBuilderChartFactory.register('VclusterRegistrationJobChart', VclusterRegistra
 IdpBuilderChartFactory.register('VclusterRegistrationCronJobChart', VclusterRegistrationCronJobChart);
 IdpBuilderChartFactory.register('NextJsParameterizedChart', NextJsParameterizedChart);
 IdpBuilderChartFactory.register('BackstageParameterizedChart', BackstageParameterizedChart);
+IdpBuilderChartFactory.register('BackstageDevHostIngressChart', BackstageDevHostIngressChart);
 IdpBuilderChartFactory.register('BackstageEnhancedChart', BackstageEnhancedChart);
 IdpBuilderChartFactory.register('BackstageDevApplicationChart', BackstageDevApplicationChart);
 IdpBuilderChartFactory.register('BackstageStagingApplicationChart', BackstageStagingApplicationChart);

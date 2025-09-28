@@ -17,6 +17,24 @@ export class BackstageParameterizedChart extends Chart {
 
     const envName = props.environmentName;
     const namespace = 'backstage';
+
+    const ingressGatewayIp = process.env.IDPBUILDER_INGRESS_IP || '10.96.130.21';
+    const ingressHostnames = [
+      'cnoe.localtest.me',
+      'argocd.cnoe.localtest.me',
+      'gitea.cnoe.localtest.me',
+      'gitea.gitea.cnoe.localtest.me',
+      'backstage.cnoe.localtest.me',
+      'backstage-dev.cnoe.localtest.me',
+      'backstage-staging.cnoe.localtest.me',
+      'headlamp.cnoe.localtest.me',
+      'keycloak.cnoe.localtest.me',
+      'kargo.cnoe.localtest.me',
+      'kargo-webhooks.cnoe.localtest.me',
+      'mcp-gateway.cnoe.localtest.me',
+      'ai-platform-engineering.cnoe.localtest.me',
+      'chat.cnoe.localtest.me',
+    ];
     
     // Get the appropriate image for this environment
     const imageRef = images[envName as keyof typeof images]?.backstage || images.dev.backstage;
@@ -299,12 +317,21 @@ clusters:
             imagePullSecrets: [
               { name: 'ghcr-dockercfg' }
             ],
+            hostAliases: [
+              {
+                ip: ingressGatewayIp,
+                hostnames: ingressHostnames,
+              },
+            ],
             containers: [
               {
                 name: 'backstage',
                 image: imageRef,
-                // Dev containers sleep by default for development
-                ...(envName === 'dev' ? { command: ['sleep', 'infinity'] } : {}),
+                ...(envName === 'dev'
+                  ? {
+                      command: ['node', 'packages/backend', '--config', 'app-config.yaml'],
+                    }
+                  : {}),
                 env: [
                   {
                     name: 'LOG_LEVEL',
@@ -344,15 +371,24 @@ clusters:
                   },
                   {
                     name: 'APP_CONFIG_app_baseUrl',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value:
+                      envName === 'dev'
+                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_baseUrl',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value:
+                      envName === 'dev'
+                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   },
                   {
                     name: 'APP_CONFIG_backend_cors_origin',
-                    value: envName === 'dev' ? 'https://cnoe.localtest.me:8443' : `https://backstage-${envName}.cnoe.localtest.me:8443`
+                    value:
+                      envName === 'dev'
+                        ? 'https://cnoe.localtest.me:8443/backstage'
+                        : `https://backstage-${envName}.cnoe.localtest.me:8443`
                   }
                 ],
                 ports: [
@@ -380,27 +416,24 @@ clusters:
                   }
                 },
                 imagePullPolicy: 'Always',
-                // Only add health probes for non-dev environments
-                ...(envName !== 'dev' ? {
-                  livenessProbe: {
-                    httpGet: {
-                      path: '/healthcheck',
-                      port: k8s.IntOrString.fromNumber(7007)
-                    },
-                    initialDelaySeconds: 60,
-                    periodSeconds: 10,
-                    timeoutSeconds: 5
+                livenessProbe: {
+                  httpGet: {
+                    path: '/healthcheck',
+                    port: k8s.IntOrString.fromNumber(7007)
                   },
-                  readinessProbe: {
-                    httpGet: {
-                      path: '/healthcheck',
-                      port: k8s.IntOrString.fromNumber(7007)
-                    },
-                    initialDelaySeconds: 30,
-                    periodSeconds: 10,
-                    timeoutSeconds: 5
-                  }
-                } : {})
+                  initialDelaySeconds: envName === 'dev' ? 90 : 60,
+                  periodSeconds: 10,
+                  timeoutSeconds: 5
+                },
+                readinessProbe: {
+                  httpGet: {
+                    path: '/healthcheck',
+                    port: k8s.IntOrString.fromNumber(7007)
+                  },
+                  initialDelaySeconds: envName === 'dev' ? 45 : 30,
+                  periodSeconds: 10,
+                  timeoutSeconds: 5
+                }
               }
             ],
             volumes: [
@@ -416,45 +449,47 @@ clusters:
       }
     });
 
-    // Ingress (for external access)
-    new k8s.KubeIngress(this, `${envName}-backstage-ingress`, {
-      metadata: {
-        name: `backstage-ingress-${envName}`,
-        namespace: namespace,
-        labels: {
-          app: `backstage-${envName}`,
-          environment: envName,
+    // Ingress (skip dev because host cluster ingress handles /backstage path routing)
+    if (envName !== 'dev') {
+      new k8s.KubeIngress(this, `${envName}-backstage-ingress`, {
+        metadata: {
+          name: `backstage-ingress-${envName}`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+          },
+          annotations: {
+            'nginx.ingress.kubernetes.io/force-ssl-redirect': 'false',
+            'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+            'argocd.argoproj.io/sync-wave': '30'
+          }
         },
-        annotations: {
-          'nginx.ingress.kubernetes.io/force-ssl-redirect': 'false',
-          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
-          'argocd.argoproj.io/sync-wave': '30'
-        }
-      },
-      spec: {
-        ingressClassName: 'nginx',
-        rules: [
-          {
-            host: envName === 'dev' ? 'cnoe.localtest.me' : `backstage-${envName}.cnoe.localtest.me`,
-            http: {
-              paths: [
-                {
-                  path: '/',
-                  pathType: 'Prefix',
-                  backend: {
-                    service: {
-                      name: `backstage-${envName}`,
-                      port: {
-                        number: 7007
+        spec: {
+          ingressClassName: 'nginx',
+          rules: [
+            {
+              host: `backstage-${envName}.cnoe.localtest.me`,
+              http: {
+                paths: [
+                  {
+                    path: '/',
+                    pathType: 'Prefix',
+                    backend: {
+                      service: {
+                        name: `backstage-${envName}`,
+                        port: {
+                          number: 7007
+                        }
                       }
                     }
                   }
-                }
-              ]
+                ]
+              }
             }
-          }
-        ]
-      }
-    });
+          ]
+        }
+      });
+    }
   }
 }
