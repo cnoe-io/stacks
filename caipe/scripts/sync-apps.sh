@@ -72,13 +72,13 @@ get_app_health() {
 sync_app_kubectl() {
     local app_name="$1"
     log "Syncing $app_name using kubectl..."
-    
+
     # Trigger sync by adding annotation
     kubectl annotate application "$app_name" -n argocd argocd.argoproj.io/refresh=normal --overwrite
-    
+
     # Wait a moment for the annotation to take effect
     sleep 2
-    
+
     # Remove the annotation
     kubectl annotate application "$app_name" -n argocd argocd.argoproj.io/refresh- || true
 }
@@ -87,10 +87,10 @@ sync_app_kubectl() {
 sync_app_argocd() {
     local app_name="$1"
     log "Syncing $app_name using argocd CLI..."
-    
+
     # Login to ArgoCD (assuming port-forward is available)
     argocd login argocd.cnoe.localtest.me:8443 --username admin --password "$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 -d)" --insecure
-    
+
     # Sync the application
     argocd app sync "$app_name" --timeout 300
 }
@@ -100,26 +100,26 @@ wait_for_app_sync() {
     local app_name="$1"
     local timeout=300
     local count=0
-    
+
     log "Waiting for $app_name to sync and become healthy..."
-    
+
     while [[ $count -lt $timeout ]]; do
         local sync_status=$(get_app_status "$app_name")
         local health_status=$(get_app_health "$app_name")
-        
+
         if [[ "$sync_status" == "Synced" && "$health_status" == "Healthy" ]]; then
             success "$app_name is synced and healthy"
             return 0
         fi
-        
+
         if [[ $((count % 30)) -eq 0 ]]; then
             log "$app_name status: sync=$sync_status, health=$health_status"
         fi
-        
+
         sleep 5
         ((count+=5))
     done
-    
+
     warn "$app_name did not become synced and healthy within ${timeout}s"
     return 1
 }
@@ -139,8 +139,8 @@ log "Checking application status before sync..."
 # Show current status
 for app in "${APPS[@]}"; do
     if app_exists "$app"; then
-        local sync_status=$(get_app_status "$app")
-        local health_status=$(get_app_health "$app")
+        sync_status=$(get_app_status "$app")
+        health_status=$(get_app_health "$app")
         log "$app: sync=$sync_status, health=$health_status"
     else
         warn "$app: Application not found"
@@ -155,13 +155,13 @@ for app in "${APPS[@]}"; do
     if app_exists "$app"; then
         echo ""
         log "Processing application: $app"
-        
+
         if [[ "$USE_KUBECTL" == "true" ]]; then
             sync_app_kubectl "$app"
         else
             sync_app_argocd "$app"
         fi
-        
+
         # Wait for sync to complete
         wait_for_app_sync "$app"
     else
@@ -175,9 +175,9 @@ log "Final application status check..."
 # Show final status
 for app in "${APPS[@]}"; do
     if app_exists "$app"; then
-        local sync_status=$(get_app_status "$app")
-        local health_status=$(get_app_health "$app")
-        
+        sync_status=$(get_app_status "$app")
+        health_status=$(get_app_health "$app")
+
         if [[ "$sync_status" == "Synced" && "$health_status" == "Healthy" ]]; then
             success "$app: sync=$sync_status, health=$health_status"
         else
