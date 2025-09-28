@@ -329,7 +329,8 @@ clusters:
                 image: imageRef,
                 ...(envName === 'dev'
                   ? {
-                      command: ['node', 'packages/backend', '--config', 'app-config.yaml'],
+                      // Use sleep infinity for dev environment to allow DevSpace to attach
+                      command: ['sleep', 'infinity'],
                     }
                   : {}),
                 envFrom: [
@@ -440,24 +441,27 @@ clusters:
                   }
                 },
                 imagePullPolicy: 'Always',
-                livenessProbe: {
-                  httpGet: {
-                    path: '/healthcheck',
-                    port: k8s.IntOrString.fromNumber(7007)
+                // Disable health checks for dev environment since we're using sleep infinity
+                ...(envName !== 'dev' ? {
+                  livenessProbe: {
+                    httpGet: {
+                      path: '/healthcheck',
+                      port: k8s.IntOrString.fromNumber(7007)
+                    },
+                    initialDelaySeconds: 60,
+                    periodSeconds: 10,
+                    timeoutSeconds: 5
                   },
-                  initialDelaySeconds: envName === 'dev' ? 90 : 60,
-                  periodSeconds: 10,
-                  timeoutSeconds: 5
-                },
-                readinessProbe: {
-                  httpGet: {
-                    path: '/healthcheck',
-                    port: k8s.IntOrString.fromNumber(7007)
-                  },
-                  initialDelaySeconds: envName === 'dev' ? 45 : 30,
-                  periodSeconds: 10,
-                  timeoutSeconds: 5
-                }
+                  readinessProbe: {
+                    httpGet: {
+                      path: '/healthcheck',
+                      port: k8s.IntOrString.fromNumber(7007)
+                    },
+                    initialDelaySeconds: 30,
+                    periodSeconds: 10,
+                    timeoutSeconds: 5
+                  }
+                } : {})
               }
             ],
             volumes: [
