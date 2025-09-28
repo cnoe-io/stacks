@@ -158,6 +158,72 @@ export class BackstageParameterizedChart extends Chart {
       }
     });
 
+    // Persistent Volume Claims for dev environment caching
+    if (envName === 'dev') {
+      // Nix store cache
+      new k8s.KubePersistentVolumeClaim(this, `${envName}-nix-store`, {
+        metadata: {
+          name: `backstage-${envName}-nix-store`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+            purpose: 'nix-cache'
+          }
+        },
+        spec: {
+          accessModes: ['ReadWriteOnce'],
+          resources: {
+            requests: {
+              storage: k8s.Quantity.fromString('100Gi')
+            }
+          }
+        }
+      });
+
+      // Home cache directory
+      new k8s.KubePersistentVolumeClaim(this, `${envName}-home-cache`, {
+        metadata: {
+          name: `backstage-${envName}-home-cache`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+            purpose: 'home-cache'
+          }
+        },
+        spec: {
+          accessModes: ['ReadWriteOnce'],
+          resources: {
+            requests: {
+              storage: k8s.Quantity.fromString('20Gi')
+            }
+          }
+        }
+      });
+
+      // Home local directory
+      new k8s.KubePersistentVolumeClaim(this, `${envName}-home-local`, {
+        metadata: {
+          name: `backstage-${envName}-home-local`,
+          namespace: namespace,
+          labels: {
+            app: `backstage-${envName}`,
+            environment: envName,
+            purpose: 'home-local'
+          }
+        },
+        spec: {
+          accessModes: ['ReadWriteOnce'],
+          resources: {
+            requests: {
+              storage: k8s.Quantity.fromString('20Gi')
+            }
+          }
+        }
+      });
+    }
+
     // PostgreSQL StatefulSet
     new k8s.KubeStatefulSet(this, `${envName}-postgresql`, {
       metadata: {
@@ -428,7 +494,22 @@ clusters:
                     name: 'k8s-config',
                     mountPath: '/app/k8s-config.yaml',
                     subPath: 'k8s-config.yaml'
-                  }
+                  },
+                  // Add PVC mounts for dev environment
+                  ...(envName === 'dev' ? [
+                    {
+                      name: 'nix-store',
+                      mountPath: '/nix'
+                    },
+                    {
+                      name: 'home-cache',
+                      mountPath: '/home/code/.cache'
+                    },
+                    {
+                      name: 'home-local',
+                      mountPath: '/home/code/.local'
+                    }
+                  ] : [])
                 ],
                 resources: {
                   requests: {
@@ -470,7 +551,28 @@ clusters:
                 secret: {
                   secretName: `k8s-config-${envName}`
                 }
-              }
+              },
+              // Add PVC volumes for dev environment
+              ...(envName === 'dev' ? [
+                {
+                  name: 'nix-store',
+                  persistentVolumeClaim: {
+                    claimName: `backstage-${envName}-nix-store`
+                  }
+                },
+                {
+                  name: 'home-cache',
+                  persistentVolumeClaim: {
+                    claimName: `backstage-${envName}-home-cache`
+                  }
+                },
+                {
+                  name: 'home-local',
+                  persistentVolumeClaim: {
+                    claimName: `backstage-${envName}-home-local`
+                  }
+                }
+              ] : [])
             ]
           }
         }
