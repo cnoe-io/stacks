@@ -208,7 +208,7 @@ export class BackstageSecretsChart extends Chart {
           template: {
             engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
             data: {
-              BACKSTAGE_FRONTEND_URL: 'https://backstage.cnoe.localtest.me:8443',
+              BACKSTAGE_FRONTEND_URL: 'https://cnoe.localtest.me:8443',
               POSTGRES_HOST: 'postgresql.backstage.svc.cluster.local',
               POSTGRES_PORT: '5432',
               POSTGRES_DB: 'backstage',

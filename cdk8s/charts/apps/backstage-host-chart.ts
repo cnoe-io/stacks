@@ -175,6 +175,21 @@ export class BackstageHostChart extends Chart {
       },
     });
 
+    // Backstage Kubernetes plugin configuration secret
+    new k8s.KubeSecret(this, `${appName}-k8s-config`, {
+      metadata: {
+        name: `${appName}-k8s-config`,
+        namespace,
+        labels: {
+          app: appName,
+          environment: environmentLabel,
+        },
+      },
+      stringData: {
+        'k8s-config.yaml': `type: 'config'\nclusters:\n  - url: https://kubernetes.default.svc.cluster.local\n    name: host-cluster\n    authProvider: 'serviceAccount'\n    skipTLSVerify: true\n    skipMetricsLookup: true\n    serviceAccountToken:\n      $file: /var/run/secrets/kubernetes.io/serviceaccount/token\n    caData:\n      $file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt`
+      },
+    });
+
     // Headless service to reach the Postgres StatefulSet
     new k8s.KubeService(this, `${postgresName}-service`, {
       metadata: {
