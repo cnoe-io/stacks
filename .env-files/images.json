@@ -1,7 +1,7 @@
 {
   "dev": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "docker.io/vpittamp23/backstage:1.0.2",
+    "backstage": "docker.io/vpittamp23/backstage:1.0.3",
     "flagdUi": "ghcr.io/vpittamp/devspace-containers/typescript:20",
     "claudecodeui": "ghcr.io/vpittamp/devspace-containers/typescript:20"
   },
@@ -13,7 +13,7 @@
   },
   "production": {
     "nextjs": "ghcr.io/pittampalliorg/chat:78",
-    "backstage": "docker.io/vpittamp23/backstage:1.0.2",
+    "backstage": "docker.io/vpittamp23/backstage:1.0.3",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   }
