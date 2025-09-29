@@ -31,7 +31,7 @@ export class BackstageDevApplicationChart extends Chart {
       spec: {
         project: 'default',
         destination: {
-          name: 'dev-vcluster',
+          name: 'dev-vcluster',  // Deploy to vcluster like nextjs-dev
           namespace: 'backstage'
         },
         source: {

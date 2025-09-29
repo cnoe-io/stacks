@@ -159,7 +159,9 @@ export class BackstageParameterizedChart extends Chart {
     });
 
     // Persistent Volume Claims for dev environment caching
-    if (envName === 'dev') {
+    // Disable PVCs for vcluster deployment - they cause sync issues
+    // DevSpace will run on main cluster, not in vcluster
+    if (envName === 'dev' && false) {
       // Nix store cache
       new k8s.KubePersistentVolumeClaim(this, `${envName}-nix-store`, {
         metadata: {
@@ -495,8 +497,8 @@ clusters:
                     mountPath: '/app/k8s-config.yaml',
                     subPath: 'k8s-config.yaml'
                   },
-                  // Add PVC mounts for dev environment
-                  ...(envName === 'dev' ? [
+                  // PVC mounts disabled for vcluster deployment
+                  ...(envName === 'dev' && false ? [
                     {
                       name: 'nix-store',
                       mountPath: '/nix'
@@ -552,8 +554,8 @@ clusters:
                   secretName: `k8s-config-${envName}`
                 }
               },
-              // Add PVC volumes for dev environment
-              ...(envName === 'dev' ? [
+              // PVC volumes disabled for vcluster deployment
+              ...(envName === 'dev' && false ? [
                 {
                   name: 'nix-store',
                   persistentVolumeClaim: {
