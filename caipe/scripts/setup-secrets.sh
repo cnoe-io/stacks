@@ -16,6 +16,62 @@ done
 
 log "🔧 Setting up LLM credentials and agent secrets"
 
+# Load environment variables from .env files
+load_env_file() {
+    local env_file="$1"
+    if [[ -f "$env_file" ]]; then
+        log "📄 Loading environment variables from $env_file"
+        # Export variables from .env file, ignoring comments and empty lines
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "${line// }" ]] && continue
+
+            # Export the variable
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+                export "$line"
+            fi
+        done < "$env_file"
+        return 0
+    fi
+    return 1
+}
+
+# Check for .env files in home directory and current directory
+ENV_LOADED=false
+if load_env_file "$HOME/.env"; then
+    ENV_LOADED=true
+fi
+if load_env_file ".env"; then
+    ENV_LOADED=true
+fi
+
+if [[ "$ENV_LOADED" == "true" ]]; then
+    log "✅ Environment variables loaded from .env file(s)"
+
+    # Show which variables are available from .env
+    log "📋 Available variables from .env:"
+    for var in GITHUB_PERSONAL_ACCESS_TOKEN ATLASSIAN_TOKEN ATLASSIAN_API_URL ATLASSIAN_EMAIL ATLASSIAN_VERIFY_SSL \
+               SLACK_BOT_TOKEN SLACK_TOKEN SLACK_APP_TOKEN SLACK_SIGNING_SECRET SLACK_CLIENT_SECRET SLACK_TEAM_ID \
+               AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ARGOCD_TOKEN ARGOCD_API_URL ARGOCD_VERIFY_SSL \
+               BACKSTAGE_API_TOKEN BACKSTAGE_URL PAGERDUTY_API_KEY PAGERDUTY_API_URL CONFLUENCE_API_URL \
+               SPLUNK_TOKEN SPLUNK_API_URL WEBEX_TOKEN KOMODOR_TOKEN KOMODOR_API_URL \
+               AZURE_OPENAI_API_KEY AZURE_OPENAI_ENDPOINT AZURE_OPENAI_DEPLOYMENT AZURE_OPENAI_API_VERSION \
+               OPENAI_API_KEY OPENAI_ENDPOINT OPENAI_MODEL_NAME AWS_BEDROCK_MODEL_ID AWS_BEDROCK_PROVIDER \
+               GOOGLE_API_KEY GOOGLE_MODEL_NAME GCP_PROJECT_ID GCP_LOCATION GCP_MODEL_NAME; do
+        if [[ -n "${!var}" ]]; then
+            if [[ "$var" =~ (TOKEN|KEY|SECRET) ]]; then
+                log "  🔐 $var: ${!var:0:8}..."
+            else
+                log "  📝 $var: ${!var}"
+            fi
+        fi
+    done
+    echo ""
+else
+    log "ℹ️  No .env files found, will prompt for all values"
+fi
+
 # Setup Vault connection
 VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.token}' | base64 -d)
 export VAULT_ADDR="http://localhost:8200"
@@ -36,18 +92,20 @@ prompt_with_env() {
   if [[ -n "$env_value" ]]; then
     if [[ "$is_secret" == "true" ]]; then
       local hint="${env_value:0:5}..."
-      printf "%s (env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
+      printf "%s (from .env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
       IFS= read -r choice < /dev/tty
       if [[ -z "$choice" ]]; then
         result="$env_value"
+        printf "✅ Using value from .env file\n" > /dev/tty
       else
         IFS= read -rs -p "$prompt: " result < /dev/tty
         printf "\n" > /dev/tty
       fi
     else
-      IFS= read -r -p "$prompt (env: $env_value) [Enter to use, type new]: " choice < /dev/tty
+      IFS= read -r -p "$prompt (from .env: $env_value) [Enter to use, type new]: " choice < /dev/tty
       if [[ -z "$choice" ]]; then
         result="$env_value"
+        printf "✅ Using value from .env file\n" > /dev/tty
       else
         IFS= read -r -p "$prompt: " result < /dev/tty
       fi
@@ -198,27 +256,41 @@ fi
 log "📝 Configuring secrets for agents: ${active_agents[*]}"
 echo ""
 
-# Prompt for LLM provider
-echo ""
-echo "Supported LLM Providers:"
-echo "1) azure-openai"
-echo "2) openai"
-echo "3) aws-bedrock"
-echo "4) google-gemini"
-echo "5) gcp-vertex"
-echo ""
-read -p "Select LLM provider (1-5): " provider_choice
+# Prompt for LLM provider (only if not already set from .env)
+if [[ -z "$LLM_PROVIDER" ]]; then
+    echo ""
+    echo "Supported LLM Providers:"
+    echo "1) azure-openai"
+    echo "2) openai"
+    echo "3) aws-bedrock"
+    echo "4) google-gemini"
+    echo "5) gcp-vertex"
+    echo ""
+    read -p "Select LLM provider (1-5): " provider_choice
 
-case $provider_choice in
-    1) LLM_PROVIDER="azure-openai" ;;
-    2) LLM_PROVIDER="openai" ;;
-    3) LLM_PROVIDER="aws-bedrock" ;;
-    4) LLM_PROVIDER="google-gemini" ;;
-    5) LLM_PROVIDER="gcp-vertex" ;;
-    *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
-esac
-
-log "📝 Selected provider: $LLM_PROVIDER"
+    case $provider_choice in
+        1) LLM_PROVIDER="azure-openai" ;;
+        2) LLM_PROVIDER="openai" ;;
+        3) LLM_PROVIDER="aws-bedrock" ;;
+        4) LLM_PROVIDER="google-gemini" ;;
+        5) LLM_PROVIDER="gcp-vertex" ;;
+        *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
+    esac
+    log "📝 Selected provider: $LLM_PROVIDER"
+else
+    # Validate LLM_PROVIDER from .env
+    case $LLM_PROVIDER in
+        "azure-openai"|"openai"|"aws-bedrock"|"google-gemini"|"gcp-vertex")
+            log "📝 Using LLM provider from .env: $LLM_PROVIDER"
+            ;;
+        *)
+            log "❌ Invalid LLM_PROVIDER from .env: $LLM_PROVIDER"
+            log "Supported providers: azure-openai, openai, aws-bedrock, google-gemini, gcp-vertex"
+            kill $VAULT_PID 2>/dev/null
+            exit 1
+            ;;
+    esac
+fi
 echo ""
 log "🔒 Note: Sensitive credentials will not be displayed on screen"
 

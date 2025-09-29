@@ -87,7 +87,7 @@ spec:
           vault kv put secret/ai-platform-engineering/aws-secret \
             AWS_ACCESS_KEY_ID="" \
             AWS_SECRET_ACCESS_KEY="" \
-            AWS_DEFAULT_REGION="" >/dev/null
+            AWS_REGION="" >/dev/null
 
           # Backstage agent secrets
           echo "Creating backstage-secret..."
