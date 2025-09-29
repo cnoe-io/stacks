@@ -256,27 +256,41 @@ fi
 log "📝 Configuring secrets for agents: ${active_agents[*]}"
 echo ""
 
-# Prompt for LLM provider
-echo ""
-echo "Supported LLM Providers:"
-echo "1) azure-openai"
-echo "2) openai"
-echo "3) aws-bedrock"
-echo "4) google-gemini"
-echo "5) gcp-vertex"
-echo ""
-read -p "Select LLM provider (1-5): " provider_choice
+# Prompt for LLM provider (only if not already set from .env)
+if [[ -z "$LLM_PROVIDER" ]]; then
+    echo ""
+    echo "Supported LLM Providers:"
+    echo "1) azure-openai"
+    echo "2) openai"
+    echo "3) aws-bedrock"
+    echo "4) google-gemini"
+    echo "5) gcp-vertex"
+    echo ""
+    read -p "Select LLM provider (1-5): " provider_choice
 
-case $provider_choice in
-    1) LLM_PROVIDER="azure-openai" ;;
-    2) LLM_PROVIDER="openai" ;;
-    3) LLM_PROVIDER="aws-bedrock" ;;
-    4) LLM_PROVIDER="google-gemini" ;;
-    5) LLM_PROVIDER="gcp-vertex" ;;
-    *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
-esac
-
-log "📝 Selected provider: $LLM_PROVIDER"
+    case $provider_choice in
+        1) LLM_PROVIDER="azure-openai" ;;
+        2) LLM_PROVIDER="openai" ;;
+        3) LLM_PROVIDER="aws-bedrock" ;;
+        4) LLM_PROVIDER="google-gemini" ;;
+        5) LLM_PROVIDER="gcp-vertex" ;;
+        *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
+    esac
+    log "📝 Selected provider: $LLM_PROVIDER"
+else
+    # Validate LLM_PROVIDER from .env
+    case $LLM_PROVIDER in
+        "azure-openai"|"openai"|"aws-bedrock"|"google-gemini"|"gcp-vertex")
+            log "📝 Using LLM provider from .env: $LLM_PROVIDER"
+            ;;
+        *)
+            log "❌ Invalid LLM_PROVIDER from .env: $LLM_PROVIDER"
+            log "Supported providers: azure-openai, openai, aws-bedrock, google-gemini, gcp-vertex"
+            kill $VAULT_PID 2>/dev/null
+            exit 1
+            ;;
+    esac
+fi
 echo ""
 log "🔒 Note: Sensitive credentials will not be displayed on screen"
 
