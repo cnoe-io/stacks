@@ -18,7 +18,7 @@ export class BackstageHostChart extends Chart {
     const appName = 'backstage';
     const environmentLabel = 'host';
     const postgresName = 'postgresql';
-    const ingressHost = 'backstage.cnoe.localtest.me';
+    const ingressHost = 'cnoe.localtest.me';
     const baseUrl = `https://${ingressHost}:8443`;
 
     const imageRef = images.production?.backstage ?? images.dev.backstage;

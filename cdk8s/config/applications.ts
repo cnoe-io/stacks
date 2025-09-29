@@ -908,7 +908,13 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'platform',
         'app.kubernetes.io/name': 'backstage'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      syncPolicy: {
+        automated: {
+          prune: false,
+          selfHeal: false
+        },
+        syncOptions: ['CreateNamespace=true']
+      }
     }
   }
   // Add more applications here as needed
