@@ -204,6 +204,7 @@ data:
         baseUrl: ${ARGO_WORKFLOWS_URL}
     agentForge:
       baseUrl: ${AGENT_FORGE_URL}
+      showOptions: true
 ---
 apiVersion: v1
 kind: Secret
