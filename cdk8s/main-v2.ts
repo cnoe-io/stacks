@@ -28,19 +28,8 @@ import { KargoWebhookPatchChart } from './charts/pipelines/kargo-webhook-patch-c
 import { DaggerInfraChart } from './charts/infra/dagger-infra-chart';
 import { AiPlatformEngineeringAzureChart } from './charts/ai-platform-engineering-azure-chart';
 import { VaultChart } from './charts/infra/vault/vault-composite-chart';
-import { VclusterDevChart } from './charts/apps/vcluster-dev-chart';
-import { VclusterStagingChart } from './charts/apps/vcluster-staging-chart';
-import { VclusterDevIngressChart } from './charts/apps/vcluster-dev-ingress-chart';
-import { VclusterStagingIngressChart } from './charts/apps/vcluster-staging-ingress-chart';
-import { VclusterRegistrationRbacChart } from './charts/vcluster-registration-rbac-chart';
-import { VclusterRegistrationJobChart } from './charts/vcluster-registration-job-chart';
-import { VclusterRegistrationCronJobChart } from './charts/vcluster-registration-cronjob-chart';
 import { NextJsParameterizedChart } from './charts/apps/nextjs-parameterized-chart';
-import { BackstageParameterizedChart } from './charts/apps/backstage-parameterized-chart';
-import { BackstageDevHostIngressChart } from './charts/apps/backstage-dev-host-ingress-chart';
-import { BackstageEnhancedChart } from './charts/apps/backstage-enhanced-chart';
-import { BackstageDevApplicationChart } from './charts/apps/backstage-dev-application-chart';
-import { BackstageStagingApplicationChart } from './charts/apps/backstage-staging-application-chart';
+import { BackstageHostChart } from './charts/apps/backstage-host-chart';
 import { BackstageSecretsChart } from './charts/secrets/backstage-secrets-chart';
 import { NextJsDevApplicationChart } from './charts/apps/nextjs-dev-application-chart';
 import { NextJsStagingApplicationChart } from './charts/apps/nextjs-staging-application-chart';
@@ -77,19 +66,8 @@ IdpBuilderChartFactory.register('KargoWebhookPatchChart', KargoWebhookPatchChart
 IdpBuilderChartFactory.register('DaggerInfraChart', DaggerInfraChart);
 IdpBuilderChartFactory.register('AiPlatformEngineeringAzureChart', AiPlatformEngineeringAzureChart);
 IdpBuilderChartFactory.register('VaultChart', VaultChart);
-IdpBuilderChartFactory.register('VclusterDevChart', VclusterDevChart);
-IdpBuilderChartFactory.register('VclusterStagingChart', VclusterStagingChart);
-IdpBuilderChartFactory.register('VclusterDevIngressChart', VclusterDevIngressChart);
-IdpBuilderChartFactory.register('VclusterStagingIngressChart', VclusterStagingIngressChart);
-IdpBuilderChartFactory.register('VclusterRegistrationRbacChart', VclusterRegistrationRbacChart);
-IdpBuilderChartFactory.register('VclusterRegistrationJobChart', VclusterRegistrationJobChart);
-IdpBuilderChartFactory.register('VclusterRegistrationCronJobChart', VclusterRegistrationCronJobChart);
 IdpBuilderChartFactory.register('NextJsParameterizedChart', NextJsParameterizedChart);
-IdpBuilderChartFactory.register('BackstageParameterizedChart', BackstageParameterizedChart);
-IdpBuilderChartFactory.register('BackstageDevHostIngressChart', BackstageDevHostIngressChart);
-IdpBuilderChartFactory.register('BackstageEnhancedChart', BackstageEnhancedChart);
-IdpBuilderChartFactory.register('BackstageDevApplicationChart', BackstageDevApplicationChart);
-IdpBuilderChartFactory.register('BackstageStagingApplicationChart', BackstageStagingApplicationChart);
+IdpBuilderChartFactory.register('BackstageHostChart', BackstageHostChart);
 IdpBuilderChartFactory.register('BackstageSecretsChart', BackstageSecretsChart);
 IdpBuilderChartFactory.register('NextJsDevApplicationChart', NextJsDevApplicationChart);
 IdpBuilderChartFactory.register('NextJsStagingApplicationChart', NextJsStagingApplicationChart);
@@ -224,9 +202,9 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       outdir: argoOutDir,
     });
     
-    // Check if this is a parameterized application (NextJs or Backstage)
-    // These now generate individual applications, not ApplicationSets
-    if (appConfig.chart?.type === 'NextJsParameterizedChart' || appConfig.chart?.type === 'BackstageParameterizedChart') {
+    // Check if this is a parameterized application (NextJs currently)
+    // These generate individual applications rather than ApplicationSets
+    if (appConfig.chart?.type === 'NextJsParameterizedChart') {
       const envName = appConfig.chart.props?.environmentName;
       if (!envName) {
         console.error(`Missing environmentName for ${appConfig.name}`);
@@ -234,41 +212,14 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       }
       
       // Generate the actual manifests for this specific environment
-      const ChartClass = appConfig.chart.type === 'NextJsParameterizedChart' 
-        ? NextJsParameterizedChart 
-        : BackstageParameterizedChart;
-      
-      new ChartClass(manifestApp, appConfig.name, {
+      new NextJsParameterizedChart(manifestApp, appConfig.name, {
         environmentName: envName,
       });
       
       // Generate the ArgoCD Application that points to these manifests
-      // Map the chart type and environment to the correct Application chart
-      let ApplicationChartClass;
-      if (appConfig.chart.type === 'NextJsParameterizedChart') {
-        ApplicationChartClass = envName === 'dev' ? NextJsDevApplicationChart : NextJsStagingApplicationChart;
-      } else {
-        ApplicationChartClass = envName === 'dev' ? BackstageDevApplicationChart : BackstageStagingApplicationChart;
-      }
-      
+      const ApplicationChartClass = envName === 'dev' ? NextJsDevApplicationChart : NextJsStagingApplicationChart;
       new ApplicationChartClass(argoApp, `${appConfig.name}-app`, {});
       
-    } else if (appConfig.chart?.type === 'VclusterDevChart' || appConfig.chart?.type === 'VclusterStagingChart') {
-      // Generate vcluster Application directly without ArgoApplicationsChartV2 wrapper
-      // These charts already contain the full Application definition with Helm source
-      const ChartClass = appConfig.chart.type === 'VclusterDevChart' ? VclusterDevChart : VclusterStagingChart;
-      new ChartClass(argoApp, appConfig.name, appConfig.chart.props || {});
-    } else if (appConfig.chart?.type === 'VclusterRegistrationJobChart') {
-      // Registration job needs special handling - bypass wrapper to avoid cnoe:// URLs
-      // Just generate the manifests, ArgoCD app will be created separately
-      // For now, use standard approach but this needs to be fixed for production
-      new ArgoApplicationsChartV2(argoApp, appConfig.name, {
-        applicationName: appConfig.name,
-        applicationNamespace: appConfig.namespace,
-        manifestPath: 'manifests',
-        argoCdConfig: appConfig.argocd,
-        environment: options.environment
-      });
     } else if (appConfig.argocd?.sources && appConfig.argocd.sources.length > 0) {
       // Multi-source application
       new ArgoApplicationsChartV2(argoApp, appConfig.name, {

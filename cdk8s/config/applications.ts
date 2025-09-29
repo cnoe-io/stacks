@@ -40,129 +40,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   */
-  // VCluster RBAC - Wave 5 (before vclusters)
-  {
-    name: 'vcluster-registration-rbac',
-    namespace: 'external-secrets',
-    chart: {
-      type: 'VclusterRegistrationRbacChart'
-    },
-    argocd: {
-      syncWave: '5',  // Before vclusters and registration
-      labels: {
-        'app.kubernetes.io/component': 'rbac',
-        'app.kubernetes.io/part-of': 'vcluster-registration',
-        'app.kubernetes.io/name': 'vcluster-registration-rbac'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
-    }
-  },
-  // Dev VCluster - Wave 10
-  {
-    name: 'vcluster-dev',
-    namespace: 'dev-vcluster',
-    chart: {
-      type: 'VclusterDevChart'
-    },
-    argocd: {
-      syncWave: '10',
-      labels: {
-        'app.kubernetes.io/component': 'vcluster',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'vcluster-dev',
-        'app.kubernetes.io/instance': 'dev'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
-  // Dev VCluster Ingress - Wave 15 (after vcluster is created)
-  {
-    name: 'vcluster-dev-ingress',
-    namespace: 'dev-vcluster',
-    chart: {
-      type: 'VclusterDevIngressChart'
-    },
-    argocd: {
-      syncWave: '15',
-      labels: {
-        'app.kubernetes.io/component': 'ingress',
-        'app.kubernetes.io/part-of': 'vcluster',
-        'app.kubernetes.io/name': 'vcluster-dev-ingress',
-        'app.kubernetes.io/instance': 'dev'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
-  // Staging VCluster - Wave 10
-  {
-    name: 'vcluster-staging',
-    namespace: 'staging-vcluster',
-    chart: {
-      type: 'VclusterStagingChart'
-    },
-    argocd: {
-      syncWave: '10',
-      labels: {
-        'app.kubernetes.io/component': 'vcluster',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'vcluster-staging',
-        'app.kubernetes.io/instance': 'staging'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
-  // Staging VCluster Ingress - Wave 15 (after vcluster is created)
-  {
-    name: 'vcluster-staging-ingress',
-    namespace: 'staging-vcluster',
-    chart: {
-      type: 'VclusterStagingIngressChart'
-    },
-    argocd: {
-      syncWave: '15',
-      labels: {
-        'app.kubernetes.io/component': 'ingress',
-        'app.kubernetes.io/part-of': 'vcluster',
-        'app.kubernetes.io/name': 'vcluster-staging-ingress',
-        'app.kubernetes.io/instance': 'staging'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
-  // VCluster registration job - Wave 20 (after vclusters)
-  {
-    name: 'vcluster-registration-job',
-    namespace: 'argocd',
-    chart: {
-      type: 'VclusterRegistrationJobChart'
-    },
-    argocd: {
-      syncWave: '20',
-      labels: {
-        'app.kubernetes.io/component': 'registration',
-        'app.kubernetes.io/part-of': 'vcluster-registration',
-        'app.kubernetes.io/name': 'vcluster-registration-job'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
-    }
-  },
-  // VCluster registration cronjob - Wave 25 (after initial job)
-  {
-    name: 'vcluster-registration-cronjob',
-    namespace: 'argocd',
-    chart: {
-      type: 'VclusterRegistrationCronJobChart'
-    },
-    argocd: {
-      syncWave: '25',
-      labels: {
-        'app.kubernetes.io/component': 'registration',
-        'app.kubernetes.io/part-of': 'vcluster-registration',
-        'app.kubernetes.io/name': 'vcluster-registration-cronjob'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
-    }
-  },
   {
     name: 'nextjs-namespace',
     namespace: 'nextjs',
@@ -1019,57 +896,17 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
-    name: 'backstage-dev',
+    name: 'backstage',
     namespace: 'backstage',
-    chart: { 
-      // Use parameterized chart with External Secrets for vcluster deployment
-      type: 'BackstageParameterizedChart',
-      props: {
-        environmentName: 'dev'
-      }
-    },
-    argocd: {
-      syncWave: '20',
-      labels: {
-        'app.kubernetes.io/component': 'developer-portal',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'backstage-dev'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
-    }
-  },
-  {
-    name: 'backstage-dev-host-ingress',
-    namespace: 'dev-vcluster',
     chart: {
-      type: 'BackstageDevHostIngressChart'
-    },
-    argocd: {
-      syncWave: '32',
-      labels: {
-        'app.kubernetes.io/component': 'ingress',
-        'app.kubernetes.io/part-of': 'backstage',
-        'app.kubernetes.io/name': 'backstage-dev-host-ingress'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'])
-    }
-  },
-  {
-    name: 'backstage-staging',
-    namespace: 'backstage',
-    chart: { 
-      // Use parameterized chart for staging
-      type: 'BackstageParameterizedChart',
-      props: {
-        environmentName: 'staging'
-      }
+      type: 'BackstageHostChart'
     },
     argocd: {
       syncWave: '20',
       labels: {
         'app.kubernetes.io/component': 'developer-portal',
         'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'backstage-staging'
+        'app.kubernetes.io/name': 'backstage'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }

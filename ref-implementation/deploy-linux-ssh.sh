@@ -359,13 +359,6 @@ if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
         # Wait a moment for Azure to process the update
         echo "  Waiting for Azure to process JWKS update..."
         sleep 5
-        
-        # If External Secrets is already deployed, restart it to pick up the new JWKS
-        if kubectl get deployment -n external-secrets external-secrets &>/dev/null 2>&1; then
-            echo -e "${GREEN}Restarting External Secrets to use new JWKS...${NC}"
-            kubectl rollout restart deployment -n external-secrets external-secrets external-secrets-cert-controller external-secrets-webhook
-            kubectl rollout status deployment -n external-secrets external-secrets --timeout=60s
-        fi
     else
         echo -e "${RED}⚠️  JWKS sync failed - External Secrets will not work properly${NC}"
         echo -e "${YELLOW}You can manually run: ${SCRIPT_DIR}/sync-jwks-to-azure.sh${NC}"
@@ -377,67 +370,27 @@ fi
 
 # Step 11: Verify External Secrets health
 echo -e "${GREEN}Verifying External Secrets configuration...${NC}"
-MAX_WAIT=60
-for i in $(seq 1 $MAX_WAIT); do
-    STATUS=$(kubectl get clustersecretstore azure-keyvault-store -o jsonpath='{.status.conditions[0].reason}' 2>/dev/null || echo "NotFound")
-    if [ "$STATUS" == "Valid" ]; then
-        echo -e "${GREEN}✓ Azure Key Vault integration is working${NC}"
-        break
-    elif [ "$STATUS" == "NotFound" ]; then
-        echo "  Waiting for ClusterSecretStore to be created... ($i/$MAX_WAIT)"
-    else
-        echo "  Azure Key Vault status: $STATUS ($i/$MAX_WAIT)"
-    fi
-    sleep 2
-done
-
-if [ "$STATUS" != "Valid" ]; then
-    echo -e "${YELLOW}⚠️  Azure Key Vault integration not ready after ${MAX_WAIT} seconds${NC}"
-    echo -e "${YELLOW}Current status: $STATUS${NC}"
-    echo -e "${YELLOW}You may need to:${NC}"
-    echo -e "${YELLOW}  1. Check Azure credentials and configuration${NC}"
-    echo -e "${YELLOW}  2. Verify JWKS sync: curl https://oidcissuer65846b7df97b.z13.web.core.windows.net/openid/v1/jwks${NC}"
-    echo -e "${YELLOW}  3. Check logs: kubectl logs -n external-secrets deploy/external-secrets${NC}"
-fi
-
-# Step 12: Setup VClusters with native kubeconfig generation
-echo -e "${GREEN}Checking for VClusters...${NC}"
-
-VCLUSTERS_FOUND=false
-for i in {1..60}; do
-    if kubectl get pod vcluster-dev-helm-0 -n dev-vcluster &>/dev/null 2>&1 || \
-       kubectl get pod vcluster-staging-helm-0 -n staging-vcluster &>/dev/null 2>&1; then
-        VCLUSTERS_FOUND=true
-        echo -e "${GREEN}  VCluster pods found${NC}"
-        break
-    fi
-    [ $i -eq 1 ] && echo -n "  Waiting for VClusters"
-    echo -n "."
-    sleep 5
-done
-echo ""
-
-if [ "$VCLUSTERS_FOUND" = true ]; then
-    if [ -x "${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh" ]; then
-        echo -e "${GREEN}Running VCluster kubeconfig setup...${NC}"
-        if ! HOST_CONTEXT_OVERRIDE="${HOST_CONTEXT}" ${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh; then
-            echo -e "${YELLOW}⚠️  VCluster kubeconfig setup completed with warnings${NC}"
-        fi
-    else
-        echo -e "${YELLOW}⚠️  setup-vcluster-kubeconfigs.sh not found or not executable${NC}"
-    fi
+if kubectl wait --for=condition=Ready clustersecretstore/azure-keyvault-store --timeout=120s &>/dev/null; then
+    echo -e "${GREEN}✓ Azure Key Vault integration is working${NC}"
 else
-    echo -e "${YELLOW}No VClusters found yet. They may be deployed later by ArgoCD.${NC}"
-    echo "Run '${SCRIPT_DIR}/setup-vcluster-kubeconfigs.sh' after VClusters are ready."
+    STATUS=$(kubectl get clustersecretstore azure-keyvault-store -o jsonpath='{.status.conditions[0].reason}' 2>/dev/null || echo "NotFound")
+    if [ "$STATUS" = "NotFound" ]; then
+        echo -e "${YELLOW}⚠️  ClusterSecretStore 'azure-keyvault-store' not found yet.${NC}"
+        echo -e "${YELLOW}ArgoCD may still be syncing applications. Monitor progress with:${NC}"
+        echo -e "${YELLOW}  kubectl get applications -n argocd${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Azure Key Vault status: $STATUS${NC}"
+        echo -e "${YELLOW}Inspect logs with: kubectl logs -n external-secrets deploy/external-secrets${NC}"
+    fi
 fi
 
-# Step 13: Setup browser certificates (lightweight, no rebuild needed)
+# Step 12: Setup browser certificates (lightweight, no rebuild needed)
 if [ -f "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" ]; then
     echo -e "${GREEN}Setting up browser certificates...${NC}"
     "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
 fi
 
-# Step 14: Refresh ArgoCD token in 1Password
+# Step 13: Refresh ArgoCD token in 1Password
 if [ -x "${SCRIPT_DIR}/../scripts/update-argocd-token.sh" ]; then
     echo -e "${GREEN}Updating ArgoCD token in 1Password...${NC}"
     if ! "${SCRIPT_DIR}/../scripts/update-argocd-token.sh"; then
@@ -445,7 +398,7 @@ if [ -x "${SCRIPT_DIR}/../scripts/update-argocd-token.sh" ]; then
     fi
 fi
 
-# Step 15: Show summary
+# Step 14: Show summary
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Cluster created successfully with SSH support!${NC}"
