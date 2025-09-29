@@ -92,10 +92,10 @@ agent-aws:
         remoteRef:
           key: secret/ai-platform-engineering/aws-secret
           property: AWS_SECRET_ACCESS_KEY
-      - secretKey: AWS_DEFAULT_REGION
+      - secretKey: AWS_REGION
         remoteRef:
           key: secret/ai-platform-engineering/aws-secret
-          property: AWS_DEFAULT_REGION
+          property: AWS_REGION
 
 agent-backstage:
   nameOverride: "agent-backstage"
