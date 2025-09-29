@@ -339,6 +339,7 @@ export class BackstageHostChart extends Chart {
                   { name: 'NODE_ENV', value: 'production' },
                   { name: 'NODE_TLS_REJECT_UNAUTHORIZED', value: '0' },
                   { name: 'ENVIRONMENT', value: environmentLabel },
+                  { name: 'APP_CONFIG_auth_environment', value: 'production' },
                   { name: 'APP_CONFIG_app_baseUrl', value: baseUrl },
                   { name: 'APP_CONFIG_backend_baseUrl', value: baseUrl },
                   { name: 'APP_CONFIG_backend_cors_origin', value: baseUrl },
