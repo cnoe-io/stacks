@@ -89,26 +89,13 @@ prompt_with_env() {
   local prompt="$1" var_name="$2" is_secret="$3"
   local env_value="${!var_name}" result
 
-  if [[ -n "$env_value" ]]; then
+  if [[ -n "$env_value" && "$ENV_LOADED" == "true" ]]; then
+    result="$env_value"
     if [[ "$is_secret" == "true" ]]; then
       local hint="${env_value:0:5}..."
-      printf "%s (from .env: %s) [Enter to use, type new]: " "$prompt" "$hint" > /dev/tty
-      IFS= read -r choice < /dev/tty
-      if [[ -z "$choice" ]]; then
-        result="$env_value"
-        printf "✅ Using value from .env file\n" > /dev/tty
-      else
-        IFS= read -rs -p "$prompt: " result < /dev/tty
-        printf "\n" > /dev/tty
-      fi
+      printf "✅ Using %s from .env file (%s)\n" "$prompt" "$hint" > /dev/tty
     else
-      IFS= read -r -p "$prompt (from .env: $env_value) [Enter to use, type new]: " choice < /dev/tty
-      if [[ -z "$choice" ]]; then
-        result="$env_value"
-        printf "✅ Using value from .env file\n" > /dev/tty
-      else
-        IFS= read -r -p "$prompt: " result < /dev/tty
-      fi
+      printf "✅ Using %s from .env file: %s\n" "$prompt" "$env_value" > /dev/tty
     fi
   else
     if [[ "$is_secret" == "true" ]]; then
@@ -338,162 +325,170 @@ GCP_LOCATION=""
 GCP_MODEL_NAME=""
 
 # Collect LLM credentials based on provider
-log "🤖 Configuring LLM credentials..."
-case $LLM_PROVIDER in
-    "azure-openai")
-        echo ""
-        AZURE_OPENAI_API_KEY="$(prompt_with_env 'Azure OpenAI API Key' 'AZURE_OPENAI_API_KEY' 'true')"
-        AZURE_OPENAI_ENDPOINT="$(prompt_with_env 'Azure OpenAI Endpoint' 'AZURE_OPENAI_ENDPOINT' 'false')"
-        AZURE_OPENAI_API_VERSION="$(prompt_with_env 'Azure OpenAI API Version' 'AZURE_OPENAI_API_VERSION' 'false')"
-        AZURE_OPENAI_DEPLOYMENT="$(prompt_with_env 'Azure OpenAI Deployment Name' 'AZURE_OPENAI_DEPLOYMENT' 'false')"
-        ;;
-    "openai")
-        echo ""
-        OPENAI_API_KEY="$(prompt_with_env 'OpenAI API Key' 'OPENAI_API_KEY' 'true')"
-        OPENAI_ENDPOINT="$(prompt_with_env 'OpenAI Endpoint' 'OPENAI_ENDPOINT' 'false')"
-        OPENAI_MODEL_NAME="$(prompt_with_env 'OpenAI Model Name' 'OPENAI_MODEL_NAME' 'false')"
-        ;;
-    "aws-bedrock")
-        echo ""
-        AWS_ACCESS_KEY_ID="$(prompt_with_env 'AWS Access Key ID' 'AWS_ACCESS_KEY_ID' 'false')"
-        AWS_SECRET_ACCESS_KEY="$(prompt_with_env 'AWS Secret Access Key' 'AWS_SECRET_ACCESS_KEY' 'true')"
-        AWS_REGION="$(prompt_with_env 'AWS Region' 'AWS_REGION' 'false')"
-        AWS_BEDROCK_MODEL_ID="$(prompt_with_env 'AWS Bedrock Model ID' 'AWS_BEDROCK_MODEL_ID' 'false')"
-        AWS_BEDROCK_PROVIDER="$(prompt_with_env 'AWS Bedrock Provider' 'AWS_BEDROCK_PROVIDER' 'false')"
-        ;;
-    "google-gemini")
-        echo ""
-        GOOGLE_API_KEY="$(prompt_with_env 'Google API Key' 'GOOGLE_API_KEY' 'true')"
-        GOOGLE_MODEL_NAME="$(prompt_with_env 'Google Model Name' 'GOOGLE_MODEL_NAME' 'false')"
-        ;;
-    "gcp-vertex")
-        echo ""
-        GCP_PROJECT_ID="$(prompt_with_env 'GCP Project ID' 'GCP_PROJECT_ID' 'false')"
-        GCP_LOCATION="$(prompt_with_env 'GCP Location' 'GCP_LOCATION' 'false')"
-        GCP_MODEL_NAME="$(prompt_with_env 'GCP Model Name' 'GCP_MODEL_NAME' 'false')"
-        ;;
-esac
-
-# Collect credentials based on active agents
-for agent in "${active_agents[@]}"; do
-    case $agent in
-        "github")
+if [[ "$ENV_LOADED" == "true" ]]; then
+    log "🤖 Using LLM credentials from .env file..."
+else
+    log "🤖 Configuring LLM credentials..."
+    case $LLM_PROVIDER in
+        "azure-openai")
             echo ""
-            log "🐙 Configuring GitHub agent secrets..."
-            GITHUB_PERSONAL_ACCESS_TOKEN="$(prompt_with_env 'GitHub Personal Access Token' 'GITHUB_PERSONAL_ACCESS_TOKEN' 'true')"
+            AZURE_OPENAI_API_KEY="$(prompt_with_env 'Azure OpenAI API Key' 'AZURE_OPENAI_API_KEY' 'true')"
+            AZURE_OPENAI_ENDPOINT="$(prompt_with_env 'Azure OpenAI Endpoint' 'AZURE_OPENAI_ENDPOINT' 'false')"
+            AZURE_OPENAI_API_VERSION="$(prompt_with_env 'Azure OpenAI API Version' 'AZURE_OPENAI_API_VERSION' 'false')"
+            AZURE_OPENAI_DEPLOYMENT="$(prompt_with_env 'Azure OpenAI Deployment Name' 'AZURE_OPENAI_DEPLOYMENT' 'false')"
             ;;
-        "jira")
+        "openai")
             echo ""
-            log "🎫 Configuring Jira agent secrets..."
-            ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
-            ATLASSIAN_API_URL=$(prompt_with_env "Atlassian API URL (e.g., https://company.atlassian.net)" "ATLASSIAN_API_URL" "false")
-            ATLASSIAN_EMAIL=$(prompt_with_env "Atlassian Email" "ATLASSIAN_EMAIL" "false")
-            ATLASSIAN_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ATLASSIAN_VERIFY_SSL" "false" "true")
+            OPENAI_API_KEY="$(prompt_with_env 'OpenAI API Key' 'OPENAI_API_KEY' 'true')"
+            OPENAI_ENDPOINT="$(prompt_with_env 'OpenAI Endpoint' 'OPENAI_ENDPOINT' 'false')"
+            OPENAI_MODEL_NAME="$(prompt_with_env 'OpenAI Model Name' 'OPENAI_MODEL_NAME' 'false')"
             ;;
-        "slack")
+        "aws-bedrock")
             echo ""
-            log "💬 Configuring Slack agent secrets..."
-            SLACK_BOT_TOKEN=$(prompt_with_env "Slack Bot Token (xoxb-...)" "SLACK_BOT_TOKEN" "true")
-            SLACK_TOKEN=$(prompt_with_env "Slack Token" "SLACK_TOKEN" "true")
-            SLACK_APP_TOKEN=$(prompt_with_env "Slack App Token (xapp-...)" "SLACK_APP_TOKEN" "true")
-            SLACK_SIGNING_SECRET=$(prompt_with_env "Slack Signing Secret" "SLACK_SIGNING_SECRET" "true")
-            SLACK_CLIENT_SECRET=$(prompt_with_env "Slack Client Secret" "SLACK_CLIENT_SECRET" "true")
-            SLACK_TEAM_ID=$(prompt_with_env "Slack Team ID" "SLACK_TEAM_ID" "false")
+            AWS_ACCESS_KEY_ID="$(prompt_with_env 'AWS Access Key ID' 'AWS_ACCESS_KEY_ID' 'false')"
+            AWS_SECRET_ACCESS_KEY="$(prompt_with_env 'AWS Secret Access Key' 'AWS_SECRET_ACCESS_KEY' 'true')"
+            AWS_REGION="$(prompt_with_env 'AWS Region' 'AWS_REGION' 'false')"
+            AWS_BEDROCK_MODEL_ID="$(prompt_with_env 'AWS Bedrock Model ID' 'AWS_BEDROCK_MODEL_ID' 'false')"
+            AWS_BEDROCK_PROVIDER="$(prompt_with_env 'AWS Bedrock Provider' 'AWS_BEDROCK_PROVIDER' 'false')"
             ;;
-        "aws")
+        "google-gemini")
             echo ""
-            log "☁️  Configuring AWS agent secrets..."
-            # Only prompt for AWS credentials if not already collected for LLM
-            if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
-                AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
-                AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
-                AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
-            else
-                log "✅ AWS credentials already collected for LLM provider"
-            fi
+            GOOGLE_API_KEY="$(prompt_with_env 'Google API Key' 'GOOGLE_API_KEY' 'true')"
+            GOOGLE_MODEL_NAME="$(prompt_with_env 'Google Model Name' 'GOOGLE_MODEL_NAME' 'false')"
             ;;
-        "argocd")
+        "gcp-vertex")
             echo ""
-            log "🚀 Populating ArgoCD secrets with local ArgoCD set up and grab following values:"
-            log "1. ARGOCD_TOKEN will be from k8s secret argocd-admin-token in namespace vault, key: token"
-            log "2. ARGOCD_API_URL will be from the same k8s secret but key: apiUrl"
-            log "3. ARGOCD_VERIFY_SSL set to 'false'"
-
-            # Get ArgoCD token from Kubernetes secret
-            ARGOCD_TOKEN=$(kubectl get secret -n vault argocd-admin-token -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
-            if [[ -z "$ARGOCD_TOKEN" ]]; then
-                log "⚠️  Could not retrieve ARGOCD_TOKEN from secret argocd-admin-token in vault namespace"
-            else
-                log "✅ ARGOCD_TOKEN retrieved from Kubernetes secret"
-            fi
-
-            # Get ArgoCD API URL from Kubernetes secret
-            ARGOCD_API_URL=$(kubectl get secret -n vault argocd-admin-token -o jsonpath='{.data.apiUrl}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
-            if [[ -z "$ARGOCD_API_URL" ]]; then
-                log "⚠️  Could not retrieve ARGOCD_API_URL from secret argocd-admin-token in vault namespace"
-                ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local"
-                log "📝 Using default ARGOCD_API_URL: $ARGOCD_API_URL"
-            else
-                log "✅ ARGOCD_API_URL retrieved from Kubernetes secret: $ARGOCD_API_URL"
-            fi
-
-            # Set ArgoCD SSL verification to false
-            ARGOCD_VERIFY_SSL="false"
-            log "✅ ARGOCD_VERIFY_SSL set to: $ARGOCD_VERIFY_SSL"
-            ;;
-        "backstage")
-            echo ""
-            log "🎭 Populating Backstage secrets with local Backstage set up and grab following values:"
-            log "1. BACKSTAGE_API_TOKEN from k8s secret backstage-auth-secrets in namespace backstage, key: AUTH_API_TOKEN_TEST"
-            log "2. BACKSTAGE_URL set to http://backstage.backstage.svc.cluster.local:7007"
-
-            # Get Backstage API token from Kubernetes secret
-            BACKSTAGE_API_TOKEN=$(kubectl get secret -n backstage backstage-auth-secrets -o jsonpath='{.data.AUTH_API_TOKEN_TEST}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
-            if [[ -z "$BACKSTAGE_API_TOKEN" ]]; then
-                log "⚠️  Could not retrieve BACKSTAGE_API_TOKEN from secret backstage-auth-secrets in backstage namespace"
-            else
-                log "✅ BACKSTAGE_API_TOKEN retrieved from Kubernetes secret"
-            fi
-
-            # Set Backstage URL
-            BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
-            log "✅ BACKSTAGE_URL set to: $BACKSTAGE_URL"
-            ;;
-        "pagerduty")
-            echo ""
-            log "📟 Configuring PagerDuty agent secrets..."
-            PAGERDUTY_API_KEY=$(prompt_with_env "PagerDuty API Key" "PAGERDUTY_API_KEY" "true")
-            PAGERDUTY_API_URL=$(prompt_with_env "PagerDuty API URL" "PAGERDUTY_API_URL" "false" "https://api.pagerduty.com")
-            ;;
-        "confluence")
-            echo ""
-            log "📚 Configuring Confluence agent secrets..."
-            CONFLUENCE_API_URL=$(prompt_with_env "Confluence API URL (e.g., https://company.atlassian.net/wiki)" "CONFLUENCE_API_URL" "false")
-            if [[ -z "$ATLASSIAN_TOKEN" ]]; then
-                ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
-                ATLASSIAN_EMAIL=$(prompt_with_env "Atlassian Email" "ATLASSIAN_EMAIL" "false")
-                ATLASSIAN_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ATLASSIAN_VERIFY_SSL" "false" "true")
-            fi
-            ;;
-        "splunk")
-            echo ""
-            log "🔍 Configuring Splunk agent secrets..."
-            SPLUNK_TOKEN=$(prompt_with_env "Splunk Token" "SPLUNK_TOKEN" "true")
-            SPLUNK_API_URL=$(prompt_with_env "Splunk API URL (e.g., https://splunk.company.com)" "SPLUNK_API_URL" "false")
-            ;;
-        "webex")
-            echo ""
-            log "📹 Configuring Webex agent secrets..."
-            WEBEX_TOKEN=$(prompt_with_env "Webex Token" "WEBEX_TOKEN" "true")
-            ;;
-        "komodor")
-            echo ""
-            log "🔧 Configuring Komodor agent secrets..."
-            KOMODOR_TOKEN=$(prompt_with_env "Komodor Token" "KOMODOR_TOKEN" "true")
-            KOMODOR_API_URL=$(prompt_with_env "Komodor API URL" "KOMODOR_API_URL" "false" "https://api.komodor.com")
+            GCP_PROJECT_ID="$(prompt_with_env 'GCP Project ID' 'GCP_PROJECT_ID' 'false')"
+            GCP_LOCATION="$(prompt_with_env 'GCP Location' 'GCP_LOCATION' 'false')"
+            GCP_MODEL_NAME="$(prompt_with_env 'GCP Model Name' 'GCP_MODEL_NAME' 'false')"
             ;;
     esac
-done
+fi
+
+# Collect credentials based on active agents
+if [[ "$ENV_LOADED" == "true" ]]; then
+    log "🔧 Using agent credentials from .env file..."
+else
+    for agent in "${active_agents[@]}"; do
+        case $agent in
+            "github")
+                echo ""
+                log "🐙 Configuring GitHub agent secrets..."
+                GITHUB_PERSONAL_ACCESS_TOKEN="$(prompt_with_env 'GitHub Personal Access Token' 'GITHUB_PERSONAL_ACCESS_TOKEN' 'true')"
+                ;;
+            "jira")
+                echo ""
+                log "🎫 Configuring Jira agent secrets..."
+                ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
+                ATLASSIAN_API_URL=$(prompt_with_env "Atlassian API URL (e.g., https://company.atlassian.net)" "ATLASSIAN_API_URL" "false")
+                ATLASSIAN_EMAIL=$(prompt_with_env "Atlassian Email" "ATLASSIAN_EMAIL" "false")
+                ATLASSIAN_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ATLASSIAN_VERIFY_SSL" "false" "true")
+                ;;
+            "slack")
+                echo ""
+                log "💬 Configuring Slack agent secrets..."
+                SLACK_BOT_TOKEN=$(prompt_with_env "Slack Bot Token (xoxb-...)" "SLACK_BOT_TOKEN" "true")
+                SLACK_TOKEN=$(prompt_with_env "Slack Token" "SLACK_TOKEN" "true")
+                SLACK_APP_TOKEN=$(prompt_with_env "Slack App Token (xapp-...)" "SLACK_APP_TOKEN" "true")
+                SLACK_SIGNING_SECRET=$(prompt_with_env "Slack Signing Secret" "SLACK_SIGNING_SECRET" "true")
+                SLACK_CLIENT_SECRET=$(prompt_with_env "Slack Client Secret" "SLACK_CLIENT_SECRET" "true")
+                SLACK_TEAM_ID=$(prompt_with_env "Slack Team ID" "SLACK_TEAM_ID" "false")
+                ;;
+            "aws")
+                echo ""
+                log "☁️  Configuring AWS agent secrets..."
+                # Only prompt for AWS credentials if not already collected for LLM
+                if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+                    AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
+                    AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
+                    AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
+                else
+                    log "✅ AWS credentials already collected for LLM provider"
+                fi
+                ;;
+            "argocd")
+                echo ""
+                log "🚀 Populating ArgoCD secrets with local ArgoCD set up and grab following values:"
+                log "1. ARGOCD_TOKEN will be from k8s secret argocd-admin-token in namespace vault, key: token"
+                log "2. ARGOCD_API_URL will be from the same k8s secret but key: apiUrl"
+                log "3. ARGOCD_VERIFY_SSL set to 'false'"
+
+                # Get ArgoCD token from Kubernetes secret
+                ARGOCD_TOKEN=$(kubectl get secret -n vault argocd-admin-token -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+                if [[ -z "$ARGOCD_TOKEN" ]]; then
+                    log "⚠️  Could not retrieve ARGOCD_TOKEN from secret argocd-admin-token in vault namespace"
+                else
+                    log "✅ ARGOCD_TOKEN retrieved from Kubernetes secret"
+                fi
+
+                # Get ArgoCD API URL from Kubernetes secret
+                ARGOCD_API_URL=$(kubectl get secret -n vault argocd-admin-token -o jsonpath='{.data.apiUrl}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+                if [[ -z "$ARGOCD_API_URL" ]]; then
+                    log "⚠️  Could not retrieve ARGOCD_API_URL from secret argocd-admin-token in vault namespace"
+                    ARGOCD_API_URL="http://argocd-server.argocd.svc.cluster.local"
+                    log "📝 Using default ARGOCD_API_URL: $ARGOCD_API_URL"
+                else
+                    log "✅ ARGOCD_API_URL retrieved from Kubernetes secret: $ARGOCD_API_URL"
+                fi
+
+                # Set ArgoCD SSL verification to false
+                ARGOCD_VERIFY_SSL="false"
+                log "✅ ARGOCD_VERIFY_SSL set to: $ARGOCD_VERIFY_SSL"
+                ;;
+            "backstage")
+                echo ""
+                log "🎭 Populating Backstage secrets with local Backstage set up and grab following values:"
+                log "1. BACKSTAGE_API_TOKEN from k8s secret backstage-auth-secrets in namespace backstage, key: AUTH_API_TOKEN_TEST"
+                log "2. BACKSTAGE_URL set to http://backstage.backstage.svc.cluster.local:7007"
+
+                # Get Backstage API token from Kubernetes secret
+                BACKSTAGE_API_TOKEN=$(kubectl get secret -n backstage backstage-auth-secrets -o jsonpath='{.data.AUTH_API_TOKEN_TEST}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+                if [[ -z "$BACKSTAGE_API_TOKEN" ]]; then
+                    log "⚠️  Could not retrieve BACKSTAGE_API_TOKEN from secret backstage-auth-secrets in backstage namespace"
+                else
+                    log "✅ BACKSTAGE_API_TOKEN retrieved from Kubernetes secret"
+                fi
+
+                # Set Backstage URL
+                BACKSTAGE_URL="http://backstage.backstage.svc.cluster.local:7007"
+                log "✅ BACKSTAGE_URL set to: $BACKSTAGE_URL"
+                ;;
+            "pagerduty")
+                echo ""
+                log "📟 Configuring PagerDuty agent secrets..."
+                PAGERDUTY_API_KEY=$(prompt_with_env "PagerDuty API Key" "PAGERDUTY_API_KEY" "true")
+                PAGERDUTY_API_URL=$(prompt_with_env "PagerDuty API URL" "PAGERDUTY_API_URL" "false" "https://api.pagerduty.com")
+                ;;
+            "confluence")
+                echo ""
+                log "📚 Configuring Confluence agent secrets..."
+                CONFLUENCE_API_URL=$(prompt_with_env "Confluence API URL (e.g., https://company.atlassian.net/wiki)" "CONFLUENCE_API_URL" "false")
+                if [[ -z "$ATLASSIAN_TOKEN" ]]; then
+                    ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
+                    ATLASSIAN_EMAIL=$(prompt_with_env "Atlassian Email" "ATLASSIAN_EMAIL" "false")
+                    ATLASSIAN_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ATLASSIAN_VERIFY_SSL" "false" "true")
+                fi
+                ;;
+            "splunk")
+                echo ""
+                log "🔍 Configuring Splunk agent secrets..."
+                SPLUNK_TOKEN=$(prompt_with_env "Splunk Token" "SPLUNK_TOKEN" "true")
+                SPLUNK_API_URL=$(prompt_with_env "Splunk API URL (e.g., https://splunk.company.com)" "SPLUNK_API_URL" "false")
+                ;;
+            "webex")
+                echo ""
+                log "📹 Configuring Webex agent secrets..."
+                WEBEX_TOKEN=$(prompt_with_env "Webex Token" "WEBEX_TOKEN" "true")
+                ;;
+            "komodor")
+                echo ""
+                log "🔧 Configuring Komodor agent secrets..."
+                KOMODOR_TOKEN=$(prompt_with_env "Komodor Token" "KOMODOR_TOKEN" "true")
+                KOMODOR_API_URL=$(prompt_with_env "Komodor API URL" "KOMODOR_API_URL" "false" "https://api.komodor.com")
+                ;;
+        esac
+    done
+fi
 
 # Store all secrets in Vault
 log "💾 Storing secrets in Vault..."
