@@ -214,6 +214,77 @@ export class BackstageHostChart extends Chart {
       },
     });
 
+    new k8s.KubeStatefulSet(this, `${postgresName}-statefulset`, {
+      metadata: {
+        name: postgresName,
+        namespace,
+        labels: {
+          app: postgresName,
+        },
+      },
+      spec: {
+        serviceName: postgresName,
+        replicas: 1,
+        selector: {
+          matchLabels: {
+            app: postgresName,
+          },
+        },
+        template: {
+          metadata: {
+            labels: {
+              app: postgresName,
+            },
+          },
+          spec: {
+            containers: [
+              {
+                name: 'postgresql',
+                image: 'postgres:16',
+                ports: [{ containerPort: 5432 }],
+                env: [
+                  { name: 'POSTGRES_DB', value: 'backstage' },
+                  { name: 'POSTGRES_USER', value: 'backstage' },
+                  { name: 'POSTGRES_PASSWORD', value: 'changeme123' },
+                ],
+                volumeMounts: [
+                  {
+                    name: 'postgres-storage',
+                    mountPath: '/var/lib/postgresql/data',
+                  },
+                ],
+                resources: {
+                  requests: {
+                    cpu: k8s.Quantity.fromString('100m'),
+                    memory: k8s.Quantity.fromString('256Mi'),
+                  },
+                  limits: {
+                    cpu: k8s.Quantity.fromString('500m'),
+                    memory: k8s.Quantity.fromString('512Mi'),
+                  },
+                },
+              },
+            ],
+          },
+        },
+        volumeClaimTemplates: [
+          {
+            metadata: {
+              name: 'postgres-storage',
+            },
+            spec: {
+              accessModes: ['ReadWriteOnce'],
+              resources: {
+                requests: {
+                  storage: k8s.Quantity.fromString('10Gi'),
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+
     // Backstage Deployment
     new k8s.KubeDeployment(this, `${appName}-deployment`, {
       metadata: {
