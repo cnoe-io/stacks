@@ -208,12 +208,12 @@ export class BackstageSecretsChart extends Chart {
           template: {
             engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
             data: {
-              BACKSTAGE_FRONTEND_URL: 'https://cnoe.localtest.me:8443',
+              BACKSTAGE_FRONTEND_URL: 'https://backstage.cnoe.localtest.me:8443',
               POSTGRES_HOST: 'postgresql.backstage.svc.cluster.local',
               POSTGRES_PORT: '5432',
               POSTGRES_DB: 'backstage',
               POSTGRES_USER: 'backstage',
-              POSTGRES_PASSWORD: '{{ .POSTGRES_PASSWORD }}',
+              POSTGRES_PASSWORD: 'changeme123',
               BACKSTAGE_SESSION_SECRET: '{{ .SESSION_SECRET }}',
               ARGO_WORKFLOWS_URL: 'https://cnoe.localtest.me:8443/argo-workflows',
               KEYCLOAK_NAME_METADATA: 'https://cnoe.localtest.me:8443/keycloak/realms/cnoe/.well-known/openid-configuration',
@@ -247,22 +247,6 @@ export class BackstageSecretsChart extends Chart {
           }
         ],
         dataFrom: [
-          {
-            sourceRef: {
-              generatorRef: {
-                apiVersion: 'generators.external-secrets.io/v1alpha1',
-                kind: ExternalSecretSpecDataFromSourceRefGeneratorRefKind.PASSWORD,
-                name: 'backstage'
-              }
-            },
-            rewrite: [
-              {
-                transform: {
-                  template: 'POSTGRES_PASSWORD'
-                }
-              }
-            ]
-          },
           {
             sourceRef: {
               generatorRef: {

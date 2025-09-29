@@ -18,7 +18,7 @@ export class BackstageHostChart extends Chart {
     const appName = 'backstage';
     const environmentLabel = 'host';
     const postgresName = 'postgresql';
-    const ingressHost = 'cnoe.localtest.me';
+    const ingressHost = 'backstage.cnoe.localtest.me';
     const baseUrl = `https://${ingressHost}:8443`;
 
     const imageRef = images.production?.backstage ?? images.dev.backstage;
@@ -137,7 +137,7 @@ export class BackstageHostChart extends Chart {
         accessModes: ['ReadWriteOnce'],
         resources: {
           requests: {
-            storage: k8s.Quantity.fromString('2Gi'),
+            storage: k8s.Quantity.fromString('20Gi'),
           },
         },
       },
@@ -153,7 +153,7 @@ export class BackstageHostChart extends Chart {
         accessModes: ['ReadWriteOnce'],
         resources: {
           requests: {
-            storage: k8s.Quantity.fromString('5Gi'),
+            storage: k8s.Quantity.fromString('20Gi'),
           },
         },
       },
@@ -169,7 +169,7 @@ export class BackstageHostChart extends Chart {
         accessModes: ['ReadWriteOnce'],
         resources: {
           requests: {
-            storage: k8s.Quantity.fromString('10Gi'),
+            storage: k8s.Quantity.fromString('100Gi'),
           },
         },
       },

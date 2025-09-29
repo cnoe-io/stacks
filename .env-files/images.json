@@ -1,19 +1,19 @@
 {
   "dev": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b",
+    "backstage": "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest",
     "flagdUi": "ghcr.io/vpittamp/devspace-containers/typescript:20",
     "claudecodeui": "ghcr.io/vpittamp/devspace-containers/typescript:20"
   },
   "staging": {
     "nextjs": "ghcr.io/pittampalliorg/chat:79",
-    "backstage": "ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b",
+    "backstage": "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   },
   "production": {
     "nextjs": "ghcr.io/pittampalliorg/chat:78",
-    "backstage": "ghcr.io/suwhang-cisco/backstage-app:66ef030f9b7282f16df76f348898e3712dff1f8b",
+    "backstage": "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest",
     "flagdUi": "vpittamp.azurecr.io/flagd-ui:1.0.1",
     "claudecodeui": "vpittamp.azurecr.io/claudecodeui:v1.5.0"
   }
