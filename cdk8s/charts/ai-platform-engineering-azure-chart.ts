@@ -153,6 +153,88 @@ export class AiPlatformEngineeringAzureChart extends Chart {
       deployment.addJsonPatch(JsonPatch.replace('/spec/template/spec/containers/0/args', ['platform-engineer']));
     }
 
+    // Patch ArgoCD agent deployment to mount CA certificate
+    const argoCdAgent = helmChart.apiObjects.find(obj =>
+      obj.kind === 'Deployment' &&
+      obj.name === 'ai-platform-engineering-agent-argocd'
+    );
+
+    if (argoCdAgent) {
+      // Add volume for CA certificate
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/volumes', [
+        {
+          name: 'ca-cert',
+          secret: {
+            secretName: 'idpbuilder-cert',
+            items: [{ key: 'ca.crt', path: 'ca.crt' }]
+          }
+        }
+      ]));
+
+      // Add volume mount to container
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/volumeMounts', [
+        {
+          name: 'ca-cert',
+          mountPath: '/etc/ssl/certs/idpbuilder-ca.crt',
+          subPath: 'ca.crt',
+          readOnly: true
+        }
+      ]));
+
+      // Add environment variables for Python to trust the CA
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+        {
+          name: 'REQUESTS_CA_BUNDLE',
+          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+        },
+        {
+          name: 'SSL_CERT_FILE',
+          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+        }
+      ]));
+    }
+
+    // Patch Backstage agent deployment to mount CA certificate
+    const backstageAgent = helmChart.apiObjects.find(obj =>
+      obj.kind === 'Deployment' &&
+      obj.name === 'ai-platform-engineering-agent-backstage'
+    );
+
+    if (backstageAgent) {
+      // Add volume for CA certificate
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/volumes', [
+        {
+          name: 'ca-cert',
+          secret: {
+            secretName: 'idpbuilder-cert',
+            items: [{ key: 'ca.crt', path: 'ca.crt' }]
+          }
+        }
+      ]));
+
+      // Add volume mount to container
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/volumeMounts', [
+        {
+          name: 'ca-cert',
+          mountPath: '/etc/ssl/certs/idpbuilder-ca.crt',
+          subPath: 'ca.crt',
+          readOnly: true
+        }
+      ]));
+
+      // Add environment variables for Python to trust the CA
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+        {
+          name: 'REQUESTS_CA_BUNDLE',
+          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+        },
+        {
+          name: 'SSL_CERT_FILE',
+          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+        }
+      ]));
+    }
+
     // Create additional ingress resources if needed
     new AiPlatformEngineeringIngressChart(this, 'ingress', {
       namespace: namespace,
