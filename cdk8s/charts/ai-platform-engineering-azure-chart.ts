@@ -181,14 +181,11 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Add environment variables for Python to trust the CA
+      // Add environment variable for Python requests library to trust the CA
+      // Note: SSL_CERT_FILE causes issues with uv package installer during build
       argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
         {
           name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/idpbuilder-ca.crt'
-        },
-        {
-          name: 'SSL_CERT_FILE',
           value: '/etc/ssl/certs/idpbuilder-ca.crt'
         }
       ]));
@@ -222,14 +219,11 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Add environment variables for Python to trust the CA
+      // Add environment variable for Python requests library to trust the CA
+      // Note: SSL_CERT_FILE causes issues with uv package installer during build
       backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
         {
           name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/idpbuilder-ca.crt'
-        },
-        {
-          name: 'SSL_CERT_FILE',
           value: '/etc/ssl/certs/idpbuilder-ca.crt'
         }
       ]));
