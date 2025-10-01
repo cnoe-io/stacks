@@ -191,6 +191,7 @@ export class AiPlatformEngineeringAzureChart extends Chart {
             'apk add --no-cache ca-certificates && ' +
             'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
             'update-ca-certificates && ' +
+            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt && ' +
             'cp -r /etc/ssl/certs/* /shared-ca-certs/'
           ],
           volumeMounts: [
@@ -216,16 +217,17 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Set SSL_CERT_DIR to point to our CA certs directory
-      // Note: SSL_CERT_FILE would break uv package installer, but SSL_CERT_DIR works
+      // Set SSL environment variables to use our CA bundle
+      // SSL_CERT_FILE points to a bundle file which works for httpx
+      // REQUESTS_CA_BUNDLE is for the requests library
       argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
         {
-          name: 'SSL_CERT_DIR',
-          value: '/etc/ssl/certs'
+          name: 'SSL_CERT_FILE',
+          value: '/etc/ssl/certs/ca-bundle.crt'
         },
         {
           name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/ca-cert-idpbuilder-ca.pem'
+          value: '/etc/ssl/certs/ca-bundle.crt'
         }
       ]));
 
@@ -274,6 +276,7 @@ export class AiPlatformEngineeringAzureChart extends Chart {
             'apk add --no-cache ca-certificates && ' +
             'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
             'update-ca-certificates && ' +
+            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt && ' +
             'cp -r /etc/ssl/certs/* /shared-ca-certs/'
           ],
           volumeMounts: [
@@ -299,16 +302,17 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Set SSL_CERT_DIR to point to our CA certs directory
-      // Note: SSL_CERT_FILE would break uv package installer, but SSL_CERT_DIR works
+      // Set SSL environment variables to use our CA bundle
+      // SSL_CERT_FILE points to a bundle file which works for httpx
+      // REQUESTS_CA_BUNDLE is for the requests library
       backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
         {
-          name: 'SSL_CERT_DIR',
-          value: '/etc/ssl/certs'
+          name: 'SSL_CERT_FILE',
+          value: '/etc/ssl/certs/ca-bundle.crt'
         },
         {
           name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/ca-cert-idpbuilder-ca.pem'
+          value: '/etc/ssl/certs/ca-bundle.crt'
         }
       ]));
 
