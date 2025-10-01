@@ -191,8 +191,7 @@ export class AiPlatformEngineeringAzureChart extends Chart {
             'apk add --no-cache ca-certificates && ' +
             'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
             'update-ca-certificates && ' +
-            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt && ' +
-            'cp -r /etc/ssl/certs/* /shared-ca-certs/'
+            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt'
           ],
           volumeMounts: [
             {
@@ -276,8 +275,7 @@ export class AiPlatformEngineeringAzureChart extends Chart {
             'apk add --no-cache ca-certificates && ' +
             'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
             'update-ca-certificates && ' +
-            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt && ' +
-            'cp -r /etc/ssl/certs/* /shared-ca-certs/'
+            'cat /etc/ssl/certs/*.pem > /shared-ca-certs/ca-bundle.crt'
           ],
           volumeMounts: [
             {
