@@ -216,6 +216,19 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
+      // Set SSL_CERT_DIR to point to our CA certs directory
+      // Note: SSL_CERT_FILE would break uv package installer, but SSL_CERT_DIR works
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+        {
+          name: 'SSL_CERT_DIR',
+          value: '/etc/ssl/certs'
+        },
+        {
+          name: 'REQUESTS_CA_BUNDLE',
+          value: '/etc/ssl/certs/ca-cert-idpbuilder-ca.pem'
+        }
+      ]));
+
       // Add shared volume for CA certificates
       argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/volumes/-', {
         name: 'shared-ca-certs',
@@ -283,6 +296,19 @@ export class AiPlatformEngineeringAzureChart extends Chart {
           name: 'shared-ca-certs',
           mountPath: '/etc/ssl/certs',
           readOnly: true
+        }
+      ]));
+
+      // Set SSL_CERT_DIR to point to our CA certs directory
+      // Note: SSL_CERT_FILE would break uv package installer, but SSL_CERT_DIR works
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+        {
+          name: 'SSL_CERT_DIR',
+          value: '/etc/ssl/certs'
+        },
+        {
+          name: 'REQUESTS_CA_BUNDLE',
+          value: '/etc/ssl/certs/ca-cert-idpbuilder-ca.pem'
         }
       ]));
 
