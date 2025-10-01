@@ -181,14 +181,46 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Add environment variable for Python requests library to trust the CA
-      // Note: SSL_CERT_FILE causes issues with uv package installer during build
-      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+      // Add init container to install CA certificate to system trust store
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/initContainers', [
         {
-          name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+          name: 'install-ca-cert',
+          image: 'alpine:latest',
+          command: ['/bin/sh', '-c'],
+          args: [
+            'apk add --no-cache ca-certificates && ' +
+            'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
+            'update-ca-certificates && ' +
+            'cp -r /etc/ssl/certs/* /shared-ca-certs/'
+          ],
+          volumeMounts: [
+            {
+              name: 'ca-cert',
+              mountPath: '/tmp/ca-cert',
+              readOnly: true
+            },
+            {
+              name: 'shared-ca-certs',
+              mountPath: '/shared-ca-certs'
+            }
+          ]
         }
       ]));
+
+      // Update main container volume mount to use shared CA certs
+      argoCdAgent.addJsonPatch(JsonPatch.replace('/spec/template/spec/containers/0/volumeMounts', [
+        {
+          name: 'shared-ca-certs',
+          mountPath: '/etc/ssl/certs',
+          readOnly: true
+        }
+      ]));
+
+      // Add shared volume for CA certificates
+      argoCdAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/volumes/-', {
+        name: 'shared-ca-certs',
+        emptyDir: {}
+      }));
     }
 
     // Patch Backstage agent deployment to mount CA certificate
@@ -219,14 +251,46 @@ export class AiPlatformEngineeringAzureChart extends Chart {
         }
       ]));
 
-      // Add environment variable for Python requests library to trust the CA
-      // Note: SSL_CERT_FILE causes issues with uv package installer during build
-      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/containers/0/env', [
+      // Add init container to install CA certificate to system trust store
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/initContainers', [
         {
-          name: 'REQUESTS_CA_BUNDLE',
-          value: '/etc/ssl/certs/idpbuilder-ca.crt'
+          name: 'install-ca-cert',
+          image: 'alpine:latest',
+          command: ['/bin/sh', '-c'],
+          args: [
+            'apk add --no-cache ca-certificates && ' +
+            'cp /tmp/ca-cert/ca.crt /usr/local/share/ca-certificates/idpbuilder-ca.crt && ' +
+            'update-ca-certificates && ' +
+            'cp -r /etc/ssl/certs/* /shared-ca-certs/'
+          ],
+          volumeMounts: [
+            {
+              name: 'ca-cert',
+              mountPath: '/tmp/ca-cert',
+              readOnly: true
+            },
+            {
+              name: 'shared-ca-certs',
+              mountPath: '/shared-ca-certs'
+            }
+          ]
         }
       ]));
+
+      // Update main container volume mount to use shared CA certs
+      backstageAgent.addJsonPatch(JsonPatch.replace('/spec/template/spec/containers/0/volumeMounts', [
+        {
+          name: 'shared-ca-certs',
+          mountPath: '/etc/ssl/certs',
+          readOnly: true
+        }
+      ]));
+
+      // Add shared volume for CA certificates
+      backstageAgent.addJsonPatch(JsonPatch.add('/spec/template/spec/volumes/-', {
+        name: 'shared-ca-certs',
+        emptyDir: {}
+      }));
     }
 
     // Create additional ingress resources if needed
