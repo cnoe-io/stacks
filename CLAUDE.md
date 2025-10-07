@@ -108,6 +108,27 @@ docker pull gitea.cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
 
 **Note:** Gitea OCI registry allows anonymous read access. Image naming convention: `{registry}/{owner}/{image}`
 
+### ArgoCD CLI
+
+```bash
+# Source cluster management functions (sets ARGOCD_AUTH_TOKEN automatically)
+source ~/stacks/deployment/scripts/cluster-menu.sh
+
+# Use native argocd CLI - always add --insecure flag for local dev
+argocd app list --insecure
+argocd app get argocd/backstage --insecure
+argocd app sync argocd/my-app --prune --insecure
+
+# Or use helper functions (--insecure added automatically)
+argocd-status              # Show formatted application status
+argocd-sync argocd/my-app  # Sync specific application
+argocd-list-outofsync      # List out-of-sync applications
+```
+
+**Required Flag:** Always use `--insecure` for local development (self-signed certificates)
+**Authentication:** Automatic via `ARGOCD_AUTH_TOKEN` environment variable (set by cluster-menu.sh)
+**Documentation:** See `deployment/docs/ARGOCD_AUTOMATION.md` for details
+
 ### Testing
 
 ```bash
