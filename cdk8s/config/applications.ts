@@ -41,24 +41,6 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
   */
   {
-    name: 'nextjs-namespace',
-    namespace: 'nextjs',
-    chart: {
-      type: 'NamespaceChart',
-      props: { name: 'nextjs' }
-    },
-    argocd: {
-      syncWave: '45',
-      labels: {
-        'app.kubernetes.io/component': 'namespace',
-        'app.kubernetes.io/part-of': 'application-stack',
-        'app.kubernetes.io/name': 'nextjs-namespace',
-        'app.kubernetes.io/environment': 'host'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], { limit: 15, backoff: { duration: '10s', factor: 2, maxDuration: '5m' } })
-    }
-  },
-  {
     name: 'external-secrets-workload-identity',
     namespace: 'external-secrets',
     chart: {
@@ -94,23 +76,6 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'bootstrap-secrets'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
-  {
-    name: 'nextjs-secrets',
-    namespace: 'nextjs',
-    chart: {
-      type: 'NextJsSecretsChart'
-    },
-    argocd: {
-      syncWave: '80',
-      labels: {
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'application-stack',
-        'app.kubernetes.io/name': 'nextjs-secrets',
-        'app.kubernetes.io/environment': 'host'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'SkipDryRunOnMissingResource=true'], { limit: 10, backoff: { duration: '10s', factor: 2, maxDuration: '5m' } })
     }
   },
   {
@@ -476,34 +441,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
-    name: 'kargo-nextjs-pipeline',
-    namespace: 'kargo-pipelines',
-    chart: {
-      type: 'KargoNextjsPipelineChart'
-    },
-    dependencies: {
-      kargoPipelinesCredentials: {
-        type: 'KargoPipelinesCredentialsChart'
-      }
-    },
-    argocd: {
-      syncWave: '80',  // After credentials
-      labels: {
-        'app.kubernetes.io/component': 'pipeline',
-        'app.kubernetes.io/part-of': 'kargo-pipelines',
-        'app.kubernetes.io/name': 'kargo-nextjs-pipeline',
-        'app.kubernetes.io/managed-by': 'argocd'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
-    }
-  },
-  {
     name: 'kargo-backstage-pipeline',
     namespace: 'kargo-pipelines',
     chart: {
@@ -683,45 +620,6 @@ export const applicationConfigs: ApplicationConfig[] = [
       // Simplified single-source configuration
       // The Helm chart is now deployed directly in the CDK8S chart
       // with all values embedded in TypeScript
-    }
-  },
-  // Individual environment applications (no more ApplicationSets)
-  {
-    name: 'nextjs-dev',
-    namespace: 'nextjs',
-    chart: { 
-      type: 'NextJsParameterizedChart',
-      props: {
-        environmentName: 'dev'
-      }
-    },
-    argocd: {
-      syncWave: '115',
-      labels: {
-        'app.kubernetes.io/component': 'frontend',
-        'app.kubernetes.io/part-of': 'application-stack',
-        'app.kubernetes.io/name': 'nextjs-dev'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
-    }
-  },
-  {
-    name: 'nextjs-staging',
-    namespace: 'nextjs',
-    chart: { 
-      type: 'NextJsParameterizedChart',
-      props: {
-        environmentName: 'staging'
-      }
-    },
-    argocd: {
-      syncWave: '115',
-      labels: {
-        'app.kubernetes.io/component': 'frontend',
-        'app.kubernetes.io/part-of': 'application-stack',
-        'app.kubernetes.io/name': 'nextjs-staging'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
   {

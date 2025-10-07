@@ -11,13 +11,6 @@
     "compile": "tsc --build",
     "watch": "tsc --build -w",
     "watch:synth": "nodemon --watch charts --watch ../.env-files --ext ts,json --exec '. ../.env-files/wi.env && npx cdk8s synth -a 'npx ts-node main.ts''",
-    "watch:smart": "ts-node scripts/watch-smart.ts",
-    "watch:smart:fast": "ts-node scripts/watch-smart-fast.ts",
-    "analyze:deps": "ts-node scripts/analyze-dependencies.ts",
-    "synth:selective": "ts-node scripts/synth-selective.ts",
-    "synth:fast": "ts-node scripts/synth-fast.ts",
-    "compile:fast": "ts-node scripts/compile-fast.ts",
-    "deps:visualize": "ts-node scripts/analyze-dependencies.ts --format=mermaid",
     "test": "jest",
     "build": "npm run synth",
     "upgrade": "npm i cdk8s@latest cdk8s-cli@latest",
@@ -29,8 +22,7 @@
     "synth:openfeature": "dagger --mod . call synthesize-with-feature-flags --source . export --path ./dist",
     "feature-flags:list": "kubectl get featureflagconfiguration -A",
     "feature-flags:get": "kubectl get featureflagconfiguration cdk8s-env-config -o yaml",
-    "feature-flags:update": "kubectl apply -f dist/FeatureFlagConfiguration.cdk8s-env-config.k8s.yaml",
-    "migrate-secrets-to-azure": "ts-node scripts/migrate-secrets-to-azure.ts"
+    "feature-flags:update": "kubectl apply -f dist/FeatureFlagConfiguration.cdk8s-env-config.k8s.yaml"
   },
   "dependencies": {
     "@opencdk8s/cdk8s-argocd-resources": "^0.0.8",

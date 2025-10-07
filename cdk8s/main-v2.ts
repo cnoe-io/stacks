@@ -6,9 +6,6 @@ import { IdpBuilderChartFactory } from './lib/idpbuilder-chart-factory';
 import { applicationConfigs } from './config/applications';
 import { autoRegisterCharts } from './lib/auto-register-charts';
 import { generateKustomization } from './lib/kustomization-generator';
-import { NextJsParameterizedChart } from './charts/apps/nextjs-parameterized-chart';
-import { NextJsDevApplicationChart } from './charts/apps/nextjs-dev-application-chart';
-import { NextJsStagingApplicationChart } from './charts/apps/nextjs-staging-application-chart';
 
 const outputDir = 'dist';
 
@@ -73,33 +70,17 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       outdir: manifestsDir,
     });
 
-    // Handle special-case parameterized charts
-    if (appConfig.chart?.type === 'NextJsParameterizedChart') {
-      const envName = appConfig.chart.props?.environmentName;
-      if (!envName) {
-        console.error(`Missing environmentName for ${appConfig.name}`);
-        return;
-      }
+    // Standard charts: use factory to create chart with dependencies
+    await IdpBuilderChartFactory.createChart(app, appConfig);
 
-      // Generate manifests for this environment
-      new NextJsParameterizedChart(app, appConfig.name, { environmentName: envName });
-
-      // Generate ArgoCD Application in the same synthesis pass
-      const ApplicationChartClass = envName === 'dev' ? NextJsDevApplicationChart : NextJsStagingApplicationChart;
-      new ApplicationChartClass(app, `${appConfig.name}-argocd`, {});
-    } else {
-      // Standard charts: use factory to create chart with dependencies
-      await IdpBuilderChartFactory.createChart(app, appConfig);
-
-      // Generate ArgoCD Application in the same synthesis pass
-      new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
-        applicationName: appConfig.name,
-        applicationNamespace: appConfig.namespace,
-        manifestPath: 'manifests',
-        argoCdConfig: appConfig.argocd,
-        environment: options.environment
-      });
-    }
+    // Generate ArgoCD Application in the same synthesis pass
+    new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
+      applicationName: appConfig.name,
+      applicationNamespace: appConfig.namespace,
+      manifestPath: 'manifests',
+      argoCdConfig: appConfig.argocd,
+      environment: options.environment
+    });
 
     // Single synth call generates everything
     app.synth();
