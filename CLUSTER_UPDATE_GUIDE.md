@@ -1,53 +1,50 @@
 # Cluster Update Guide
 
-## New Cluster Management Functions
+## Cluster Management Functions
 
-### Overview
-Added idempotent cluster update functionality to the cluster management tools. The `idpbuilder create` command is idempotent and uses eventual consistency, allowing safe repeated execution.
+The cluster management functions are now maintained in the `stacks` repository for version control and portability.
+
+### Quick Start
+
+Source the cluster management functions in your shell:
+
+```bash
+# One-time setup: Add to ~/.bashrc
+echo 'source ~/stacks/.bashrc-cluster' >> ~/.bashrc
+
+# Or source manually in current session
+source ~/stacks/cluster-menu.sh
+```
 
 ### Available Commands
-
-#### `cluster-update` / `clu`
-Updates the cluster with the latest CDK8s charts without recreating it.
-
-```bash
-# Basic usage
-cluster-update
-
-# Short alias
-clu
-```
-
-**What it does:**
-1. Sources environment files (`wi.env`)
-2. Synthesizes CDK8s manifests (`npm run synth`)
-3. Runs idpbuilder create with existing cluster (idempotent)
-4. Shows ArgoCD application sync status
-
-#### Interactive Menu
-The cluster menu (`clm`) now includes an "Update Cluster (idempotent)" option:
-
-```bash
-clm
-```
-
-Menu options:
-- **Synthesize Only** - Just run CDK8s synthesis
-- **Update Cluster (idempotent)** - Synthesize and update existing cluster
-- **Synthesize & Deploy** - Full deployment (with spinner or logs)
-- **Recreate Cluster** - Delete and recreate from scratch
-- **Show Status** - Display cluster and ArgoCD status
-
-### Command Reference
 
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `cluster-synth` | `cls` | Synthesize CDK8s manifests only |
 | `cluster-deploy` | `cld` | Create/deploy cluster from scratch |
 | `cluster-update` | `clu` | Update existing cluster (idempotent) |
+| `cluster-update-gum` | `clug` | Interactive update with gum UI |
 | `cluster-recreate` | `clr` | Delete and recreate cluster |
 | `cluster-status` | `clst` | Show cluster and ArgoCD status |
-| `cluster-menu` | `clm` | Interactive management menu |
+| `cluster-menu` | `clm` | Interactive management menu (requires gum) |
+
+### Interactive Menu
+
+The cluster menu (`clm`) provides an interactive UI for common operations:
+
+```bash
+./cluster-menu.sh
+# or
+clm
+```
+
+Menu options:
+- **Synthesize Only** - Just run CDK8s synthesis
+- **Update Cluster (idempotent)** - Synthesize and update existing cluster
+- **Synthesize & Deploy** - Full deployment (with logs)
+- **Synthesize & Deploy (with spinner)** - Full deployment (quiet with spinner)
+- **Recreate Cluster** - Delete and recreate from scratch
+- **Show Status** - Display cluster and ArgoCD status
 
 ### Implementation Details
 
@@ -85,40 +82,102 @@ This command is **idempotent** - it can be run multiple times safely:
    clst
    ```
 
-### Notes
+### Advanced Usage
 
-- The functions are loaded automatically in new shell sessions
-- Environment variables are sourced from `~/stacks/.env-files/wi.env`
-- The cluster name is `localdev` (IDPBuilder default)
-- Kind config includes SSH port mappings for development
-- Override the kubectl helper image (if needed) by exporting `KUBECTL_IMAGE`
-  before running `clu`/`clm`; defaults to `registry.k8s.io/kubectl:v1.31.4`.
-- If you previously deployed the legacy CoreDNS rewrite package, run
-  `~/stacks/scripts/remove-core-dns-package.sh` once before the next
-  `cluster-update` or `cluster-recreate` run. This removes the old
-  custom package so IDPBuilder can manage CoreDNS natively.
-
-### Activation
-
-After NixOS rebuild, start a new shell session to use the functions:
+**Update with manifest diff viewing:**
 ```bash
-# The functions are automatically loaded
-# You'll see: 🎯 Cluster functions loaded: cluster-synth, cluster-deploy, cluster-update, cluster-recreate, cluster-status, cluster-menu
+clu  # Will prompt to view diff
 ```
 
-## Recent Changes
+**Update in watch mode (keeps terminal open):**
+```bash
+cluw  # or: cluster-update --no-exit
+```
 
-### AgentGateway Integration
-Added comprehensive AgentGateway/kgateway support via CDK8s:
+**Interactive update with gum:**
+```bash
+clug  # or: cluster-update-gum
+```
 
-1. **kgateway-agentgateway-chart.ts**
-   - AgentGateway Backend with A2A and MCP support
-   - Authentication with External Secrets
-   - Gateway resources and TLS configuration
+### Environment Variables
 
-2. **kgateway-ai-services-chart.ts**
-   - OpenAI and Anthropic Backend resources
-   - HTTPRoute for AI service routing
-   - 1Password integration for API keys
+The functions automatically:
+- Source environment variables from `~/stacks/.env-files/wi.env`
+- Set `STACKS_DIR` (defaults to `$HOME/stacks`)
+- Configure SSL certificates from `~/stacks/certs/ca-bundle-with-idpbuilder.crt`
+- Clear WSL Docker variables if native Docker socket exists
 
-These charts are now included in the CDK8s synthesis and will be deployed/updated with the cluster commands.
+Override the kubectl helper image (if needed):
+```bash
+export KUBECTL_IMAGE=registry.k8s.io/kubectl:v1.31.4
+```
+
+### Azure Authentication
+
+Functions automatically check Azure authentication when needed:
+- **With gum installed**: Interactive prompts with colored output
+- **Without gum**: Fallback to basic prompts
+
+To manually authenticate:
+```bash
+az login
+```
+
+### Optional: gum Installation
+
+For the best interactive experience, install gum:
+```bash
+nix-env -iA nixpkgs.gum
+```
+
+Features with gum:
+- Colored, styled output
+- Interactive confirmations
+- Spinners for long-running operations
+- Better visual feedback
+
+### Migration from NixOS Configuration
+
+If you previously had cluster management in `/etc/nixos`, you can now remove it and use this version-controlled approach instead. Benefits:
+- ✅ Version controlled in Git
+- ✅ Portable across systems
+- ✅ No NixOS rebuild needed for updates
+- ✅ Can be modified without sudo
+- ✅ Easier to review changes in pull requests
+
+### Notes
+
+- The cluster name is `localdev` (idpbuilder default)
+- Kind config includes SSH port mappings for development
+- Functions handle Docker socket detection automatically
+- ArgoCD UI available at: https://argocd.cnoe.localtest.me:8443
+- Manifest changes are tracked with git in `cdk8s/dist/.git`
+
+### Troubleshooting
+
+**Functions not available:**
+```bash
+# Re-source the functions
+source ~/stacks/cluster-menu.sh
+```
+
+**Azure authentication errors:**
+```bash
+# Refresh Azure login
+az login
+```
+
+**Cluster not found:**
+```bash
+# Create new cluster
+cld
+```
+
+**gum not found:**
+```bash
+# Install gum for interactive features
+nix-env -iA nixpkgs.gum
+
+# Or use non-interactive versions
+clu  # instead of clug
+```
