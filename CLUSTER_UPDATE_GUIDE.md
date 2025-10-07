@@ -10,10 +10,10 @@ Source the cluster management functions in your shell:
 
 ```bash
 # One-time setup: Add to ~/.bashrc
-echo 'source ~/stacks/.bashrc-cluster' >> ~/.bashrc
+echo 'source ~/stacks/deployment/scripts/.bashrc-cluster' >> ~/.bashrc
 
 # Or source manually in current session
-source ~/stacks/cluster-menu.sh
+source ~/stacks/deployment/scripts/cluster-menu.sh
 ```
 
 ### Available Commands
@@ -33,7 +33,7 @@ source ~/stacks/cluster-menu.sh
 The cluster menu (`clm`) provides an interactive UI for common operations:
 
 ```bash
-./cluster-menu.sh
+./deployment/scripts/cluster-menu.sh
 # or
 clm
 ```
@@ -50,8 +50,8 @@ Menu options:
 
 The update function uses:
 ```bash
-# Primary path: deploy-linux-ssh.sh (with kind-config-linux-ssh.yaml)
-./deploy-linux-ssh.sh \
+# Primary path: deploy-linux-ssh.sh (dynamically generates kind-config)
+./deployment/scripts/deploy-linux-ssh.sh \
   --package "$STACKS_DIR/cdk8s/dist/" \
   --package "$STACKS_DIR/ref-implementation/"
 ```
@@ -158,7 +158,7 @@ If you previously had cluster management in `/etc/nixos`, you can now remove it 
 **Functions not available:**
 ```bash
 # Re-source the functions
-source ~/stacks/cluster-menu.sh
+source ~/stacks/deployment/scripts/cluster-menu.sh
 ```
 
 **Azure authentication errors:**

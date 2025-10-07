@@ -144,6 +144,7 @@ cluster-deploy() {
 
   local CDK8S_DIR="$STACKS_DIR/cdk8s"
   local REF_DIR="$STACKS_DIR/ref-implementation"
+  local DEPLOY_DIR="$STACKS_DIR/deployment"
   local ORIG_DIR="$(pwd)"
 
   # Source environment files FIRST (before any operations that need them)
@@ -165,9 +166,9 @@ cluster-deploy() {
 
   # Allow idpbuilder to manage its own self-signed certificates
   # Check if Linux deployment script exists and use it
-  if [ -f "$REF_DIR/deploy-linux-ssh.sh" ]; then
+  if [ -f "$DEPLOY_DIR/scripts/deploy-linux-ssh.sh" ]; then
     echo "Using Linux deployment script with direct key mounting and Azure integration..."
-    cd "$REF_DIR" && ./deploy-linux-ssh.sh \
+    cd "$DEPLOY_DIR/scripts" && ./deploy-linux-ssh.sh \
       --package "$CDK8S_DIR/dist/" \
       --package "$REF_DIR/" \
       "$@"
@@ -177,7 +178,7 @@ cluster-deploy() {
     idpbuilder create \
       -p "$CDK8S_DIR/dist/" \
       -p "$REF_DIR/" \
-      --kind-config "$REF_DIR/kind-config-linux-ssh.yaml" \
+      --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
       --dev-password "$@"
 
     # Sync JWKS after cluster creation
@@ -290,8 +291,9 @@ cluster-update-gum() {
   gum style --foreground 82 "✅ Synthesis complete"
 
   # Step 2: Update cluster with spinner
+  local DEPLOY_DIR="$STACKS_DIR/deployment"
   gum spin --spinner dot --title "🚀 Updating cluster (idempotent)..." -- \
-    bash -c "cd $REF_DIR && idpbuilder create -p $CDK8S_DIR/dist/ -p $REF_DIR/ --kind-config $REF_DIR/kind-config-linux-ssh.yaml --dev-password >/dev/null 2>&1"
+    bash -c "cd $REF_DIR && idpbuilder create -p $CDK8S_DIR/dist/ -p $REF_DIR/ --kind-config $DEPLOY_DIR/config/kind-config-linux-ssh.yaml --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -441,11 +443,12 @@ cluster-update() {
   echo "🚀 Updating cluster (idempotent)..."
   echo ""
 
+  local DEPLOY_DIR="$STACKS_DIR/deployment"
   cd "$REF_DIR"
   idpbuilder create \
     -p "$CDK8S_DIR/dist/" \
     -p "$REF_DIR/" \
-    --kind-config "$REF_DIR/kind-config-linux-ssh.yaml" \
+    --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
     --dev-password
 
   if [ $? -ne 0 ]; then

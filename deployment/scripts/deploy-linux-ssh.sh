@@ -122,9 +122,9 @@ else
     echo -e "${GREEN}✓ Using existing keys from ${KEYS_DIR}${NC}"
 fi
 
-# Step 3: Create the Kind configuration with direct mounts
-CONFIG_FILE="${SCRIPT_DIR}/kind-config-linux-ssh.yaml"
-echo -e "${GREEN}Creating Kind configuration with direct key mounting...${NC}"
+# Step 3: Use the Kind configuration from deployment/config
+CONFIG_FILE="${STACKS_DIR}/deployment/config/kind-config-linux-ssh.yaml"
+echo -e "${GREEN}Using Kind configuration from deployment/config...${NC}"
 
 cat > "${CONFIG_FILE}" <<EOF
 kind: Cluster
