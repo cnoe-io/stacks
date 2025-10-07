@@ -1,10 +1,12 @@
 idpbuilder.tar.gz
 cdk8s/.tsbuild/.tsbuildinfo
 .gitignore
-ref-implementation/keys/jwks.json
 cdk8s/datree.tar.gz
-ref-implementation/keys/sa.key
-ref-implementation/keys/sa.pub
+
+# Private keys - NEVER commit these
+**/keys/sa.key
+**/keys/sa.pub
+**/jwks.json
 node_modules/tsx/dist/
 
 node_modules/
@@ -46,4 +48,3 @@ cdk8s/imports/
 # OS files
 .DS_Store
 Thumbs.db
-ref-implementation/jwks.json

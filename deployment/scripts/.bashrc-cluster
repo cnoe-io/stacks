@@ -1,9 +1,0 @@
-# Cluster management functions for stacks project
-# Add this to your ~/.bashrc or source it manually:
-#   source ~/stacks/deployment/scripts/.bashrc-cluster
-
-# Source cluster management functions
-if [ -f "$HOME/stacks/deployment/scripts/cluster-menu.sh" ]; then
-  source "$HOME/stacks/deployment/scripts/cluster-menu.sh"
-  echo "🎯 Cluster functions loaded: cluster-synth, cluster-deploy, cluster-update, cluster-recreate, cluster-status, cluster-menu"
-fi
