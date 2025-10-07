@@ -1,8 +1,0 @@
-{
-  "name": "cluster",
-  "engineVersion": "v0.18.10",
-  "sdk": {
-    "source": "typescript"
-  },
-  "source": ".dagger"
-}
