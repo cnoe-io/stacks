@@ -498,51 +498,6 @@ export const applicationConfigs: ApplicationConfig[] = [
   //       syncOptions: ['CreateNamespace=true']
   //     }
   //   }
-  // },
-  {
-    name: 'vault',
-    namespace: 'vault',
-    chart: {
-      type: 'VaultChart'
-    },
-    argocd: {
-      syncWave: '-150',  // Early, before external secrets
-      labels: {
-        'app.kubernetes.io/component': 'secrets-management',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'vault'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      },
-      // Multi-source configuration for Vault
-      sources: [
-        {
-          repoURL: 'https://helm.releases.hashicorp.com',
-          chart: 'vault',
-          targetRevision: '0.27.0',
-          helm: {
-            valueFiles: ['$values/values.yaml']
-          }
-        },
-        {
-          repoURL: 'cnoe://vault',
-          targetRevision: 'HEAD',
-          ref: 'values'
-        }
-      ],
-      ignoreDifferences: [
-        {
-          group: 'admissionregistration.k8s.io',
-          kind: 'MutatingWebhookConfiguration',
-          jsonPointers: ['/webhooks']
-        }
-      ]
-    }
-  }
+  // }
   // Add more applications here as needed
 ];
