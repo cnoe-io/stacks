@@ -41,6 +41,10 @@ cdk8s/imports/
 *.swp
 *.orig
 
+# Spec-kit (private credentials may be stored here)
+.claude/
+.specify/memory/
+
 # OS files
 .DS_Store
 Thumbs.db
