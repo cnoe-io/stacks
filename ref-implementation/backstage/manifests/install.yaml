@@ -216,7 +216,7 @@ spec:
   noUpper: false
   allowRepeat: true
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: backstage-oidc
@@ -270,7 +270,7 @@ spec:
         - transform:
             template: "SESSION_SECRET"
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: gitea-credentials
@@ -292,7 +292,7 @@ spec:
         key: gitea-credential
         property: password
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: ghcr-dockercfg-external
