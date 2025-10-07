@@ -11,6 +11,12 @@ if [ -f "$custom_bundle" ]; then
   export NIX_SSL_CERT_FILE="$custom_bundle"
 fi
 
+# Source ArgoCD authentication helper
+ARGOCD_AUTH_SCRIPT="$STACKS_DIR/deployment/scripts/argocd-auth.sh"
+if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
+  source "$ARGOCD_AUTH_SCRIPT"
+fi
+
 # Azure authentication helper functions
 detect_host_context() {
   local ctx
@@ -189,6 +195,25 @@ cluster-deploy() {
   fi
 
   local result=$?
+
+  # Initialize ArgoCD authentication and save token to 1Password after successful deployment
+  if [ $result -eq 0 ] && [ "${SKIP_ARGOCD_INIT:-}" != "true" ]; then
+    echo ""
+    echo "🔐 Initializing ArgoCD authentication and saving token..."
+
+    # Wait a moment for ArgoCD to be fully ready
+    sleep 5
+
+    # Initialize and save token
+    if command -v argocd &>/dev/null && [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
+      if argocd-auth-init; then
+        echo "✅ ArgoCD authentication configured and token saved to 1Password"
+      else
+        echo "⚠️  ArgoCD authentication initialization failed (may retry later)"
+      fi
+    fi
+  fi
+
   cd "$ORIG_DIR"
   return $result
 }
@@ -234,8 +259,12 @@ cluster-recreate() {
   echo "🗑️  Deleting existing cluster..."
   idpbuilder delete
 
+  # Clear cached ArgoCD token since cluster is being recreated
+  unset ARGOCD_AUTH_TOKEN
+
   echo ""
   echo "🔨 Creating fresh cluster..."
+  # cluster-deploy will handle ArgoCD initialization automatically
   SKIP_AZURE_CHECK=true cluster-deploy "$@"
 }
 
@@ -533,8 +562,15 @@ cluster-status() {
     echo ""
     kubectl get nodes
     echo ""
-    echo "ArgoCD Applications:"
-    kubectl get applications -n argocd 2>/dev/null || echo "  No applications found"
+
+    # Use ArgoCD CLI for application status if available
+    if command -v argocd &>/dev/null && [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
+      echo "ArgoCD Applications (via CLI):"
+      argocd-status 2>/dev/null || kubectl get applications -n argocd 2>/dev/null || echo "  No applications found"
+    else
+      echo "ArgoCD Applications:"
+      kubectl get applications -n argocd 2>/dev/null || echo "  No applications found"
+    fi
   else
     echo "❌ No cluster found"
   fi
@@ -622,6 +658,14 @@ alias clug="cluster-update-gum"
 alias clr="cluster-recreate"
 alias clst="cluster-status"
 alias clm="cluster-menu"
+
+# ArgoCD Aliases (if argocd-auth.sh is loaded)
+if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
+  alias argo-status="argocd-status"
+  alias argo-sync="argocd-sync"
+  alias argo-sync-all="argocd-sync-all"
+  alias argo-outofsync="argocd-list-outofsync"
+fi
 
 # If script is being run directly (not sourced), show help
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
