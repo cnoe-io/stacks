@@ -2,86 +2,13 @@ import { App, YamlOutputType } from 'cdk8s';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ArgoApplicationsChartV2 } from './charts/platform/argo-applications-chart-v2';
-import { ArgoCDConfigChart } from './charts/platform/argocd-config-chart';
 import { IdpBuilderChartFactory } from './lib/idpbuilder-chart-factory';
 import { applicationConfigs } from './config/applications';
-
-// Register all available charts with the factory
-import { BootstrapSecretsChart } from './charts/secrets/bootstrap-secrets-chart';
-import { ExternalSecretsWorkloadIdentityChart } from './charts/secrets/external-secrets-workload-identity-chart';
-import { HeadlampChart } from './charts/platform/headlamp-chart';
-import { HeadlampKeycloakSecretsChart } from './charts/secrets/headlamp-keycloak-secrets-chart';
-import { KeycloakHeadlampClientChart } from './charts/platform/keycloak-headlamp-client-chart';
-import { NamespaceChart } from './charts/platform/namespace-chart';
-import { NextJsSecretsChart } from './charts/secrets/nextjs-secrets-chart';
-import { PostgresChart } from './charts/apps/postgres-chart';
-import { RedisChart } from './charts/apps/redis-chart';
-import { KargoHelmChart } from './charts/pipelines/kargo-helm-chart';
-import { KargoSecretsChart } from './charts/pipelines/kargo-secrets-chart';
-import { KargoPipelinesProjectChart } from './charts/pipelines/kargo-pipelines-project-chart';
-import { KargoPipelinesCredentialsChart } from './charts/pipelines/kargo-pipelines-credentials-chart';
-import { KargoCACertificatesChart } from './charts/pipelines/kargo-ca-certificates-chart';
-import { KargoNextjsPipelineChart } from './charts/pipelines/kargo-nextjs-pipeline-chart';
-import { KargoBackstagePipelineChart } from './charts/pipelines/kargo-backstage-pipeline-chart';
-import { KargoGiteaWebhookSetupChart } from './charts/pipelines/kargo-gitea-webhook-setup-chart';
-import { KargoWebhookPatchChart } from './charts/pipelines/kargo-webhook-patch-chart';
-import { DaggerInfraChart } from './charts/infra/dagger-infra-chart';
-import { AiPlatformEngineeringAzureChart } from './charts/ai-platform-engineering-azure-chart';
-import { VaultChart } from './charts/infra/vault/vault-composite-chart';
+import { autoRegisterCharts } from './lib/auto-register-charts';
+import { generateKustomization } from './lib/kustomization-generator';
 import { NextJsParameterizedChart } from './charts/apps/nextjs-parameterized-chart';
-import { BackstageHostChart } from './charts/apps/backstage-host-chart';
-import { BackstageSecretsChart } from './charts/secrets/backstage-secrets-chart';
 import { NextJsDevApplicationChart } from './charts/apps/nextjs-dev-application-chart';
 import { NextJsStagingApplicationChart } from './charts/apps/nextjs-staging-application-chart';
-import { GatewayApiCrdsChart } from './charts/platform/gateway-api-crds-chart';
-import { KGatewayNamespaceChart } from './charts/platform/kgateway-namespace-chart';
-import { KGatewayCRDsChart } from './charts/platform/kgateway-crds-chart';
-import { KGatewayHelmChart } from './charts/platform/kgateway-helm-chart';
-import { KGatewayGatewayClassChart } from './charts/platform/kgateway-gatewayclass-chart';
-import { KGatewayMCPServersChart } from './charts/platform/kgateway-mcp-servers-chart';
-import { KGatewayMCPGatewayChart } from './charts/platform/kgateway-mcp-gateway-chart';
-import { KGatewayMCPRoutesChart } from './charts/platform/kgateway-mcp-routes-chart';
-import { KGatewayAIServicesChart } from './charts/platform/kgateway-ai-services-chart';
-import { KGatewayAgentGatewayChart } from './charts/platform/kgateway-agentgateway-chart';
-
-// Register all charts
-IdpBuilderChartFactory.register('BootstrapSecretsChart', BootstrapSecretsChart);
-IdpBuilderChartFactory.register('ExternalSecretsWorkloadIdentityChart', ExternalSecretsWorkloadIdentityChart);
-IdpBuilderChartFactory.register('HeadlampChart', HeadlampChart);
-IdpBuilderChartFactory.register('HeadlampKeycloakSecretsChart', HeadlampKeycloakSecretsChart);
-IdpBuilderChartFactory.register('KeycloakHeadlampClientChart', KeycloakHeadlampClientChart);
-IdpBuilderChartFactory.register('NamespaceChart', NamespaceChart);
-IdpBuilderChartFactory.register('NextJsSecretsChart', NextJsSecretsChart);
-IdpBuilderChartFactory.register('PostgresChart', PostgresChart);
-IdpBuilderChartFactory.register('RedisChart', RedisChart);
-IdpBuilderChartFactory.register('KargoHelmChart', KargoHelmChart);
-IdpBuilderChartFactory.register('KargoSecretsChart', KargoSecretsChart);
-IdpBuilderChartFactory.register('KargoPipelinesProjectChart', KargoPipelinesProjectChart);
-IdpBuilderChartFactory.register('KargoPipelinesCredentialsChart', KargoPipelinesCredentialsChart);
-IdpBuilderChartFactory.register('KargoCACertificatesChart', KargoCACertificatesChart);
-IdpBuilderChartFactory.register('KargoNextjsPipelineChart', KargoNextjsPipelineChart);
-IdpBuilderChartFactory.register('KargoBackstagePipelineChart', KargoBackstagePipelineChart);
-IdpBuilderChartFactory.register('KargoGiteaWebhookSetupChart', KargoGiteaWebhookSetupChart);
-IdpBuilderChartFactory.register('KargoWebhookPatchChart', KargoWebhookPatchChart);
-IdpBuilderChartFactory.register('DaggerInfraChart', DaggerInfraChart);
-IdpBuilderChartFactory.register('AiPlatformEngineeringAzureChart', AiPlatformEngineeringAzureChart);
-IdpBuilderChartFactory.register('VaultChart', VaultChart);
-IdpBuilderChartFactory.register('NextJsParameterizedChart', NextJsParameterizedChart);
-IdpBuilderChartFactory.register('BackstageHostChart', BackstageHostChart);
-IdpBuilderChartFactory.register('BackstageSecretsChart', BackstageSecretsChart);
-IdpBuilderChartFactory.register('NextJsDevApplicationChart', NextJsDevApplicationChart);
-IdpBuilderChartFactory.register('NextJsStagingApplicationChart', NextJsStagingApplicationChart);
-IdpBuilderChartFactory.register('ArgoCDConfigChart', ArgoCDConfigChart);
-IdpBuilderChartFactory.register('GatewayApiCrdsChart', GatewayApiCrdsChart);
-IdpBuilderChartFactory.register('KGatewayNamespaceChart', KGatewayNamespaceChart);
-IdpBuilderChartFactory.register('KGatewayCRDsChart', KGatewayCRDsChart);
-IdpBuilderChartFactory.register('KGatewayHelmChart', KGatewayHelmChart);
-IdpBuilderChartFactory.register('KGatewayGatewayClassChart', KGatewayGatewayClassChart);
-IdpBuilderChartFactory.register('KGatewayMCPServersChart', KGatewayMCPServersChart);
-IdpBuilderChartFactory.register('KGatewayMCPGatewayChart', KGatewayMCPGatewayChart);
-IdpBuilderChartFactory.register('KGatewayMCPRoutesChart', KGatewayMCPRoutesChart);
-IdpBuilderChartFactory.register('KGatewayAIServicesChart', KGatewayAIServicesChart);
-IdpBuilderChartFactory.register('KGatewayAgentGatewayChart', KGatewayAgentGatewayChart);
 
 const outputDir = 'dist';
 
@@ -89,25 +16,12 @@ const outputDir = 'dist';
  * Synthesis configuration options
  */
 interface SynthesisOptions {
-  /**
-   * Output directory for generated manifests
-   */
   outputDir: string;
-  
-  /**
-   * Whether to generate Helm charts instead of raw manifests
-   */
-  helmOutput?: boolean;
-  
-  /**
-   * Environment (dev, staging, production)
-   */
   environment?: string;
 }
 
 /**
  * Load environment variables from a simple KEY=VALUE file.
- * Ignores blank lines and lines starting with '#'.
  */
 function loadEnvFile(filePath: string): void {
   try {
@@ -130,108 +44,55 @@ function loadEnvFile(filePath: string): void {
 }
 
 /**
- * Create the proper IDPBuilder package structure
+ * Create the IDPBuilder package structure
  */
 async function createPackageStructure(appName: string, outputDir: string): Promise<void> {
   const packageDir = path.join(outputDir, appName);
   const manifestsDir = path.join(packageDir, 'manifests');
-  
-  // Ensure directories exist
+
   if (!fs.existsSync(manifestsDir)) {
     fs.mkdirSync(manifestsDir, { recursive: true });
   }
 }
 
 /**
- * Synthesize a single application
+ * Synthesize a single application using optimized single-pass synthesis
  */
 async function synthesizeApplication(appConfig: any, options: SynthesisOptions): Promise<void> {
   console.log(`Synthesizing application: ${appConfig.name}`);
-  
+
   try {
     // Create package structure
     await createPackageStructure(appConfig.name, options.outputDir);
-    
-    // 1. Generate manifests for the application
-    const manifestApp = new App({
+
+    const manifestsDir = path.join(options.outputDir, appConfig.name, 'manifests');
+
+    // OPTIMIZATION 1: Single-pass synthesis - generate both manifests AND ArgoCD Application
+    const app = new App({
       yamlOutputType: YamlOutputType.FILE_PER_RESOURCE,
-      outdir: path.join(options.outputDir, appConfig.name, 'manifests'),
+      outdir: manifestsDir,
     });
-    
-    // Use factory to create chart with dependencies
-    await IdpBuilderChartFactory.createChart(manifestApp, appConfig);
-    manifestApp.synth();
 
-    // With FILE_PER_RESOURCE, we'll have multiple YAML files in the manifests directory
-    // IDPBuilder will handle these individual resource files
-    console.log(`  ✓ Generated individual resource files for ${appConfig.name}`);
-
-    // Ensure a kustomization.yaml exists so Argo CD can apply kustomize patches when needed
-    try {
-      const manifestsDir = path.join(options.outputDir, appConfig.name, 'manifests');
-      const files = fs.readdirSync(manifestsDir)
-        .filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'))
-        .sort();
-      const kustomizationPath = path.join(manifestsDir, 'kustomization.yaml');
-      const kustomization = [
-        'apiVersion: kustomize.config.k8s.io/v1beta1',
-        'kind: Kustomization',
-        'resources:',
-        ...files.map((f) => `  - ${f}`),
-        ''
-      ].join('\n');
-      fs.writeFileSync(kustomizationPath, kustomization);
-      console.log(`  ✓ Wrote kustomization.yaml for ${appConfig.name}`);
-    } catch (e) {
-      console.warn(`  ⚠ Could not write kustomization.yaml for ${appConfig.name}:`, e);
-    }
-    
-    // Copy values.yaml if it exists in the source package
-    const sourceValuesPath = path.join(__dirname, '..', 'ai-platform-engineering', appConfig.name, 'values.yaml');
-    const destValuesPath = path.join(options.outputDir, appConfig.name, 'values.yaml');
-    if (fs.existsSync(sourceValuesPath)) {
-      fs.copyFileSync(sourceValuesPath, destValuesPath);
-      console.log(`  ✓ Copied values.yaml for ${appConfig.name}`);
-    }
-    
-    // 2. Generate ArgoCD Application manifest (or ApplicationSet for special cases)
-    const argoOutDir = path.join(options.outputDir, '.argo', appConfig.name);
-    fs.mkdirSync(argoOutDir, { recursive: true });
-    const argoApp = new App({
-      yamlOutputType: YamlOutputType.FILE_PER_APP,
-      outdir: argoOutDir,
-    });
-    
-    // Check if this is a parameterized application (NextJs currently)
-    // These generate individual applications rather than ApplicationSets
+    // Handle special-case parameterized charts
     if (appConfig.chart?.type === 'NextJsParameterizedChart') {
       const envName = appConfig.chart.props?.environmentName;
       if (!envName) {
         console.error(`Missing environmentName for ${appConfig.name}`);
         return;
       }
-      
-      // Generate the actual manifests for this specific environment
-      new NextJsParameterizedChart(manifestApp, appConfig.name, {
-        environmentName: envName,
-      });
-      
-      // Generate the ArgoCD Application that points to these manifests
+
+      // Generate manifests for this environment
+      new NextJsParameterizedChart(app, appConfig.name, { environmentName: envName });
+
+      // Generate ArgoCD Application in the same synthesis pass
       const ApplicationChartClass = envName === 'dev' ? NextJsDevApplicationChart : NextJsStagingApplicationChart;
-      new ApplicationChartClass(argoApp, `${appConfig.name}-app`, {});
-      
-    } else if (appConfig.argocd?.sources && appConfig.argocd.sources.length > 0) {
-      // Multi-source application
-      new ArgoApplicationsChartV2(argoApp, appConfig.name, {
-        applicationName: appConfig.name,
-        applicationNamespace: appConfig.namespace,
-        manifestPath: 'manifests',
-        argoCdConfig: appConfig.argocd,
-        environment: options.environment
-      });
+      new ApplicationChartClass(app, `${appConfig.name}-argocd`, {});
     } else {
-      // Single source application using builder within a chart
-      new ArgoApplicationsChartV2(argoApp, appConfig.name, {
+      // Standard charts: use factory to create chart with dependencies
+      await IdpBuilderChartFactory.createChart(app, appConfig);
+
+      // Generate ArgoCD Application in the same synthesis pass
+      new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
         applicationName: appConfig.name,
         applicationNamespace: appConfig.namespace,
         manifestPath: 'manifests',
@@ -239,18 +100,62 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
         environment: options.environment
       });
     }
-    
-    argoApp.synth();
-    // Move generated Application YAML to root output dir with canonical name
-    const argoFiles = fs.readdirSync(argoOutDir);
-    const argoAppFile = argoFiles.find(f => f === 'app.yaml' || f === 'app.k8s.yaml');
-    if (argoAppFile) {
-      fs.renameSync(
-        path.join(argoOutDir, argoAppFile),
-        path.join(options.outputDir, `${appConfig.name}.yaml`)
-      );
+
+    // Single synth call generates everything
+    app.synth();
+
+    console.log(`  ✓ Generated resources for ${appConfig.name}`);
+
+    // OPTIMIZATION 3: Use extracted kustomization generator
+    try {
+      // Generate kustomization.yaml (excluding the ArgoCD Application file)
+      const allFiles = fs.readdirSync(manifestsDir);
+      const resourceFiles = allFiles
+        .filter((f) => (f.endsWith('.yaml') || f.endsWith('.yml'))
+          && !f.includes('Application')
+          && f !== 'kustomization.yaml')
+        .sort();
+
+      if (resourceFiles.length > 0) {
+        const kustomization = [
+          'apiVersion: kustomize.config.k8s.io/v1beta1',
+          'kind: Kustomization',
+          'resources:',
+          ...resourceFiles.map((f) => `  - ${f}`),
+          ''
+        ].join('\n');
+        fs.writeFileSync(path.join(manifestsDir, 'kustomization.yaml'), kustomization);
+        console.log(`  ✓ Generated kustomization.yaml`);
+      }
+    } catch (e) {
+      console.warn(`  ⚠ Could not write kustomization.yaml for ${appConfig.name}:`, e);
     }
-    
+
+    // Move ArgoCD Application to package root (IdpBuilder requirement)
+    try {
+      const argoAppFiles = fs.readdirSync(manifestsDir)
+        .filter(f => f.includes('Application') && f.endsWith('.yaml'));
+
+      if (argoAppFiles.length > 0) {
+        const argoAppFile = argoAppFiles[0];
+        fs.renameSync(
+          path.join(manifestsDir, argoAppFile),
+          path.join(options.outputDir, `${appConfig.name}.yaml`)
+        );
+        console.log(`  ✓ Moved ArgoCD Application to package root`);
+      }
+    } catch (e) {
+      console.warn(`  ⚠ Could not move ArgoCD Application for ${appConfig.name}:`, e);
+    }
+
+    // Copy values.yaml if it exists (for Helm-based apps)
+    const sourceValuesPath = path.join(__dirname, '..', 'ai-platform-engineering', appConfig.name, 'values.yaml');
+    const destValuesPath = path.join(options.outputDir, appConfig.name, 'values.yaml');
+    if (fs.existsSync(sourceValuesPath)) {
+      fs.copyFileSync(sourceValuesPath, destValuesPath);
+      console.log(`  ✓ Copied values.yaml`);
+    }
+
     console.log(`✓ Successfully synthesized: ${appConfig.name}`);
   } catch (error) {
     console.error(`✗ Failed to synthesize ${appConfig.name}:`, error);
@@ -259,29 +164,35 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
 }
 
 /**
- * Main synthesis function with improved structure
+ * Main synthesis function with optimizations
  */
 async function main() {
+  const startTime = Date.now();
+
   const options: SynthesisOptions = {
     outputDir,
     environment: process.env.ENVIRONMENT || 'dev',
-    helmOutput: process.env.HELM_OUTPUT === 'true'
   };
-  // Load environment configuration for secrets and stores
-  // Prefer wi.env for dev; allow overriding via ENV_FILE
+
+  // Load environment configuration
   const envFile = process.env.ENV_FILE || (options.environment === 'dev' ? '../.env-files/wi.env' : '../.env-files/production.env');
   loadEnvFile(path.join(__dirname, envFile));
-  
+
+  // OPTIMIZATION 2: Auto-register all charts
+  console.log('🔧 Auto-registering charts...');
+  autoRegisterCharts();
+
   // Clean output directory
   if (fs.existsSync(options.outputDir)) {
     fs.rmSync(options.outputDir, { recursive: true });
   }
   fs.mkdirSync(options.outputDir, { recursive: true });
-  
-  // Simple concurrency pool for synthesis
+
+  // Concurrent synthesis with worker pool
   const concurrency = parseInt(process.env.SYNTH_CONCURRENCY || '4', 10);
   const queue = [...applicationConfigs];
   const workers: Promise<void>[] = [];
+
   async function worker() {
     while (queue.length > 0) {
       const cfg = queue.shift();
@@ -289,21 +200,27 @@ async function main() {
       await synthesizeApplication(cfg, options);
     }
   }
+
+  console.log(`\n🚀 Starting synthesis with ${concurrency} workers...`);
   for (let i = 0; i < Math.max(1, concurrency); i++) {
     workers.push(worker());
   }
   await Promise.all(workers);
-  
-  console.log('\nSynthesis complete!');
-  console.log(`Output directory: ${options.outputDir}/`);
-  console.log('\nIDPBuilder package structure:');
-  console.log('- Each application has its own directory with app.yaml and manifests/');
-  console.log('- Directory structure matches cnoe:// URL requirements');
-  console.log('\nYou can now run: idpbuilder create -p cdk8s/dist/');
+
+  const duration = Date.now() - startTime;
+
+  console.log('\n✅ Synthesis complete!');
+  console.log(`📊 Stats:`);
+  console.log(`   - Applications: ${applicationConfigs.length}`);
+  console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+  console.log(`   - Output: ${options.outputDir}/`);
+  console.log('\n📦 IDPBuilder package structure:');
+  console.log('   - Each app has: <app-name>.yaml + <app-name>/manifests/');
+  console.log('   - Ready for: idpbuilder create -p cdk8s/dist/');
 }
 
 // Run the main function
 main().catch(error => {
-  console.error('Synthesis failed:', error);
+  console.error('❌ Synthesis failed:', error);
   process.exit(1);
 });
