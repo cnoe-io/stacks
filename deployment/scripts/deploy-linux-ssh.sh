@@ -22,7 +22,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
+DEPLOYMENT_DIR="$(dirname "${SCRIPT_DIR}")"
+STACKS_DIR="$(dirname "${DEPLOYMENT_DIR}")"
 KEYS_DIR="${SCRIPT_DIR}/azure-workload-identity/keys"
 
 # Source environment variables from wi.env if it exists
@@ -123,8 +124,11 @@ else
 fi
 
 # Step 3: Use the Kind configuration from deployment/config
-CONFIG_FILE="${STACKS_DIR}/deployment/config/kind-config-linux-ssh.yaml"
+CONFIG_FILE="${DEPLOYMENT_DIR}/config/kind-config-linux-ssh.yaml"
 echo -e "${GREEN}Using Kind configuration from deployment/config...${NC}"
+
+# Ensure config directory exists
+mkdir -p "${DEPLOYMENT_DIR}/config"
 
 cat > "${CONFIG_FILE}" <<EOF
 kind: Cluster
