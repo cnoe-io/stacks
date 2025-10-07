@@ -5,7 +5,7 @@
 # Cluster management functions
 export STACKS_DIR="${STACKS_DIR:-$HOME/stacks}"
 
-custom_bundle="$STACKS_DIR/certs/ca-bundle-with-idpbuilder.crt"
+custom_bundle="$STACKS_DIR/scripts/certificates/system/ca-bundle-with-idpbuilder.crt"
 if [ -f "$custom_bundle" ]; then
   export SSL_CERT_FILE="$custom_bundle"
   export NIX_SSL_CERT_FILE="$custom_bundle"

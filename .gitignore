@@ -12,11 +12,9 @@ node_modules/
 # Temporary clone directories
 cdk8s/idpbuilder-localdev-backstage-manifests/
 temp-backstage-repo/
-certificates/idpbuilder-static-cert.sh
-certificates/*.crt
-certificates/*.key
-certificates/*.pem
-certificates/*.yaml
+# Certificate cache (regenerated from cluster)
+scripts/certificates/cache/
+scripts/certificates/system/
 
 # DevSpace
 .devspace/
@@ -49,9 +47,3 @@ cdk8s/imports/
 .DS_Store
 Thumbs.db
 ref-implementation/jwks.json
-certs/argocd-server-tls.crt
-certs/idpbuilder-ca.crt
-certs/*.crt
-certs/*.key
-certs/*.pem
-certs/kargo-webhooks-server-cert.crt

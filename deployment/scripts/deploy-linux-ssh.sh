@@ -223,9 +223,9 @@ unset DOCKER_CERT_PATH
 # Create cluster using idpbuilder defaults
 echo -e "${BLUE}Allowing IDPBuilder to generate self-signed certificates${NC}"
 
-if [ -x "$STACKS_DIR/scripts/remove-core-dns-package.sh" ]; then
+if [ -x "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" ]; then
     echo -e "${GREEN}Cleaning legacy CoreDNS overrides (if any)${NC}"
-    "$STACKS_DIR/scripts/remove-core-dns-package.sh" || true
+    "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" || true
 fi
 
 idpbuilder create --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
@@ -275,9 +275,9 @@ fi
 echo -e "${GREEN}Waiting for system pods...${NC}"
 kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
 
-if [ -x "$HOME/stacks/scripts/sync-cluster-certificates.sh" ]; then
+if [ -x "$STACKS_DIR/scripts/certificates/sync-cluster-certificates.sh" ]; then
     echo -e "${GREEN}Syncing IDPBuilder certificates to local trust stores...${NC}"
-    "$HOME/stacks/scripts/sync-cluster-certificates.sh"
+    "$STACKS_DIR/scripts/certificates/sync-cluster-certificates.sh"
 else
     echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
 fi
@@ -385,15 +385,15 @@ else
 fi
 
 # Step 12: Setup browser certificates (lightweight, no rebuild needed)
-if [ -f "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" ]; then
+if [ -f "$STACKS_DIR/scripts/certificates/setup-browser-certs.sh" ]; then
     echo -e "${GREEN}Setting up browser certificates...${NC}"
-    "${SCRIPT_DIR}/../scripts/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
+    "$STACKS_DIR/scripts/certificates/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
 fi
 
 # Step 13: Refresh ArgoCD token in 1Password
-if [ -x "${SCRIPT_DIR}/../scripts/update-argocd-token.sh" ]; then
+if [ -x "$STACKS_DIR/scripts/cluster/update-argocd-token.sh" ]; then
     echo -e "${GREEN}Updating ArgoCD token in 1Password...${NC}"
-    if ! "${SCRIPT_DIR}/../scripts/update-argocd-token.sh"; then
+    if ! "$STACKS_DIR/scripts/cluster/update-argocd-token.sh"; then
         echo -e "${YELLOW}⚠️  Unable to store ArgoCD token automatically; check logs above.${NC}"
     fi
 fi

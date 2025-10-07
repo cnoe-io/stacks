@@ -11,9 +11,9 @@ CERT_SECRET_NAME="${CERT_SECRET_NAME:-idpbuilder-cert}"
 CERT_NAMESPACE="${CERT_NAMESPACE:-ingress-nginx}"
 REGISTRY_HOST="${REGISTRY_HOST:-gitea.cnoe.localtest.me:8443}"
 STACKS_DIR="${STACKS_DIR:-$HOME/stacks}"
-CERT_CACHE_DIR="$STACKS_DIR/certificates"
-SYSTEM_CERT_DIR="$STACKS_DIR/certs"
-BROWSER_SCRIPT="$STACKS_DIR/scripts/setup-browser-certs.sh"
+CERT_CACHE_DIR="$STACKS_DIR/scripts/certificates/cache"
+SYSTEM_CERT_DIR="$STACKS_DIR/scripts/certificates/system"
+BROWSER_SCRIPT="$STACKS_DIR/scripts/certificates/setup-browser-certs.sh"
 TARGET_USER="${TARGET_USER:-$(id -un)}"
 MODE="user"
 FORCE_UPDATE=false
@@ -204,7 +204,7 @@ fi
 if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo >/dev/null 2>&1; then
         log "Triggering system trust installation"
-        sudo STACKS_DIR="$STACKS_DIR" TARGET_USER="$TARGET_USER" REGISTRY_HOST="$REGISTRY_HOST" "$STACKS_DIR/scripts/sync-cluster-certificates.sh" --system
+        sudo STACKS_DIR="$STACKS_DIR" TARGET_USER="$TARGET_USER" REGISTRY_HOST="$REGISTRY_HOST" "$STACKS_DIR/scripts/certificates/sync-cluster-certificates.sh" --system
     else
         warn "sudo not found; system trust stores not updated automatically"
     fi
