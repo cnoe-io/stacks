@@ -88,38 +88,15 @@ kubectl get --raw /openid/v1/jwks | jq > "${SCRIPT_DIR}/jwks.json"
 KID=$(jq -r '.keys[0].kid' "${SCRIPT_DIR}/jwks.json")
 echo "Extracted JWKS with key ID: ${KID}"
 
-# Check if we're in nix-shell or if az is available
-if ! command -v az &> /dev/null; then
-    echo "Azure CLI not found in current environment"
-    echo "Attempting to use nix-shell..."
-    
-    if [ -f "${SCRIPT_DIR}/../shell.nix" ]; then
-        echo "Running with nix-shell..."
-        nix-shell "${SCRIPT_DIR}/../shell.nix" --run "\
-            az storage blob upload \
-                --container-name '\$web' \
-                --file '${SCRIPT_DIR}/jwks.json' \
-                --name 'openid/v1/jwks' \
-                --account-name '${AZURE_STORAGE_ACCOUNT}' \
-                --auth-mode login \
-                --overwrite \
-                --output table"
-    else
-        echo "Error: Azure CLI not available and shell.nix not found"
-        echo "Please install Azure CLI or run this script from the stacks directory"
-        exit 1
-    fi
-else
-    echo "Uploading JWKS to Azure storage using Azure AD authentication..."
-    az storage blob upload \
-        --container-name '$web' \
-        --file "${SCRIPT_DIR}/jwks.json" \
-        --name "openid/v1/jwks" \
-        --account-name "${AZURE_STORAGE_ACCOUNT}" \
-        --auth-mode login \
-        --overwrite \
-        --output table
-fi
+echo "Uploading JWKS to Azure storage using Azure AD authentication..."
+az storage blob upload \
+    --container-name '$web' \
+    --file "${SCRIPT_DIR}/jwks.json" \
+    --name "openid/v1/jwks" \
+    --account-name "${AZURE_STORAGE_ACCOUNT}" \
+    --auth-mode login \
+    --overwrite \
+    --output table
 
 # Verify the upload
 echo ""
