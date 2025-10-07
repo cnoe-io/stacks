@@ -78,23 +78,6 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
     }
   },
-  {
-    name: 'backstage-secrets',
-    namespace: 'backstage',
-    chart: {
-      type: 'BackstageSecretsChart'
-    },
-    argocd: {
-      syncWave: '80',
-      labels: {
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'application-stack',
-        'app.kubernetes.io/name': 'backstage-secrets',
-        'app.kubernetes.io/environment': 'host'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'SkipDryRunOnMissingResource=true'], { limit: 10, backoff: { duration: '10s', factor: 2, maxDuration: '5m' } })
-    }
-  },
   // Replaced with multi-env version below
   // {
   //   name: 'nextjs',
@@ -441,34 +424,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
-    name: 'kargo-backstage-pipeline',
-    namespace: 'kargo-pipelines',
-    chart: {
-      type: 'KargoBackstagePipelineChart'
-    },
-    dependencies: {
-      kargoPipelinesCredentials: {
-        type: 'KargoPipelinesCredentialsChart'
-      }
-    },
-    argocd: {
-      syncWave: '80',  // After credentials
-      labels: {
-        'app.kubernetes.io/component': 'pipeline',
-        'app.kubernetes.io/part-of': 'kargo-pipelines',
-        'app.kubernetes.io/name': 'kargo-backstage-pipeline',
-        'app.kubernetes.io/managed-by': 'argocd'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
-    }
-  },
-  {
     name: 'kargo-gitea-webhook-setup',
     namespace: 'kargo-pipelines',
     chart: {
@@ -620,28 +575,6 @@ export const applicationConfigs: ApplicationConfig[] = [
       // Simplified single-source configuration
       // The Helm chart is now deployed directly in the CDK8S chart
       // with all values embedded in TypeScript
-    }
-  },
-  {
-    name: 'backstage',
-    namespace: 'backstage',
-    chart: {
-      type: 'BackstageHostChart'
-    },
-    argocd: {
-      syncWave: '20',
-      labels: {
-        'app.kubernetes.io/component': 'developer-portal',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'backstage'
-      },
-      syncPolicy: {
-        automated: {
-          prune: false,
-          selfHeal: false
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
     }
   }
   // Add more applications here as needed
