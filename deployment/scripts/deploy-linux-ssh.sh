@@ -123,100 +123,13 @@ else
     echo -e "${GREEN}✓ Using existing keys from ${KEYS_DIR}${NC}"
 fi
 
-# Step 3: Use the Kind configuration from deployment/config
-CONFIG_FILE="${DEPLOYMENT_DIR}/config/kind-config-linux-ssh.yaml"
-echo -e "${GREEN}Using Kind configuration from deployment/config...${NC}"
+# Step 3: Use simplified Kind configuration with Azure Workload Identity
+CONFIG_FILE="${DEPLOYMENT_DIR}/config/kind-config.yaml"
+echo -e "${GREEN}Using Kind configuration: ${CONFIG_FILE}${NC}"
 
-# Ensure config directory exists
-mkdir -p "${DEPLOYMENT_DIR}/config"
 
-cat > "${CONFIG_FILE}" <<EOF
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gitea.cnoe.localtest.me:8443"]
-    endpoint = ["https://gitea.cnoe.localtest.me"]
-  [plugins."io.containerd.grpc.v1.cri".registry.configs."gitea.cnoe.localtest.me".tls]
-    insecure_skip_verify = true
-networking:
-  apiServerAddress: "127.0.0.1"
-  apiServerPort: 6443
-nodes:
-- role: control-plane
-  image: "kindest/node:v1.31.4"
-  labels:
-    ingress-ready: "true"
-  extraPortMappings:
-  # Standard IDPBuilder ports
-  - containerPort: 443
-    hostPort: 8443
-    protocol: TCP
-  - containerPort: 32222
-    hostPort: 32222
-    protocol: TCP
-  
-  # DevSpace SSH ports for development containers
-  # Backstage SSH ports
-  - containerPort: 30022
-    hostPort: 30022
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  - containerPort: 30023
-    hostPort: 30023
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  
-  # NextJS SSH ports
-  - containerPort: 30024
-    hostPort: 30024
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  - containerPort: 30025
-    hostPort: 30025
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  
-  # Additional service SSH ports
-  - containerPort: 30026
-    hostPort: 30026
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  - containerPort: 30027
-    hostPort: 30027
-    protocol: TCP
-    listenAddress: "0.0.0.0"
-  
-  # Direct mount of keys - works on Linux
-  extraMounts:
-    - hostPath: ${KEYS_DIR}
-      containerPath: /etc/kubernetes/pki/custom-keys
-      readOnly: true
-      
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      certSANs:
-      - "localhost"
-      - "127.0.0.1"
-      - "nixos-hetzner"
-      - "178.156.202.233"  # Hetzner public IP
-      - "kubernetes"
-      - "kubernetes.default"
-      - "kubernetes.default.svc"
-      - "kubernetes.default.svc.cluster.local"
-      extraArgs:
-        service-account-issuer: "${SERVICE_ACCOUNT_ISSUER:-https://oidcissuer65846b7df97b.z13.web.core.windows.net/}"
-        service-account-key-file: /etc/kubernetes/pki/custom-keys/sa.pub
-        service-account-signing-key-file: /etc/kubernetes/pki/custom-keys/sa.key
-    controllerManager:
-      extraArgs:
-        service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
-EOF
-
-# Step 4: Create cluster with direct key mounting
-echo -e "${GREEN}Creating Kind cluster with SSH NodePort support and mounted keys...${NC}"
+# Step 4: Create cluster with idpbuilder
+echo -e "${GREEN}Creating Kind cluster with Azure Workload Identity support...${NC}"
 echo -e "${BLUE}Using config: ${CONFIG_FILE}${NC}"
 
 # Clear any Docker environment variables from WSL
