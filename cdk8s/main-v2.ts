@@ -129,13 +129,6 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       console.warn(`  ⚠ Could not move ArgoCD Application for ${appConfig.name}:`, e);
     }
 
-    // Copy values.yaml if it exists (for Helm-based apps)
-    const sourceValuesPath = path.join(__dirname, '..', 'ai-platform-engineering', appConfig.name, 'values.yaml');
-    const destValuesPath = path.join(options.outputDir, appConfig.name, 'values.yaml');
-    if (fs.existsSync(sourceValuesPath)) {
-      fs.copyFileSync(sourceValuesPath, destValuesPath);
-      console.log(`  ✓ Copied values.yaml`);
-    }
 
     console.log(`✓ Successfully synthesized: ${appConfig.name}`);
   } catch (error) {

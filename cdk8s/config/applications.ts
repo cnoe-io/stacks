@@ -543,39 +543,6 @@ export const applicationConfigs: ApplicationConfig[] = [
         }
       ]
     }
-  },
-  {
-    name: 'ai-platform-engineering',
-    namespace: 'ai-platform-engineering',
-    chart: {
-      type: 'AiPlatformEngineeringAzureChart'
-    },
-    argocd: {
-      syncWave: '100',  // After most platform components
-      labels: {
-        'app.kubernetes.io/component': 'ai-platform',
-        'app.kubernetes.io/part-of': 'platform',
-        'app.kubernetes.io/name': 'ai-platform-engineering'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true', 'PrunePropagationPolicy=foreground', 'PruneLast=true'],
-        retry: {
-          limit: 5,
-          backoff: {
-            duration: '5s',
-            factor: 2,
-            maxDuration: '3m'
-          }
-        }
-      },
-      // Simplified single-source configuration
-      // The Helm chart is now deployed directly in the CDK8S chart
-      // with all values embedded in TypeScript
-    }
   }
   // Add more applications here as needed
 ];
