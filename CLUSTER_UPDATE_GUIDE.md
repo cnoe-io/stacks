@@ -53,11 +53,10 @@ Menu options:
 
 The update function uses:
 ```bash
-idpbuilder create \
-  -p "$STACKS_DIR/cdk8s/dist/" \
-  -p "$STACKS_DIR/ref-implementation/" \
-  --kind-config "$STACKS_DIR/ref-implementation/kind-config-nixos-ssh.yaml" \
-  --dev-password
+# Primary path: deploy-linux-ssh.sh (with kind-config-linux-ssh.yaml)
+./deploy-linux-ssh.sh \
+  --package "$STACKS_DIR/cdk8s/dist/" \
+  --package "$STACKS_DIR/ref-implementation/"
 ```
 
 This command is **idempotent** - it can be run multiple times safely:
