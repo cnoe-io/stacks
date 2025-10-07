@@ -30,6 +30,9 @@ scripts/certificates/system/
 cdk8s/dist/
 cdk8s/imports/
 
+# Deployment runtime-generated config
+deployment/config/
+
 # Logs
 *.log
 

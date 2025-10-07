@@ -111,11 +111,10 @@ Shell initialization snippet that:
 
 The `deploy-linux-ssh.sh` script generates configuration files at runtime:
 
-**kind-config-linux-ssh.yaml** (created in deployment/config/)
-- Generated with current `KEYS_DIR` path
-- Includes Azure service account issuer
-- Configures SSH port mappings
-- Sets up key mounts
+**kind-config.yaml** (created in deployment/config/)
+- Generated with current `KEYS_DIR` path and `SERVICE_ACCOUNT_ISSUER` from wi.env
+- Minimal configuration that adds only Azure Workload Identity to idpbuilder defaults
+- Mounts service account keys for custom OIDC issuer
 
 ### Environment Variables
 
