@@ -3,7 +3,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
+REF_DIR="$(dirname "${SCRIPT_DIR}")"
+STACKS_DIR="$(dirname "${REF_DIR}")"
 
 # Source environment variables from wi.env if it exists
 if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then

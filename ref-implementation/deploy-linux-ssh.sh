@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACKS_DIR="$(dirname "${SCRIPT_DIR}")"
-KEYS_DIR="${SCRIPT_DIR}/keys"
+KEYS_DIR="${SCRIPT_DIR}/azure-workload-identity/keys"
 
 # Source environment variables from wi.env if it exists
 if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then
@@ -305,7 +305,7 @@ else
 fi
 
 # Step 10: Sync JWKS to Azure (CRITICAL for External Secrets)
-if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
+if [ -f "${SCRIPT_DIR}/azure-workload-identity/sync-jwks-to-azure.sh" ]; then
     echo -e "${GREEN}Checking Azure authentication for JWKS sync...${NC}"
     
     # Pre-check Azure auth to fail fast
@@ -317,7 +317,7 @@ if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
         echo ""
         echo -e "${YELLOW}Note: The cluster has been created but External Secrets will not work.${NC}"
         echo -e "${YELLOW}After logging in to Azure, you can run:${NC}"
-        echo -e "${YELLOW}  ${SCRIPT_DIR}/sync-jwks-to-azure.sh${NC}"
+        echo -e "${YELLOW}  ${SCRIPT_DIR}/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
         exit 1
     fi
     
@@ -351,8 +351,8 @@ if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
     echo ""
     
     # Run the sync
-    ${SCRIPT_DIR}/sync-jwks-to-azure.sh
-    
+    ${SCRIPT_DIR}/azure-workload-identity/sync-jwks-to-azure.sh
+
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ JWKS successfully synced to Azure${NC}"
         
@@ -361,11 +361,11 @@ if [ -f "${SCRIPT_DIR}/sync-jwks-to-azure.sh" ]; then
         sleep 5
     else
         echo -e "${RED}⚠️  JWKS sync failed - External Secrets will not work properly${NC}"
-        echo -e "${YELLOW}You can manually run: ${SCRIPT_DIR}/sync-jwks-to-azure.sh${NC}"
+        echo -e "${YELLOW}You can manually run: ${SCRIPT_DIR}/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
     fi
 else
     echo -e "${RED}⚠️  Azure JWKS sync script not found - External Secrets will fail${NC}"
-    echo -e "${YELLOW}Expected at: ${SCRIPT_DIR}/sync-jwks-to-azure.sh${NC}"
+    echo -e "${YELLOW}Expected at: ${SCRIPT_DIR}/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
 fi
 
 # Step 11: Verify External Secrets health
