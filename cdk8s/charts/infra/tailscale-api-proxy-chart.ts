@@ -145,10 +145,6 @@ export class TailscaleApiProxyChart extends Chart {
                     value: proxyHostname,
                   },
                   {
-                    name: 'TS_EXTRA_ARGS',
-                    value: '--advertise-tags=tag:k8s',
-                  },
-                  {
                     name: 'TS_STATE_DIR',
                     value: '/var/lib/tailscale',
                   },
