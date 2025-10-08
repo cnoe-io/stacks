@@ -207,12 +207,13 @@ export class TailscaleOperatorChart extends Chart {
     });
 
     // T015-T017: Create operator Deployment
+    // Sync wave -70 ensures ExternalSecret (wave -80) creates the secret first
     new k8s.KubeDeployment(this, 'operator-deployment', {
       metadata: {
         name: 'tailscale-operator',
         namespace: namespace,
         annotations: {
-          'argocd.argoproj.io/sync-wave': '-90',
+          'argocd.argoproj.io/sync-wave': '-70',
         },
       },
       spec: {
