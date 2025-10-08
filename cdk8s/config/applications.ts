@@ -511,7 +511,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
         clusterName: process.env.CLUSTER_NAME || 'kind',
         oauthSecretName: 'tailscale-oauth',
-        enableHA: false,  // Set to true for staging/production
+        enableHA: true,  // Enable ProxyGroup for API server access
         proxyReplicas: 2,
         impersonationGrants: [
           {
@@ -538,6 +538,27 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         }
+      }
+    }
+  },
+
+  // Tailscale API Proxy (sidecar approach)
+  {
+    name: 'tailscale-api-proxy',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleApiProxyChart',
+      props: {
+        clusterName: process.env.CLUSTER_NAME || 'kind',
+        authKeySecretName: 'tailscale-auth-key',
+        tailscaleImage: 'tailscale/tailscale:latest',
+        kubectlImage: 'bitnami/kubectl:latest'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
       }
     }
   }
