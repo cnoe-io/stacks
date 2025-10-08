@@ -1,4 +1,4 @@
-import { Chart, ChartProps } from 'cdk8s';
+import { Chart, ChartProps, JsonPatch } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
@@ -68,6 +68,9 @@ export class TailscaleApiProxyChart extends Chart {
         { key: 'authKey', remoteRef: { key: 'TAILSCALE-AUTH-KEY' } }
       ]
     });
+    authKeySecret.addJsonPatch(JsonPatch.add('/metadata/annotations', {
+      'argocd.argoproj.io/sync-wave': '-80'
+    }));
 
     // Create ServiceAccount for API access
     new k8s.KubeServiceAccount(this, 'api-proxy-sa', {
