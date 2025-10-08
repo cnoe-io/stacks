@@ -498,6 +498,47 @@ export const applicationConfigs: ApplicationConfig[] = [
   //       syncOptions: ['CreateNamespace=true']
   //     }
   //   }
-  // }
+  // },
   // Add more applications here as needed
+
+  // Tailscale Operator - Remote Kubernetes Cluster Access
+  {
+    name: 'tailscale-operator',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleOperatorChart',
+      props: {
+        environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
+        clusterName: process.env.CLUSTER_NAME || 'kind',
+        oauthSecretName: 'tailscale-oauth',
+        enableHA: false,  // Set to true for staging/production
+        proxyReplicas: 2,
+        impersonationGrants: [
+          {
+            tailscaleGroup: 'group:admins',
+            kubernetesGroups: ['system:masters'],
+            description: 'Full cluster admin access for Tailscale admin group'
+          },
+          {
+            tailscaleGroup: 'group:developers',
+            kubernetesGroups: ['developers'],
+            description: 'Developer namespace access via Kubernetes RBAC'
+          }
+        ]
+      }
+    },
+    argocd: {
+      syncWave: '-90',
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-operator',
+        'app.kubernetes.io/component': 'network-proxy'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  }
 ];

@@ -10,3 +10,4 @@ imports:
   - helm:oci://ghcr.io/cnoe-io/helm-charts/ai-platform-engineering@0.1.10
   - /tmp/external-secrets-crds.yaml
   - /tmp/kgateway-crds.yaml
+  - /tmp/tailscale-proxygroups-crd.yaml
