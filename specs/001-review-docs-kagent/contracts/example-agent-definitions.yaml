@@ -1,0 +1,139 @@
+# Example Agent Definitions for kagent Platform
+# These examples demonstrate the three core agent patterns
+
+---
+# Example 1: Kubernetes Resource Query Agent
+# Uses built-in K8s tools from kagent-tool-server
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: k8s-agent
+  namespace: kagent
+  labels:
+    app.kubernetes.io/name: k8s-agent
+    app.kubernetes.io/component: agent
+spec:
+  description: Agent for querying Kubernetes cluster resources
+  type: Declarative
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      You are an expert Kubernetes agent with deep knowledge of cluster operations.
+      Use the available K8s tools to help users query and understand their cluster resources.
+
+      Guidelines:
+      - Always use k8s_get_available_api_resources first to discover resource types
+      - Use k8s_get_resources to retrieve specific resource details
+      - Explain resource relationships and dependencies clearly
+      - Highlight any potential issues or misconfigurations
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: kagent-tool-server
+          kind: RemoteMCPServer
+          toolNames:
+            - k8s_get_resources
+            - k8s_get_available_api_resources
+
+---
+# Example 2: Web Content Fetcher Agent
+# Uses custom MCP server for web content retrieval
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: fetch-agent
+  namespace: kagent
+  labels:
+    app.kubernetes.io/name: fetch-agent
+    app.kubernetes.io/component: agent
+spec:
+  description: Agent that fetches and summarizes web content
+  type: Declarative
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      You are a web content research assistant.
+      When users ask about websites or online resources:
+      1. Use the fetch tool to retrieve web content
+      2. Analyze and summarize the key information
+      3. Provide concise, accurate answers based on the content
+
+      Be helpful, accurate, and cite sources when appropriate.
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: mcp-website-fetcher
+          kind: MCPServer
+          toolNames: ['fetch']
+
+---
+# Example 3: Agent-to-Agent Protocol Enabled Agent
+# Exposes skills via A2A protocol for external integrations
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: a2a-agent
+  namespace: kagent
+  labels:
+    app.kubernetes.io/name: a2a-agent
+    app.kubernetes.io/component: agent
+spec:
+  description: Agent with A2A protocol enabled for external integrations
+  type: Declarative
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      You are a Kubernetes operations agent accessible via the A2A protocol.
+      Help external systems and other agents query cluster resources effectively.
+      Provide clear, structured responses suitable for programmatic consumption.
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: kagent-tool-server
+          kind: RemoteMCPServer
+          toolNames:
+            - k8s_get_resources
+            - k8s_get_available_api_resources
+    a2aConfig:
+      skills:
+        - id: get-resources-skill
+          name: Get Kubernetes Resources
+          description: Query and retrieve information about Kubernetes cluster resources
+          inputModes: ['text']
+          outputModes: ['text']
+          tags:
+            - k8s
+            - resources
+            - query
+
+---
+# Supporting Resource: ModelConfig for OpenAI
+apiVersion: kagent.dev/v1alpha1
+kind: ModelConfig
+metadata:
+  name: default-model-config
+  namespace: kagent
+spec:
+  provider: openAI
+  openAI:
+    apiKeySecret: kagent-llm-providers
+    apiKeySecretKey: OPENAI_API_KEY
+    model: gpt-4-turbo-preview
+
+---
+# Supporting Resource: MCP Website Fetcher Server
+apiVersion: kmcp.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcp-website-fetcher
+  namespace: kagent
+  labels:
+    app.kubernetes.io/name: mcp-website-fetcher
+    app.kubernetes.io/component: mcp-server
+spec:
+  deployment:
+    cmd: uvx
+    args: ['mcp-server-fetch']
+    port: 3000
+  transportType: stdio
+  stdioTransport: {}

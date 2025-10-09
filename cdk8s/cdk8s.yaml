@@ -11,3 +11,5 @@ imports:
   - /tmp/external-secrets-crds.yaml
   - /tmp/kgateway-crds.yaml
   - /tmp/tailscale-proxygroups-crd.yaml
+  - /tmp/kmcp-mcpserver-crd.yaml
+  - /tmp/kagent-all-crds.yaml

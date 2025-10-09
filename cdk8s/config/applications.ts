@@ -561,5 +561,97 @@ export const applicationConfigs: ApplicationConfig[] = [
         automated: { prune: true, selfHeal: true }
       }
     }
+  },
+
+  // kagent Platform (AI Agent Infrastructure)
+  {
+    name: 'kagent',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentChart'
+    },
+    argocd: {
+      syncWave: '-110',  // Deploy CRDs and core infrastructure early
+      labels: {
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // kmcp Controller (MCP Server Manager)
+  {
+    name: 'kmcp',
+    namespace: 'kagent',
+    chart: {
+      type: 'KmcpChart'
+    },
+    argocd: {
+      syncWave: '-110',  // Deploy alongside kagent
+      labels: {
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kmcp'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // kagent Secrets (LLM Provider API Keys)
+  {
+    name: 'kagent-secrets',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentSecretsChart'
+    },
+    argocd: {
+      syncWave: '-70',  // After workload identity, before agents
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-secrets'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // kagent Example Agents
+  {
+    name: 'kagent-agents',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentExampleAgentsChart'
+    },
+    argocd: {
+      syncWave: '50',  // After platform is ready
+      labels: {
+        'app.kubernetes.io/component': 'agents',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
   }
 ];

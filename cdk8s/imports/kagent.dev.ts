@@ -111,6 +111,11 @@ export interface AgentSpec {
   readonly a2AConfig?: AgentSpecA2AConfig;
 
   /**
+   * @schema AgentSpec#deployment
+   */
+  readonly deployment?: AgentSpecDeployment;
+
+  /**
    * @schema AgentSpec#description
    */
   readonly description?: string;
@@ -157,6 +162,7 @@ export function toJson_AgentSpec(obj: AgentSpec | undefined): Record<string, any
   if (obj === undefined) { return undefined; }
   const result = {
     'a2aConfig': toJson_AgentSpecA2AConfig(obj.a2AConfig),
+    'deployment': toJson_AgentSpecDeployment(obj.deployment),
     'description': obj.description,
     'memory': obj.memory?.map(y => y),
     'modelConfig': obj.modelConfig,
@@ -195,6 +201,63 @@ export function toJson_AgentSpecA2AConfig(obj: AgentSpecA2AConfig | undefined): 
   if (obj === undefined) { return undefined; }
   const result = {
     'skills': obj.skills?.map(y => toJson_AgentSpecA2AConfigSkills(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentSpecDeployment
+ */
+export interface AgentSpecDeployment {
+  /**
+   * @schema AgentSpecDeployment#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema AgentSpecDeployment#env
+   */
+  readonly env?: AgentSpecDeploymentEnv[];
+
+  /**
+   * @schema AgentSpecDeployment#imagePullSecrets
+   */
+  readonly imagePullSecrets?: AgentSpecDeploymentImagePullSecrets[];
+
+  /**
+   * @schema AgentSpecDeployment#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+  /**
+   * If not specified, the default value is 1.
+   *
+   * @schema AgentSpecDeployment#replicas
+   */
+  readonly replicas?: number;
+
+  /**
+   * @schema AgentSpecDeployment#volumes
+   */
+  readonly volumes?: AgentSpecDeploymentVolumes[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeployment' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeployment(obj: AgentSpecDeployment | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'env': obj.env?.map(y => toJson_AgentSpecDeploymentEnv(y)),
+    'imagePullSecrets': obj.imagePullSecrets?.map(y => toJson_AgentSpecDeploymentImagePullSecrets(y)),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'replicas': obj.replicas,
+    'volumes': obj.volumes?.map(y => toJson_AgentSpecDeploymentVolumes(y)),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -293,7 +356,7 @@ export interface AgentSpecA2AConfigSkills {
    *
    * @schema AgentSpecA2AConfigSkills#tags
    */
-  readonly tags?: string[];
+  readonly tags: string[];
 
 }
 
@@ -311,6 +374,446 @@ export function toJson_AgentSpecA2AConfigSkills(obj: AgentSpecA2AConfigSkills | 
     'name': obj.name,
     'outputModes': obj.outputModes?.map(y => y),
     'tags': obj.tags?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EnvVar represents an environment variable present in a Container.
+ *
+ * @schema AgentSpecDeploymentEnv
+ */
+export interface AgentSpecDeploymentEnv {
+  /**
+   * Name of the environment variable.
+   * May consist of any printable ASCII characters except '='.
+   *
+   * @schema AgentSpecDeploymentEnv#name
+   */
+  readonly name: string;
+
+  /**
+   * Variable references $(VAR_NAME) are expanded
+   * using the previously defined environment variables in the container and
+   * any service environment variables. If a variable cannot be resolved,
+   * the reference in the input string will be unchanged. Double $$ are reduced
+   * to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e.
+   * "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)".
+   * Escaped references will never be expanded, regardless of whether the variable
+   * exists or not.
+   * Defaults to "".
+   *
+   * @default .
+   * @schema AgentSpecDeploymentEnv#value
+   */
+  readonly value?: string;
+
+  /**
+   * Source for the environment variable's value. Cannot be used if value is not empty.
+   *
+   * @schema AgentSpecDeploymentEnv#valueFrom
+   */
+  readonly valueFrom?: AgentSpecDeploymentEnvValueFrom;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnv' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnv(obj: AgentSpecDeploymentEnv | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'value': obj.value,
+    'valueFrom': toJson_AgentSpecDeploymentEnvValueFrom(obj.valueFrom),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * LocalObjectReference contains enough information to let you locate the
+ * referenced object inside the same namespace.
+ *
+ * @schema AgentSpecDeploymentImagePullSecrets
+ */
+export interface AgentSpecDeploymentImagePullSecrets {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentImagePullSecrets#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentImagePullSecrets' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentImagePullSecrets(obj: AgentSpecDeploymentImagePullSecrets | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volume represents a named volume in a pod that may be accessed by any container in the pod.
+ *
+ * @schema AgentSpecDeploymentVolumes
+ */
+export interface AgentSpecDeploymentVolumes {
+  /**
+   * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentSpecDeploymentVolumes#awsElasticBlockStore
+   */
+  readonly awsElasticBlockStore?: AgentSpecDeploymentVolumesAwsElasticBlockStore;
+
+  /**
+   * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
+   *
+   * @schema AgentSpecDeploymentVolumes#azureDisk
+   */
+  readonly azureDisk?: AgentSpecDeploymentVolumesAzureDisk;
+
+  /**
+   * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
+   *
+   * @schema AgentSpecDeploymentVolumes#azureFile
+   */
+  readonly azureFile?: AgentSpecDeploymentVolumesAzureFile;
+
+  /**
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#cephfs
+   */
+  readonly cephfs?: AgentSpecDeploymentVolumesCephfs;
+
+  /**
+   * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentSpecDeploymentVolumes#cinder
+   */
+  readonly cinder?: AgentSpecDeploymentVolumesCinder;
+
+  /**
+   * configMap represents a configMap that should populate this volume
+   *
+   * @schema AgentSpecDeploymentVolumes#configMap
+   */
+  readonly configMap?: AgentSpecDeploymentVolumesConfigMap;
+
+  /**
+   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+   *
+   * @schema AgentSpecDeploymentVolumes#csi
+   */
+  readonly csi?: AgentSpecDeploymentVolumesCsi;
+
+  /**
+   * downwardAPI represents downward API about the pod that should populate this volume
+   *
+   * @schema AgentSpecDeploymentVolumes#downwardAPI
+   */
+  readonly downwardApi?: AgentSpecDeploymentVolumesDownwardApi;
+
+  /**
+   * emptyDir represents a temporary directory that shares a pod's lifetime.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentSpecDeploymentVolumes#emptyDir
+   */
+  readonly emptyDir?: AgentSpecDeploymentVolumesEmptyDir;
+
+  /**
+   * ephemeral represents a volume that is handled by a cluster storage driver.
+   * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+   * and deleted when the pod is removed.
+   *
+   * Use this if:
+   * a) the volume is only needed while the pod runs,
+   * b) features of normal volumes like restoring from snapshot or capacity
+   * tracking are needed,
+   * c) the storage driver is specified through a storage class, and
+   * d) the storage driver supports dynamic volume provisioning through
+   * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+   * information on the connection between this volume type
+   * and PersistentVolumeClaim).
+   *
+   * Use PersistentVolumeClaim or one of the vendor-specific
+   * APIs for volumes that persist for longer than the lifecycle
+   * of an individual pod.
+   *
+   * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+   * be used that way - see the documentation of the driver for
+   * more information.
+   *
+   * A pod can use both types of ephemeral volumes and
+   * persistent volumes at the same time.
+   *
+   * @schema AgentSpecDeploymentVolumes#ephemeral
+   */
+  readonly ephemeral?: AgentSpecDeploymentVolumesEphemeral;
+
+  /**
+   * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+   *
+   * @schema AgentSpecDeploymentVolumes#fc
+   */
+  readonly fc?: AgentSpecDeploymentVolumesFc;
+
+  /**
+   * flexVolume represents a generic volume resource that is
+   * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+   *
+   * @schema AgentSpecDeploymentVolumes#flexVolume
+   */
+  readonly flexVolume?: AgentSpecDeploymentVolumesFlexVolume;
+
+  /**
+   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#flocker
+   */
+  readonly flocker?: AgentSpecDeploymentVolumesFlocker;
+
+  /**
+   * gcePersistentDisk represents a GCE Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentSpecDeploymentVolumes#gcePersistentDisk
+   */
+  readonly gcePersistentDisk?: AgentSpecDeploymentVolumesGcePersistentDisk;
+
+  /**
+   * gitRepo represents a git repository at a particular revision.
+   * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+   * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+   * into the Pod's container.
+   *
+   * @schema AgentSpecDeploymentVolumes#gitRepo
+   */
+  readonly gitRepo?: AgentSpecDeploymentVolumesGitRepo;
+
+  /**
+   * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#glusterfs
+   */
+  readonly glusterfs?: AgentSpecDeploymentVolumesGlusterfs;
+
+  /**
+   * hostPath represents a pre-existing file or directory on the host
+   * machine that is directly exposed to the container. This is generally
+   * used for system agents or other privileged things that are allowed
+   * to see the host machine. Most containers will NOT need this.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentSpecDeploymentVolumes#hostPath
+   */
+  readonly hostPath?: AgentSpecDeploymentVolumesHostPath;
+
+  /**
+   * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+   * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+   *
+   * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   *
+   * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+   * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+   * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+   * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+   * The volume will be mounted read-only (ro) and non-executable files (noexec).
+   * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+   * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+   *
+   * @schema AgentSpecDeploymentVolumes#image
+   */
+  readonly image?: AgentSpecDeploymentVolumesImage;
+
+  /**
+   * iscsi represents an ISCSI Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+   *
+   * @schema AgentSpecDeploymentVolumes#iscsi
+   */
+  readonly iscsi?: AgentSpecDeploymentVolumesIscsi;
+
+  /**
+   * name of the volume.
+   * Must be a DNS_LABEL and unique within the pod.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumes#name
+   */
+  readonly name: string;
+
+  /**
+   * nfs represents an NFS mount on the host that shares a pod's lifetime
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentSpecDeploymentVolumes#nfs
+   */
+  readonly nfs?: AgentSpecDeploymentVolumesNfs;
+
+  /**
+   * persistentVolumeClaimVolumeSource represents a reference to a
+   * PersistentVolumeClaim in the same namespace.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentSpecDeploymentVolumes#persistentVolumeClaim
+   */
+  readonly persistentVolumeClaim?: AgentSpecDeploymentVolumesPersistentVolumeClaim;
+
+  /**
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#photonPersistentDisk
+   */
+  readonly photonPersistentDisk?: AgentSpecDeploymentVolumesPhotonPersistentDisk;
+
+  /**
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
+   *
+   * @schema AgentSpecDeploymentVolumes#portworxVolume
+   */
+  readonly portworxVolume?: AgentSpecDeploymentVolumesPortworxVolume;
+
+  /**
+   * projected items for all in one resources secrets, configmaps, and downward API
+   *
+   * @schema AgentSpecDeploymentVolumes#projected
+   */
+  readonly projected?: AgentSpecDeploymentVolumesProjected;
+
+  /**
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#quobyte
+   */
+  readonly quobyte?: AgentSpecDeploymentVolumesQuobyte;
+
+  /**
+   * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#rbd
+   */
+  readonly rbd?: AgentSpecDeploymentVolumesRbd;
+
+  /**
+   * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#scaleIO
+   */
+  readonly scaleIo?: AgentSpecDeploymentVolumesScaleIo;
+
+  /**
+   * secret represents a secret that should populate this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentSpecDeploymentVolumes#secret
+   */
+  readonly secret?: AgentSpecDeploymentVolumesSecret;
+
+  /**
+   * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+   *
+   * @schema AgentSpecDeploymentVolumes#storageos
+   */
+  readonly storageos?: AgentSpecDeploymentVolumesStorageos;
+
+  /**
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
+   *
+   * @schema AgentSpecDeploymentVolumes#vsphereVolume
+   */
+  readonly vsphereVolume?: AgentSpecDeploymentVolumesVsphereVolume;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumes' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumes(obj: AgentSpecDeploymentVolumes | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsElasticBlockStore': toJson_AgentSpecDeploymentVolumesAwsElasticBlockStore(obj.awsElasticBlockStore),
+    'azureDisk': toJson_AgentSpecDeploymentVolumesAzureDisk(obj.azureDisk),
+    'azureFile': toJson_AgentSpecDeploymentVolumesAzureFile(obj.azureFile),
+    'cephfs': toJson_AgentSpecDeploymentVolumesCephfs(obj.cephfs),
+    'cinder': toJson_AgentSpecDeploymentVolumesCinder(obj.cinder),
+    'configMap': toJson_AgentSpecDeploymentVolumesConfigMap(obj.configMap),
+    'csi': toJson_AgentSpecDeploymentVolumesCsi(obj.csi),
+    'downwardAPI': toJson_AgentSpecDeploymentVolumesDownwardApi(obj.downwardApi),
+    'emptyDir': toJson_AgentSpecDeploymentVolumesEmptyDir(obj.emptyDir),
+    'ephemeral': toJson_AgentSpecDeploymentVolumesEphemeral(obj.ephemeral),
+    'fc': toJson_AgentSpecDeploymentVolumesFc(obj.fc),
+    'flexVolume': toJson_AgentSpecDeploymentVolumesFlexVolume(obj.flexVolume),
+    'flocker': toJson_AgentSpecDeploymentVolumesFlocker(obj.flocker),
+    'gcePersistentDisk': toJson_AgentSpecDeploymentVolumesGcePersistentDisk(obj.gcePersistentDisk),
+    'gitRepo': toJson_AgentSpecDeploymentVolumesGitRepo(obj.gitRepo),
+    'glusterfs': toJson_AgentSpecDeploymentVolumesGlusterfs(obj.glusterfs),
+    'hostPath': toJson_AgentSpecDeploymentVolumesHostPath(obj.hostPath),
+    'image': toJson_AgentSpecDeploymentVolumesImage(obj.image),
+    'iscsi': toJson_AgentSpecDeploymentVolumesIscsi(obj.iscsi),
+    'name': obj.name,
+    'nfs': toJson_AgentSpecDeploymentVolumesNfs(obj.nfs),
+    'persistentVolumeClaim': toJson_AgentSpecDeploymentVolumesPersistentVolumeClaim(obj.persistentVolumeClaim),
+    'photonPersistentDisk': toJson_AgentSpecDeploymentVolumesPhotonPersistentDisk(obj.photonPersistentDisk),
+    'portworxVolume': toJson_AgentSpecDeploymentVolumesPortworxVolume(obj.portworxVolume),
+    'projected': toJson_AgentSpecDeploymentVolumesProjected(obj.projected),
+    'quobyte': toJson_AgentSpecDeploymentVolumesQuobyte(obj.quobyte),
+    'rbd': toJson_AgentSpecDeploymentVolumesRbd(obj.rbd),
+    'scaleIO': toJson_AgentSpecDeploymentVolumesScaleIo(obj.scaleIo),
+    'secret': toJson_AgentSpecDeploymentVolumesSecret(obj.secret),
+    'storageos': toJson_AgentSpecDeploymentVolumesStorageos(obj.storageos),
+    'vsphereVolume': toJson_AgentSpecDeploymentVolumesVsphereVolume(obj.vsphereVolume),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -381,6 +884,19461 @@ export function toJson_AgentSpecToolsMcpServer(obj: AgentSpecToolsMcpServer | un
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
 }
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Source for the environment variable's value. Cannot be used if value is not empty.
+ *
+ * @schema AgentSpecDeploymentEnvValueFrom
+ */
+export interface AgentSpecDeploymentEnvValueFrom {
+  /**
+   * Selects a key of a ConfigMap.
+   *
+   * @schema AgentSpecDeploymentEnvValueFrom#configMapKeyRef
+   */
+  readonly configMapKeyRef?: AgentSpecDeploymentEnvValueFromConfigMapKeyRef;
+
+  /**
+   * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+   * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+   *
+   * @schema AgentSpecDeploymentEnvValueFrom#fieldRef
+   */
+  readonly fieldRef?: AgentSpecDeploymentEnvValueFromFieldRef;
+
+  /**
+   * FileKeyRef selects a key of the env file.
+   * Requires the EnvFiles feature gate to be enabled.
+   *
+   * @schema AgentSpecDeploymentEnvValueFrom#fileKeyRef
+   */
+  readonly fileKeyRef?: AgentSpecDeploymentEnvValueFromFileKeyRef;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+   *
+   * @schema AgentSpecDeploymentEnvValueFrom#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentSpecDeploymentEnvValueFromResourceFieldRef;
+
+  /**
+   * Selects a key of a secret in the pod's namespace
+   *
+   * @schema AgentSpecDeploymentEnvValueFrom#secretKeyRef
+   */
+  readonly secretKeyRef?: AgentSpecDeploymentEnvValueFromSecretKeyRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFrom(obj: AgentSpecDeploymentEnvValueFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMapKeyRef': toJson_AgentSpecDeploymentEnvValueFromConfigMapKeyRef(obj.configMapKeyRef),
+    'fieldRef': toJson_AgentSpecDeploymentEnvValueFromFieldRef(obj.fieldRef),
+    'fileKeyRef': toJson_AgentSpecDeploymentEnvValueFromFileKeyRef(obj.fileKeyRef),
+    'resourceFieldRef': toJson_AgentSpecDeploymentEnvValueFromResourceFieldRef(obj.resourceFieldRef),
+    'secretKeyRef': toJson_AgentSpecDeploymentEnvValueFromSecretKeyRef(obj.secretKeyRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+ * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+ *
+ * @schema AgentSpecDeploymentVolumesAwsElasticBlockStore
+ */
+export interface AgentSpecDeploymentVolumesAwsElasticBlockStore {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentSpecDeploymentVolumesAwsElasticBlockStore#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   *
+   * @schema AgentSpecDeploymentVolumesAwsElasticBlockStore#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * readOnly value true will force the readOnly setting in VolumeMounts.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentSpecDeploymentVolumesAwsElasticBlockStore#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID is unique ID of the persistent disk resource in AWS (Amazon EBS volume).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentSpecDeploymentVolumesAwsElasticBlockStore#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesAwsElasticBlockStore' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesAwsElasticBlockStore(obj: AgentSpecDeploymentVolumesAwsElasticBlockStore | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+ * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+ * are redirected to the disk.csi.azure.com CSI driver.
+ *
+ * @schema AgentSpecDeploymentVolumesAzureDisk
+ */
+export interface AgentSpecDeploymentVolumesAzureDisk {
+  /**
+   * cachingMode is the Host Caching mode: None, Read Only, Read Write.
+   *
+   * @schema AgentSpecDeploymentVolumesAzureDisk#cachingMode
+   */
+  readonly cachingMode?: string;
+
+  /**
+   * diskName is the Name of the data disk in the blob storage
+   *
+   * @schema AgentSpecDeploymentVolumesAzureDisk#diskName
+   */
+  readonly diskName: string;
+
+  /**
+   * diskURI is the URI of data disk in the blob storage
+   *
+   * @schema AgentSpecDeploymentVolumesAzureDisk#diskURI
+   */
+  readonly diskUri: string;
+
+  /**
+   * fsType is Filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesAzureDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
+   *
+   * @schema AgentSpecDeploymentVolumesAzureDisk#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentSpecDeploymentVolumesAzureDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesAzureDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesAzureDisk(obj: AgentSpecDeploymentVolumesAzureDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'cachingMode': obj.cachingMode,
+    'diskName': obj.diskName,
+    'diskURI': obj.diskUri,
+    'fsType': obj.fsType,
+    'kind': obj.kind,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+ * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+ * are redirected to the file.csi.azure.com CSI driver.
+ *
+ * @schema AgentSpecDeploymentVolumesAzureFile
+ */
+export interface AgentSpecDeploymentVolumesAzureFile {
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentSpecDeploymentVolumesAzureFile#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretName is the  name of secret that contains Azure Storage Account Name and Key
+   *
+   * @schema AgentSpecDeploymentVolumesAzureFile#secretName
+   */
+  readonly secretName: string;
+
+  /**
+   * shareName is the azure share Name
+   *
+   * @schema AgentSpecDeploymentVolumesAzureFile#shareName
+   */
+  readonly shareName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesAzureFile' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesAzureFile(obj: AgentSpecDeploymentVolumesAzureFile | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'readOnly': obj.readOnly,
+    'secretName': obj.secretName,
+    'shareName': obj.shareName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+ * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesCephfs
+ */
+export interface AgentSpecDeploymentVolumesCephfs {
+  /**
+   * monitors is Required: Monitors is a collection of Ceph monitors
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesCephfs#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * path is Optional: Used as the mounted root, rather than the full Ceph tree, default is /
+   *
+   * @schema AgentSpecDeploymentVolumesCephfs#path
+   */
+  readonly path?: string;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentSpecDeploymentVolumesCephfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretFile is Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesCephfs#secretFile
+   */
+  readonly secretFile?: string;
+
+  /**
+   * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesCephfs#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesCephfsSecretRef;
+
+  /**
+   * user is optional: User is the rados user name, default is admin
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesCephfs#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCephfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCephfs(obj: AgentSpecDeploymentVolumesCephfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'monitors': obj.monitors?.map(y => y),
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'secretFile': obj.secretFile,
+    'secretRef': toJson_AgentSpecDeploymentVolumesCephfsSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cinder represents a cinder volume attached and mounted on kubelets host machine.
+ * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+ * are redirected to the cinder.csi.openstack.org CSI driver.
+ * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+ *
+ * @schema AgentSpecDeploymentVolumesCinder
+ */
+export interface AgentSpecDeploymentVolumesCinder {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentSpecDeploymentVolumesCinder#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentSpecDeploymentVolumesCinder#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is optional: points to a secret object containing parameters used to connect
+   * to OpenStack.
+   *
+   * @schema AgentSpecDeploymentVolumesCinder#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesCinderSecretRef;
+
+  /**
+   * volumeID used to identify the volume in cinder.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentSpecDeploymentVolumesCinder#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCinder' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCinder(obj: AgentSpecDeploymentVolumesCinder | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesCinderSecretRef(obj.secretRef),
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap represents a configMap that should populate this volume
+ *
+ * @schema AgentSpecDeploymentVolumesConfigMap
+ */
+export interface AgentSpecDeploymentVolumesConfigMap {
+  /**
+   * defaultMode is optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentSpecDeploymentVolumesConfigMap#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMap#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesConfigMap(obj: AgentSpecDeploymentVolumesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+ *
+ * @schema AgentSpecDeploymentVolumesCsi
+ */
+export interface AgentSpecDeploymentVolumesCsi {
+  /**
+   * driver is the name of the CSI driver that handles this volume.
+   * Consult with your admin for the correct name as registered in the cluster.
+   *
+   * @schema AgentSpecDeploymentVolumesCsi#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType to mount. Ex. "ext4", "xfs", "ntfs".
+   * If not provided, the empty value is passed to the associated CSI driver
+   * which will determine the default filesystem to apply.
+   *
+   * @schema AgentSpecDeploymentVolumesCsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * nodePublishSecretRef is a reference to the secret object containing
+   * sensitive information to pass to the CSI driver to complete the CSI
+   * NodePublishVolume and NodeUnpublishVolume calls.
+   * This field is optional, and  may be empty if no secret is required. If the
+   * secret object contains more than one secret, all secret references are passed.
+   *
+   * @schema AgentSpecDeploymentVolumesCsi#nodePublishSecretRef
+   */
+  readonly nodePublishSecretRef?: AgentSpecDeploymentVolumesCsiNodePublishSecretRef;
+
+  /**
+   * readOnly specifies a read-only configuration for the volume.
+   * Defaults to false (read/write).
+   *
+   * @default false (read/write).
+   * @schema AgentSpecDeploymentVolumesCsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeAttributes stores driver-specific properties that are passed to the CSI
+   * driver. Consult your driver's documentation for supported values.
+   *
+   * @schema AgentSpecDeploymentVolumesCsi#volumeAttributes
+   */
+  readonly volumeAttributes?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCsi(obj: AgentSpecDeploymentVolumesCsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'nodePublishSecretRef': toJson_AgentSpecDeploymentVolumesCsiNodePublishSecretRef(obj.nodePublishSecretRef),
+    'readOnly': obj.readOnly,
+    'volumeAttributes': ((obj.volumeAttributes) === undefined) ? undefined : (Object.entries(obj.volumeAttributes).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI represents downward API about the pod that should populate this volume
+ *
+ * @schema AgentSpecDeploymentVolumesDownwardApi
+ */
+export interface AgentSpecDeploymentVolumesDownwardApi {
+  /**
+   * Optional: mode bits to use on created files by default. Must be a
+   * Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentSpecDeploymentVolumesDownwardApi#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * Items is a list of downward API volume file
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApi#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesDownwardApi(obj: AgentSpecDeploymentVolumesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * emptyDir represents a temporary directory that shares a pod's lifetime.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentSpecDeploymentVolumesEmptyDir
+ */
+export interface AgentSpecDeploymentVolumesEmptyDir {
+  /**
+   * medium represents what type of storage medium should back this directory.
+   * The default is "" which means to use the node's default medium.
+   * Must be an empty string (default) or Memory.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentSpecDeploymentVolumesEmptyDir#medium
+   */
+  readonly medium?: string;
+
+  /**
+   * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+   * The size limit is also applicable for memory medium.
+   * The maximum usage on memory medium EmptyDir would be the minimum value between
+   * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+   * The default is nil which means that the limit is undefined.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentSpecDeploymentVolumesEmptyDir#sizeLimit
+   */
+  readonly sizeLimit?: AgentSpecDeploymentVolumesEmptyDirSizeLimit;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEmptyDir' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEmptyDir(obj: AgentSpecDeploymentVolumesEmptyDir | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'medium': obj.medium,
+    'sizeLimit': obj.sizeLimit?.value,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ephemeral represents a volume that is handled by a cluster storage driver.
+ * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+ * and deleted when the pod is removed.
+ *
+ * Use this if:
+ * a) the volume is only needed while the pod runs,
+ * b) features of normal volumes like restoring from snapshot or capacity
+ * tracking are needed,
+ * c) the storage driver is specified through a storage class, and
+ * d) the storage driver supports dynamic volume provisioning through
+ * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+ * information on the connection between this volume type
+ * and PersistentVolumeClaim).
+ *
+ * Use PersistentVolumeClaim or one of the vendor-specific
+ * APIs for volumes that persist for longer than the lifecycle
+ * of an individual pod.
+ *
+ * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+ * be used that way - see the documentation of the driver for
+ * more information.
+ *
+ * A pod can use both types of ephemeral volumes and
+ * persistent volumes at the same time.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeral
+ */
+export interface AgentSpecDeploymentVolumesEphemeral {
+  /**
+   * Will be used to create a stand-alone PVC to provision the volume.
+   * The pod in which this EphemeralVolumeSource is embedded will be the
+   * owner of the PVC, i.e. the PVC will be deleted together with the
+   * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+   * `<volume name>` is the name from the `PodSpec.Volumes` array
+   * entry. Pod validation will reject the pod if the concatenated name
+   * is not valid for a PVC (for example, too long).
+   *
+   * An existing PVC with that name that is not owned by the pod
+   * will *not* be used for the pod to avoid using an unrelated
+   * volume by mistake. Starting the pod is then blocked until
+   * the unrelated PVC is removed. If such a pre-created PVC is
+   * meant to be used by the pod, the PVC has to updated with an
+   * owner reference to the pod once the pod exists. Normally
+   * this should not be necessary, but it may be useful when
+   * manually reconstructing a broken cluster.
+   *
+   * This field is read-only and no changes will be made by Kubernetes
+   * to the PVC after it has been created.
+   *
+   * Required, must not be nil.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeral#volumeClaimTemplate
+   */
+  readonly volumeClaimTemplate?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeral' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeral(obj: AgentSpecDeploymentVolumesEphemeral | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'volumeClaimTemplate': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate(obj.volumeClaimTemplate),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+ *
+ * @schema AgentSpecDeploymentVolumesFc
+ */
+export interface AgentSpecDeploymentVolumesFc {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesFc#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * lun is Optional: FC target lun number
+   *
+   * @schema AgentSpecDeploymentVolumesFc#lun
+   */
+  readonly lun?: number;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentSpecDeploymentVolumesFc#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * targetWWNs is Optional: FC target worldwide names (WWNs)
+   *
+   * @schema AgentSpecDeploymentVolumesFc#targetWWNs
+   */
+  readonly targetWwNs?: string[];
+
+  /**
+   * wwids Optional: FC volume world wide identifiers (wwids)
+   * Either wwids or combination of targetWWNs and lun must be set, but not both simultaneously.
+   *
+   * @schema AgentSpecDeploymentVolumesFc#wwids
+   */
+  readonly wwids?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesFc' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesFc(obj: AgentSpecDeploymentVolumesFc | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'lun': obj.lun,
+    'readOnly': obj.readOnly,
+    'targetWWNs': obj.targetWwNs?.map(y => y),
+    'wwids': obj.wwids?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flexVolume represents a generic volume resource that is
+ * provisioned/attached using an exec based plugin.
+ * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+ *
+ * @schema AgentSpecDeploymentVolumesFlexVolume
+ */
+export interface AgentSpecDeploymentVolumesFlexVolume {
+  /**
+   * driver is the name of the driver to use for this volume.
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolume#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * options is Optional: this field holds extra command options if any.
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolume#options
+   */
+  readonly options?: { [key: string]: string };
+
+  /**
+   * readOnly is Optional: defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is Optional: secretRef is reference to the secret object containing
+   * sensitive information to pass to the plugin scripts. This may be
+   * empty if no secret object is specified. If the secret object
+   * contains more than one secret, all secrets are passed to the plugin
+   * scripts.
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolume#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesFlexVolumeSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesFlexVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesFlexVolume(obj: AgentSpecDeploymentVolumesFlexVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'options': ((obj.options) === undefined) ? undefined : (Object.entries(obj.options).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesFlexVolumeSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+ * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesFlocker
+ */
+export interface AgentSpecDeploymentVolumesFlocker {
+  /**
+   * datasetName is Name of the dataset stored as metadata -> name on the dataset for Flocker
+   * should be considered as deprecated
+   *
+   * @schema AgentSpecDeploymentVolumesFlocker#datasetName
+   */
+  readonly datasetName?: string;
+
+  /**
+   * datasetUUID is the UUID of the dataset. This is unique identifier of a Flocker dataset
+   *
+   * @schema AgentSpecDeploymentVolumesFlocker#datasetUUID
+   */
+  readonly datasetUuid?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesFlocker' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesFlocker(obj: AgentSpecDeploymentVolumesFlocker | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'datasetName': obj.datasetName,
+    'datasetUUID': obj.datasetUuid,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gcePersistentDisk represents a GCE Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+ * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+ *
+ * @schema AgentSpecDeploymentVolumesGcePersistentDisk
+ */
+export interface AgentSpecDeploymentVolumesGcePersistentDisk {
+  /**
+   * fsType is filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentSpecDeploymentVolumesGcePersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentSpecDeploymentVolumesGcePersistentDisk#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * pdName is unique name of the PD resource in GCE. Used to identify the disk in GCE.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentSpecDeploymentVolumesGcePersistentDisk#pdName
+   */
+  readonly pdName: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesGcePersistentDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesGcePersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesGcePersistentDisk(obj: AgentSpecDeploymentVolumesGcePersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'pdName': obj.pdName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gitRepo represents a git repository at a particular revision.
+ * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+ * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+ * into the Pod's container.
+ *
+ * @schema AgentSpecDeploymentVolumesGitRepo
+ */
+export interface AgentSpecDeploymentVolumesGitRepo {
+  /**
+   * directory is the target directory name.
+   * Must not contain or start with '..'.  If '.' is supplied, the volume directory will be the
+   * git repository.  Otherwise, if specified, the volume will contain the git repository in
+   * the subdirectory with the given name.
+   *
+   * @schema AgentSpecDeploymentVolumesGitRepo#directory
+   */
+  readonly directory?: string;
+
+  /**
+   * repository is the URL
+   *
+   * @schema AgentSpecDeploymentVolumesGitRepo#repository
+   */
+  readonly repository: string;
+
+  /**
+   * revision is the commit hash for the specified revision.
+   *
+   * @schema AgentSpecDeploymentVolumesGitRepo#revision
+   */
+  readonly revision?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesGitRepo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesGitRepo(obj: AgentSpecDeploymentVolumesGitRepo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'directory': obj.directory,
+    'repository': obj.repository,
+    'revision': obj.revision,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+ * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesGlusterfs
+ */
+export interface AgentSpecDeploymentVolumesGlusterfs {
+  /**
+   * endpoints is the endpoint name that details Glusterfs topology.
+   *
+   * @schema AgentSpecDeploymentVolumesGlusterfs#endpoints
+   */
+  readonly endpoints: string;
+
+  /**
+   * path is the Glusterfs volume path.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @schema AgentSpecDeploymentVolumesGlusterfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesGlusterfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesGlusterfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesGlusterfs(obj: AgentSpecDeploymentVolumesGlusterfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'endpoints': obj.endpoints,
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * hostPath represents a pre-existing file or directory on the host
+ * machine that is directly exposed to the container. This is generally
+ * used for system agents or other privileged things that are allowed
+ * to see the host machine. Most containers will NOT need this.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+ *
+ * @schema AgentSpecDeploymentVolumesHostPath
+ */
+export interface AgentSpecDeploymentVolumesHostPath {
+  /**
+   * path of the directory on the host.
+   * If the path is a symlink, it will follow the link to the real path.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentSpecDeploymentVolumesHostPath#path
+   */
+  readonly path: string;
+
+  /**
+   * type for HostPath Volume
+   * Defaults to ""
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @default More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   * @schema AgentSpecDeploymentVolumesHostPath#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesHostPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesHostPath(obj: AgentSpecDeploymentVolumesHostPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+ * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+ *
+ * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+ * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+ * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+ *
+ * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+ * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+ * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+ * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+ * The volume will be mounted read-only (ro) and non-executable files (noexec).
+ * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+ * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+ *
+ * @schema AgentSpecDeploymentVolumesImage
+ */
+export interface AgentSpecDeploymentVolumesImage {
+  /**
+   * Policy for pulling OCI objects. Possible values are:
+   * Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   * Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+   *
+   * @default Always if :latest tag is specified, or IfNotPresent otherwise.
+   * @schema AgentSpecDeploymentVolumesImage#pullPolicy
+   */
+  readonly pullPolicy?: string;
+
+  /**
+   * Required: Image or artifact reference to be used.
+   * Behaves in the same way as pod.spec.containers[*].image.
+   * Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
+   * More info: https://kubernetes.io/docs/concepts/containers/images
+   * This field is optional to allow higher level config management to default or override
+   * container images in workload controllers like Deployments and StatefulSets.
+   *
+   * @schema AgentSpecDeploymentVolumesImage#reference
+   */
+  readonly reference?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesImage' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesImage(obj: AgentSpecDeploymentVolumesImage | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'pullPolicy': obj.pullPolicy,
+    'reference': obj.reference,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * iscsi represents an ISCSI Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+ *
+ * @schema AgentSpecDeploymentVolumesIscsi
+ */
+export interface AgentSpecDeploymentVolumesIscsi {
+  /**
+   * chapAuthDiscovery defines whether support iSCSI Discovery CHAP authentication
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#chapAuthDiscovery
+   */
+  readonly chapAuthDiscovery?: boolean;
+
+  /**
+   * chapAuthSession defines whether support iSCSI Session CHAP authentication
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#chapAuthSession
+   */
+  readonly chapAuthSession?: boolean;
+
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * initiatorName is the custom iSCSI Initiator Name.
+   * If initiatorName is specified with iscsiInterface simultaneously, new iSCSI interface
+   * <target portal>:<volume name> will be created for the connection.
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#initiatorName
+   */
+  readonly initiatorName?: string;
+
+  /**
+   * iqn is the target iSCSI Qualified Name.
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#iqn
+   */
+  readonly iqn: string;
+
+  /**
+   * iscsiInterface is the interface Name that uses an iSCSI transport.
+   * Defaults to 'default' (tcp).
+   *
+   * @default default' (tcp).
+   * @schema AgentSpecDeploymentVolumesIscsi#iscsiInterface
+   */
+  readonly iscsiInterface?: string;
+
+  /**
+   * lun represents iSCSI Target Lun number.
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#lun
+   */
+  readonly lun: number;
+
+  /**
+   * portals is the iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#portals
+   */
+  readonly portals?: string[];
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesIscsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesIscsiSecretRef;
+
+  /**
+   * targetPortal is iSCSI Target Portal. The Portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentSpecDeploymentVolumesIscsi#targetPortal
+   */
+  readonly targetPortal: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesIscsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesIscsi(obj: AgentSpecDeploymentVolumesIscsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'chapAuthDiscovery': obj.chapAuthDiscovery,
+    'chapAuthSession': obj.chapAuthSession,
+    'fsType': obj.fsType,
+    'initiatorName': obj.initiatorName,
+    'iqn': obj.iqn,
+    'iscsiInterface': obj.iscsiInterface,
+    'lun': obj.lun,
+    'portals': obj.portals?.map(y => y),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesIscsiSecretRef(obj.secretRef),
+    'targetPortal': obj.targetPortal,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nfs represents an NFS mount on the host that shares a pod's lifetime
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+ *
+ * @schema AgentSpecDeploymentVolumesNfs
+ */
+export interface AgentSpecDeploymentVolumesNfs {
+  /**
+   * path that is exported by the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentSpecDeploymentVolumesNfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the NFS export to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesNfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * server is the hostname or IP address of the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentSpecDeploymentVolumesNfs#server
+   */
+  readonly server: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesNfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesNfs(obj: AgentSpecDeploymentVolumesNfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'server': obj.server,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * persistentVolumeClaimVolumeSource represents a reference to a
+ * PersistentVolumeClaim in the same namespace.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+ *
+ * @schema AgentSpecDeploymentVolumesPersistentVolumeClaim
+ */
+export interface AgentSpecDeploymentVolumesPersistentVolumeClaim {
+  /**
+   * claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentSpecDeploymentVolumesPersistentVolumeClaim#claimName
+   */
+  readonly claimName: string;
+
+  /**
+   * readOnly Will force the ReadOnly setting in VolumeMounts.
+   * Default false.
+   *
+   * @schema AgentSpecDeploymentVolumesPersistentVolumeClaim#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesPersistentVolumeClaim' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesPersistentVolumeClaim(obj: AgentSpecDeploymentVolumesPersistentVolumeClaim | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claimName': obj.claimName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+ * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesPhotonPersistentDisk
+ */
+export interface AgentSpecDeploymentVolumesPhotonPersistentDisk {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesPhotonPersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * pdID is the ID that identifies Photon Controller persistent disk
+   *
+   * @schema AgentSpecDeploymentVolumesPhotonPersistentDisk#pdID
+   */
+  readonly pdId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesPhotonPersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesPhotonPersistentDisk(obj: AgentSpecDeploymentVolumesPhotonPersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'pdID': obj.pdId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+ * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+ * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+ * is on.
+ *
+ * @schema AgentSpecDeploymentVolumesPortworxVolume
+ */
+export interface AgentSpecDeploymentVolumesPortworxVolume {
+  /**
+   * fSType represents the filesystem type to mount
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesPortworxVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentSpecDeploymentVolumesPortworxVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID uniquely identifies a Portworx volume
+   *
+   * @schema AgentSpecDeploymentVolumesPortworxVolume#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesPortworxVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesPortworxVolume(obj: AgentSpecDeploymentVolumesPortworxVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * projected items for all in one resources secrets, configmaps, and downward API
+ *
+ * @schema AgentSpecDeploymentVolumesProjected
+ */
+export interface AgentSpecDeploymentVolumesProjected {
+  /**
+   * defaultMode are the mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesProjected#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * sources is the list of volume projections. Each entry in this list
+   * handles one source.
+   *
+   * @schema AgentSpecDeploymentVolumesProjected#sources
+   */
+  readonly sources?: AgentSpecDeploymentVolumesProjectedSources[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjected' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjected(obj: AgentSpecDeploymentVolumesProjected | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'sources': obj.sources?.map(y => toJson_AgentSpecDeploymentVolumesProjectedSources(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+ * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesQuobyte
+ */
+export interface AgentSpecDeploymentVolumesQuobyte {
+  /**
+   * group to map volume access to
+   * Default is no group
+   *
+   * @default no group
+   * @schema AgentSpecDeploymentVolumesQuobyte#group
+   */
+  readonly group?: string;
+
+  /**
+   * readOnly here will force the Quobyte volume to be mounted with read-only permissions.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesQuobyte#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * registry represents a single or multiple Quobyte Registry services
+   * specified as a string as host:port pair (multiple entries are separated with commas)
+   * which acts as the central registry for volumes
+   *
+   * @schema AgentSpecDeploymentVolumesQuobyte#registry
+   */
+  readonly registry: string;
+
+  /**
+   * tenant owning the given Quobyte volume in the Backend
+   * Used with dynamically provisioned Quobyte volumes, value is set by the plugin
+   *
+   * @schema AgentSpecDeploymentVolumesQuobyte#tenant
+   */
+  readonly tenant?: string;
+
+  /**
+   * user to map volume access to
+   * Defaults to serivceaccount user
+   *
+   * @default serivceaccount user
+   * @schema AgentSpecDeploymentVolumesQuobyte#user
+   */
+  readonly user?: string;
+
+  /**
+   * volume is a string that references an already created Quobyte volume by name.
+   *
+   * @schema AgentSpecDeploymentVolumesQuobyte#volume
+   */
+  readonly volume: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesQuobyte' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesQuobyte(obj: AgentSpecDeploymentVolumesQuobyte | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'group': obj.group,
+    'readOnly': obj.readOnly,
+    'registry': obj.registry,
+    'tenant': obj.tenant,
+    'user': obj.user,
+    'volume': obj.volume,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+ * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesRbd
+ */
+export interface AgentSpecDeploymentVolumesRbd {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
+   *
+   * @schema AgentSpecDeploymentVolumesRbd#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * image is the rados image name.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesRbd#image
+   */
+  readonly image: string;
+
+  /**
+   * keyring is the path to key ring for RBDUser.
+   * Default is /etc/ceph/keyring.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default etc/ceph/keyring.
+   * @schema AgentSpecDeploymentVolumesRbd#keyring
+   */
+  readonly keyring?: string;
+
+  /**
+   * monitors is a collection of Ceph monitors.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentSpecDeploymentVolumesRbd#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * pool is the rados pool name.
+   * Default is rbd.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default rbd.
+   * @schema AgentSpecDeploymentVolumesRbd#pool
+   */
+  readonly pool?: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default false.
+   * @schema AgentSpecDeploymentVolumesRbd#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is name of the authentication secret for RBDUser. If provided
+   * overrides keyring.
+   * Default is nil.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default nil.
+   * @schema AgentSpecDeploymentVolumesRbd#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesRbdSecretRef;
+
+  /**
+   * user is the rados user name.
+   * Default is admin.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default admin.
+   * @schema AgentSpecDeploymentVolumesRbd#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesRbd' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesRbd(obj: AgentSpecDeploymentVolumesRbd | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'image': obj.image,
+    'keyring': obj.keyring,
+    'monitors': obj.monitors?.map(y => y),
+    'pool': obj.pool,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesRbdSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+ * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesScaleIo
+ */
+export interface AgentSpecDeploymentVolumesScaleIo {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs".
+   * Default is "xfs".
+   *
+   * @default xfs".
+   * @schema AgentSpecDeploymentVolumesScaleIo#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * gateway is the host address of the ScaleIO API Gateway.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#gateway
+   */
+  readonly gateway: string;
+
+  /**
+   * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#protectionDomain
+   */
+  readonly protectionDomain?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentSpecDeploymentVolumesScaleIo#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef references to the secret for ScaleIO user and other
+   * sensitive information. If this is not provided, Login operation will fail.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#secretRef
+   */
+  readonly secretRef: AgentSpecDeploymentVolumesScaleIoSecretRef;
+
+  /**
+   * sslEnabled Flag enable/disable SSL communication with Gateway, default false
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#sslEnabled
+   */
+  readonly sslEnabled?: boolean;
+
+  /**
+   * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.
+   * Default is ThinProvisioned.
+   *
+   * @default ThinProvisioned.
+   * @schema AgentSpecDeploymentVolumesScaleIo#storageMode
+   */
+  readonly storageMode?: string;
+
+  /**
+   * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#storagePool
+   */
+  readonly storagePool?: string;
+
+  /**
+   * system is the name of the storage system as configured in ScaleIO.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#system
+   */
+  readonly system: string;
+
+  /**
+   * volumeName is the name of a volume already created in the ScaleIO system
+   * that is associated with this volume source.
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIo#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesScaleIo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesScaleIo(obj: AgentSpecDeploymentVolumesScaleIo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'gateway': obj.gateway,
+    'protectionDomain': obj.protectionDomain,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesScaleIoSecretRef(obj.secretRef),
+    'sslEnabled': obj.sslEnabled,
+    'storageMode': obj.storageMode,
+    'storagePool': obj.storagePool,
+    'system': obj.system,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret represents a secret that should populate this volume.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+ *
+ * @schema AgentSpecDeploymentVolumesSecret
+ */
+export interface AgentSpecDeploymentVolumesSecret {
+  /**
+   * defaultMode is Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values
+   * for mode bits. Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentSpecDeploymentVolumesSecret#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items If unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesSecret#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesSecretItems[];
+
+  /**
+   * optional field specify whether the Secret or its keys must be defined
+   *
+   * @schema AgentSpecDeploymentVolumesSecret#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * secretName is the name of the secret in the pod's namespace to use.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentSpecDeploymentVolumesSecret#secretName
+   */
+  readonly secretName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesSecret(obj: AgentSpecDeploymentVolumesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesSecretItems(y)),
+    'optional': obj.optional,
+    'secretName': obj.secretName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+ * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+ *
+ * @schema AgentSpecDeploymentVolumesStorageos
+ */
+export interface AgentSpecDeploymentVolumesStorageos {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesStorageos#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentSpecDeploymentVolumesStorageos#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef specifies the secret to use for obtaining the StorageOS API
+   * credentials.  If not specified, default values will be attempted.
+   *
+   * @schema AgentSpecDeploymentVolumesStorageos#secretRef
+   */
+  readonly secretRef?: AgentSpecDeploymentVolumesStorageosSecretRef;
+
+  /**
+   * volumeName is the human-readable name of the StorageOS volume.  Volume
+   * names are only unique within a namespace.
+   *
+   * @schema AgentSpecDeploymentVolumesStorageos#volumeName
+   */
+  readonly volumeName?: string;
+
+  /**
+   * volumeNamespace specifies the scope of the volume within StorageOS.  If no
+   * namespace is specified then the Pod's namespace will be used.  This allows the
+   * Kubernetes name scoping to be mirrored within StorageOS for tighter integration.
+   * Set VolumeName to any name to override the default behaviour.
+   * Set to "default" if you are not using namespaces within StorageOS.
+   * Namespaces that do not pre-exist within StorageOS will be created.
+   *
+   * @schema AgentSpecDeploymentVolumesStorageos#volumeNamespace
+   */
+  readonly volumeNamespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesStorageos' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesStorageos(obj: AgentSpecDeploymentVolumesStorageos | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentSpecDeploymentVolumesStorageosSecretRef(obj.secretRef),
+    'volumeName': obj.volumeName,
+    'volumeNamespace': obj.volumeNamespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+ * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+ * are redirected to the csi.vsphere.vmware.com CSI driver.
+ *
+ * @schema AgentSpecDeploymentVolumesVsphereVolume
+ */
+export interface AgentSpecDeploymentVolumesVsphereVolume {
+  /**
+   * fsType is filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentSpecDeploymentVolumesVsphereVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * storagePolicyID is the storage Policy Based Management (SPBM) profile ID associated with the StoragePolicyName.
+   *
+   * @schema AgentSpecDeploymentVolumesVsphereVolume#storagePolicyID
+   */
+  readonly storagePolicyId?: string;
+
+  /**
+   * storagePolicyName is the storage Policy Based Management (SPBM) profile name.
+   *
+   * @schema AgentSpecDeploymentVolumesVsphereVolume#storagePolicyName
+   */
+  readonly storagePolicyName?: string;
+
+  /**
+   * volumePath is the path that identifies vSphere volume vmdk
+   *
+   * @schema AgentSpecDeploymentVolumesVsphereVolume#volumePath
+   */
+  readonly volumePath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesVsphereVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesVsphereVolume(obj: AgentSpecDeploymentVolumesVsphereVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'storagePolicyID': obj.storagePolicyId,
+    'storagePolicyName': obj.storagePolicyName,
+    'volumePath': obj.volumePath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a ConfigMap.
+ *
+ * @schema AgentSpecDeploymentEnvValueFromConfigMapKeyRef
+ */
+export interface AgentSpecDeploymentEnvValueFromConfigMapKeyRef {
+  /**
+   * The key to select.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromConfigMapKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentEnvValueFromConfigMapKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the ConfigMap or its key must be defined
+   *
+   * @schema AgentSpecDeploymentEnvValueFromConfigMapKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFromConfigMapKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFromConfigMapKeyRef(obj: AgentSpecDeploymentEnvValueFromConfigMapKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+ * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+ *
+ * @schema AgentSpecDeploymentEnvValueFromFieldRef
+ */
+export interface AgentSpecDeploymentEnvValueFromFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFromFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFromFieldRef(obj: AgentSpecDeploymentEnvValueFromFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * FileKeyRef selects a key of the env file.
+ * Requires the EnvFiles feature gate to be enabled.
+ *
+ * @schema AgentSpecDeploymentEnvValueFromFileKeyRef
+ */
+export interface AgentSpecDeploymentEnvValueFromFileKeyRef {
+  /**
+   * The key within the env file. An invalid key will prevent the pod from starting.
+   * The keys defined within a source may consist of any printable ASCII characters except '='.
+   * During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFileKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Specify whether the file or its key must be defined. If the file or key
+   * does not exist, then the env var is not published.
+   * If optional is set to true and the specified key does not exist,
+   * the environment variable will not be set in the Pod's containers.
+   *
+   * If optional is set to false and the specified key does not exist,
+   * an error will be returned during Pod creation.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFileKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * The path within the volume from which to select the file.
+   * Must be relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFileKeyRef#path
+   */
+  readonly path: string;
+
+  /**
+   * The name of the volume mount containing the env file.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromFileKeyRef#volumeName
+   */
+  readonly volumeName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFromFileKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFromFileKeyRef(obj: AgentSpecDeploymentEnvValueFromFileKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'optional': obj.optional,
+    'path': obj.path,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+ *
+ * @schema AgentSpecDeploymentEnvValueFromResourceFieldRef
+ */
+export interface AgentSpecDeploymentEnvValueFromResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentSpecDeploymentEnvValueFromResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentSpecDeploymentEnvValueFromResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentSpecDeploymentEnvValueFromResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFromResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFromResourceFieldRef(obj: AgentSpecDeploymentEnvValueFromResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a secret in the pod's namespace
+ *
+ * @schema AgentSpecDeploymentEnvValueFromSecretKeyRef
+ */
+export interface AgentSpecDeploymentEnvValueFromSecretKeyRef {
+  /**
+   * The key of the secret to select from.  Must be a valid secret key.
+   *
+   * @schema AgentSpecDeploymentEnvValueFromSecretKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentEnvValueFromSecretKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the Secret or its key must be defined
+   *
+   * @schema AgentSpecDeploymentEnvValueFromSecretKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentEnvValueFromSecretKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentEnvValueFromSecretKeyRef(obj: AgentSpecDeploymentEnvValueFromSecretKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+ * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+ *
+ * @schema AgentSpecDeploymentVolumesCephfsSecretRef
+ */
+export interface AgentSpecDeploymentVolumesCephfsSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesCephfsSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCephfsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCephfsSecretRef(obj: AgentSpecDeploymentVolumesCephfsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is optional: points to a secret object containing parameters used to connect
+ * to OpenStack.
+ *
+ * @schema AgentSpecDeploymentVolumesCinderSecretRef
+ */
+export interface AgentSpecDeploymentVolumesCinderSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesCinderSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCinderSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCinderSecretRef(obj: AgentSpecDeploymentVolumesCinderSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentSpecDeploymentVolumesConfigMapItems
+ */
+export interface AgentSpecDeploymentVolumesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesConfigMapItems(obj: AgentSpecDeploymentVolumesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nodePublishSecretRef is a reference to the secret object containing
+ * sensitive information to pass to the CSI driver to complete the CSI
+ * NodePublishVolume and NodeUnpublishVolume calls.
+ * This field is optional, and  may be empty if no secret is required. If the
+ * secret object contains more than one secret, all secret references are passed.
+ *
+ * @schema AgentSpecDeploymentVolumesCsiNodePublishSecretRef
+ */
+export interface AgentSpecDeploymentVolumesCsiNodePublishSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesCsiNodePublishSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesCsiNodePublishSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesCsiNodePublishSecretRef(obj: AgentSpecDeploymentVolumesCsiNodePublishSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentSpecDeploymentVolumesDownwardApiItems
+ */
+export interface AgentSpecDeploymentVolumesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentSpecDeploymentVolumesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesDownwardApiItems(obj: AgentSpecDeploymentVolumesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentSpecDeploymentVolumesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+ * The size limit is also applicable for memory medium.
+ * The maximum usage on memory medium EmptyDir would be the minimum value between
+ * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+ * The default is nil which means that the limit is undefined.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentSpecDeploymentVolumesEmptyDirSizeLimit
+ */
+export class AgentSpecDeploymentVolumesEmptyDirSizeLimit {
+  public static fromNumber(value: number): AgentSpecDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentSpecDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentSpecDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Will be used to create a stand-alone PVC to provision the volume.
+ * The pod in which this EphemeralVolumeSource is embedded will be the
+ * owner of the PVC, i.e. the PVC will be deleted together with the
+ * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+ * `<volume name>` is the name from the `PodSpec.Volumes` array
+ * entry. Pod validation will reject the pod if the concatenated name
+ * is not valid for a PVC (for example, too long).
+ *
+ * An existing PVC with that name that is not owned by the pod
+ * will *not* be used for the pod to avoid using an unrelated
+ * volume by mistake. Starting the pod is then blocked until
+ * the unrelated PVC is removed. If such a pre-created PVC is
+ * meant to be used by the pod, the PVC has to updated with an
+ * owner reference to the pod once the pod exists. Normally
+ * this should not be necessary, but it may be useful when
+ * manually reconstructing a broken cluster.
+ *
+ * This field is read-only and no changes will be made by Kubernetes
+ * to the PVC after it has been created.
+ *
+ * Required, must not be nil.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate {
+  /**
+   * May contain labels and annotations that will be copied into the PVC
+   * when creating it. No other fields are allowed and will be rejected during
+   * validation.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate#metadata
+   */
+  readonly metadata?: any;
+
+  /**
+   * The specification for the PersistentVolumeClaim. The entire content is
+   * copied unchanged into the PVC that gets created from this
+   * template. The same fields as in a PersistentVolumeClaim
+   * are also valid here.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate#spec
+   */
+  readonly spec: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: secretRef is reference to the secret object containing
+ * sensitive information to pass to the plugin scripts. This may be
+ * empty if no secret object is specified. If the secret object
+ * contains more than one secret, all secrets are passed to the plugin
+ * scripts.
+ *
+ * @schema AgentSpecDeploymentVolumesFlexVolumeSecretRef
+ */
+export interface AgentSpecDeploymentVolumesFlexVolumeSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesFlexVolumeSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesFlexVolumeSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesFlexVolumeSecretRef(obj: AgentSpecDeploymentVolumesFlexVolumeSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+ *
+ * @schema AgentSpecDeploymentVolumesIscsiSecretRef
+ */
+export interface AgentSpecDeploymentVolumesIscsiSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesIscsiSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesIscsiSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesIscsiSecretRef(obj: AgentSpecDeploymentVolumesIscsiSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projection that may be projected along with other supported volume types.
+ * Exactly one of these fields must be set.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSources
+ */
+export interface AgentSpecDeploymentVolumesProjectedSources {
+  /**
+   * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+   * of ClusterTrustBundle objects in an auto-updating file.
+   *
+   * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+   *
+   * ClusterTrustBundle objects can either be selected by name, or by the
+   * combination of signer name and a label selector.
+   *
+   * Kubelet performs aggressive normalization of the PEM contents written
+   * into the pod filesystem.  Esoteric PEM features such as inter-block
+   * comments and block headers are stripped.  Certificates are deduplicated.
+   * The ordering of certificates within the file is arbitrary, and Kubelet
+   * may change the order over time.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#clusterTrustBundle
+   */
+  readonly clusterTrustBundle?: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle;
+
+  /**
+   * configMap information about the configMap data to project
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#configMap
+   */
+  readonly configMap?: AgentSpecDeploymentVolumesProjectedSourcesConfigMap;
+
+  /**
+   * downwardAPI information about the downwardAPI data to project
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#downwardAPI
+   */
+  readonly downwardApi?: AgentSpecDeploymentVolumesProjectedSourcesDownwardApi;
+
+  /**
+   * Projects an auto-rotating credential bundle (private key and certificate
+   * chain) that the pod can use either as a TLS client or server.
+   *
+   * Kubelet generates a private key and uses it to send a
+   * PodCertificateRequest to the named signer.  Once the signer approves the
+   * request and issues a certificate chain, Kubelet writes the key and
+   * certificate chain to the pod filesystem.  The pod does not start until
+   * certificates have been issued for each podCertificate projected volume
+   * source in its spec.
+   *
+   * Kubelet will begin trying to rotate the certificate at the time indicated
+   * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+   * timestamp.
+   *
+   * Kubelet can write a single file, indicated by the credentialBundlePath
+   * field, or separate files, indicated by the keyPath and
+   * certificateChainPath fields.
+   *
+   * The credential bundle is a single file in PEM format.  The first PEM
+   * entry is the private key (in PKCS#8 format), and the remaining PEM
+   * entries are the certificate chain issued by the signer (typically,
+   * signers will return their certificate chain in leaf-to-root order).
+   *
+   * Prefer using the credential bundle format, since your application code
+   * can read it atomically.  If you use keyPath and certificateChainPath,
+   * your application must make two separate file reads. If these coincide
+   * with a certificate rotation, it is possible that the private key and leaf
+   * certificate you read may not correspond to each other.  Your application
+   * will need to check for this condition, and re-read until they are
+   * consistent.
+   *
+   * The named signer controls chooses the format of the certificate it
+   * issues; consult the signer implementation's documentation to learn how to
+   * use the certificates it issues.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#podCertificate
+   */
+  readonly podCertificate?: AgentSpecDeploymentVolumesProjectedSourcesPodCertificate;
+
+  /**
+   * secret information about the secret data to project
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#secret
+   */
+  readonly secret?: AgentSpecDeploymentVolumesProjectedSourcesSecret;
+
+  /**
+   * serviceAccountToken is information about the serviceAccountToken data to project
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSources#serviceAccountToken
+   */
+  readonly serviceAccountToken?: AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSources(obj: AgentSpecDeploymentVolumesProjectedSources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'clusterTrustBundle': toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle(obj.clusterTrustBundle),
+    'configMap': toJson_AgentSpecDeploymentVolumesProjectedSourcesConfigMap(obj.configMap),
+    'downwardAPI': toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApi(obj.downwardApi),
+    'podCertificate': toJson_AgentSpecDeploymentVolumesProjectedSourcesPodCertificate(obj.podCertificate),
+    'secret': toJson_AgentSpecDeploymentVolumesProjectedSourcesSecret(obj.secret),
+    'serviceAccountToken': toJson_AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken(obj.serviceAccountToken),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is name of the authentication secret for RBDUser. If provided
+ * overrides keyring.
+ * Default is nil.
+ * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+ *
+ * @default nil.
+ * @schema AgentSpecDeploymentVolumesRbdSecretRef
+ */
+export interface AgentSpecDeploymentVolumesRbdSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesRbdSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesRbdSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesRbdSecretRef(obj: AgentSpecDeploymentVolumesRbdSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef references to the secret for ScaleIO user and other
+ * sensitive information. If this is not provided, Login operation will fail.
+ *
+ * @schema AgentSpecDeploymentVolumesScaleIoSecretRef
+ */
+export interface AgentSpecDeploymentVolumesScaleIoSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesScaleIoSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesScaleIoSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesScaleIoSecretRef(obj: AgentSpecDeploymentVolumesScaleIoSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentSpecDeploymentVolumesSecretItems
+ */
+export interface AgentSpecDeploymentVolumesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentSpecDeploymentVolumesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesSecretItems(obj: AgentSpecDeploymentVolumesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef specifies the secret to use for obtaining the StorageOS API
+ * credentials.  If not specified, default values will be attempted.
+ *
+ * @schema AgentSpecDeploymentVolumesStorageosSecretRef
+ */
+export interface AgentSpecDeploymentVolumesStorageosSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesStorageosSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesStorageosSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesStorageosSecretRef(obj: AgentSpecDeploymentVolumesStorageosSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor
+ */
+export class AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentSpecDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentSpecDeploymentVolumesDownwardApiItemsFieldRef
+ */
+export interface AgentSpecDeploymentVolumesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesDownwardApiItemsFieldRef(obj: AgentSpecDeploymentVolumesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef(obj: AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The specification for the PersistentVolumeClaim. The entire content is
+ * copied unchanged into the PVC that gets created from this
+ * template. The same fields as in a PersistentVolumeClaim
+ * are also valid here.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec {
+  /**
+   * accessModes contains the desired access modes the volume should have.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#accessModes
+   */
+  readonly accessModes?: string[];
+
+  /**
+   * dataSource field can be used to specify either:
+   * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+   * * An existing PVC (PersistentVolumeClaim)
+   * If the provisioner or an external controller can support the specified data source,
+   * it will create a new volume based on the contents of the specified data source.
+   * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+   * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+   * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSource
+   */
+  readonly dataSource?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource;
+
+  /**
+   * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+   * volume is desired. This may be any object from a non-empty API group (non
+   * core object) or a PersistentVolumeClaim object.
+   * When this field is specified, volume binding will only succeed if the type of
+   * the specified object matches some installed volume populator or dynamic
+   * provisioner.
+   * This field will replace the functionality of the dataSource field and as such
+   * if both fields are non-empty, they must have the same value. For backwards
+   * compatibility, when namespace isn't specified in dataSourceRef,
+   * both fields (dataSource and dataSourceRef) will be set to the same
+   * value automatically if one of them is empty and the other is non-empty.
+   * When namespace is specified in dataSourceRef,
+   * dataSource isn't set to the same value and must be empty.
+   * There are three important differences between dataSource and dataSourceRef:
+   * * While dataSource only allows two specific types of objects, dataSourceRef
+   * allows any non-core object, as well as PersistentVolumeClaim objects.
+   * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+   * preserves all values, and generates an error if a disallowed value is
+   * specified.
+   * * While dataSource only allows local objects, dataSourceRef allows objects
+   * in any namespaces.
+   * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+   * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSourceRef
+   */
+  readonly dataSourceRef?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef;
+
+  /**
+   * resources represents the minimum resources the volume should have.
+   * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+   * that are lower than previous value but must still be higher than capacity recorded in the
+   * status field of the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#resources
+   */
+  readonly resources?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources;
+
+  /**
+   * selector is a label query over volumes to consider for binding.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#selector
+   */
+  readonly selector?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector;
+
+  /**
+   * storageClassName is the name of the StorageClass required by the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#storageClassName
+   */
+  readonly storageClassName?: string;
+
+  /**
+   * volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+   * If specified, the CSI driver will create or update the volume with the attributes defined
+   * in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+   * it can be changed after the claim is created. An empty string or nil value indicates that no
+   * VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+   * this field can be reset to its previous value (including nil) to cancel the modification.
+   * If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+   * set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+   * exists.
+   * More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeAttributesClassName
+   */
+  readonly volumeAttributesClassName?: string;
+
+  /**
+   * volumeMode defines what type of volume is required by the claim.
+   * Value of Filesystem is implied when not included in claim spec.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeMode
+   */
+  readonly volumeMode?: string;
+
+  /**
+   * volumeName is the binding reference to the PersistentVolume backing this claim.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessModes': obj.accessModes?.map(y => y),
+    'dataSource': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj.dataSource),
+    'dataSourceRef': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj.dataSourceRef),
+    'resources': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj.resources),
+    'selector': toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj.selector),
+    'storageClassName': obj.storageClassName,
+    'volumeAttributesClassName': obj.volumeAttributesClassName,
+    'volumeMode': obj.volumeMode,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+ * of ClusterTrustBundle objects in an auto-updating file.
+ *
+ * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+ *
+ * ClusterTrustBundle objects can either be selected by name, or by the
+ * combination of signer name and a label selector.
+ *
+ * Kubelet performs aggressive normalization of the PEM contents written
+ * into the pod filesystem.  Esoteric PEM features such as inter-block
+ * comments and block headers are stripped.  Certificates are deduplicated.
+ * The ordering of certificates within the file is arbitrary, and Kubelet
+ * may change the order over time.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle {
+  /**
+   * Select all ClusterTrustBundles that match this label selector.  Only has
+   * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+   * interpreted as "match nothing".  If set but empty, interpreted as "match
+   * everything".
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#labelSelector
+   */
+  readonly labelSelector?: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector;
+
+  /**
+   * Select a single ClusterTrustBundle by object name.  Mutually-exclusive
+   * with signerName and labelSelector.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#name
+   */
+  readonly name?: string;
+
+  /**
+   * If true, don't block pod startup if the referenced ClusterTrustBundle(s)
+   * aren't available.  If using name, then the named ClusterTrustBundle is
+   * allowed not to exist.  If using signerName, then the combination of
+   * signerName and labelSelector is allowed to match zero
+   * ClusterTrustBundles.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * Relative path from the volume root to write the bundle.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#path
+   */
+  readonly path: string;
+
+  /**
+   * Select all ClusterTrustBundles that match this signer name.
+   * Mutually-exclusive with name.  The contents of all selected
+   * ClusterTrustBundles will be unified and deduplicated.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#signerName
+   */
+  readonly signerName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle(obj: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundle | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'labelSelector': toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj.labelSelector),
+    'name': obj.name,
+    'optional': obj.optional,
+    'path': obj.path,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap information about the configMap data to project
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMap
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesConfigMap {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMap#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesConfigMap(obj: AgentSpecDeploymentVolumesProjectedSourcesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI information about the downwardAPI data to project
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApi
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesDownwardApi {
+  /**
+   * Items is a list of DownwardAPIVolume file
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApi#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApi(obj: AgentSpecDeploymentVolumesProjectedSourcesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projects an auto-rotating credential bundle (private key and certificate
+ * chain) that the pod can use either as a TLS client or server.
+ *
+ * Kubelet generates a private key and uses it to send a
+ * PodCertificateRequest to the named signer.  Once the signer approves the
+ * request and issues a certificate chain, Kubelet writes the key and
+ * certificate chain to the pod filesystem.  The pod does not start until
+ * certificates have been issued for each podCertificate projected volume
+ * source in its spec.
+ *
+ * Kubelet will begin trying to rotate the certificate at the time indicated
+ * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+ * timestamp.
+ *
+ * Kubelet can write a single file, indicated by the credentialBundlePath
+ * field, or separate files, indicated by the keyPath and
+ * certificateChainPath fields.
+ *
+ * The credential bundle is a single file in PEM format.  The first PEM
+ * entry is the private key (in PKCS#8 format), and the remaining PEM
+ * entries are the certificate chain issued by the signer (typically,
+ * signers will return their certificate chain in leaf-to-root order).
+ *
+ * Prefer using the credential bundle format, since your application code
+ * can read it atomically.  If you use keyPath and certificateChainPath,
+ * your application must make two separate file reads. If these coincide
+ * with a certificate rotation, it is possible that the private key and leaf
+ * certificate you read may not correspond to each other.  Your application
+ * will need to check for this condition, and re-read until they are
+ * consistent.
+ *
+ * The named signer controls chooses the format of the certificate it
+ * issues; consult the signer implementation's documentation to learn how to
+ * use the certificates it issues.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesPodCertificate {
+  /**
+   * Write the certificate chain at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#certificateChainPath
+   */
+  readonly certificateChainPath?: string;
+
+  /**
+   * Write the credential bundle at this path in the projected volume.
+   *
+   * The credential bundle is a single file that contains multiple PEM blocks.
+   * The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+   * key.
+   *
+   * The remaining blocks are CERTIFICATE blocks, containing the issued
+   * certificate chain from the signer (leaf and any intermediates).
+   *
+   * Using credentialBundlePath lets your Pod's application code make a single
+   * atomic read that retrieves a consistent key and certificate chain.  If you
+   * project them to separate files, your application code will need to
+   * additionally check that the leaf certificate was issued to the key.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#credentialBundlePath
+   */
+  readonly credentialBundlePath?: string;
+
+  /**
+   * Write the key at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#keyPath
+   */
+  readonly keyPath?: string;
+
+  /**
+   * The type of keypair Kubelet will generate for the pod.
+   *
+   * Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+   * "ECDSAP521", and "ED25519".
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#keyType
+   */
+  readonly keyType: string;
+
+  /**
+   * maxExpirationSeconds is the maximum lifetime permitted for the
+   * certificate.
+   *
+   * Kubelet copies this value verbatim into the PodCertificateRequests it
+   * generates for this projection.
+   *
+   * If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+   * will reject values shorter than 3600 (1 hour).  The maximum allowable
+   * value is 7862400 (91 days).
+   *
+   * The signer implementation is then free to issue a certificate with any
+   * lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+   * seconds (1 hour).  This constraint is enforced by kube-apiserver.
+   * `kubernetes.io` signers will never issue certificates with a lifetime
+   * longer than 24 hours.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#maxExpirationSeconds
+   */
+  readonly maxExpirationSeconds?: number;
+
+  /**
+   * Kubelet's generated CSRs will be addressed to this signer.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesPodCertificate#signerName
+   */
+  readonly signerName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesPodCertificate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesPodCertificate(obj: AgentSpecDeploymentVolumesProjectedSourcesPodCertificate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'certificateChainPath': obj.certificateChainPath,
+    'credentialBundlePath': obj.credentialBundlePath,
+    'keyPath': obj.keyPath,
+    'keyType': obj.keyType,
+    'maxExpirationSeconds': obj.maxExpirationSeconds,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret information about the secret data to project
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesSecret
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesSecret {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecret#items
+   */
+  readonly items?: AgentSpecDeploymentVolumesProjectedSourcesSecretItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional field specify whether the Secret or its key must be defined
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecret#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesSecret(obj: AgentSpecDeploymentVolumesProjectedSourcesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentSpecDeploymentVolumesProjectedSourcesSecretItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountToken is information about the serviceAccountToken data to project
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken {
+  /**
+   * audience is the intended audience of the token. A recipient of a token
+   * must identify itself with an identifier specified in the audience of the
+   * token, and otherwise should reject the token. The audience defaults to the
+   * identifier of the apiserver.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * expirationSeconds is the requested duration of validity of the service
+   * account token. As the token approaches expiration, the kubelet volume
+   * plugin will proactively rotate the service account token. The kubelet will
+   * start trying to rotate the token if the token is older than 80 percent of
+   * its time to live or if the token is older than 24 hours.Defaults to 1 hour
+   * and must be at least 10 minutes.
+   *
+   * @default 1 hour
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken#expirationSeconds
+   */
+  readonly expirationSeconds?: number;
+
+  /**
+   * path is the path relative to the mount point of the file to project the
+   * token into.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken(obj: AgentSpecDeploymentVolumesProjectedSourcesServiceAccountToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'expirationSeconds': obj.expirationSeconds,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * dataSource field can be used to specify either:
+ * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+ * * An existing PVC (PersistentVolumeClaim)
+ * If the provisioner or an external controller can support the specified data source,
+ * it will create a new volume based on the contents of the specified data source.
+ * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+ * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+ * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+ * volume is desired. This may be any object from a non-empty API group (non
+ * core object) or a PersistentVolumeClaim object.
+ * When this field is specified, volume binding will only succeed if the type of
+ * the specified object matches some installed volume populator or dynamic
+ * provisioner.
+ * This field will replace the functionality of the dataSource field and as such
+ * if both fields are non-empty, they must have the same value. For backwards
+ * compatibility, when namespace isn't specified in dataSourceRef,
+ * both fields (dataSource and dataSourceRef) will be set to the same
+ * value automatically if one of them is empty and the other is non-empty.
+ * When namespace is specified in dataSourceRef,
+ * dataSource isn't set to the same value and must be empty.
+ * There are three important differences between dataSource and dataSourceRef:
+ * * While dataSource only allows two specific types of objects, dataSourceRef
+ * allows any non-core object, as well as PersistentVolumeClaim objects.
+ * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+ * preserves all values, and generates an error if a disallowed value is
+ * specified.
+ * * While dataSource only allows local objects, dataSourceRef allows objects
+ * in any namespaces.
+ * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+ * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace is the namespace of resource being referenced
+   * Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+   * (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * resources represents the minimum resources the volume should have.
+ * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+ * that are lower than previous value but must still be higher than capacity recorded in the
+ * status field of the claim.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources {
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#limits
+   */
+  readonly limits?: { [key: string]: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#requests
+   */
+  readonly requests?: { [key: string]: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * selector is a label query over volumes to consider for binding.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select all ClusterTrustBundles that match this label selector.  Only has
+ * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+ * interpreted as "match nothing".  If set but empty, interpreted as "match
+ * everything".
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems(obj: AgentSpecDeploymentVolumesProjectedSourcesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems(obj: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesSecretItems
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesSecretItems(obj: AgentSpecDeploymentVolumesProjectedSourcesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits
+ */
+export class AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+  public static fromNumber(value: number): AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests
+ */
+export class AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+  public static fromNumber(value: number): AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions
+ */
+export interface AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(obj: AgentSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(obj: AgentSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj: AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+
+/**
+ * Agent is the Schema for the agents API.
+ *
+ * @schema AgentV1Alpha2
+ */
+export class AgentV1Alpha2 extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "AgentV1Alpha2"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'kagent.dev/v1alpha2',
+    kind: 'Agent',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "AgentV1Alpha2".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: AgentV1Alpha2Props = {}): any {
+    return {
+      ...AgentV1Alpha2.GVK,
+      ...toJson_AgentV1Alpha2Props(props),
+    };
+  }
+
+  /**
+   * Defines a "AgentV1Alpha2" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: AgentV1Alpha2Props = {}) {
+    super(scope, id, {
+      ...AgentV1Alpha2.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...AgentV1Alpha2.GVK,
+      ...toJson_AgentV1Alpha2Props(resolved),
+    };
+  }
+}
+
+/**
+ * Agent is the Schema for the agents API.
+ *
+ * @schema AgentV1Alpha2
+ */
+export interface AgentV1Alpha2Props {
+  /**
+   * @schema AgentV1Alpha2#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * AgentSpec defines the desired state of Agent.
+   *
+   * @schema AgentV1Alpha2#spec
+   */
+  readonly spec?: AgentV1Alpha2Spec;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2Props' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2Props(obj: AgentV1Alpha2Props | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_AgentV1Alpha2Spec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * AgentSpec defines the desired state of Agent.
+ *
+ * @schema AgentV1Alpha2Spec
+ */
+export interface AgentV1Alpha2Spec {
+  /**
+   * @schema AgentV1Alpha2Spec#byo
+   */
+  readonly byo?: AgentV1Alpha2SpecByo;
+
+  /**
+   * @schema AgentV1Alpha2Spec#declarative
+   */
+  readonly declarative?: AgentV1Alpha2SpecDeclarative;
+
+  /**
+   * @schema AgentV1Alpha2Spec#description
+   */
+  readonly description?: string;
+
+  /**
+   * AgentType represents the agent type
+   *
+   * @schema AgentV1Alpha2Spec#type
+   */
+  readonly type: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2Spec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2Spec(obj: AgentV1Alpha2Spec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'byo': toJson_AgentV1Alpha2SpecByo(obj.byo),
+    'declarative': toJson_AgentV1Alpha2SpecDeclarative(obj.declarative),
+    'description': obj.description,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecByo
+ */
+export interface AgentV1Alpha2SpecByo {
+  /**
+   * Trust relationship to the agent.
+   *
+   * @schema AgentV1Alpha2SpecByo#deployment
+   */
+  readonly deployment?: AgentV1Alpha2SpecByoDeployment;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByo(obj: AgentV1Alpha2SpecByo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'deployment': toJson_AgentV1Alpha2SpecByoDeployment(obj.deployment),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarative
+ */
+export interface AgentV1Alpha2SpecDeclarative {
+  /**
+   * A2AConfig instantiates an A2A server for this agent,
+   * served on the HTTP port of the kagent kubernetes
+   * controller (default 8083).
+   * The A2A server URL will be served at
+   * <kagent-controller-ip>:8083/api/a2a/<agent-namespace>/<agent-name>
+   * Read more about the A2A protocol here: https://github.com/google/A2A
+   *
+   * @schema AgentV1Alpha2SpecDeclarative#a2aConfig
+   */
+  readonly a2AConfig?: AgentV1Alpha2SpecDeclarativeA2AConfig;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarative#deployment
+   */
+  readonly deployment?: AgentV1Alpha2SpecDeclarativeDeployment;
+
+  /**
+   * The name of the model config to use.
+   * If not specified, the default value is "default-model-config".
+   * Must be in the same namespace as the Agent.
+   *
+   * @schema AgentV1Alpha2SpecDeclarative#modelConfig
+   */
+  readonly modelConfig?: string;
+
+  /**
+   * Whether to stream the response from the model.
+   * If not specified, the default value is true.
+   *
+   * @schema AgentV1Alpha2SpecDeclarative#stream
+   */
+  readonly stream?: boolean;
+
+  /**
+   * SystemMessage is a string specifying the system message for the agent
+   *
+   * @schema AgentV1Alpha2SpecDeclarative#systemMessage
+   */
+  readonly systemMessage?: string;
+
+  /**
+   * SystemMessageFrom is a reference to a ConfigMap or Secret containing the system message.
+   *
+   * @schema AgentV1Alpha2SpecDeclarative#systemMessageFrom
+   */
+  readonly systemMessageFrom?: AgentV1Alpha2SpecDeclarativeSystemMessageFrom;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarative#tools
+   */
+  readonly tools?: AgentV1Alpha2SpecDeclarativeTools[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarative' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarative(obj: AgentV1Alpha2SpecDeclarative | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'a2aConfig': toJson_AgentV1Alpha2SpecDeclarativeA2AConfig(obj.a2AConfig),
+    'deployment': toJson_AgentV1Alpha2SpecDeclarativeDeployment(obj.deployment),
+    'modelConfig': obj.modelConfig,
+    'stream': obj.stream,
+    'systemMessage': obj.systemMessage,
+    'systemMessageFrom': toJson_AgentV1Alpha2SpecDeclarativeSystemMessageFrom(obj.systemMessageFrom),
+    'tools': obj.tools?.map(y => toJson_AgentV1Alpha2SpecDeclarativeTools(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Trust relationship to the agent.
+ *
+ * @schema AgentV1Alpha2SpecByoDeployment
+ */
+export interface AgentV1Alpha2SpecByoDeployment {
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#args
+   */
+  readonly args?: string[];
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#cmd
+   */
+  readonly cmd?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#env
+   */
+  readonly env?: AgentV1Alpha2SpecByoDeploymentEnv[];
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#image
+   */
+  readonly image?: string;
+
+  /**
+   * PullPolicy describes a policy for if/when to pull a container image
+   *
+   * @schema AgentV1Alpha2SpecByoDeployment#imagePullPolicy
+   */
+  readonly imagePullPolicy?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#imagePullSecrets
+   */
+  readonly imagePullSecrets?: AgentV1Alpha2SpecByoDeploymentImagePullSecrets[];
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+  /**
+   * If not specified, the default value is 1.
+   *
+   * @schema AgentV1Alpha2SpecByoDeployment#replicas
+   */
+  readonly replicas?: number;
+
+  /**
+   * ResourceRequirements describes the compute resource requirements.
+   *
+   * @schema AgentV1Alpha2SpecByoDeployment#resources
+   */
+  readonly resources?: AgentV1Alpha2SpecByoDeploymentResources;
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#volumeMounts
+   */
+  readonly volumeMounts?: AgentV1Alpha2SpecByoDeploymentVolumeMounts[];
+
+  /**
+   * @schema AgentV1Alpha2SpecByoDeployment#volumes
+   */
+  readonly volumes?: AgentV1Alpha2SpecByoDeploymentVolumes[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeployment' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeployment(obj: AgentV1Alpha2SpecByoDeployment | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'args': obj.args?.map(y => y),
+    'cmd': obj.cmd,
+    'env': obj.env?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentEnv(y)),
+    'image': obj.image,
+    'imagePullPolicy': obj.imagePullPolicy,
+    'imagePullSecrets': obj.imagePullSecrets?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentImagePullSecrets(y)),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'replicas': obj.replicas,
+    'resources': toJson_AgentV1Alpha2SpecByoDeploymentResources(obj.resources),
+    'volumeMounts': obj.volumeMounts?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumeMounts(y)),
+    'volumes': obj.volumes?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumes(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A2AConfig instantiates an A2A server for this agent,
+ * served on the HTTP port of the kagent kubernetes
+ * controller (default 8083).
+ * The A2A server URL will be served at
+ * <kagent-controller-ip>:8083/api/a2a/<agent-namespace>/<agent-name>
+ * Read more about the A2A protocol here: https://github.com/google/A2A
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeA2AConfig
+ */
+export interface AgentV1Alpha2SpecDeclarativeA2AConfig {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfig#skills
+   */
+  readonly skills?: AgentV1Alpha2SpecDeclarativeA2AConfigSkills[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeA2AConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeA2AConfig(obj: AgentV1Alpha2SpecDeclarativeA2AConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'skills': obj.skills?.map(y => toJson_AgentV1Alpha2SpecDeclarativeA2AConfigSkills(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeDeployment
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeployment {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#env
+   */
+  readonly env?: AgentV1Alpha2SpecDeclarativeDeploymentEnv[];
+
+  /**
+   * PullPolicy describes a policy for if/when to pull a container image
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#imagePullPolicy
+   */
+  readonly imagePullPolicy?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#imagePullSecrets
+   */
+  readonly imagePullSecrets?: AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets[];
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#imageRegistry
+   */
+  readonly imageRegistry?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+  /**
+   * If not specified, the default value is 1.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#replicas
+   */
+  readonly replicas?: number;
+
+  /**
+   * ResourceRequirements describes the compute resource requirements.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#resources
+   */
+  readonly resources?: AgentV1Alpha2SpecDeclarativeDeploymentResources;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#volumeMounts
+   */
+  readonly volumeMounts?: AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts[];
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeDeployment#volumes
+   */
+  readonly volumes?: AgentV1Alpha2SpecDeclarativeDeploymentVolumes[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeployment' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeployment(obj: AgentV1Alpha2SpecDeclarativeDeployment | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'env': obj.env?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnv(y)),
+    'imagePullPolicy': obj.imagePullPolicy,
+    'imagePullSecrets': obj.imagePullSecrets?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets(y)),
+    'imageRegistry': obj.imageRegistry,
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'replicas': obj.replicas,
+    'resources': toJson_AgentV1Alpha2SpecDeclarativeDeploymentResources(obj.resources),
+    'volumeMounts': obj.volumeMounts?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts(y)),
+    'volumes': obj.volumes?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumes(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SystemMessageFrom is a reference to a ConfigMap or Secret containing the system message.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeSystemMessageFrom
+ */
+export interface AgentV1Alpha2SpecDeclarativeSystemMessageFrom {
+  /**
+   * The key of the ConfigMap or Secret.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeSystemMessageFrom#key
+   */
+  readonly key: string;
+
+  /**
+   * The name of the ConfigMap or Secret.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeSystemMessageFrom#name
+   */
+  readonly name: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeSystemMessageFrom#type
+   */
+  readonly type: AgentV1Alpha2SpecDeclarativeSystemMessageFromType;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeSystemMessageFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeSystemMessageFrom(obj: AgentV1Alpha2SpecDeclarativeSystemMessageFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeTools
+ */
+export interface AgentV1Alpha2SpecDeclarativeTools {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeTools#agent
+   */
+  readonly agent?: AgentV1Alpha2SpecDeclarativeToolsAgent;
+
+  /**
+   * HeadersFrom specifies a list of configuration values to be added as
+   * headers to requests sent to the Tool from this agent. The value of
+   * each header is resolved from either a Secret or ConfigMap in the same
+   * namespace as the Agent. Headers specified here will override any
+   * headers of the same name/key specified on the tool.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeTools#headersFrom
+   */
+  readonly headersFrom?: AgentV1Alpha2SpecDeclarativeToolsHeadersFrom[];
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeTools#mcpServer
+   */
+  readonly mcpServer?: AgentV1Alpha2SpecDeclarativeToolsMcpServer;
+
+  /**
+   * ToolProviderType represents the tool provider type
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeTools#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeTools' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeTools(obj: AgentV1Alpha2SpecDeclarativeTools | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'agent': toJson_AgentV1Alpha2SpecDeclarativeToolsAgent(obj.agent),
+    'headersFrom': obj.headersFrom?.map(y => toJson_AgentV1Alpha2SpecDeclarativeToolsHeadersFrom(y)),
+    'mcpServer': toJson_AgentV1Alpha2SpecDeclarativeToolsMcpServer(obj.mcpServer),
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EnvVar represents an environment variable present in a Container.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnv
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnv {
+  /**
+   * Name of the environment variable.
+   * May consist of any printable ASCII characters except '='.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnv#name
+   */
+  readonly name: string;
+
+  /**
+   * Variable references $(VAR_NAME) are expanded
+   * using the previously defined environment variables in the container and
+   * any service environment variables. If a variable cannot be resolved,
+   * the reference in the input string will be unchanged. Double $$ are reduced
+   * to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e.
+   * "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)".
+   * Escaped references will never be expanded, regardless of whether the variable
+   * exists or not.
+   * Defaults to "".
+   *
+   * @default .
+   * @schema AgentV1Alpha2SpecByoDeploymentEnv#value
+   */
+  readonly value?: string;
+
+  /**
+   * Source for the environment variable's value. Cannot be used if value is not empty.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnv#valueFrom
+   */
+  readonly valueFrom?: AgentV1Alpha2SpecByoDeploymentEnvValueFrom;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnv' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnv(obj: AgentV1Alpha2SpecByoDeploymentEnv | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'value': obj.value,
+    'valueFrom': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFrom(obj.valueFrom),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * LocalObjectReference contains enough information to let you locate the
+ * referenced object inside the same namespace.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentImagePullSecrets
+ */
+export interface AgentV1Alpha2SpecByoDeploymentImagePullSecrets {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentImagePullSecrets#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentImagePullSecrets' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentImagePullSecrets(obj: AgentV1Alpha2SpecByoDeploymentImagePullSecrets | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ResourceRequirements describes the compute resource requirements.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentResources
+ */
+export interface AgentV1Alpha2SpecByoDeploymentResources {
+  /**
+   * Claims lists the names of resources, defined in spec.resourceClaims,
+   * that are used by this container.
+   *
+   * This field depends on the
+   * DynamicResourceAllocation feature gate.
+   *
+   * This field is immutable. It can only be set for containers.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentResources#claims
+   */
+  readonly claims?: AgentV1Alpha2SpecByoDeploymentResourcesClaims[];
+
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentResources#limits
+   */
+  readonly limits?: { [key: string]: AgentV1Alpha2SpecByoDeploymentResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentResources#requests
+   */
+  readonly requests?: { [key: string]: AgentV1Alpha2SpecByoDeploymentResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentResources(obj: AgentV1Alpha2SpecByoDeploymentResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claims': obj.claims?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentResourcesClaims(y)),
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * VolumeMount describes a mounting of a Volume within a container.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumeMounts {
+  /**
+   * Path within the container at which the volume should be mounted.  Must
+   * not contain ':'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#mountPath
+   */
+  readonly mountPath: string;
+
+  /**
+   * mountPropagation determines how mounts are propagated from the host
+   * to container and the other way around.
+   * When not set, MountPropagationNone is used.
+   * This field is beta in 1.10.
+   * When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
+   * (which defaults to None).
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#mountPropagation
+   */
+  readonly mountPropagation?: string;
+
+  /**
+   * This must match the Name of a Volume.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#name
+   */
+  readonly name: string;
+
+  /**
+   * Mounted read-only if true, read-write otherwise (false or unspecified).
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * RecursiveReadOnly specifies whether read-only mounts should be handled
+   * recursively.
+   *
+   * If ReadOnly is false, this field has no meaning and must be unspecified.
+   *
+   * If ReadOnly is true, and this field is set to Disabled, the mount is not made
+   * recursively read-only.  If this field is set to IfPossible, the mount is made
+   * recursively read-only, if it is supported by the container runtime.  If this
+   * field is set to Enabled, the mount is made recursively read-only if it is
+   * supported by the container runtime, otherwise the pod will not be started and
+   * an error will be generated to indicate the reason.
+   *
+   * If this field is set to IfPossible or Enabled, MountPropagation must be set to
+   * None (or be unspecified, which defaults to None).
+   *
+   * If this field is not specified, it is treated as an equivalent of Disabled.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#recursiveReadOnly
+   */
+  readonly recursiveReadOnly?: string;
+
+  /**
+   * Path within the volume from which the container's volume should be mounted.
+   * Defaults to "" (volume's root).
+   *
+   * @default volume's root).
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#subPath
+   */
+  readonly subPath?: string;
+
+  /**
+   * Expanded path within the volume from which the container's volume should be mounted.
+   * Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment.
+   * Defaults to "" (volume's root).
+   * SubPathExpr and SubPath are mutually exclusive.
+   *
+   * @default volume's root).
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumeMounts#subPathExpr
+   */
+  readonly subPathExpr?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumeMounts' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumeMounts(obj: AgentV1Alpha2SpecByoDeploymentVolumeMounts | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'mountPath': obj.mountPath,
+    'mountPropagation': obj.mountPropagation,
+    'name': obj.name,
+    'readOnly': obj.readOnly,
+    'recursiveReadOnly': obj.recursiveReadOnly,
+    'subPath': obj.subPath,
+    'subPathExpr': obj.subPathExpr,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volume represents a named volume in a pod that may be accessed by any container in the pod.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumes
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumes {
+  /**
+   * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#awsElasticBlockStore
+   */
+  readonly awsElasticBlockStore?: AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore;
+
+  /**
+   * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#azureDisk
+   */
+  readonly azureDisk?: AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk;
+
+  /**
+   * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#azureFile
+   */
+  readonly azureFile?: AgentV1Alpha2SpecByoDeploymentVolumesAzureFile;
+
+  /**
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#cephfs
+   */
+  readonly cephfs?: AgentV1Alpha2SpecByoDeploymentVolumesCephfs;
+
+  /**
+   * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#cinder
+   */
+  readonly cinder?: AgentV1Alpha2SpecByoDeploymentVolumesCinder;
+
+  /**
+   * configMap represents a configMap that should populate this volume
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#configMap
+   */
+  readonly configMap?: AgentV1Alpha2SpecByoDeploymentVolumesConfigMap;
+
+  /**
+   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#csi
+   */
+  readonly csi?: AgentV1Alpha2SpecByoDeploymentVolumesCsi;
+
+  /**
+   * downwardAPI represents downward API about the pod that should populate this volume
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#downwardAPI
+   */
+  readonly downwardApi?: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi;
+
+  /**
+   * emptyDir represents a temporary directory that shares a pod's lifetime.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#emptyDir
+   */
+  readonly emptyDir?: AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir;
+
+  /**
+   * ephemeral represents a volume that is handled by a cluster storage driver.
+   * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+   * and deleted when the pod is removed.
+   *
+   * Use this if:
+   * a) the volume is only needed while the pod runs,
+   * b) features of normal volumes like restoring from snapshot or capacity
+   * tracking are needed,
+   * c) the storage driver is specified through a storage class, and
+   * d) the storage driver supports dynamic volume provisioning through
+   * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+   * information on the connection between this volume type
+   * and PersistentVolumeClaim).
+   *
+   * Use PersistentVolumeClaim or one of the vendor-specific
+   * APIs for volumes that persist for longer than the lifecycle
+   * of an individual pod.
+   *
+   * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+   * be used that way - see the documentation of the driver for
+   * more information.
+   *
+   * A pod can use both types of ephemeral volumes and
+   * persistent volumes at the same time.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#ephemeral
+   */
+  readonly ephemeral?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeral;
+
+  /**
+   * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#fc
+   */
+  readonly fc?: AgentV1Alpha2SpecByoDeploymentVolumesFc;
+
+  /**
+   * flexVolume represents a generic volume resource that is
+   * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#flexVolume
+   */
+  readonly flexVolume?: AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume;
+
+  /**
+   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#flocker
+   */
+  readonly flocker?: AgentV1Alpha2SpecByoDeploymentVolumesFlocker;
+
+  /**
+   * gcePersistentDisk represents a GCE Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#gcePersistentDisk
+   */
+  readonly gcePersistentDisk?: AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk;
+
+  /**
+   * gitRepo represents a git repository at a particular revision.
+   * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+   * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+   * into the Pod's container.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#gitRepo
+   */
+  readonly gitRepo?: AgentV1Alpha2SpecByoDeploymentVolumesGitRepo;
+
+  /**
+   * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#glusterfs
+   */
+  readonly glusterfs?: AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs;
+
+  /**
+   * hostPath represents a pre-existing file or directory on the host
+   * machine that is directly exposed to the container. This is generally
+   * used for system agents or other privileged things that are allowed
+   * to see the host machine. Most containers will NOT need this.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#hostPath
+   */
+  readonly hostPath?: AgentV1Alpha2SpecByoDeploymentVolumesHostPath;
+
+  /**
+   * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+   * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+   *
+   * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   *
+   * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+   * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+   * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+   * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+   * The volume will be mounted read-only (ro) and non-executable files (noexec).
+   * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+   * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#image
+   */
+  readonly image?: AgentV1Alpha2SpecByoDeploymentVolumesImage;
+
+  /**
+   * iscsi represents an ISCSI Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#iscsi
+   */
+  readonly iscsi?: AgentV1Alpha2SpecByoDeploymentVolumesIscsi;
+
+  /**
+   * name of the volume.
+   * Must be a DNS_LABEL and unique within the pod.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#name
+   */
+  readonly name: string;
+
+  /**
+   * nfs represents an NFS mount on the host that shares a pod's lifetime
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#nfs
+   */
+  readonly nfs?: AgentV1Alpha2SpecByoDeploymentVolumesNfs;
+
+  /**
+   * persistentVolumeClaimVolumeSource represents a reference to a
+   * PersistentVolumeClaim in the same namespace.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#persistentVolumeClaim
+   */
+  readonly persistentVolumeClaim?: AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim;
+
+  /**
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#photonPersistentDisk
+   */
+  readonly photonPersistentDisk?: AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk;
+
+  /**
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#portworxVolume
+   */
+  readonly portworxVolume?: AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume;
+
+  /**
+   * projected items for all in one resources secrets, configmaps, and downward API
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#projected
+   */
+  readonly projected?: AgentV1Alpha2SpecByoDeploymentVolumesProjected;
+
+  /**
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#quobyte
+   */
+  readonly quobyte?: AgentV1Alpha2SpecByoDeploymentVolumesQuobyte;
+
+  /**
+   * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#rbd
+   */
+  readonly rbd?: AgentV1Alpha2SpecByoDeploymentVolumesRbd;
+
+  /**
+   * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#scaleIO
+   */
+  readonly scaleIo?: AgentV1Alpha2SpecByoDeploymentVolumesScaleIo;
+
+  /**
+   * secret represents a secret that should populate this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#secret
+   */
+  readonly secret?: AgentV1Alpha2SpecByoDeploymentVolumesSecret;
+
+  /**
+   * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#storageos
+   */
+  readonly storageos?: AgentV1Alpha2SpecByoDeploymentVolumesStorageos;
+
+  /**
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumes#vsphereVolume
+   */
+  readonly vsphereVolume?: AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumes' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumes(obj: AgentV1Alpha2SpecByoDeploymentVolumes | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsElasticBlockStore': toJson_AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore(obj.awsElasticBlockStore),
+    'azureDisk': toJson_AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk(obj.azureDisk),
+    'azureFile': toJson_AgentV1Alpha2SpecByoDeploymentVolumesAzureFile(obj.azureFile),
+    'cephfs': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCephfs(obj.cephfs),
+    'cinder': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCinder(obj.cinder),
+    'configMap': toJson_AgentV1Alpha2SpecByoDeploymentVolumesConfigMap(obj.configMap),
+    'csi': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCsi(obj.csi),
+    'downwardAPI': toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi(obj.downwardApi),
+    'emptyDir': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir(obj.emptyDir),
+    'ephemeral': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeral(obj.ephemeral),
+    'fc': toJson_AgentV1Alpha2SpecByoDeploymentVolumesFc(obj.fc),
+    'flexVolume': toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume(obj.flexVolume),
+    'flocker': toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlocker(obj.flocker),
+    'gcePersistentDisk': toJson_AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk(obj.gcePersistentDisk),
+    'gitRepo': toJson_AgentV1Alpha2SpecByoDeploymentVolumesGitRepo(obj.gitRepo),
+    'glusterfs': toJson_AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs(obj.glusterfs),
+    'hostPath': toJson_AgentV1Alpha2SpecByoDeploymentVolumesHostPath(obj.hostPath),
+    'image': toJson_AgentV1Alpha2SpecByoDeploymentVolumesImage(obj.image),
+    'iscsi': toJson_AgentV1Alpha2SpecByoDeploymentVolumesIscsi(obj.iscsi),
+    'name': obj.name,
+    'nfs': toJson_AgentV1Alpha2SpecByoDeploymentVolumesNfs(obj.nfs),
+    'persistentVolumeClaim': toJson_AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim(obj.persistentVolumeClaim),
+    'photonPersistentDisk': toJson_AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk(obj.photonPersistentDisk),
+    'portworxVolume': toJson_AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume(obj.portworxVolume),
+    'projected': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjected(obj.projected),
+    'quobyte': toJson_AgentV1Alpha2SpecByoDeploymentVolumesQuobyte(obj.quobyte),
+    'rbd': toJson_AgentV1Alpha2SpecByoDeploymentVolumesRbd(obj.rbd),
+    'scaleIO': toJson_AgentV1Alpha2SpecByoDeploymentVolumesScaleIo(obj.scaleIo),
+    'secret': toJson_AgentV1Alpha2SpecByoDeploymentVolumesSecret(obj.secret),
+    'storageos': toJson_AgentV1Alpha2SpecByoDeploymentVolumesStorageos(obj.storageos),
+    'vsphereVolume': toJson_AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume(obj.vsphereVolume),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * AgentSkill describes a specific capability or function of the agent.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills
+ */
+export interface AgentV1Alpha2SpecDeclarativeA2AConfigSkills {
+  /**
+   * Description is an optional detailed description of the skill.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#description
+   */
+  readonly description?: string;
+
+  /**
+   * Examples are optional usage examples.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#examples
+   */
+  readonly examples?: string[];
+
+  /**
+   * ID is the unique identifier for the skill.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#id
+   */
+  readonly id: string;
+
+  /**
+   * InputModes are the supported input data modes/types.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#inputModes
+   */
+  readonly inputModes?: string[];
+
+  /**
+   * Name is the human-readable name of the skill.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#name
+   */
+  readonly name: string;
+
+  /**
+   * OutputModes are the supported output data modes/types.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#outputModes
+   */
+  readonly outputModes?: string[];
+
+  /**
+   * Tags are optional tags for categorization.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeA2AConfigSkills#tags
+   */
+  readonly tags: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeA2AConfigSkills' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeA2AConfigSkills(obj: AgentV1Alpha2SpecDeclarativeA2AConfigSkills | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'description': obj.description,
+    'examples': obj.examples?.map(y => y),
+    'id': obj.id,
+    'inputModes': obj.inputModes?.map(y => y),
+    'name': obj.name,
+    'outputModes': obj.outputModes?.map(y => y),
+    'tags': obj.tags?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EnvVar represents an environment variable present in a Container.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnv
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnv {
+  /**
+   * Name of the environment variable.
+   * May consist of any printable ASCII characters except '='.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnv#name
+   */
+  readonly name: string;
+
+  /**
+   * Variable references $(VAR_NAME) are expanded
+   * using the previously defined environment variables in the container and
+   * any service environment variables. If a variable cannot be resolved,
+   * the reference in the input string will be unchanged. Double $$ are reduced
+   * to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e.
+   * "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)".
+   * Escaped references will never be expanded, regardless of whether the variable
+   * exists or not.
+   * Defaults to "".
+   *
+   * @default .
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnv#value
+   */
+  readonly value?: string;
+
+  /**
+   * Source for the environment variable's value. Cannot be used if value is not empty.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnv#valueFrom
+   */
+  readonly valueFrom?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnv' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnv(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnv | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'value': obj.value,
+    'valueFrom': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom(obj.valueFrom),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * LocalObjectReference contains enough information to let you locate the
+ * referenced object inside the same namespace.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets(obj: AgentV1Alpha2SpecDeclarativeDeploymentImagePullSecrets | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ResourceRequirements describes the compute resource requirements.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentResources
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentResources {
+  /**
+   * Claims lists the names of resources, defined in spec.resourceClaims,
+   * that are used by this container.
+   *
+   * This field depends on the
+   * DynamicResourceAllocation feature gate.
+   *
+   * This field is immutable. It can only be set for containers.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentResources#claims
+   */
+  readonly claims?: AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims[];
+
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentResources#limits
+   */
+  readonly limits?: { [key: string]: AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentResources#requests
+   */
+  readonly requests?: { [key: string]: AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentResources(obj: AgentV1Alpha2SpecDeclarativeDeploymentResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claims': obj.claims?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims(y)),
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * VolumeMount describes a mounting of a Volume within a container.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts {
+  /**
+   * Path within the container at which the volume should be mounted.  Must
+   * not contain ':'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#mountPath
+   */
+  readonly mountPath: string;
+
+  /**
+   * mountPropagation determines how mounts are propagated from the host
+   * to container and the other way around.
+   * When not set, MountPropagationNone is used.
+   * This field is beta in 1.10.
+   * When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
+   * (which defaults to None).
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#mountPropagation
+   */
+  readonly mountPropagation?: string;
+
+  /**
+   * This must match the Name of a Volume.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#name
+   */
+  readonly name: string;
+
+  /**
+   * Mounted read-only if true, read-write otherwise (false or unspecified).
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * RecursiveReadOnly specifies whether read-only mounts should be handled
+   * recursively.
+   *
+   * If ReadOnly is false, this field has no meaning and must be unspecified.
+   *
+   * If ReadOnly is true, and this field is set to Disabled, the mount is not made
+   * recursively read-only.  If this field is set to IfPossible, the mount is made
+   * recursively read-only, if it is supported by the container runtime.  If this
+   * field is set to Enabled, the mount is made recursively read-only if it is
+   * supported by the container runtime, otherwise the pod will not be started and
+   * an error will be generated to indicate the reason.
+   *
+   * If this field is set to IfPossible or Enabled, MountPropagation must be set to
+   * None (or be unspecified, which defaults to None).
+   *
+   * If this field is not specified, it is treated as an equivalent of Disabled.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#recursiveReadOnly
+   */
+  readonly recursiveReadOnly?: string;
+
+  /**
+   * Path within the volume from which the container's volume should be mounted.
+   * Defaults to "" (volume's root).
+   *
+   * @default volume's root).
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#subPath
+   */
+  readonly subPath?: string;
+
+  /**
+   * Expanded path within the volume from which the container's volume should be mounted.
+   * Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment.
+   * Defaults to "" (volume's root).
+   * SubPathExpr and SubPath are mutually exclusive.
+   *
+   * @default volume's root).
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts#subPathExpr
+   */
+  readonly subPathExpr?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumeMounts | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'mountPath': obj.mountPath,
+    'mountPropagation': obj.mountPropagation,
+    'name': obj.name,
+    'readOnly': obj.readOnly,
+    'recursiveReadOnly': obj.recursiveReadOnly,
+    'subPath': obj.subPath,
+    'subPathExpr': obj.subPathExpr,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volume represents a named volume in a pod that may be accessed by any container in the pod.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumes {
+  /**
+   * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#awsElasticBlockStore
+   */
+  readonly awsElasticBlockStore?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore;
+
+  /**
+   * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#azureDisk
+   */
+  readonly azureDisk?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk;
+
+  /**
+   * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#azureFile
+   */
+  readonly azureFile?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile;
+
+  /**
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#cephfs
+   */
+  readonly cephfs?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs;
+
+  /**
+   * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#cinder
+   */
+  readonly cinder?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder;
+
+  /**
+   * configMap represents a configMap that should populate this volume
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#configMap
+   */
+  readonly configMap?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap;
+
+  /**
+   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#csi
+   */
+  readonly csi?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi;
+
+  /**
+   * downwardAPI represents downward API about the pod that should populate this volume
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#downwardAPI
+   */
+  readonly downwardApi?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi;
+
+  /**
+   * emptyDir represents a temporary directory that shares a pod's lifetime.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#emptyDir
+   */
+  readonly emptyDir?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir;
+
+  /**
+   * ephemeral represents a volume that is handled by a cluster storage driver.
+   * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+   * and deleted when the pod is removed.
+   *
+   * Use this if:
+   * a) the volume is only needed while the pod runs,
+   * b) features of normal volumes like restoring from snapshot or capacity
+   * tracking are needed,
+   * c) the storage driver is specified through a storage class, and
+   * d) the storage driver supports dynamic volume provisioning through
+   * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+   * information on the connection between this volume type
+   * and PersistentVolumeClaim).
+   *
+   * Use PersistentVolumeClaim or one of the vendor-specific
+   * APIs for volumes that persist for longer than the lifecycle
+   * of an individual pod.
+   *
+   * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+   * be used that way - see the documentation of the driver for
+   * more information.
+   *
+   * A pod can use both types of ephemeral volumes and
+   * persistent volumes at the same time.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#ephemeral
+   */
+  readonly ephemeral?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral;
+
+  /**
+   * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#fc
+   */
+  readonly fc?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc;
+
+  /**
+   * flexVolume represents a generic volume resource that is
+   * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#flexVolume
+   */
+  readonly flexVolume?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume;
+
+  /**
+   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#flocker
+   */
+  readonly flocker?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker;
+
+  /**
+   * gcePersistentDisk represents a GCE Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#gcePersistentDisk
+   */
+  readonly gcePersistentDisk?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk;
+
+  /**
+   * gitRepo represents a git repository at a particular revision.
+   * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+   * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+   * into the Pod's container.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#gitRepo
+   */
+  readonly gitRepo?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo;
+
+  /**
+   * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#glusterfs
+   */
+  readonly glusterfs?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs;
+
+  /**
+   * hostPath represents a pre-existing file or directory on the host
+   * machine that is directly exposed to the container. This is generally
+   * used for system agents or other privileged things that are allowed
+   * to see the host machine. Most containers will NOT need this.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#hostPath
+   */
+  readonly hostPath?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath;
+
+  /**
+   * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+   * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+   *
+   * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   *
+   * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+   * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+   * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+   * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+   * The volume will be mounted read-only (ro) and non-executable files (noexec).
+   * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+   * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#image
+   */
+  readonly image?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage;
+
+  /**
+   * iscsi represents an ISCSI Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#iscsi
+   */
+  readonly iscsi?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi;
+
+  /**
+   * name of the volume.
+   * Must be a DNS_LABEL and unique within the pod.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#name
+   */
+  readonly name: string;
+
+  /**
+   * nfs represents an NFS mount on the host that shares a pod's lifetime
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#nfs
+   */
+  readonly nfs?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs;
+
+  /**
+   * persistentVolumeClaimVolumeSource represents a reference to a
+   * PersistentVolumeClaim in the same namespace.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#persistentVolumeClaim
+   */
+  readonly persistentVolumeClaim?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim;
+
+  /**
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#photonPersistentDisk
+   */
+  readonly photonPersistentDisk?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk;
+
+  /**
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#portworxVolume
+   */
+  readonly portworxVolume?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume;
+
+  /**
+   * projected items for all in one resources secrets, configmaps, and downward API
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#projected
+   */
+  readonly projected?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected;
+
+  /**
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#quobyte
+   */
+  readonly quobyte?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte;
+
+  /**
+   * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#rbd
+   */
+  readonly rbd?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd;
+
+  /**
+   * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#scaleIO
+   */
+  readonly scaleIo?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo;
+
+  /**
+   * secret represents a secret that should populate this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#secret
+   */
+  readonly secret?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret;
+
+  /**
+   * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#storageos
+   */
+  readonly storageos?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos;
+
+  /**
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumes#vsphereVolume
+   */
+  readonly vsphereVolume?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumes' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumes(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumes | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsElasticBlockStore': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore(obj.awsElasticBlockStore),
+    'azureDisk': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk(obj.azureDisk),
+    'azureFile': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile(obj.azureFile),
+    'cephfs': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs(obj.cephfs),
+    'cinder': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder(obj.cinder),
+    'configMap': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap(obj.configMap),
+    'csi': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi(obj.csi),
+    'downwardAPI': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi(obj.downwardApi),
+    'emptyDir': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir(obj.emptyDir),
+    'ephemeral': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral(obj.ephemeral),
+    'fc': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc(obj.fc),
+    'flexVolume': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume(obj.flexVolume),
+    'flocker': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker(obj.flocker),
+    'gcePersistentDisk': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk(obj.gcePersistentDisk),
+    'gitRepo': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo(obj.gitRepo),
+    'glusterfs': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs(obj.glusterfs),
+    'hostPath': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath(obj.hostPath),
+    'image': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage(obj.image),
+    'iscsi': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi(obj.iscsi),
+    'name': obj.name,
+    'nfs': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs(obj.nfs),
+    'persistentVolumeClaim': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim(obj.persistentVolumeClaim),
+    'photonPersistentDisk': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk(obj.photonPersistentDisk),
+    'portworxVolume': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume(obj.portworxVolume),
+    'projected': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected(obj.projected),
+    'quobyte': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte(obj.quobyte),
+    'rbd': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd(obj.rbd),
+    'scaleIO': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo(obj.scaleIo),
+    'secret': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret(obj.secret),
+    'storageos': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos(obj.storageos),
+    'vsphereVolume': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume(obj.vsphereVolume),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeSystemMessageFromType
+ */
+export enum AgentV1Alpha2SpecDeclarativeSystemMessageFromType {
+  /** ConfigMap */
+  CONFIG_MAP = "ConfigMap",
+  /** Secret */
+  SECRET = "Secret",
+}
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeToolsAgent
+ */
+export interface AgentV1Alpha2SpecDeclarativeToolsAgent {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsAgent#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsAgent#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsAgent#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeToolsAgent' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeToolsAgent(obj: AgentV1Alpha2SpecDeclarativeToolsAgent | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ValueRef represents a configuration value
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFrom
+ */
+export interface AgentV1Alpha2SpecDeclarativeToolsHeadersFrom {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFrom#name
+   */
+  readonly name: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFrom#value
+   */
+  readonly value?: string;
+
+  /**
+   * ValueSource defines a source for configuration values from a Secret or ConfigMap
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFrom#valueFrom
+   */
+  readonly valueFrom?: AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeToolsHeadersFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeToolsHeadersFrom(obj: AgentV1Alpha2SpecDeclarativeToolsHeadersFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'value': obj.value,
+    'valueFrom': toJson_AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom(obj.valueFrom),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeToolsMcpServer
+ */
+export interface AgentV1Alpha2SpecDeclarativeToolsMcpServer {
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsMcpServer#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsMcpServer#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsMcpServer#name
+   */
+  readonly name: string;
+
+  /**
+   * The names of the tools to be provided by the ToolServer
+   * For a list of all the tools provided by the server,
+   * the client can query the status of the ToolServer object after it has been created
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeToolsMcpServer#toolNames
+   */
+  readonly toolNames?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeToolsMcpServer' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeToolsMcpServer(obj: AgentV1Alpha2SpecDeclarativeToolsMcpServer | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+    'toolNames': obj.toolNames?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Source for the environment variable's value. Cannot be used if value is not empty.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFrom {
+  /**
+   * Selects a key of a ConfigMap.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom#configMapKeyRef
+   */
+  readonly configMapKeyRef?: AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef;
+
+  /**
+   * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+   * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef;
+
+  /**
+   * FileKeyRef selects a key of the env file.
+   * Requires the EnvFiles feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom#fileKeyRef
+   */
+  readonly fileKeyRef?: AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef;
+
+  /**
+   * Selects a key of a secret in the pod's namespace
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFrom#secretKeyRef
+   */
+  readonly secretKeyRef?: AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFrom(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMapKeyRef': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef(obj.configMapKeyRef),
+    'fieldRef': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef(obj.fieldRef),
+    'fileKeyRef': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef(obj.fileKeyRef),
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef(obj.resourceFieldRef),
+    'secretKeyRef': toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef(obj.secretKeyRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ResourceClaim references one entry in PodSpec.ResourceClaims.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentResourcesClaims
+ */
+export interface AgentV1Alpha2SpecByoDeploymentResourcesClaims {
+  /**
+   * Name must match the name of one entry in pod.spec.resourceClaims of
+   * the Pod where this field is used. It makes that resource available
+   * inside a container.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentResourcesClaims#name
+   */
+  readonly name: string;
+
+  /**
+   * Request is the name chosen for a request in the referenced claim.
+   * If empty, everything from the claim is made available, otherwise
+   * only the result of this request.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentResourcesClaims#request
+   */
+  readonly request?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentResourcesClaims' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentResourcesClaims(obj: AgentV1Alpha2SpecByoDeploymentResourcesClaims | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'request': obj.request,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecByoDeploymentResourcesLimits
+ */
+export class AgentV1Alpha2SpecByoDeploymentResourcesLimits {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentResourcesLimits {
+    return new AgentV1Alpha2SpecByoDeploymentResourcesLimits(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentResourcesLimits {
+    return new AgentV1Alpha2SpecByoDeploymentResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema AgentV1Alpha2SpecByoDeploymentResourcesRequests
+ */
+export class AgentV1Alpha2SpecByoDeploymentResourcesRequests {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentResourcesRequests {
+    return new AgentV1Alpha2SpecByoDeploymentResourcesRequests(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentResourcesRequests {
+    return new AgentV1Alpha2SpecByoDeploymentResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+ * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * readOnly value true will force the readOnly setting in VolumeMounts.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID is unique ID of the persistent disk resource in AWS (Amazon EBS volume).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore(obj: AgentV1Alpha2SpecByoDeploymentVolumesAwsElasticBlockStore | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+ * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+ * are redirected to the disk.csi.azure.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk {
+  /**
+   * cachingMode is the Host Caching mode: None, Read Only, Read Write.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#cachingMode
+   */
+  readonly cachingMode?: string;
+
+  /**
+   * diskName is the Name of the data disk in the blob storage
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#diskName
+   */
+  readonly diskName: string;
+
+  /**
+   * diskURI is the URI of data disk in the blob storage
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#diskURI
+   */
+  readonly diskUri: string;
+
+  /**
+   * fsType is Filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk(obj: AgentV1Alpha2SpecByoDeploymentVolumesAzureDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'cachingMode': obj.cachingMode,
+    'diskName': obj.diskName,
+    'diskURI': obj.diskUri,
+    'fsType': obj.fsType,
+    'kind': obj.kind,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+ * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+ * are redirected to the file.csi.azure.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureFile
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesAzureFile {
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureFile#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretName is the  name of secret that contains Azure Storage Account Name and Key
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureFile#secretName
+   */
+  readonly secretName: string;
+
+  /**
+   * shareName is the azure share Name
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesAzureFile#shareName
+   */
+  readonly shareName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesAzureFile' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesAzureFile(obj: AgentV1Alpha2SpecByoDeploymentVolumesAzureFile | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'readOnly': obj.readOnly,
+    'secretName': obj.secretName,
+    'shareName': obj.shareName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+ * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCephfs {
+  /**
+   * monitors is Required: Monitors is a collection of Ceph monitors
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * path is Optional: Used as the mounted root, rather than the full Ceph tree, default is /
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#path
+   */
+  readonly path?: string;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretFile is Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#secretFile
+   */
+  readonly secretFile?: string;
+
+  /**
+   * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef;
+
+  /**
+   * user is optional: User is the rados user name, default is admin
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfs#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCephfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCephfs(obj: AgentV1Alpha2SpecByoDeploymentVolumesCephfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'monitors': obj.monitors?.map(y => y),
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'secretFile': obj.secretFile,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cinder represents a cinder volume attached and mounted on kubelets host machine.
+ * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+ * are redirected to the cinder.csi.openstack.org CSI driver.
+ * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinder
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCinder {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinder#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinder#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is optional: points to a secret object containing parameters used to connect
+   * to OpenStack.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinder#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef;
+
+  /**
+   * volumeID used to identify the volume in cinder.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinder#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCinder' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCinder(obj: AgentV1Alpha2SpecByoDeploymentVolumesCinder | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef(obj.secretRef),
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap represents a configMap that should populate this volume
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMap
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesConfigMap {
+  /**
+   * defaultMode is optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMap#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMap#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesConfigMap(obj: AgentV1Alpha2SpecByoDeploymentVolumesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCsi {
+  /**
+   * driver is the name of the CSI driver that handles this volume.
+   * Consult with your admin for the correct name as registered in the cluster.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType to mount. Ex. "ext4", "xfs", "ntfs".
+   * If not provided, the empty value is passed to the associated CSI driver
+   * which will determine the default filesystem to apply.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * nodePublishSecretRef is a reference to the secret object containing
+   * sensitive information to pass to the CSI driver to complete the CSI
+   * NodePublishVolume and NodeUnpublishVolume calls.
+   * This field is optional, and  may be empty if no secret is required. If the
+   * secret object contains more than one secret, all secret references are passed.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi#nodePublishSecretRef
+   */
+  readonly nodePublishSecretRef?: AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef;
+
+  /**
+   * readOnly specifies a read-only configuration for the volume.
+   * Defaults to false (read/write).
+   *
+   * @default false (read/write).
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeAttributes stores driver-specific properties that are passed to the CSI
+   * driver. Consult your driver's documentation for supported values.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsi#volumeAttributes
+   */
+  readonly volumeAttributes?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCsi(obj: AgentV1Alpha2SpecByoDeploymentVolumesCsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'nodePublishSecretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef(obj.nodePublishSecretRef),
+    'readOnly': obj.readOnly,
+    'volumeAttributes': ((obj.volumeAttributes) === undefined) ? undefined : (Object.entries(obj.volumeAttributes).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI represents downward API about the pod that should populate this volume
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi {
+  /**
+   * Optional: mode bits to use on created files by default. Must be a
+   * Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * Items is a list of downward API volume file
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi(obj: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * emptyDir represents a temporary directory that shares a pod's lifetime.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir {
+  /**
+   * medium represents what type of storage medium should back this directory.
+   * The default is "" which means to use the node's default medium.
+   * Must be an empty string (default) or Memory.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir#medium
+   */
+  readonly medium?: string;
+
+  /**
+   * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+   * The size limit is also applicable for memory medium.
+   * The maximum usage on memory medium EmptyDir would be the minimum value between
+   * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+   * The default is nil which means that the limit is undefined.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir#sizeLimit
+   */
+  readonly sizeLimit?: AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir(obj: AgentV1Alpha2SpecByoDeploymentVolumesEmptyDir | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'medium': obj.medium,
+    'sizeLimit': obj.sizeLimit?.value,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ephemeral represents a volume that is handled by a cluster storage driver.
+ * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+ * and deleted when the pod is removed.
+ *
+ * Use this if:
+ * a) the volume is only needed while the pod runs,
+ * b) features of normal volumes like restoring from snapshot or capacity
+ * tracking are needed,
+ * c) the storage driver is specified through a storage class, and
+ * d) the storage driver supports dynamic volume provisioning through
+ * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+ * information on the connection between this volume type
+ * and PersistentVolumeClaim).
+ *
+ * Use PersistentVolumeClaim or one of the vendor-specific
+ * APIs for volumes that persist for longer than the lifecycle
+ * of an individual pod.
+ *
+ * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+ * be used that way - see the documentation of the driver for
+ * more information.
+ *
+ * A pod can use both types of ephemeral volumes and
+ * persistent volumes at the same time.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeral
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeral {
+  /**
+   * Will be used to create a stand-alone PVC to provision the volume.
+   * The pod in which this EphemeralVolumeSource is embedded will be the
+   * owner of the PVC, i.e. the PVC will be deleted together with the
+   * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+   * `<volume name>` is the name from the `PodSpec.Volumes` array
+   * entry. Pod validation will reject the pod if the concatenated name
+   * is not valid for a PVC (for example, too long).
+   *
+   * An existing PVC with that name that is not owned by the pod
+   * will *not* be used for the pod to avoid using an unrelated
+   * volume by mistake. Starting the pod is then blocked until
+   * the unrelated PVC is removed. If such a pre-created PVC is
+   * meant to be used by the pod, the PVC has to updated with an
+   * owner reference to the pod once the pod exists. Normally
+   * this should not be necessary, but it may be useful when
+   * manually reconstructing a broken cluster.
+   *
+   * This field is read-only and no changes will be made by Kubernetes
+   * to the PVC after it has been created.
+   *
+   * Required, must not be nil.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeral#volumeClaimTemplate
+   */
+  readonly volumeClaimTemplate?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeral' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeral(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeral | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'volumeClaimTemplate': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate(obj.volumeClaimTemplate),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesFc {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * lun is Optional: FC target lun number
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc#lun
+   */
+  readonly lun?: number;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * targetWWNs is Optional: FC target worldwide names (WWNs)
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc#targetWWNs
+   */
+  readonly targetWwNs?: string[];
+
+  /**
+   * wwids Optional: FC volume world wide identifiers (wwids)
+   * Either wwids or combination of targetWWNs and lun must be set, but not both simultaneously.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFc#wwids
+   */
+  readonly wwids?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesFc' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesFc(obj: AgentV1Alpha2SpecByoDeploymentVolumesFc | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'lun': obj.lun,
+    'readOnly': obj.readOnly,
+    'targetWWNs': obj.targetWwNs?.map(y => y),
+    'wwids': obj.wwids?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flexVolume represents a generic volume resource that is
+ * provisioned/attached using an exec based plugin.
+ * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume {
+  /**
+   * driver is the name of the driver to use for this volume.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * options is Optional: this field holds extra command options if any.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume#options
+   */
+  readonly options?: { [key: string]: string };
+
+  /**
+   * readOnly is Optional: defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is Optional: secretRef is reference to the secret object containing
+   * sensitive information to pass to the plugin scripts. This may be
+   * empty if no secret object is specified. If the secret object
+   * contains more than one secret, all secrets are passed to the plugin
+   * scripts.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume(obj: AgentV1Alpha2SpecByoDeploymentVolumesFlexVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'options': ((obj.options) === undefined) ? undefined : (Object.entries(obj.options).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+ * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlocker
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesFlocker {
+  /**
+   * datasetName is Name of the dataset stored as metadata -> name on the dataset for Flocker
+   * should be considered as deprecated
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlocker#datasetName
+   */
+  readonly datasetName?: string;
+
+  /**
+   * datasetUUID is the UUID of the dataset. This is unique identifier of a Flocker dataset
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlocker#datasetUUID
+   */
+  readonly datasetUuid?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesFlocker' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlocker(obj: AgentV1Alpha2SpecByoDeploymentVolumesFlocker | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'datasetName': obj.datasetName,
+    'datasetUUID': obj.datasetUuid,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gcePersistentDisk represents a GCE Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+ * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk {
+  /**
+   * fsType is filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * pdName is unique name of the PD resource in GCE. Used to identify the disk in GCE.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk#pdName
+   */
+  readonly pdName: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk(obj: AgentV1Alpha2SpecByoDeploymentVolumesGcePersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'pdName': obj.pdName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gitRepo represents a git repository at a particular revision.
+ * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+ * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+ * into the Pod's container.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesGitRepo
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesGitRepo {
+  /**
+   * directory is the target directory name.
+   * Must not contain or start with '..'.  If '.' is supplied, the volume directory will be the
+   * git repository.  Otherwise, if specified, the volume will contain the git repository in
+   * the subdirectory with the given name.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGitRepo#directory
+   */
+  readonly directory?: string;
+
+  /**
+   * repository is the URL
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGitRepo#repository
+   */
+  readonly repository: string;
+
+  /**
+   * revision is the commit hash for the specified revision.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGitRepo#revision
+   */
+  readonly revision?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesGitRepo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesGitRepo(obj: AgentV1Alpha2SpecByoDeploymentVolumesGitRepo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'directory': obj.directory,
+    'repository': obj.repository,
+    'revision': obj.revision,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+ * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs {
+  /**
+   * endpoints is the endpoint name that details Glusterfs topology.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs#endpoints
+   */
+  readonly endpoints: string;
+
+  /**
+   * path is the Glusterfs volume path.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs(obj: AgentV1Alpha2SpecByoDeploymentVolumesGlusterfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'endpoints': obj.endpoints,
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * hostPath represents a pre-existing file or directory on the host
+ * machine that is directly exposed to the container. This is generally
+ * used for system agents or other privileged things that are allowed
+ * to see the host machine. Most containers will NOT need this.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesHostPath
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesHostPath {
+  /**
+   * path of the directory on the host.
+   * If the path is a symlink, it will follow the link to the real path.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesHostPath#path
+   */
+  readonly path: string;
+
+  /**
+   * type for HostPath Volume
+   * Defaults to ""
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @default More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesHostPath#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesHostPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesHostPath(obj: AgentV1Alpha2SpecByoDeploymentVolumesHostPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+ * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+ *
+ * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+ * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+ * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+ *
+ * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+ * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+ * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+ * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+ * The volume will be mounted read-only (ro) and non-executable files (noexec).
+ * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+ * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesImage
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesImage {
+  /**
+   * Policy for pulling OCI objects. Possible values are:
+   * Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   * Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+   *
+   * @default Always if :latest tag is specified, or IfNotPresent otherwise.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesImage#pullPolicy
+   */
+  readonly pullPolicy?: string;
+
+  /**
+   * Required: Image or artifact reference to be used.
+   * Behaves in the same way as pod.spec.containers[*].image.
+   * Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
+   * More info: https://kubernetes.io/docs/concepts/containers/images
+   * This field is optional to allow higher level config management to default or override
+   * container images in workload controllers like Deployments and StatefulSets.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesImage#reference
+   */
+  readonly reference?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesImage' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesImage(obj: AgentV1Alpha2SpecByoDeploymentVolumesImage | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'pullPolicy': obj.pullPolicy,
+    'reference': obj.reference,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * iscsi represents an ISCSI Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesIscsi {
+  /**
+   * chapAuthDiscovery defines whether support iSCSI Discovery CHAP authentication
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#chapAuthDiscovery
+   */
+  readonly chapAuthDiscovery?: boolean;
+
+  /**
+   * chapAuthSession defines whether support iSCSI Session CHAP authentication
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#chapAuthSession
+   */
+  readonly chapAuthSession?: boolean;
+
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * initiatorName is the custom iSCSI Initiator Name.
+   * If initiatorName is specified with iscsiInterface simultaneously, new iSCSI interface
+   * <target portal>:<volume name> will be created for the connection.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#initiatorName
+   */
+  readonly initiatorName?: string;
+
+  /**
+   * iqn is the target iSCSI Qualified Name.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#iqn
+   */
+  readonly iqn: string;
+
+  /**
+   * iscsiInterface is the interface Name that uses an iSCSI transport.
+   * Defaults to 'default' (tcp).
+   *
+   * @default default' (tcp).
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#iscsiInterface
+   */
+  readonly iscsiInterface?: string;
+
+  /**
+   * lun represents iSCSI Target Lun number.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#lun
+   */
+  readonly lun: number;
+
+  /**
+   * portals is the iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#portals
+   */
+  readonly portals?: string[];
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef;
+
+  /**
+   * targetPortal is iSCSI Target Portal. The Portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsi#targetPortal
+   */
+  readonly targetPortal: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesIscsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesIscsi(obj: AgentV1Alpha2SpecByoDeploymentVolumesIscsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'chapAuthDiscovery': obj.chapAuthDiscovery,
+    'chapAuthSession': obj.chapAuthSession,
+    'fsType': obj.fsType,
+    'initiatorName': obj.initiatorName,
+    'iqn': obj.iqn,
+    'iscsiInterface': obj.iscsiInterface,
+    'lun': obj.lun,
+    'portals': obj.portals?.map(y => y),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef(obj.secretRef),
+    'targetPortal': obj.targetPortal,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nfs represents an NFS mount on the host that shares a pod's lifetime
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesNfs
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesNfs {
+  /**
+   * path that is exported by the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesNfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the NFS export to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesNfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * server is the hostname or IP address of the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesNfs#server
+   */
+  readonly server: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesNfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesNfs(obj: AgentV1Alpha2SpecByoDeploymentVolumesNfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'server': obj.server,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * persistentVolumeClaimVolumeSource represents a reference to a
+ * PersistentVolumeClaim in the same namespace.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim {
+  /**
+   * claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim#claimName
+   */
+  readonly claimName: string;
+
+  /**
+   * readOnly Will force the ReadOnly setting in VolumeMounts.
+   * Default false.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim(obj: AgentV1Alpha2SpecByoDeploymentVolumesPersistentVolumeClaim | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claimName': obj.claimName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+ * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * pdID is the ID that identifies Photon Controller persistent disk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk#pdID
+   */
+  readonly pdId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk(obj: AgentV1Alpha2SpecByoDeploymentVolumesPhotonPersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'pdID': obj.pdId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+ * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+ * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+ * is on.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume {
+  /**
+   * fSType represents the filesystem type to mount
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID uniquely identifies a Portworx volume
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume(obj: AgentV1Alpha2SpecByoDeploymentVolumesPortworxVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * projected items for all in one resources secrets, configmaps, and downward API
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjected
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjected {
+  /**
+   * defaultMode are the mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjected#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * sources is the list of volume projections. Each entry in this list
+   * handles one source.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjected#sources
+   */
+  readonly sources?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjected' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjected(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjected | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'sources': obj.sources?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+ * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesQuobyte {
+  /**
+   * group to map volume access to
+   * Default is no group
+   *
+   * @default no group
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#group
+   */
+  readonly group?: string;
+
+  /**
+   * readOnly here will force the Quobyte volume to be mounted with read-only permissions.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * registry represents a single or multiple Quobyte Registry services
+   * specified as a string as host:port pair (multiple entries are separated with commas)
+   * which acts as the central registry for volumes
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#registry
+   */
+  readonly registry: string;
+
+  /**
+   * tenant owning the given Quobyte volume in the Backend
+   * Used with dynamically provisioned Quobyte volumes, value is set by the plugin
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#tenant
+   */
+  readonly tenant?: string;
+
+  /**
+   * user to map volume access to
+   * Defaults to serivceaccount user
+   *
+   * @default serivceaccount user
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#user
+   */
+  readonly user?: string;
+
+  /**
+   * volume is a string that references an already created Quobyte volume by name.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesQuobyte#volume
+   */
+  readonly volume: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesQuobyte' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesQuobyte(obj: AgentV1Alpha2SpecByoDeploymentVolumesQuobyte | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'group': obj.group,
+    'readOnly': obj.readOnly,
+    'registry': obj.registry,
+    'tenant': obj.tenant,
+    'user': obj.user,
+    'volume': obj.volume,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+ * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesRbd {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * image is the rados image name.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#image
+   */
+  readonly image: string;
+
+  /**
+   * keyring is the path to key ring for RBDUser.
+   * Default is /etc/ceph/keyring.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default etc/ceph/keyring.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#keyring
+   */
+  readonly keyring?: string;
+
+  /**
+   * monitors is a collection of Ceph monitors.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * pool is the rados pool name.
+   * Default is rbd.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default rbd.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#pool
+   */
+  readonly pool?: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is name of the authentication secret for RBDUser. If provided
+   * overrides keyring.
+   * Default is nil.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default nil.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef;
+
+  /**
+   * user is the rados user name.
+   * Default is admin.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default admin.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbd#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesRbd' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesRbd(obj: AgentV1Alpha2SpecByoDeploymentVolumesRbd | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'image': obj.image,
+    'keyring': obj.keyring,
+    'monitors': obj.monitors?.map(y => y),
+    'pool': obj.pool,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+ * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesScaleIo {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs".
+   * Default is "xfs".
+   *
+   * @default xfs".
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * gateway is the host address of the ScaleIO API Gateway.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#gateway
+   */
+  readonly gateway: string;
+
+  /**
+   * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#protectionDomain
+   */
+  readonly protectionDomain?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef references to the secret for ScaleIO user and other
+   * sensitive information. If this is not provided, Login operation will fail.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#secretRef
+   */
+  readonly secretRef: AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef;
+
+  /**
+   * sslEnabled Flag enable/disable SSL communication with Gateway, default false
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#sslEnabled
+   */
+  readonly sslEnabled?: boolean;
+
+  /**
+   * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.
+   * Default is ThinProvisioned.
+   *
+   * @default ThinProvisioned.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#storageMode
+   */
+  readonly storageMode?: string;
+
+  /**
+   * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#storagePool
+   */
+  readonly storagePool?: string;
+
+  /**
+   * system is the name of the storage system as configured in ScaleIO.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#system
+   */
+  readonly system: string;
+
+  /**
+   * volumeName is the name of a volume already created in the ScaleIO system
+   * that is associated with this volume source.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIo#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesScaleIo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesScaleIo(obj: AgentV1Alpha2SpecByoDeploymentVolumesScaleIo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'gateway': obj.gateway,
+    'protectionDomain': obj.protectionDomain,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef(obj.secretRef),
+    'sslEnabled': obj.sslEnabled,
+    'storageMode': obj.storageMode,
+    'storagePool': obj.storagePool,
+    'system': obj.system,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret represents a secret that should populate this volume.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecret
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesSecret {
+  /**
+   * defaultMode is Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values
+   * for mode bits. Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecret#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items If unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecret#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesSecretItems[];
+
+  /**
+   * optional field specify whether the Secret or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecret#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * secretName is the name of the secret in the pod's namespace to use.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecret#secretName
+   */
+  readonly secretName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesSecret(obj: AgentV1Alpha2SpecByoDeploymentVolumesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesSecretItems(y)),
+    'optional': obj.optional,
+    'secretName': obj.secretName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+ * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesStorageos {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef specifies the secret to use for obtaining the StorageOS API
+   * credentials.  If not specified, default values will be attempted.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef;
+
+  /**
+   * volumeName is the human-readable name of the StorageOS volume.  Volume
+   * names are only unique within a namespace.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos#volumeName
+   */
+  readonly volumeName?: string;
+
+  /**
+   * volumeNamespace specifies the scope of the volume within StorageOS.  If no
+   * namespace is specified then the Pod's namespace will be used.  This allows the
+   * Kubernetes name scoping to be mirrored within StorageOS for tighter integration.
+   * Set VolumeName to any name to override the default behaviour.
+   * Set to "default" if you are not using namespaces within StorageOS.
+   * Namespaces that do not pre-exist within StorageOS will be created.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageos#volumeNamespace
+   */
+  readonly volumeNamespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesStorageos' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesStorageos(obj: AgentV1Alpha2SpecByoDeploymentVolumesStorageos | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef(obj.secretRef),
+    'volumeName': obj.volumeName,
+    'volumeNamespace': obj.volumeNamespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+ * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+ * are redirected to the csi.vsphere.vmware.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume {
+  /**
+   * fsType is filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * storagePolicyID is the storage Policy Based Management (SPBM) profile ID associated with the StoragePolicyName.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume#storagePolicyID
+   */
+  readonly storagePolicyId?: string;
+
+  /**
+   * storagePolicyName is the storage Policy Based Management (SPBM) profile name.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume#storagePolicyName
+   */
+  readonly storagePolicyName?: string;
+
+  /**
+   * volumePath is the path that identifies vSphere volume vmdk
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume#volumePath
+   */
+  readonly volumePath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume(obj: AgentV1Alpha2SpecByoDeploymentVolumesVsphereVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'storagePolicyID': obj.storagePolicyId,
+    'storagePolicyName': obj.storagePolicyName,
+    'volumePath': obj.volumePath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Source for the environment variable's value. Cannot be used if value is not empty.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom {
+  /**
+   * Selects a key of a ConfigMap.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom#configMapKeyRef
+   */
+  readonly configMapKeyRef?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef;
+
+  /**
+   * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+   * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef;
+
+  /**
+   * FileKeyRef selects a key of the env file.
+   * Requires the EnvFiles feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom#fileKeyRef
+   */
+  readonly fileKeyRef?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef;
+
+  /**
+   * Selects a key of a secret in the pod's namespace
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom#secretKeyRef
+   */
+  readonly secretKeyRef?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMapKeyRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef(obj.configMapKeyRef),
+    'fieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef(obj.fieldRef),
+    'fileKeyRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef(obj.fileKeyRef),
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef(obj.resourceFieldRef),
+    'secretKeyRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef(obj.secretKeyRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ResourceClaim references one entry in PodSpec.ResourceClaims.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims {
+  /**
+   * Name must match the name of one entry in pod.spec.resourceClaims of
+   * the Pod where this field is used. It makes that resource available
+   * inside a container.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims#name
+   */
+  readonly name: string;
+
+  /**
+   * Request is the name chosen for a request in the referenced claim.
+   * If empty, everything from the claim is made available, otherwise
+   * only the result of this request.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims#request
+   */
+  readonly request?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims(obj: AgentV1Alpha2SpecDeclarativeDeploymentResourcesClaims | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'request': obj.request,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+ * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * readOnly value true will force the readOnly setting in VolumeMounts.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID is unique ID of the persistent disk resource in AWS (Amazon EBS volume).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAwsElasticBlockStore | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+ * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+ * are redirected to the disk.csi.azure.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk {
+  /**
+   * cachingMode is the Host Caching mode: None, Read Only, Read Write.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#cachingMode
+   */
+  readonly cachingMode?: string;
+
+  /**
+   * diskName is the Name of the data disk in the blob storage
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#diskName
+   */
+  readonly diskName: string;
+
+  /**
+   * diskURI is the URI of data disk in the blob storage
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#diskURI
+   */
+  readonly diskUri: string;
+
+  /**
+   * fsType is Filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'cachingMode': obj.cachingMode,
+    'diskName': obj.diskName,
+    'diskURI': obj.diskUri,
+    'fsType': obj.fsType,
+    'kind': obj.kind,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+ * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+ * are redirected to the file.csi.azure.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile {
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretName is the  name of secret that contains Azure Storage Account Name and Key
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile#secretName
+   */
+  readonly secretName: string;
+
+  /**
+   * shareName is the azure share Name
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile#shareName
+   */
+  readonly shareName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesAzureFile | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'readOnly': obj.readOnly,
+    'secretName': obj.secretName,
+    'shareName': obj.shareName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+ * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs {
+  /**
+   * monitors is Required: Monitors is a collection of Ceph monitors
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * path is Optional: Used as the mounted root, rather than the full Ceph tree, default is /
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#path
+   */
+  readonly path?: string;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretFile is Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#secretFile
+   */
+  readonly secretFile?: string;
+
+  /**
+   * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef;
+
+  /**
+   * user is optional: User is the rados user name, default is admin
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'monitors': obj.monitors?.map(y => y),
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'secretFile': obj.secretFile,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cinder represents a cinder volume attached and mounted on kubelets host machine.
+ * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+ * are redirected to the cinder.csi.openstack.org CSI driver.
+ * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is optional: points to a secret object containing parameters used to connect
+   * to OpenStack.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef;
+
+  /**
+   * volumeID used to identify the volume in cinder.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinder | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef(obj.secretRef),
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap represents a configMap that should populate this volume
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap {
+  /**
+   * defaultMode is optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi {
+  /**
+   * driver is the name of the CSI driver that handles this volume.
+   * Consult with your admin for the correct name as registered in the cluster.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType to mount. Ex. "ext4", "xfs", "ntfs".
+   * If not provided, the empty value is passed to the associated CSI driver
+   * which will determine the default filesystem to apply.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * nodePublishSecretRef is a reference to the secret object containing
+   * sensitive information to pass to the CSI driver to complete the CSI
+   * NodePublishVolume and NodeUnpublishVolume calls.
+   * This field is optional, and  may be empty if no secret is required. If the
+   * secret object contains more than one secret, all secret references are passed.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi#nodePublishSecretRef
+   */
+  readonly nodePublishSecretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef;
+
+  /**
+   * readOnly specifies a read-only configuration for the volume.
+   * Defaults to false (read/write).
+   *
+   * @default false (read/write).
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeAttributes stores driver-specific properties that are passed to the CSI
+   * driver. Consult your driver's documentation for supported values.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi#volumeAttributes
+   */
+  readonly volumeAttributes?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'nodePublishSecretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef(obj.nodePublishSecretRef),
+    'readOnly': obj.readOnly,
+    'volumeAttributes': ((obj.volumeAttributes) === undefined) ? undefined : (Object.entries(obj.volumeAttributes).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI represents downward API about the pod that should populate this volume
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi {
+  /**
+   * Optional: mode bits to use on created files by default. Must be a
+   * Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * Items is a list of downward API volume file
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * emptyDir represents a temporary directory that shares a pod's lifetime.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir {
+  /**
+   * medium represents what type of storage medium should back this directory.
+   * The default is "" which means to use the node's default medium.
+   * Must be an empty string (default) or Memory.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir#medium
+   */
+  readonly medium?: string;
+
+  /**
+   * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+   * The size limit is also applicable for memory medium.
+   * The maximum usage on memory medium EmptyDir would be the minimum value between
+   * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+   * The default is nil which means that the limit is undefined.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir#sizeLimit
+   */
+  readonly sizeLimit?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDir | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'medium': obj.medium,
+    'sizeLimit': obj.sizeLimit?.value,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ephemeral represents a volume that is handled by a cluster storage driver.
+ * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+ * and deleted when the pod is removed.
+ *
+ * Use this if:
+ * a) the volume is only needed while the pod runs,
+ * b) features of normal volumes like restoring from snapshot or capacity
+ * tracking are needed,
+ * c) the storage driver is specified through a storage class, and
+ * d) the storage driver supports dynamic volume provisioning through
+ * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+ * information on the connection between this volume type
+ * and PersistentVolumeClaim).
+ *
+ * Use PersistentVolumeClaim or one of the vendor-specific
+ * APIs for volumes that persist for longer than the lifecycle
+ * of an individual pod.
+ *
+ * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+ * be used that way - see the documentation of the driver for
+ * more information.
+ *
+ * A pod can use both types of ephemeral volumes and
+ * persistent volumes at the same time.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral {
+  /**
+   * Will be used to create a stand-alone PVC to provision the volume.
+   * The pod in which this EphemeralVolumeSource is embedded will be the
+   * owner of the PVC, i.e. the PVC will be deleted together with the
+   * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+   * `<volume name>` is the name from the `PodSpec.Volumes` array
+   * entry. Pod validation will reject the pod if the concatenated name
+   * is not valid for a PVC (for example, too long).
+   *
+   * An existing PVC with that name that is not owned by the pod
+   * will *not* be used for the pod to avoid using an unrelated
+   * volume by mistake. Starting the pod is then blocked until
+   * the unrelated PVC is removed. If such a pre-created PVC is
+   * meant to be used by the pod, the PVC has to updated with an
+   * owner reference to the pod once the pod exists. Normally
+   * this should not be necessary, but it may be useful when
+   * manually reconstructing a broken cluster.
+   *
+   * This field is read-only and no changes will be made by Kubernetes
+   * to the PVC after it has been created.
+   *
+   * Required, must not be nil.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral#volumeClaimTemplate
+   */
+  readonly volumeClaimTemplate?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeral | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'volumeClaimTemplate': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate(obj.volumeClaimTemplate),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * lun is Optional: FC target lun number
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc#lun
+   */
+  readonly lun?: number;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * targetWWNs is Optional: FC target worldwide names (WWNs)
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc#targetWWNs
+   */
+  readonly targetWwNs?: string[];
+
+  /**
+   * wwids Optional: FC volume world wide identifiers (wwids)
+   * Either wwids or combination of targetWWNs and lun must be set, but not both simultaneously.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc#wwids
+   */
+  readonly wwids?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFc | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'lun': obj.lun,
+    'readOnly': obj.readOnly,
+    'targetWWNs': obj.targetWwNs?.map(y => y),
+    'wwids': obj.wwids?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flexVolume represents a generic volume resource that is
+ * provisioned/attached using an exec based plugin.
+ * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume {
+  /**
+   * driver is the name of the driver to use for this volume.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * options is Optional: this field holds extra command options if any.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume#options
+   */
+  readonly options?: { [key: string]: string };
+
+  /**
+   * readOnly is Optional: defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is Optional: secretRef is reference to the secret object containing
+   * sensitive information to pass to the plugin scripts. This may be
+   * empty if no secret object is specified. If the secret object
+   * contains more than one secret, all secrets are passed to the plugin
+   * scripts.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'options': ((obj.options) === undefined) ? undefined : (Object.entries(obj.options).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+ * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker {
+  /**
+   * datasetName is Name of the dataset stored as metadata -> name on the dataset for Flocker
+   * should be considered as deprecated
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker#datasetName
+   */
+  readonly datasetName?: string;
+
+  /**
+   * datasetUUID is the UUID of the dataset. This is unique identifier of a Flocker dataset
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker#datasetUUID
+   */
+  readonly datasetUuid?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlocker | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'datasetName': obj.datasetName,
+    'datasetUUID': obj.datasetUuid,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gcePersistentDisk represents a GCE Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+ * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk {
+  /**
+   * fsType is filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * pdName is unique name of the PD resource in GCE. Used to identify the disk in GCE.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk#pdName
+   */
+  readonly pdName: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGcePersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'pdName': obj.pdName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gitRepo represents a git repository at a particular revision.
+ * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+ * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+ * into the Pod's container.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo {
+  /**
+   * directory is the target directory name.
+   * Must not contain or start with '..'.  If '.' is supplied, the volume directory will be the
+   * git repository.  Otherwise, if specified, the volume will contain the git repository in
+   * the subdirectory with the given name.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo#directory
+   */
+  readonly directory?: string;
+
+  /**
+   * repository is the URL
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo#repository
+   */
+  readonly repository: string;
+
+  /**
+   * revision is the commit hash for the specified revision.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo#revision
+   */
+  readonly revision?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGitRepo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'directory': obj.directory,
+    'repository': obj.repository,
+    'revision': obj.revision,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+ * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs {
+  /**
+   * endpoints is the endpoint name that details Glusterfs topology.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs#endpoints
+   */
+  readonly endpoints: string;
+
+  /**
+   * path is the Glusterfs volume path.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesGlusterfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'endpoints': obj.endpoints,
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * hostPath represents a pre-existing file or directory on the host
+ * machine that is directly exposed to the container. This is generally
+ * used for system agents or other privileged things that are allowed
+ * to see the host machine. Most containers will NOT need this.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath {
+  /**
+   * path of the directory on the host.
+   * If the path is a symlink, it will follow the link to the real path.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath#path
+   */
+  readonly path: string;
+
+  /**
+   * type for HostPath Volume
+   * Defaults to ""
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @default More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesHostPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+ * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+ *
+ * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+ * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+ * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+ *
+ * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+ * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+ * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+ * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+ * The volume will be mounted read-only (ro) and non-executable files (noexec).
+ * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+ * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage {
+  /**
+   * Policy for pulling OCI objects. Possible values are:
+   * Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   * Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+   *
+   * @default Always if :latest tag is specified, or IfNotPresent otherwise.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage#pullPolicy
+   */
+  readonly pullPolicy?: string;
+
+  /**
+   * Required: Image or artifact reference to be used.
+   * Behaves in the same way as pod.spec.containers[*].image.
+   * Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
+   * More info: https://kubernetes.io/docs/concepts/containers/images
+   * This field is optional to allow higher level config management to default or override
+   * container images in workload controllers like Deployments and StatefulSets.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage#reference
+   */
+  readonly reference?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesImage | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'pullPolicy': obj.pullPolicy,
+    'reference': obj.reference,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * iscsi represents an ISCSI Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi {
+  /**
+   * chapAuthDiscovery defines whether support iSCSI Discovery CHAP authentication
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#chapAuthDiscovery
+   */
+  readonly chapAuthDiscovery?: boolean;
+
+  /**
+   * chapAuthSession defines whether support iSCSI Session CHAP authentication
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#chapAuthSession
+   */
+  readonly chapAuthSession?: boolean;
+
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * initiatorName is the custom iSCSI Initiator Name.
+   * If initiatorName is specified with iscsiInterface simultaneously, new iSCSI interface
+   * <target portal>:<volume name> will be created for the connection.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#initiatorName
+   */
+  readonly initiatorName?: string;
+
+  /**
+   * iqn is the target iSCSI Qualified Name.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#iqn
+   */
+  readonly iqn: string;
+
+  /**
+   * iscsiInterface is the interface Name that uses an iSCSI transport.
+   * Defaults to 'default' (tcp).
+   *
+   * @default default' (tcp).
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#iscsiInterface
+   */
+  readonly iscsiInterface?: string;
+
+  /**
+   * lun represents iSCSI Target Lun number.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#lun
+   */
+  readonly lun: number;
+
+  /**
+   * portals is the iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#portals
+   */
+  readonly portals?: string[];
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef;
+
+  /**
+   * targetPortal is iSCSI Target Portal. The Portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi#targetPortal
+   */
+  readonly targetPortal: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'chapAuthDiscovery': obj.chapAuthDiscovery,
+    'chapAuthSession': obj.chapAuthSession,
+    'fsType': obj.fsType,
+    'initiatorName': obj.initiatorName,
+    'iqn': obj.iqn,
+    'iscsiInterface': obj.iscsiInterface,
+    'lun': obj.lun,
+    'portals': obj.portals?.map(y => y),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef(obj.secretRef),
+    'targetPortal': obj.targetPortal,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nfs represents an NFS mount on the host that shares a pod's lifetime
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs {
+  /**
+   * path that is exported by the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the NFS export to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * server is the hostname or IP address of the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs#server
+   */
+  readonly server: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesNfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'server': obj.server,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * persistentVolumeClaimVolumeSource represents a reference to a
+ * PersistentVolumeClaim in the same namespace.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim {
+  /**
+   * claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim#claimName
+   */
+  readonly claimName: string;
+
+  /**
+   * readOnly Will force the ReadOnly setting in VolumeMounts.
+   * Default false.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPersistentVolumeClaim | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claimName': obj.claimName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+ * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * pdID is the ID that identifies Photon Controller persistent disk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk#pdID
+   */
+  readonly pdId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPhotonPersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'pdID': obj.pdId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+ * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+ * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+ * is on.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume {
+  /**
+   * fSType represents the filesystem type to mount
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID uniquely identifies a Portworx volume
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesPortworxVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * projected items for all in one resources secrets, configmaps, and downward API
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected {
+  /**
+   * defaultMode are the mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * sources is the list of volume projections. Each entry in this list
+   * handles one source.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected#sources
+   */
+  readonly sources?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjected | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'sources': obj.sources?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+ * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte {
+  /**
+   * group to map volume access to
+   * Default is no group
+   *
+   * @default no group
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#group
+   */
+  readonly group?: string;
+
+  /**
+   * readOnly here will force the Quobyte volume to be mounted with read-only permissions.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * registry represents a single or multiple Quobyte Registry services
+   * specified as a string as host:port pair (multiple entries are separated with commas)
+   * which acts as the central registry for volumes
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#registry
+   */
+  readonly registry: string;
+
+  /**
+   * tenant owning the given Quobyte volume in the Backend
+   * Used with dynamically provisioned Quobyte volumes, value is set by the plugin
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#tenant
+   */
+  readonly tenant?: string;
+
+  /**
+   * user to map volume access to
+   * Defaults to serivceaccount user
+   *
+   * @default serivceaccount user
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#user
+   */
+  readonly user?: string;
+
+  /**
+   * volume is a string that references an already created Quobyte volume by name.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte#volume
+   */
+  readonly volume: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesQuobyte | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'group': obj.group,
+    'readOnly': obj.readOnly,
+    'registry': obj.registry,
+    'tenant': obj.tenant,
+    'user': obj.user,
+    'volume': obj.volume,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+ * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * image is the rados image name.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#image
+   */
+  readonly image: string;
+
+  /**
+   * keyring is the path to key ring for RBDUser.
+   * Default is /etc/ceph/keyring.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default etc/ceph/keyring.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#keyring
+   */
+  readonly keyring?: string;
+
+  /**
+   * monitors is a collection of Ceph monitors.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * pool is the rados pool name.
+   * Default is rbd.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default rbd.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#pool
+   */
+  readonly pool?: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default false.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is name of the authentication secret for RBDUser. If provided
+   * overrides keyring.
+   * Default is nil.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default nil.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef;
+
+  /**
+   * user is the rados user name.
+   * Default is admin.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default admin.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbd | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'image': obj.image,
+    'keyring': obj.keyring,
+    'monitors': obj.monitors?.map(y => y),
+    'pool': obj.pool,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+ * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs".
+   * Default is "xfs".
+   *
+   * @default xfs".
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * gateway is the host address of the ScaleIO API Gateway.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#gateway
+   */
+  readonly gateway: string;
+
+  /**
+   * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#protectionDomain
+   */
+  readonly protectionDomain?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef references to the secret for ScaleIO user and other
+   * sensitive information. If this is not provided, Login operation will fail.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#secretRef
+   */
+  readonly secretRef: AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef;
+
+  /**
+   * sslEnabled Flag enable/disable SSL communication with Gateway, default false
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#sslEnabled
+   */
+  readonly sslEnabled?: boolean;
+
+  /**
+   * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.
+   * Default is ThinProvisioned.
+   *
+   * @default ThinProvisioned.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#storageMode
+   */
+  readonly storageMode?: string;
+
+  /**
+   * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#storagePool
+   */
+  readonly storagePool?: string;
+
+  /**
+   * system is the name of the storage system as configured in ScaleIO.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#system
+   */
+  readonly system: string;
+
+  /**
+   * volumeName is the name of a volume already created in the ScaleIO system
+   * that is associated with this volume source.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'gateway': obj.gateway,
+    'protectionDomain': obj.protectionDomain,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef(obj.secretRef),
+    'sslEnabled': obj.sslEnabled,
+    'storageMode': obj.storageMode,
+    'storagePool': obj.storagePool,
+    'system': obj.system,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret represents a secret that should populate this volume.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret {
+  /**
+   * defaultMode is Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values
+   * for mode bits. Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items If unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems[];
+
+  /**
+   * optional field specify whether the Secret or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * secretName is the name of the secret in the pod's namespace to use.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret#secretName
+   */
+  readonly secretName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems(y)),
+    'optional': obj.optional,
+    'secretName': obj.secretName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+ * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef specifies the secret to use for obtaining the StorageOS API
+   * credentials.  If not specified, default values will be attempted.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos#secretRef
+   */
+  readonly secretRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef;
+
+  /**
+   * volumeName is the human-readable name of the StorageOS volume.  Volume
+   * names are only unique within a namespace.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos#volumeName
+   */
+  readonly volumeName?: string;
+
+  /**
+   * volumeNamespace specifies the scope of the volume within StorageOS.  If no
+   * namespace is specified then the Pod's namespace will be used.  This allows the
+   * Kubernetes name scoping to be mirrored within StorageOS for tighter integration.
+   * Set VolumeName to any name to override the default behaviour.
+   * Set to "default" if you are not using namespaces within StorageOS.
+   * Namespaces that do not pre-exist within StorageOS will be created.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos#volumeNamespace
+   */
+  readonly volumeNamespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageos | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef(obj.secretRef),
+    'volumeName': obj.volumeName,
+    'volumeNamespace': obj.volumeNamespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+ * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+ * are redirected to the csi.vsphere.vmware.com CSI driver.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume {
+  /**
+   * fsType is filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * storagePolicyID is the storage Policy Based Management (SPBM) profile ID associated with the StoragePolicyName.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume#storagePolicyID
+   */
+  readonly storagePolicyId?: string;
+
+  /**
+   * storagePolicyName is the storage Policy Based Management (SPBM) profile name.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume#storagePolicyName
+   */
+  readonly storagePolicyName?: string;
+
+  /**
+   * volumePath is the path that identifies vSphere volume vmdk
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume#volumePath
+   */
+  readonly volumePath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesVsphereVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'storagePolicyID': obj.storagePolicyId,
+    'storagePolicyName': obj.storagePolicyName,
+    'volumePath': obj.volumePath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ValueSource defines a source for configuration values from a Secret or ConfigMap
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom
+ */
+export interface AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom {
+  /**
+   * The key of the ConfigMap or Secret.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom#key
+   */
+  readonly key: string;
+
+  /**
+   * The name of the ConfigMap or Secret.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom#name
+   */
+  readonly name: string;
+
+  /**
+   * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom#type
+   */
+  readonly type: AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFromType;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom(obj: AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a ConfigMap.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef {
+  /**
+   * The key to select.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the ConfigMap or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFromConfigMapKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+ * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFromFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * FileKeyRef selects a key of the env file.
+ * Requires the EnvFiles feature gate to be enabled.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef {
+  /**
+   * The key within the env file. An invalid key will prevent the pod from starting.
+   * The keys defined within a source may consist of any printable ASCII characters except '='.
+   * During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Specify whether the file or its key must be defined. If the file or key
+   * does not exist, then the env var is not published.
+   * If optional is set to true and the specified key does not exist,
+   * the environment variable will not be set in the Pod's containers.
+   *
+   * If optional is set to false and the specified key does not exist,
+   * an error will be returned during Pod creation.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * The path within the volume from which to select the file.
+   * Must be relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef#path
+   */
+  readonly path: string;
+
+  /**
+   * The name of the volume mount containing the env file.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef#volumeName
+   */
+  readonly volumeName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFromFileKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'optional': obj.optional,
+    'path': obj.path,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a secret in the pod's namespace
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef {
+  /**
+   * The key of the secret to select from.  Must be a valid secret key.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the Secret or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef(obj: AgentV1Alpha2SpecByoDeploymentEnvValueFromSecretKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+ * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesCephfsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is optional: points to a secret object containing parameters used to connect
+ * to OpenStack.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesCinderSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nodePublishSecretRef is a reference to the secret object containing
+ * sensitive information to pass to the CSI driver to complete the CSI
+ * NodePublishVolume and NodeUnpublishVolume calls.
+ * This field is optional, and  may be empty if no secret is required. If the
+ * secret object contains more than one secret, all secret references are passed.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesCsiNodePublishSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+ * The size limit is also applicable for memory medium.
+ * The maximum usage on memory medium EmptyDir would be the minimum value between
+ * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+ * The default is nil which means that the limit is undefined.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit
+ */
+export class AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Will be used to create a stand-alone PVC to provision the volume.
+ * The pod in which this EphemeralVolumeSource is embedded will be the
+ * owner of the PVC, i.e. the PVC will be deleted together with the
+ * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+ * `<volume name>` is the name from the `PodSpec.Volumes` array
+ * entry. Pod validation will reject the pod if the concatenated name
+ * is not valid for a PVC (for example, too long).
+ *
+ * An existing PVC with that name that is not owned by the pod
+ * will *not* be used for the pod to avoid using an unrelated
+ * volume by mistake. Starting the pod is then blocked until
+ * the unrelated PVC is removed. If such a pre-created PVC is
+ * meant to be used by the pod, the PVC has to updated with an
+ * owner reference to the pod once the pod exists. Normally
+ * this should not be necessary, but it may be useful when
+ * manually reconstructing a broken cluster.
+ *
+ * This field is read-only and no changes will be made by Kubernetes
+ * to the PVC after it has been created.
+ *
+ * Required, must not be nil.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate {
+  /**
+   * May contain labels and annotations that will be copied into the PVC
+   * when creating it. No other fields are allowed and will be rejected during
+   * validation.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate#metadata
+   */
+  readonly metadata?: any;
+
+  /**
+   * The specification for the PersistentVolumeClaim. The entire content is
+   * copied unchanged into the PVC that gets created from this
+   * template. The same fields as in a PersistentVolumeClaim
+   * are also valid here.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate#spec
+   */
+  readonly spec: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: secretRef is reference to the secret object containing
+ * sensitive information to pass to the plugin scripts. This may be
+ * empty if no secret object is specified. If the secret object
+ * contains more than one secret, all secrets are passed to the plugin
+ * scripts.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesFlexVolumeSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesIscsiSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projection that may be projected along with other supported volume types.
+ * Exactly one of these fields must be set.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources {
+  /**
+   * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+   * of ClusterTrustBundle objects in an auto-updating file.
+   *
+   * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+   *
+   * ClusterTrustBundle objects can either be selected by name, or by the
+   * combination of signer name and a label selector.
+   *
+   * Kubelet performs aggressive normalization of the PEM contents written
+   * into the pod filesystem.  Esoteric PEM features such as inter-block
+   * comments and block headers are stripped.  Certificates are deduplicated.
+   * The ordering of certificates within the file is arbitrary, and Kubelet
+   * may change the order over time.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#clusterTrustBundle
+   */
+  readonly clusterTrustBundle?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle;
+
+  /**
+   * configMap information about the configMap data to project
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#configMap
+   */
+  readonly configMap?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap;
+
+  /**
+   * downwardAPI information about the downwardAPI data to project
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#downwardAPI
+   */
+  readonly downwardApi?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi;
+
+  /**
+   * Projects an auto-rotating credential bundle (private key and certificate
+   * chain) that the pod can use either as a TLS client or server.
+   *
+   * Kubelet generates a private key and uses it to send a
+   * PodCertificateRequest to the named signer.  Once the signer approves the
+   * request and issues a certificate chain, Kubelet writes the key and
+   * certificate chain to the pod filesystem.  The pod does not start until
+   * certificates have been issued for each podCertificate projected volume
+   * source in its spec.
+   *
+   * Kubelet will begin trying to rotate the certificate at the time indicated
+   * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+   * timestamp.
+   *
+   * Kubelet can write a single file, indicated by the credentialBundlePath
+   * field, or separate files, indicated by the keyPath and
+   * certificateChainPath fields.
+   *
+   * The credential bundle is a single file in PEM format.  The first PEM
+   * entry is the private key (in PKCS#8 format), and the remaining PEM
+   * entries are the certificate chain issued by the signer (typically,
+   * signers will return their certificate chain in leaf-to-root order).
+   *
+   * Prefer using the credential bundle format, since your application code
+   * can read it atomically.  If you use keyPath and certificateChainPath,
+   * your application must make two separate file reads. If these coincide
+   * with a certificate rotation, it is possible that the private key and leaf
+   * certificate you read may not correspond to each other.  Your application
+   * will need to check for this condition, and re-read until they are
+   * consistent.
+   *
+   * The named signer controls chooses the format of the certificate it
+   * issues; consult the signer implementation's documentation to learn how to
+   * use the certificates it issues.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#podCertificate
+   */
+  readonly podCertificate?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate;
+
+  /**
+   * secret information about the secret data to project
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#secret
+   */
+  readonly secret?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret;
+
+  /**
+   * serviceAccountToken is information about the serviceAccountToken data to project
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources#serviceAccountToken
+   */
+  readonly serviceAccountToken?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'clusterTrustBundle': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle(obj.clusterTrustBundle),
+    'configMap': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap(obj.configMap),
+    'downwardAPI': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi(obj.downwardApi),
+    'podCertificate': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate(obj.podCertificate),
+    'secret': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret(obj.secret),
+    'serviceAccountToken': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken(obj.serviceAccountToken),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is name of the authentication secret for RBDUser. If provided
+ * overrides keyring.
+ * Default is nil.
+ * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+ *
+ * @default nil.
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesRbdSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef references to the secret for ScaleIO user and other
+ * sensitive information. If this is not provided, Login operation will fail.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesScaleIoSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecretItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesSecretItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef specifies the secret to use for obtaining the StorageOS API
+ * credentials.  If not specified, default values will be attempted.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesStorageosSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a ConfigMap.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef {
+  /**
+   * The key to select.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the ConfigMap or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromConfigMapKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels['<KEY>']`, `metadata.annotations['<KEY>']`,
+ * spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * FileKeyRef selects a key of the env file.
+ * Requires the EnvFiles feature gate to be enabled.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef {
+  /**
+   * The key within the env file. An invalid key will prevent the pod from starting.
+   * The keys defined within a source may consist of any printable ASCII characters except '='.
+   * During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Specify whether the file or its key must be defined. If the file or key
+   * does not exist, then the env var is not published.
+   * If optional is set to true and the specified key does not exist,
+   * the environment variable will not be set in the Pod's containers.
+   *
+   * If optional is set to false and the specified key does not exist,
+   * an error will be returned during Pod creation.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * The path within the volume from which to select the file.
+   * Must be relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef#path
+   */
+  readonly path: string;
+
+  /**
+   * The name of the volume mount containing the env file.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef#volumeName
+   */
+  readonly volumeName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromFileKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'optional': obj.optional,
+    'path': obj.path,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a key of a secret in the pod's namespace
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef {
+  /**
+   * The key of the secret to select from.  Must be a valid secret key.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * Specify whether the Secret or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromSecretKeyRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+ * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCephfsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is optional: points to a secret object containing parameters used to connect
+ * to OpenStack.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCinderSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nodePublishSecretRef is a reference to the secret object containing
+ * sensitive information to pass to the CSI driver to complete the CSI
+ * NodePublishVolume and NodeUnpublishVolume calls.
+ * This field is optional, and  may be empty if no secret is required. If the
+ * secret object contains more than one secret, all secret references are passed.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesCsiNodePublishSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+ * The size limit is also applicable for memory medium.
+ * The maximum usage on memory medium EmptyDir would be the minimum value between
+ * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+ * The default is nil which means that the limit is undefined.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Will be used to create a stand-alone PVC to provision the volume.
+ * The pod in which this EphemeralVolumeSource is embedded will be the
+ * owner of the PVC, i.e. the PVC will be deleted together with the
+ * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+ * `<volume name>` is the name from the `PodSpec.Volumes` array
+ * entry. Pod validation will reject the pod if the concatenated name
+ * is not valid for a PVC (for example, too long).
+ *
+ * An existing PVC with that name that is not owned by the pod
+ * will *not* be used for the pod to avoid using an unrelated
+ * volume by mistake. Starting the pod is then blocked until
+ * the unrelated PVC is removed. If such a pre-created PVC is
+ * meant to be used by the pod, the PVC has to updated with an
+ * owner reference to the pod once the pod exists. Normally
+ * this should not be necessary, but it may be useful when
+ * manually reconstructing a broken cluster.
+ *
+ * This field is read-only and no changes will be made by Kubernetes
+ * to the PVC after it has been created.
+ *
+ * Required, must not be nil.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate {
+  /**
+   * May contain labels and annotations that will be copied into the PVC
+   * when creating it. No other fields are allowed and will be rejected during
+   * validation.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate#metadata
+   */
+  readonly metadata?: any;
+
+  /**
+   * The specification for the PersistentVolumeClaim. The entire content is
+   * copied unchanged into the PVC that gets created from this
+   * template. The same fields as in a PersistentVolumeClaim
+   * are also valid here.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate#spec
+   */
+  readonly spec: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: secretRef is reference to the secret object containing
+ * sensitive information to pass to the plugin scripts. This may be
+ * empty if no secret object is specified. If the secret object
+ * contains more than one secret, all secrets are passed to the plugin
+ * scripts.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesFlexVolumeSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesIscsiSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projection that may be projected along with other supported volume types.
+ * Exactly one of these fields must be set.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources {
+  /**
+   * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+   * of ClusterTrustBundle objects in an auto-updating file.
+   *
+   * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+   *
+   * ClusterTrustBundle objects can either be selected by name, or by the
+   * combination of signer name and a label selector.
+   *
+   * Kubelet performs aggressive normalization of the PEM contents written
+   * into the pod filesystem.  Esoteric PEM features such as inter-block
+   * comments and block headers are stripped.  Certificates are deduplicated.
+   * The ordering of certificates within the file is arbitrary, and Kubelet
+   * may change the order over time.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#clusterTrustBundle
+   */
+  readonly clusterTrustBundle?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle;
+
+  /**
+   * configMap information about the configMap data to project
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#configMap
+   */
+  readonly configMap?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap;
+
+  /**
+   * downwardAPI information about the downwardAPI data to project
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#downwardAPI
+   */
+  readonly downwardApi?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi;
+
+  /**
+   * Projects an auto-rotating credential bundle (private key and certificate
+   * chain) that the pod can use either as a TLS client or server.
+   *
+   * Kubelet generates a private key and uses it to send a
+   * PodCertificateRequest to the named signer.  Once the signer approves the
+   * request and issues a certificate chain, Kubelet writes the key and
+   * certificate chain to the pod filesystem.  The pod does not start until
+   * certificates have been issued for each podCertificate projected volume
+   * source in its spec.
+   *
+   * Kubelet will begin trying to rotate the certificate at the time indicated
+   * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+   * timestamp.
+   *
+   * Kubelet can write a single file, indicated by the credentialBundlePath
+   * field, or separate files, indicated by the keyPath and
+   * certificateChainPath fields.
+   *
+   * The credential bundle is a single file in PEM format.  The first PEM
+   * entry is the private key (in PKCS#8 format), and the remaining PEM
+   * entries are the certificate chain issued by the signer (typically,
+   * signers will return their certificate chain in leaf-to-root order).
+   *
+   * Prefer using the credential bundle format, since your application code
+   * can read it atomically.  If you use keyPath and certificateChainPath,
+   * your application must make two separate file reads. If these coincide
+   * with a certificate rotation, it is possible that the private key and leaf
+   * certificate you read may not correspond to each other.  Your application
+   * will need to check for this condition, and re-read until they are
+   * consistent.
+   *
+   * The named signer controls chooses the format of the certificate it
+   * issues; consult the signer implementation's documentation to learn how to
+   * use the certificates it issues.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#podCertificate
+   */
+  readonly podCertificate?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate;
+
+  /**
+   * secret information about the secret data to project
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#secret
+   */
+  readonly secret?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret;
+
+  /**
+   * serviceAccountToken is information about the serviceAccountToken data to project
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources#serviceAccountToken
+   */
+  readonly serviceAccountToken?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'clusterTrustBundle': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle(obj.clusterTrustBundle),
+    'configMap': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap(obj.configMap),
+    'downwardAPI': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi(obj.downwardApi),
+    'podCertificate': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate(obj.podCertificate),
+    'secret': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret(obj.secret),
+    'serviceAccountToken': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken(obj.serviceAccountToken),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is name of the authentication secret for RBDUser. If provided
+ * overrides keyring.
+ * Default is nil.
+ * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+ *
+ * @default nil.
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesRbdSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef references to the secret for ScaleIO user and other
+ * sensitive information. If this is not provided, Login operation will fail.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesScaleIoSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef specifies the secret to use for obtaining the StorageOS API
+ * credentials.  If not specified, default values will be attempted.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesStorageosSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFromType
+ */
+export enum AgentV1Alpha2SpecDeclarativeToolsHeadersFromValueFromType {
+  /** ConfigMap */
+  CONFIG_MAP = "ConfigMap",
+  /** Secret */
+  SECRET = "Secret",
+}
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The specification for the PersistentVolumeClaim. The entire content is
+ * copied unchanged into the PVC that gets created from this
+ * template. The same fields as in a PersistentVolumeClaim
+ * are also valid here.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec {
+  /**
+   * accessModes contains the desired access modes the volume should have.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#accessModes
+   */
+  readonly accessModes?: string[];
+
+  /**
+   * dataSource field can be used to specify either:
+   * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+   * * An existing PVC (PersistentVolumeClaim)
+   * If the provisioner or an external controller can support the specified data source,
+   * it will create a new volume based on the contents of the specified data source.
+   * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+   * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+   * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSource
+   */
+  readonly dataSource?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource;
+
+  /**
+   * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+   * volume is desired. This may be any object from a non-empty API group (non
+   * core object) or a PersistentVolumeClaim object.
+   * When this field is specified, volume binding will only succeed if the type of
+   * the specified object matches some installed volume populator or dynamic
+   * provisioner.
+   * This field will replace the functionality of the dataSource field and as such
+   * if both fields are non-empty, they must have the same value. For backwards
+   * compatibility, when namespace isn't specified in dataSourceRef,
+   * both fields (dataSource and dataSourceRef) will be set to the same
+   * value automatically if one of them is empty and the other is non-empty.
+   * When namespace is specified in dataSourceRef,
+   * dataSource isn't set to the same value and must be empty.
+   * There are three important differences between dataSource and dataSourceRef:
+   * * While dataSource only allows two specific types of objects, dataSourceRef
+   * allows any non-core object, as well as PersistentVolumeClaim objects.
+   * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+   * preserves all values, and generates an error if a disallowed value is
+   * specified.
+   * * While dataSource only allows local objects, dataSourceRef allows objects
+   * in any namespaces.
+   * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+   * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSourceRef
+   */
+  readonly dataSourceRef?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef;
+
+  /**
+   * resources represents the minimum resources the volume should have.
+   * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+   * that are lower than previous value but must still be higher than capacity recorded in the
+   * status field of the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#resources
+   */
+  readonly resources?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources;
+
+  /**
+   * selector is a label query over volumes to consider for binding.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#selector
+   */
+  readonly selector?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector;
+
+  /**
+   * storageClassName is the name of the StorageClass required by the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#storageClassName
+   */
+  readonly storageClassName?: string;
+
+  /**
+   * volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+   * If specified, the CSI driver will create or update the volume with the attributes defined
+   * in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+   * it can be changed after the claim is created. An empty string or nil value indicates that no
+   * VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+   * this field can be reset to its previous value (including nil) to cancel the modification.
+   * If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+   * set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+   * exists.
+   * More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeAttributesClassName
+   */
+  readonly volumeAttributesClassName?: string;
+
+  /**
+   * volumeMode defines what type of volume is required by the claim.
+   * Value of Filesystem is implied when not included in claim spec.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeMode
+   */
+  readonly volumeMode?: string;
+
+  /**
+   * volumeName is the binding reference to the PersistentVolume backing this claim.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessModes': obj.accessModes?.map(y => y),
+    'dataSource': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj.dataSource),
+    'dataSourceRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj.dataSourceRef),
+    'resources': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj.resources),
+    'selector': toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj.selector),
+    'storageClassName': obj.storageClassName,
+    'volumeAttributesClassName': obj.volumeAttributesClassName,
+    'volumeMode': obj.volumeMode,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+ * of ClusterTrustBundle objects in an auto-updating file.
+ *
+ * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+ *
+ * ClusterTrustBundle objects can either be selected by name, or by the
+ * combination of signer name and a label selector.
+ *
+ * Kubelet performs aggressive normalization of the PEM contents written
+ * into the pod filesystem.  Esoteric PEM features such as inter-block
+ * comments and block headers are stripped.  Certificates are deduplicated.
+ * The ordering of certificates within the file is arbitrary, and Kubelet
+ * may change the order over time.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle {
+  /**
+   * Select all ClusterTrustBundles that match this label selector.  Only has
+   * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+   * interpreted as "match nothing".  If set but empty, interpreted as "match
+   * everything".
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle#labelSelector
+   */
+  readonly labelSelector?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector;
+
+  /**
+   * Select a single ClusterTrustBundle by object name.  Mutually-exclusive
+   * with signerName and labelSelector.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle#name
+   */
+  readonly name?: string;
+
+  /**
+   * If true, don't block pod startup if the referenced ClusterTrustBundle(s)
+   * aren't available.  If using name, then the named ClusterTrustBundle is
+   * allowed not to exist.  If using signerName, then the combination of
+   * signerName and labelSelector is allowed to match zero
+   * ClusterTrustBundles.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * Relative path from the volume root to write the bundle.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle#path
+   */
+  readonly path: string;
+
+  /**
+   * Select all ClusterTrustBundles that match this signer name.
+   * Mutually-exclusive with name.  The contents of all selected
+   * ClusterTrustBundles will be unified and deduplicated.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle#signerName
+   */
+  readonly signerName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundle | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'labelSelector': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj.labelSelector),
+    'name': obj.name,
+    'optional': obj.optional,
+    'path': obj.path,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap information about the configMap data to project
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI information about the downwardAPI data to project
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi {
+  /**
+   * Items is a list of DownwardAPIVolume file
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projects an auto-rotating credential bundle (private key and certificate
+ * chain) that the pod can use either as a TLS client or server.
+ *
+ * Kubelet generates a private key and uses it to send a
+ * PodCertificateRequest to the named signer.  Once the signer approves the
+ * request and issues a certificate chain, Kubelet writes the key and
+ * certificate chain to the pod filesystem.  The pod does not start until
+ * certificates have been issued for each podCertificate projected volume
+ * source in its spec.
+ *
+ * Kubelet will begin trying to rotate the certificate at the time indicated
+ * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+ * timestamp.
+ *
+ * Kubelet can write a single file, indicated by the credentialBundlePath
+ * field, or separate files, indicated by the keyPath and
+ * certificateChainPath fields.
+ *
+ * The credential bundle is a single file in PEM format.  The first PEM
+ * entry is the private key (in PKCS#8 format), and the remaining PEM
+ * entries are the certificate chain issued by the signer (typically,
+ * signers will return their certificate chain in leaf-to-root order).
+ *
+ * Prefer using the credential bundle format, since your application code
+ * can read it atomically.  If you use keyPath and certificateChainPath,
+ * your application must make two separate file reads. If these coincide
+ * with a certificate rotation, it is possible that the private key and leaf
+ * certificate you read may not correspond to each other.  Your application
+ * will need to check for this condition, and re-read until they are
+ * consistent.
+ *
+ * The named signer controls chooses the format of the certificate it
+ * issues; consult the signer implementation's documentation to learn how to
+ * use the certificates it issues.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate {
+  /**
+   * Write the certificate chain at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#certificateChainPath
+   */
+  readonly certificateChainPath?: string;
+
+  /**
+   * Write the credential bundle at this path in the projected volume.
+   *
+   * The credential bundle is a single file that contains multiple PEM blocks.
+   * The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+   * key.
+   *
+   * The remaining blocks are CERTIFICATE blocks, containing the issued
+   * certificate chain from the signer (leaf and any intermediates).
+   *
+   * Using credentialBundlePath lets your Pod's application code make a single
+   * atomic read that retrieves a consistent key and certificate chain.  If you
+   * project them to separate files, your application code will need to
+   * additionally check that the leaf certificate was issued to the key.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#credentialBundlePath
+   */
+  readonly credentialBundlePath?: string;
+
+  /**
+   * Write the key at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#keyPath
+   */
+  readonly keyPath?: string;
+
+  /**
+   * The type of keypair Kubelet will generate for the pod.
+   *
+   * Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+   * "ECDSAP521", and "ED25519".
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#keyType
+   */
+  readonly keyType: string;
+
+  /**
+   * maxExpirationSeconds is the maximum lifetime permitted for the
+   * certificate.
+   *
+   * Kubelet copies this value verbatim into the PodCertificateRequests it
+   * generates for this projection.
+   *
+   * If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+   * will reject values shorter than 3600 (1 hour).  The maximum allowable
+   * value is 7862400 (91 days).
+   *
+   * The signer implementation is then free to issue a certificate with any
+   * lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+   * seconds (1 hour).  This constraint is enforced by kube-apiserver.
+   * `kubernetes.io` signers will never issue certificates with a lifetime
+   * longer than 24 hours.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#maxExpirationSeconds
+   */
+  readonly maxExpirationSeconds?: number;
+
+  /**
+   * Kubelet's generated CSRs will be addressed to this signer.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate#signerName
+   */
+  readonly signerName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesPodCertificate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'certificateChainPath': obj.certificateChainPath,
+    'credentialBundlePath': obj.credentialBundlePath,
+    'keyPath': obj.keyPath,
+    'keyType': obj.keyType,
+    'maxExpirationSeconds': obj.maxExpirationSeconds,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret information about the secret data to project
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret#items
+   */
+  readonly items?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional field specify whether the Secret or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountToken is information about the serviceAccountToken data to project
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken {
+  /**
+   * audience is the intended audience of the token. A recipient of a token
+   * must identify itself with an identifier specified in the audience of the
+   * token, and otherwise should reject the token. The audience defaults to the
+   * identifier of the apiserver.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * expirationSeconds is the requested duration of validity of the service
+   * account token. As the token approaches expiration, the kubelet volume
+   * plugin will proactively rotate the service account token. The kubelet will
+   * start trying to rotate the token if the token is older than 80 percent of
+   * its time to live or if the token is older than 24 hours.Defaults to 1 hour
+   * and must be at least 10 minutes.
+   *
+   * @default 1 hour
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken#expirationSeconds
+   */
+  readonly expirationSeconds?: number;
+
+  /**
+   * path is the path relative to the mount point of the file to project the
+   * token into.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesServiceAccountToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'expirationSeconds': obj.expirationSeconds,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentEnvValueFromResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The specification for the PersistentVolumeClaim. The entire content is
+ * copied unchanged into the PVC that gets created from this
+ * template. The same fields as in a PersistentVolumeClaim
+ * are also valid here.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec {
+  /**
+   * accessModes contains the desired access modes the volume should have.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#accessModes
+   */
+  readonly accessModes?: string[];
+
+  /**
+   * dataSource field can be used to specify either:
+   * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+   * * An existing PVC (PersistentVolumeClaim)
+   * If the provisioner or an external controller can support the specified data source,
+   * it will create a new volume based on the contents of the specified data source.
+   * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+   * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+   * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSource
+   */
+  readonly dataSource?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource;
+
+  /**
+   * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+   * volume is desired. This may be any object from a non-empty API group (non
+   * core object) or a PersistentVolumeClaim object.
+   * When this field is specified, volume binding will only succeed if the type of
+   * the specified object matches some installed volume populator or dynamic
+   * provisioner.
+   * This field will replace the functionality of the dataSource field and as such
+   * if both fields are non-empty, they must have the same value. For backwards
+   * compatibility, when namespace isn't specified in dataSourceRef,
+   * both fields (dataSource and dataSourceRef) will be set to the same
+   * value automatically if one of them is empty and the other is non-empty.
+   * When namespace is specified in dataSourceRef,
+   * dataSource isn't set to the same value and must be empty.
+   * There are three important differences between dataSource and dataSourceRef:
+   * * While dataSource only allows two specific types of objects, dataSourceRef
+   * allows any non-core object, as well as PersistentVolumeClaim objects.
+   * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+   * preserves all values, and generates an error if a disallowed value is
+   * specified.
+   * * While dataSource only allows local objects, dataSourceRef allows objects
+   * in any namespaces.
+   * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+   * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSourceRef
+   */
+  readonly dataSourceRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef;
+
+  /**
+   * resources represents the minimum resources the volume should have.
+   * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+   * that are lower than previous value but must still be higher than capacity recorded in the
+   * status field of the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#resources
+   */
+  readonly resources?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources;
+
+  /**
+   * selector is a label query over volumes to consider for binding.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#selector
+   */
+  readonly selector?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector;
+
+  /**
+   * storageClassName is the name of the StorageClass required by the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#storageClassName
+   */
+  readonly storageClassName?: string;
+
+  /**
+   * volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+   * If specified, the CSI driver will create or update the volume with the attributes defined
+   * in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+   * it can be changed after the claim is created. An empty string or nil value indicates that no
+   * VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+   * this field can be reset to its previous value (including nil) to cancel the modification.
+   * If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+   * set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+   * exists.
+   * More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeAttributesClassName
+   */
+  readonly volumeAttributesClassName?: string;
+
+  /**
+   * volumeMode defines what type of volume is required by the claim.
+   * Value of Filesystem is implied when not included in claim spec.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeMode
+   */
+  readonly volumeMode?: string;
+
+  /**
+   * volumeName is the binding reference to the PersistentVolume backing this claim.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessModes': obj.accessModes?.map(y => y),
+    'dataSource': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj.dataSource),
+    'dataSourceRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj.dataSourceRef),
+    'resources': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj.resources),
+    'selector': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj.selector),
+    'storageClassName': obj.storageClassName,
+    'volumeAttributesClassName': obj.volumeAttributesClassName,
+    'volumeMode': obj.volumeMode,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+ * of ClusterTrustBundle objects in an auto-updating file.
+ *
+ * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+ *
+ * ClusterTrustBundle objects can either be selected by name, or by the
+ * combination of signer name and a label selector.
+ *
+ * Kubelet performs aggressive normalization of the PEM contents written
+ * into the pod filesystem.  Esoteric PEM features such as inter-block
+ * comments and block headers are stripped.  Certificates are deduplicated.
+ * The ordering of certificates within the file is arbitrary, and Kubelet
+ * may change the order over time.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle {
+  /**
+   * Select all ClusterTrustBundles that match this label selector.  Only has
+   * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+   * interpreted as "match nothing".  If set but empty, interpreted as "match
+   * everything".
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle#labelSelector
+   */
+  readonly labelSelector?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector;
+
+  /**
+   * Select a single ClusterTrustBundle by object name.  Mutually-exclusive
+   * with signerName and labelSelector.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle#name
+   */
+  readonly name?: string;
+
+  /**
+   * If true, don't block pod startup if the referenced ClusterTrustBundle(s)
+   * aren't available.  If using name, then the named ClusterTrustBundle is
+   * allowed not to exist.  If using signerName, then the combination of
+   * signerName and labelSelector is allowed to match zero
+   * ClusterTrustBundles.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * Relative path from the volume root to write the bundle.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle#path
+   */
+  readonly path: string;
+
+  /**
+   * Select all ClusterTrustBundles that match this signer name.
+   * Mutually-exclusive with name.  The contents of all selected
+   * ClusterTrustBundles will be unified and deduplicated.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle#signerName
+   */
+  readonly signerName?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundle | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'labelSelector': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj.labelSelector),
+    'name': obj.name,
+    'optional': obj.optional,
+    'path': obj.path,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap information about the configMap data to project
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI information about the downwardAPI data to project
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi {
+  /**
+   * Items is a list of DownwardAPIVolume file
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projects an auto-rotating credential bundle (private key and certificate
+ * chain) that the pod can use either as a TLS client or server.
+ *
+ * Kubelet generates a private key and uses it to send a
+ * PodCertificateRequest to the named signer.  Once the signer approves the
+ * request and issues a certificate chain, Kubelet writes the key and
+ * certificate chain to the pod filesystem.  The pod does not start until
+ * certificates have been issued for each podCertificate projected volume
+ * source in its spec.
+ *
+ * Kubelet will begin trying to rotate the certificate at the time indicated
+ * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+ * timestamp.
+ *
+ * Kubelet can write a single file, indicated by the credentialBundlePath
+ * field, or separate files, indicated by the keyPath and
+ * certificateChainPath fields.
+ *
+ * The credential bundle is a single file in PEM format.  The first PEM
+ * entry is the private key (in PKCS#8 format), and the remaining PEM
+ * entries are the certificate chain issued by the signer (typically,
+ * signers will return their certificate chain in leaf-to-root order).
+ *
+ * Prefer using the credential bundle format, since your application code
+ * can read it atomically.  If you use keyPath and certificateChainPath,
+ * your application must make two separate file reads. If these coincide
+ * with a certificate rotation, it is possible that the private key and leaf
+ * certificate you read may not correspond to each other.  Your application
+ * will need to check for this condition, and re-read until they are
+ * consistent.
+ *
+ * The named signer controls chooses the format of the certificate it
+ * issues; consult the signer implementation's documentation to learn how to
+ * use the certificates it issues.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate {
+  /**
+   * Write the certificate chain at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#certificateChainPath
+   */
+  readonly certificateChainPath?: string;
+
+  /**
+   * Write the credential bundle at this path in the projected volume.
+   *
+   * The credential bundle is a single file that contains multiple PEM blocks.
+   * The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+   * key.
+   *
+   * The remaining blocks are CERTIFICATE blocks, containing the issued
+   * certificate chain from the signer (leaf and any intermediates).
+   *
+   * Using credentialBundlePath lets your Pod's application code make a single
+   * atomic read that retrieves a consistent key and certificate chain.  If you
+   * project them to separate files, your application code will need to
+   * additionally check that the leaf certificate was issued to the key.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#credentialBundlePath
+   */
+  readonly credentialBundlePath?: string;
+
+  /**
+   * Write the key at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#keyPath
+   */
+  readonly keyPath?: string;
+
+  /**
+   * The type of keypair Kubelet will generate for the pod.
+   *
+   * Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+   * "ECDSAP521", and "ED25519".
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#keyType
+   */
+  readonly keyType: string;
+
+  /**
+   * maxExpirationSeconds is the maximum lifetime permitted for the
+   * certificate.
+   *
+   * Kubelet copies this value verbatim into the PodCertificateRequests it
+   * generates for this projection.
+   *
+   * If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+   * will reject values shorter than 3600 (1 hour).  The maximum allowable
+   * value is 7862400 (91 days).
+   *
+   * The signer implementation is then free to issue a certificate with any
+   * lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+   * seconds (1 hour).  This constraint is enforced by kube-apiserver.
+   * `kubernetes.io` signers will never issue certificates with a lifetime
+   * longer than 24 hours.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#maxExpirationSeconds
+   */
+  readonly maxExpirationSeconds?: number;
+
+  /**
+   * Kubelet's generated CSRs will be addressed to this signer.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate#signerName
+   */
+  readonly signerName: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesPodCertificate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'certificateChainPath': obj.certificateChainPath,
+    'credentialBundlePath': obj.credentialBundlePath,
+    'keyPath': obj.keyPath,
+    'keyType': obj.keyType,
+    'maxExpirationSeconds': obj.maxExpirationSeconds,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret information about the secret data to project
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret#items
+   */
+  readonly items?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional field specify whether the Secret or its key must be defined
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountToken is information about the serviceAccountToken data to project
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken {
+  /**
+   * audience is the intended audience of the token. A recipient of a token
+   * must identify itself with an identifier specified in the audience of the
+   * token, and otherwise should reject the token. The audience defaults to the
+   * identifier of the apiserver.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * expirationSeconds is the requested duration of validity of the service
+   * account token. As the token approaches expiration, the kubelet volume
+   * plugin will proactively rotate the service account token. The kubelet will
+   * start trying to rotate the token if the token is older than 80 percent of
+   * its time to live or if the token is older than 24 hours.Defaults to 1 hour
+   * and must be at least 10 minutes.
+   *
+   * @default 1 hour
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken#expirationSeconds
+   */
+  readonly expirationSeconds?: number;
+
+  /**
+   * path is the path relative to the mount point of the file to project the
+   * token into.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesServiceAccountToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'expirationSeconds': obj.expirationSeconds,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * dataSource field can be used to specify either:
+ * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+ * * An existing PVC (PersistentVolumeClaim)
+ * If the provisioner or an external controller can support the specified data source,
+ * it will create a new volume based on the contents of the specified data source.
+ * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+ * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+ * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+ * volume is desired. This may be any object from a non-empty API group (non
+ * core object) or a PersistentVolumeClaim object.
+ * When this field is specified, volume binding will only succeed if the type of
+ * the specified object matches some installed volume populator or dynamic
+ * provisioner.
+ * This field will replace the functionality of the dataSource field and as such
+ * if both fields are non-empty, they must have the same value. For backwards
+ * compatibility, when namespace isn't specified in dataSourceRef,
+ * both fields (dataSource and dataSourceRef) will be set to the same
+ * value automatically if one of them is empty and the other is non-empty.
+ * When namespace is specified in dataSourceRef,
+ * dataSource isn't set to the same value and must be empty.
+ * There are three important differences between dataSource and dataSourceRef:
+ * * While dataSource only allows two specific types of objects, dataSourceRef
+ * allows any non-core object, as well as PersistentVolumeClaim objects.
+ * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+ * preserves all values, and generates an error if a disallowed value is
+ * specified.
+ * * While dataSource only allows local objects, dataSourceRef allows objects
+ * in any namespaces.
+ * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+ * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace is the namespace of resource being referenced
+   * Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+   * (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * resources represents the minimum resources the volume should have.
+ * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+ * that are lower than previous value but must still be higher than capacity recorded in the
+ * status field of the claim.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources {
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#limits
+   */
+  readonly limits?: { [key: string]: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#requests
+   */
+  readonly requests?: { [key: string]: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * selector is a label query over volumes to consider for binding.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select all ClusterTrustBundles that match this label selector.  Only has
+ * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+ * interpreted as "match nothing".  If set but empty, interpreted as "match
+ * everything".
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * dataSource field can be used to specify either:
+ * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+ * * An existing PVC (PersistentVolumeClaim)
+ * If the provisioner or an external controller can support the specified data source,
+ * it will create a new volume based on the contents of the specified data source.
+ * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+ * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+ * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+ * volume is desired. This may be any object from a non-empty API group (non
+ * core object) or a PersistentVolumeClaim object.
+ * When this field is specified, volume binding will only succeed if the type of
+ * the specified object matches some installed volume populator or dynamic
+ * provisioner.
+ * This field will replace the functionality of the dataSource field and as such
+ * if both fields are non-empty, they must have the same value. For backwards
+ * compatibility, when namespace isn't specified in dataSourceRef,
+ * both fields (dataSource and dataSourceRef) will be set to the same
+ * value automatically if one of them is empty and the other is non-empty.
+ * When namespace is specified in dataSourceRef,
+ * dataSource isn't set to the same value and must be empty.
+ * There are three important differences between dataSource and dataSourceRef:
+ * * While dataSource only allows two specific types of objects, dataSourceRef
+ * allows any non-core object, as well as PersistentVolumeClaim objects.
+ * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+ * preserves all values, and generates an error if a disallowed value is
+ * specified.
+ * * While dataSource only allows local objects, dataSourceRef allows objects
+ * in any namespaces.
+ * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+ * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace is the namespace of resource being referenced
+   * Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+   * (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * resources represents the minimum resources the volume should have.
+ * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+ * that are lower than previous value but must still be higher than capacity recorded in the
+ * status field of the claim.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources {
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#limits
+   */
+  readonly limits?: { [key: string]: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#requests
+   */
+  readonly requests?: { [key: string]: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * selector is a label query over volumes to consider for binding.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select all ClusterTrustBundles that match this label selector.  Only has
+ * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+ * interpreted as "match nothing".  If set but empty, interpreted as "match
+ * everything".
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits
+ */
+export class AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests
+ */
+export class AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(obj: AgentV1Alpha2SpecByoDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj: AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef
+ */
+export interface AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj: AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecByoDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new AgentV1Alpha2SpecDeclarativeDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+
+/**
+ * MCPServer is the Schema for the mcpservers API.
+ *
+ * @schema MCPServer
+ */
+export class McpServer extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "MCPServer"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'kagent.dev/v1alpha1',
+    kind: 'MCPServer',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "MCPServer".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: McpServerProps = {}): any {
+    return {
+      ...McpServer.GVK,
+      ...toJson_McpServerProps(props),
+    };
+  }
+
+  /**
+   * Defines a "MCPServer" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: McpServerProps = {}) {
+    super(scope, id, {
+      ...McpServer.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...McpServer.GVK,
+      ...toJson_McpServerProps(resolved),
+    };
+  }
+}
+
+/**
+ * MCPServer is the Schema for the mcpservers API.
+ *
+ * @schema MCPServer
+ */
+export interface McpServerProps {
+  /**
+   * @schema MCPServer#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * MCPServerSpec defines the desired state of MCPServer.
+   *
+   * @schema MCPServer#spec
+   */
+  readonly spec?: McpServerSpec;
+
+}
+
+/**
+ * Converts an object of type 'McpServerProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerProps(obj: McpServerProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_McpServerSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * MCPServerSpec defines the desired state of MCPServer.
+ *
+ * @schema McpServerSpec
+ */
+export interface McpServerSpec {
+  /**
+   * Configuration to Deploy the MCP Server using a docker container
+   *
+   * @schema McpServerSpec#deployment
+   */
+  readonly deployment: McpServerSpecDeployment;
+
+  /**
+   * HTTPTransport defines the configuration for a Streamable HTTP transport.
+   *
+   * @schema McpServerSpec#httpTransport
+   */
+  readonly httpTransport?: McpServerSpecHttpTransport;
+
+  /**
+   * StdioTransport defines the configuration for a standard input/output transport.
+   *
+   * @schema McpServerSpec#stdioTransport
+   */
+  readonly stdioTransport?: any;
+
+  /**
+   * TransportType defines the type of mcp server being run
+   *
+   * @schema McpServerSpec#transportType
+   */
+  readonly transportType?: McpServerSpecTransportType;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpec(obj: McpServerSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'deployment': toJson_McpServerSpecDeployment(obj.deployment),
+    'httpTransport': toJson_McpServerSpecHttpTransport(obj.httpTransport),
+    'stdioTransport': obj.stdioTransport,
+    'transportType': obj.transportType,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Configuration to Deploy the MCP Server using a docker container
+ *
+ * @schema McpServerSpecDeployment
+ */
+export interface McpServerSpecDeployment {
+  /**
+   * Args defines the arguments to pass to the command.
+   *
+   * @schema McpServerSpecDeployment#args
+   */
+  readonly args?: string[];
+
+  /**
+   * Cmd defines the command to run in the container to start the mcp server.
+   *
+   * @schema McpServerSpecDeployment#cmd
+   */
+  readonly cmd?: string;
+
+  /**
+   * ConfigMapRefs defines the list of Kubernetes configmaps to reference.
+   * These configmaps will be mounted as volumes to the MCP server container.
+   *
+   * @schema McpServerSpecDeployment#configMapRefs
+   */
+  readonly configMapRefs?: McpServerSpecDeploymentConfigMapRefs[];
+
+  /**
+   * Env defines the environment variables to set in the container.
+   *
+   * @schema McpServerSpecDeployment#env
+   */
+  readonly env?: { [key: string]: string };
+
+  /**
+   * Image defines the container image to to deploy the MCP server.
+   *
+   * @schema McpServerSpecDeployment#image
+   */
+  readonly image?: string;
+
+  /**
+   * Port defines the port on which the MCP server will listen.
+   *
+   * @schema McpServerSpecDeployment#port
+   */
+  readonly port?: number;
+
+  /**
+   * SecretRefs defines the list of Kubernetes secrets to reference.
+   * These secrets will be mounted as volumes to the MCP server container.
+   *
+   * @schema McpServerSpecDeployment#secretRefs
+   */
+  readonly secretRefs?: McpServerSpecDeploymentSecretRefs[];
+
+  /**
+   * VolumeMounts defines the list of volume mounts for the MCP server container.
+   * This allows for more flexible volume mounting configurations.
+   *
+   * @schema McpServerSpecDeployment#volumeMounts
+   */
+  readonly volumeMounts?: McpServerSpecDeploymentVolumeMounts[];
+
+  /**
+   * Volumes defines the list of volumes that can be mounted by containers.
+   * This allows for custom volume configurations beyond just secrets and configmaps.
+   *
+   * @schema McpServerSpecDeployment#volumes
+   */
+  readonly volumes?: McpServerSpecDeploymentVolumes[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeployment' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeployment(obj: McpServerSpecDeployment | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'args': obj.args?.map(y => y),
+    'cmd': obj.cmd,
+    'configMapRefs': obj.configMapRefs?.map(y => toJson_McpServerSpecDeploymentConfigMapRefs(y)),
+    'env': ((obj.env) === undefined) ? undefined : (Object.entries(obj.env).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'image': obj.image,
+    'port': obj.port,
+    'secretRefs': obj.secretRefs?.map(y => toJson_McpServerSpecDeploymentSecretRefs(y)),
+    'volumeMounts': obj.volumeMounts?.map(y => toJson_McpServerSpecDeploymentVolumeMounts(y)),
+    'volumes': obj.volumes?.map(y => toJson_McpServerSpecDeploymentVolumes(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * HTTPTransport defines the configuration for a Streamable HTTP transport.
+ *
+ * @schema McpServerSpecHttpTransport
+ */
+export interface McpServerSpecHttpTransport {
+  /**
+   * the target path where MCP is served
+   *
+   * @schema McpServerSpecHttpTransport#path
+   */
+  readonly path?: string;
+
+  /**
+   * target port is the HTTP port that serves the MCP server.over HTTP
+   *
+   * @schema McpServerSpecHttpTransport#targetPort
+   */
+  readonly targetPort?: number;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecHttpTransport' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecHttpTransport(obj: McpServerSpecHttpTransport | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'targetPort': obj.targetPort,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * TransportType defines the type of mcp server being run
+ *
+ * @schema McpServerSpecTransportType
+ */
+export enum McpServerSpecTransportType {
+  /** stdio */
+  STDIO = "stdio",
+  /** http */
+  HTTP = "http",
+}
+
+/**
+ * LocalObjectReference contains enough information to let you locate the
+ * referenced object inside the same namespace.
+ *
+ * @schema McpServerSpecDeploymentConfigMapRefs
+ */
+export interface McpServerSpecDeploymentConfigMapRefs {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentConfigMapRefs#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentConfigMapRefs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentConfigMapRefs(obj: McpServerSpecDeploymentConfigMapRefs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * LocalObjectReference contains enough information to let you locate the
+ * referenced object inside the same namespace.
+ *
+ * @schema McpServerSpecDeploymentSecretRefs
+ */
+export interface McpServerSpecDeploymentSecretRefs {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentSecretRefs#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentSecretRefs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentSecretRefs(obj: McpServerSpecDeploymentSecretRefs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * VolumeMount describes a mounting of a Volume within a container.
+ *
+ * @schema McpServerSpecDeploymentVolumeMounts
+ */
+export interface McpServerSpecDeploymentVolumeMounts {
+  /**
+   * Path within the container at which the volume should be mounted.  Must
+   * not contain ':'.
+   *
+   * @schema McpServerSpecDeploymentVolumeMounts#mountPath
+   */
+  readonly mountPath: string;
+
+  /**
+   * mountPropagation determines how mounts are propagated from the host
+   * to container and the other way around.
+   * When not set, MountPropagationNone is used.
+   * This field is beta in 1.10.
+   * When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
+   * (which defaults to None).
+   *
+   * @schema McpServerSpecDeploymentVolumeMounts#mountPropagation
+   */
+  readonly mountPropagation?: string;
+
+  /**
+   * This must match the Name of a Volume.
+   *
+   * @schema McpServerSpecDeploymentVolumeMounts#name
+   */
+  readonly name: string;
+
+  /**
+   * Mounted read-only if true, read-write otherwise (false or unspecified).
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumeMounts#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * RecursiveReadOnly specifies whether read-only mounts should be handled
+   * recursively.
+   *
+   * If ReadOnly is false, this field has no meaning and must be unspecified.
+   *
+   * If ReadOnly is true, and this field is set to Disabled, the mount is not made
+   * recursively read-only.  If this field is set to IfPossible, the mount is made
+   * recursively read-only, if it is supported by the container runtime.  If this
+   * field is set to Enabled, the mount is made recursively read-only if it is
+   * supported by the container runtime, otherwise the pod will not be started and
+   * an error will be generated to indicate the reason.
+   *
+   * If this field is set to IfPossible or Enabled, MountPropagation must be set to
+   * None (or be unspecified, which defaults to None).
+   *
+   * If this field is not specified, it is treated as an equivalent of Disabled.
+   *
+   * @schema McpServerSpecDeploymentVolumeMounts#recursiveReadOnly
+   */
+  readonly recursiveReadOnly?: string;
+
+  /**
+   * Path within the volume from which the container's volume should be mounted.
+   * Defaults to "" (volume's root).
+   *
+   * @default volume's root).
+   * @schema McpServerSpecDeploymentVolumeMounts#subPath
+   */
+  readonly subPath?: string;
+
+  /**
+   * Expanded path within the volume from which the container's volume should be mounted.
+   * Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment.
+   * Defaults to "" (volume's root).
+   * SubPathExpr and SubPath are mutually exclusive.
+   *
+   * @default volume's root).
+   * @schema McpServerSpecDeploymentVolumeMounts#subPathExpr
+   */
+  readonly subPathExpr?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumeMounts' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumeMounts(obj: McpServerSpecDeploymentVolumeMounts | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'mountPath': obj.mountPath,
+    'mountPropagation': obj.mountPropagation,
+    'name': obj.name,
+    'readOnly': obj.readOnly,
+    'recursiveReadOnly': obj.recursiveReadOnly,
+    'subPath': obj.subPath,
+    'subPathExpr': obj.subPathExpr,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volume represents a named volume in a pod that may be accessed by any container in the pod.
+ *
+ * @schema McpServerSpecDeploymentVolumes
+ */
+export interface McpServerSpecDeploymentVolumes {
+  /**
+   * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema McpServerSpecDeploymentVolumes#awsElasticBlockStore
+   */
+  readonly awsElasticBlockStore?: McpServerSpecDeploymentVolumesAwsElasticBlockStore;
+
+  /**
+   * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
+   *
+   * @schema McpServerSpecDeploymentVolumes#azureDisk
+   */
+  readonly azureDisk?: McpServerSpecDeploymentVolumesAzureDisk;
+
+  /**
+   * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
+   *
+   * @schema McpServerSpecDeploymentVolumes#azureFile
+   */
+  readonly azureFile?: McpServerSpecDeploymentVolumesAzureFile;
+
+  /**
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#cephfs
+   */
+  readonly cephfs?: McpServerSpecDeploymentVolumesCephfs;
+
+  /**
+   * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema McpServerSpecDeploymentVolumes#cinder
+   */
+  readonly cinder?: McpServerSpecDeploymentVolumesCinder;
+
+  /**
+   * configMap represents a configMap that should populate this volume
+   *
+   * @schema McpServerSpecDeploymentVolumes#configMap
+   */
+  readonly configMap?: McpServerSpecDeploymentVolumesConfigMap;
+
+  /**
+   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+   *
+   * @schema McpServerSpecDeploymentVolumes#csi
+   */
+  readonly csi?: McpServerSpecDeploymentVolumesCsi;
+
+  /**
+   * downwardAPI represents downward API about the pod that should populate this volume
+   *
+   * @schema McpServerSpecDeploymentVolumes#downwardAPI
+   */
+  readonly downwardApi?: McpServerSpecDeploymentVolumesDownwardApi;
+
+  /**
+   * emptyDir represents a temporary directory that shares a pod's lifetime.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema McpServerSpecDeploymentVolumes#emptyDir
+   */
+  readonly emptyDir?: McpServerSpecDeploymentVolumesEmptyDir;
+
+  /**
+   * ephemeral represents a volume that is handled by a cluster storage driver.
+   * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+   * and deleted when the pod is removed.
+   *
+   * Use this if:
+   * a) the volume is only needed while the pod runs,
+   * b) features of normal volumes like restoring from snapshot or capacity
+   * tracking are needed,
+   * c) the storage driver is specified through a storage class, and
+   * d) the storage driver supports dynamic volume provisioning through
+   * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+   * information on the connection between this volume type
+   * and PersistentVolumeClaim).
+   *
+   * Use PersistentVolumeClaim or one of the vendor-specific
+   * APIs for volumes that persist for longer than the lifecycle
+   * of an individual pod.
+   *
+   * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+   * be used that way - see the documentation of the driver for
+   * more information.
+   *
+   * A pod can use both types of ephemeral volumes and
+   * persistent volumes at the same time.
+   *
+   * @schema McpServerSpecDeploymentVolumes#ephemeral
+   */
+  readonly ephemeral?: McpServerSpecDeploymentVolumesEphemeral;
+
+  /**
+   * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+   *
+   * @schema McpServerSpecDeploymentVolumes#fc
+   */
+  readonly fc?: McpServerSpecDeploymentVolumesFc;
+
+  /**
+   * flexVolume represents a generic volume resource that is
+   * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+   *
+   * @schema McpServerSpecDeploymentVolumes#flexVolume
+   */
+  readonly flexVolume?: McpServerSpecDeploymentVolumesFlexVolume;
+
+  /**
+   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#flocker
+   */
+  readonly flocker?: McpServerSpecDeploymentVolumesFlocker;
+
+  /**
+   * gcePersistentDisk represents a GCE Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema McpServerSpecDeploymentVolumes#gcePersistentDisk
+   */
+  readonly gcePersistentDisk?: McpServerSpecDeploymentVolumesGcePersistentDisk;
+
+  /**
+   * gitRepo represents a git repository at a particular revision.
+   * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+   * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+   * into the Pod's container.
+   *
+   * @schema McpServerSpecDeploymentVolumes#gitRepo
+   */
+  readonly gitRepo?: McpServerSpecDeploymentVolumesGitRepo;
+
+  /**
+   * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#glusterfs
+   */
+  readonly glusterfs?: McpServerSpecDeploymentVolumesGlusterfs;
+
+  /**
+   * hostPath represents a pre-existing file or directory on the host
+   * machine that is directly exposed to the container. This is generally
+   * used for system agents or other privileged things that are allowed
+   * to see the host machine. Most containers will NOT need this.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema McpServerSpecDeploymentVolumes#hostPath
+   */
+  readonly hostPath?: McpServerSpecDeploymentVolumesHostPath;
+
+  /**
+   * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+   * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+   *
+   * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   *
+   * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+   * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+   * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+   * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+   * The volume will be mounted read-only (ro) and non-executable files (noexec).
+   * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+   * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+   *
+   * @schema McpServerSpecDeploymentVolumes#image
+   */
+  readonly image?: McpServerSpecDeploymentVolumesImage;
+
+  /**
+   * iscsi represents an ISCSI Disk resource that is attached to a
+   * kubelet's host machine and then exposed to the pod.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+   *
+   * @schema McpServerSpecDeploymentVolumes#iscsi
+   */
+  readonly iscsi?: McpServerSpecDeploymentVolumesIscsi;
+
+  /**
+   * name of the volume.
+   * Must be a DNS_LABEL and unique within the pod.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumes#name
+   */
+  readonly name: string;
+
+  /**
+   * nfs represents an NFS mount on the host that shares a pod's lifetime
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema McpServerSpecDeploymentVolumes#nfs
+   */
+  readonly nfs?: McpServerSpecDeploymentVolumesNfs;
+
+  /**
+   * persistentVolumeClaimVolumeSource represents a reference to a
+   * PersistentVolumeClaim in the same namespace.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema McpServerSpecDeploymentVolumes#persistentVolumeClaim
+   */
+  readonly persistentVolumeClaim?: McpServerSpecDeploymentVolumesPersistentVolumeClaim;
+
+  /**
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#photonPersistentDisk
+   */
+  readonly photonPersistentDisk?: McpServerSpecDeploymentVolumesPhotonPersistentDisk;
+
+  /**
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
+   *
+   * @schema McpServerSpecDeploymentVolumes#portworxVolume
+   */
+  readonly portworxVolume?: McpServerSpecDeploymentVolumesPortworxVolume;
+
+  /**
+   * projected items for all in one resources secrets, configmaps, and downward API
+   *
+   * @schema McpServerSpecDeploymentVolumes#projected
+   */
+  readonly projected?: McpServerSpecDeploymentVolumesProjected;
+
+  /**
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#quobyte
+   */
+  readonly quobyte?: McpServerSpecDeploymentVolumesQuobyte;
+
+  /**
+   * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#rbd
+   */
+  readonly rbd?: McpServerSpecDeploymentVolumesRbd;
+
+  /**
+   * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#scaleIO
+   */
+  readonly scaleIo?: McpServerSpecDeploymentVolumesScaleIo;
+
+  /**
+   * secret represents a secret that should populate this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema McpServerSpecDeploymentVolumes#secret
+   */
+  readonly secret?: McpServerSpecDeploymentVolumesSecret;
+
+  /**
+   * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+   *
+   * @schema McpServerSpecDeploymentVolumes#storageos
+   */
+  readonly storageos?: McpServerSpecDeploymentVolumesStorageos;
+
+  /**
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
+   *
+   * @schema McpServerSpecDeploymentVolumes#vsphereVolume
+   */
+  readonly vsphereVolume?: McpServerSpecDeploymentVolumesVsphereVolume;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumes' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumes(obj: McpServerSpecDeploymentVolumes | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsElasticBlockStore': toJson_McpServerSpecDeploymentVolumesAwsElasticBlockStore(obj.awsElasticBlockStore),
+    'azureDisk': toJson_McpServerSpecDeploymentVolumesAzureDisk(obj.azureDisk),
+    'azureFile': toJson_McpServerSpecDeploymentVolumesAzureFile(obj.azureFile),
+    'cephfs': toJson_McpServerSpecDeploymentVolumesCephfs(obj.cephfs),
+    'cinder': toJson_McpServerSpecDeploymentVolumesCinder(obj.cinder),
+    'configMap': toJson_McpServerSpecDeploymentVolumesConfigMap(obj.configMap),
+    'csi': toJson_McpServerSpecDeploymentVolumesCsi(obj.csi),
+    'downwardAPI': toJson_McpServerSpecDeploymentVolumesDownwardApi(obj.downwardApi),
+    'emptyDir': toJson_McpServerSpecDeploymentVolumesEmptyDir(obj.emptyDir),
+    'ephemeral': toJson_McpServerSpecDeploymentVolumesEphemeral(obj.ephemeral),
+    'fc': toJson_McpServerSpecDeploymentVolumesFc(obj.fc),
+    'flexVolume': toJson_McpServerSpecDeploymentVolumesFlexVolume(obj.flexVolume),
+    'flocker': toJson_McpServerSpecDeploymentVolumesFlocker(obj.flocker),
+    'gcePersistentDisk': toJson_McpServerSpecDeploymentVolumesGcePersistentDisk(obj.gcePersistentDisk),
+    'gitRepo': toJson_McpServerSpecDeploymentVolumesGitRepo(obj.gitRepo),
+    'glusterfs': toJson_McpServerSpecDeploymentVolumesGlusterfs(obj.glusterfs),
+    'hostPath': toJson_McpServerSpecDeploymentVolumesHostPath(obj.hostPath),
+    'image': toJson_McpServerSpecDeploymentVolumesImage(obj.image),
+    'iscsi': toJson_McpServerSpecDeploymentVolumesIscsi(obj.iscsi),
+    'name': obj.name,
+    'nfs': toJson_McpServerSpecDeploymentVolumesNfs(obj.nfs),
+    'persistentVolumeClaim': toJson_McpServerSpecDeploymentVolumesPersistentVolumeClaim(obj.persistentVolumeClaim),
+    'photonPersistentDisk': toJson_McpServerSpecDeploymentVolumesPhotonPersistentDisk(obj.photonPersistentDisk),
+    'portworxVolume': toJson_McpServerSpecDeploymentVolumesPortworxVolume(obj.portworxVolume),
+    'projected': toJson_McpServerSpecDeploymentVolumesProjected(obj.projected),
+    'quobyte': toJson_McpServerSpecDeploymentVolumesQuobyte(obj.quobyte),
+    'rbd': toJson_McpServerSpecDeploymentVolumesRbd(obj.rbd),
+    'scaleIO': toJson_McpServerSpecDeploymentVolumesScaleIo(obj.scaleIo),
+    'secret': toJson_McpServerSpecDeploymentVolumesSecret(obj.secret),
+    'storageos': toJson_McpServerSpecDeploymentVolumesStorageos(obj.storageos),
+    'vsphereVolume': toJson_McpServerSpecDeploymentVolumesVsphereVolume(obj.vsphereVolume),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsElasticBlockStore represents an AWS Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+ * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+ *
+ * @schema McpServerSpecDeploymentVolumesAwsElasticBlockStore
+ */
+export interface McpServerSpecDeploymentVolumesAwsElasticBlockStore {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema McpServerSpecDeploymentVolumesAwsElasticBlockStore#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   *
+   * @schema McpServerSpecDeploymentVolumesAwsElasticBlockStore#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * readOnly value true will force the readOnly setting in VolumeMounts.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema McpServerSpecDeploymentVolumesAwsElasticBlockStore#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID is unique ID of the persistent disk resource in AWS (Amazon EBS volume).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+   *
+   * @schema McpServerSpecDeploymentVolumesAwsElasticBlockStore#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesAwsElasticBlockStore' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesAwsElasticBlockStore(obj: McpServerSpecDeploymentVolumesAwsElasticBlockStore | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+ * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+ * are redirected to the disk.csi.azure.com CSI driver.
+ *
+ * @schema McpServerSpecDeploymentVolumesAzureDisk
+ */
+export interface McpServerSpecDeploymentVolumesAzureDisk {
+  /**
+   * cachingMode is the Host Caching mode: None, Read Only, Read Write.
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#cachingMode
+   */
+  readonly cachingMode?: string;
+
+  /**
+   * diskName is the Name of the data disk in the blob storage
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#diskName
+   */
+  readonly diskName: string;
+
+  /**
+   * diskURI is the URI of data disk in the blob storage
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#diskURI
+   */
+  readonly diskUri: string;
+
+  /**
+   * fsType is Filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#kind
+   */
+  readonly kind?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema McpServerSpecDeploymentVolumesAzureDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesAzureDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesAzureDisk(obj: McpServerSpecDeploymentVolumesAzureDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'cachingMode': obj.cachingMode,
+    'diskName': obj.diskName,
+    'diskURI': obj.diskUri,
+    'fsType': obj.fsType,
+    'kind': obj.kind,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+ * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+ * are redirected to the file.csi.azure.com CSI driver.
+ *
+ * @schema McpServerSpecDeploymentVolumesAzureFile
+ */
+export interface McpServerSpecDeploymentVolumesAzureFile {
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureFile#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretName is the  name of secret that contains Azure Storage Account Name and Key
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureFile#secretName
+   */
+  readonly secretName: string;
+
+  /**
+   * shareName is the azure share Name
+   *
+   * @schema McpServerSpecDeploymentVolumesAzureFile#shareName
+   */
+  readonly shareName: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesAzureFile' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesAzureFile(obj: McpServerSpecDeploymentVolumesAzureFile | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'readOnly': obj.readOnly,
+    'secretName': obj.secretName,
+    'shareName': obj.shareName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+ * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesCephfs
+ */
+export interface McpServerSpecDeploymentVolumesCephfs {
+  /**
+   * monitors is Required: Monitors is a collection of Ceph monitors
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfs#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * path is Optional: Used as the mounted root, rather than the full Ceph tree, default is /
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfs#path
+   */
+  readonly path?: string;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema McpServerSpecDeploymentVolumesCephfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretFile is Optional: SecretFile is the path to key ring for User, default is /etc/ceph/user.secret
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfs#secretFile
+   */
+  readonly secretFile?: string;
+
+  /**
+   * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfs#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesCephfsSecretRef;
+
+  /**
+   * user is optional: User is the rados user name, default is admin
+   * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfs#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCephfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCephfs(obj: McpServerSpecDeploymentVolumesCephfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'monitors': obj.monitors?.map(y => y),
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'secretFile': obj.secretFile,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesCephfsSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * cinder represents a cinder volume attached and mounted on kubelets host machine.
+ * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+ * are redirected to the cinder.csi.openstack.org CSI driver.
+ * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+ *
+ * @schema McpServerSpecDeploymentVolumesCinder
+ */
+export interface McpServerSpecDeploymentVolumesCinder {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema McpServerSpecDeploymentVolumesCinder#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema McpServerSpecDeploymentVolumesCinder#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is optional: points to a secret object containing parameters used to connect
+   * to OpenStack.
+   *
+   * @schema McpServerSpecDeploymentVolumesCinder#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesCinderSecretRef;
+
+  /**
+   * volumeID used to identify the volume in cinder.
+   * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+   *
+   * @schema McpServerSpecDeploymentVolumesCinder#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCinder' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCinder(obj: McpServerSpecDeploymentVolumesCinder | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesCinderSecretRef(obj.secretRef),
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap represents a configMap that should populate this volume
+ *
+ * @schema McpServerSpecDeploymentVolumesConfigMap
+ */
+export interface McpServerSpecDeploymentVolumesConfigMap {
+  /**
+   * defaultMode is optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema McpServerSpecDeploymentVolumesConfigMap#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMap#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesConfigMap(obj: McpServerSpecDeploymentVolumesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
+ *
+ * @schema McpServerSpecDeploymentVolumesCsi
+ */
+export interface McpServerSpecDeploymentVolumesCsi {
+  /**
+   * driver is the name of the CSI driver that handles this volume.
+   * Consult with your admin for the correct name as registered in the cluster.
+   *
+   * @schema McpServerSpecDeploymentVolumesCsi#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType to mount. Ex. "ext4", "xfs", "ntfs".
+   * If not provided, the empty value is passed to the associated CSI driver
+   * which will determine the default filesystem to apply.
+   *
+   * @schema McpServerSpecDeploymentVolumesCsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * nodePublishSecretRef is a reference to the secret object containing
+   * sensitive information to pass to the CSI driver to complete the CSI
+   * NodePublishVolume and NodeUnpublishVolume calls.
+   * This field is optional, and  may be empty if no secret is required. If the
+   * secret object contains more than one secret, all secret references are passed.
+   *
+   * @schema McpServerSpecDeploymentVolumesCsi#nodePublishSecretRef
+   */
+  readonly nodePublishSecretRef?: McpServerSpecDeploymentVolumesCsiNodePublishSecretRef;
+
+  /**
+   * readOnly specifies a read-only configuration for the volume.
+   * Defaults to false (read/write).
+   *
+   * @default false (read/write).
+   * @schema McpServerSpecDeploymentVolumesCsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeAttributes stores driver-specific properties that are passed to the CSI
+   * driver. Consult your driver's documentation for supported values.
+   *
+   * @schema McpServerSpecDeploymentVolumesCsi#volumeAttributes
+   */
+  readonly volumeAttributes?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCsi(obj: McpServerSpecDeploymentVolumesCsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'nodePublishSecretRef': toJson_McpServerSpecDeploymentVolumesCsiNodePublishSecretRef(obj.nodePublishSecretRef),
+    'readOnly': obj.readOnly,
+    'volumeAttributes': ((obj.volumeAttributes) === undefined) ? undefined : (Object.entries(obj.volumeAttributes).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI represents downward API about the pod that should populate this volume
+ *
+ * @schema McpServerSpecDeploymentVolumesDownwardApi
+ */
+export interface McpServerSpecDeploymentVolumesDownwardApi {
+  /**
+   * Optional: mode bits to use on created files by default. Must be a
+   * Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema McpServerSpecDeploymentVolumesDownwardApi#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * Items is a list of downward API volume file
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApi#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesDownwardApi(obj: McpServerSpecDeploymentVolumesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * emptyDir represents a temporary directory that shares a pod's lifetime.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema McpServerSpecDeploymentVolumesEmptyDir
+ */
+export interface McpServerSpecDeploymentVolumesEmptyDir {
+  /**
+   * medium represents what type of storage medium should back this directory.
+   * The default is "" which means to use the node's default medium.
+   * Must be an empty string (default) or Memory.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema McpServerSpecDeploymentVolumesEmptyDir#medium
+   */
+  readonly medium?: string;
+
+  /**
+   * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+   * The size limit is also applicable for memory medium.
+   * The maximum usage on memory medium EmptyDir would be the minimum value between
+   * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+   * The default is nil which means that the limit is undefined.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+   *
+   * @schema McpServerSpecDeploymentVolumesEmptyDir#sizeLimit
+   */
+  readonly sizeLimit?: McpServerSpecDeploymentVolumesEmptyDirSizeLimit;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEmptyDir' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEmptyDir(obj: McpServerSpecDeploymentVolumesEmptyDir | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'medium': obj.medium,
+    'sizeLimit': obj.sizeLimit?.value,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ephemeral represents a volume that is handled by a cluster storage driver.
+ * The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+ * and deleted when the pod is removed.
+ *
+ * Use this if:
+ * a) the volume is only needed while the pod runs,
+ * b) features of normal volumes like restoring from snapshot or capacity
+ * tracking are needed,
+ * c) the storage driver is specified through a storage class, and
+ * d) the storage driver supports dynamic volume provisioning through
+ * a PersistentVolumeClaim (see EphemeralVolumeSource for more
+ * information on the connection between this volume type
+ * and PersistentVolumeClaim).
+ *
+ * Use PersistentVolumeClaim or one of the vendor-specific
+ * APIs for volumes that persist for longer than the lifecycle
+ * of an individual pod.
+ *
+ * Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+ * be used that way - see the documentation of the driver for
+ * more information.
+ *
+ * A pod can use both types of ephemeral volumes and
+ * persistent volumes at the same time.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeral
+ */
+export interface McpServerSpecDeploymentVolumesEphemeral {
+  /**
+   * Will be used to create a stand-alone PVC to provision the volume.
+   * The pod in which this EphemeralVolumeSource is embedded will be the
+   * owner of the PVC, i.e. the PVC will be deleted together with the
+   * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+   * `<volume name>` is the name from the `PodSpec.Volumes` array
+   * entry. Pod validation will reject the pod if the concatenated name
+   * is not valid for a PVC (for example, too long).
+   *
+   * An existing PVC with that name that is not owned by the pod
+   * will *not* be used for the pod to avoid using an unrelated
+   * volume by mistake. Starting the pod is then blocked until
+   * the unrelated PVC is removed. If such a pre-created PVC is
+   * meant to be used by the pod, the PVC has to updated with an
+   * owner reference to the pod once the pod exists. Normally
+   * this should not be necessary, but it may be useful when
+   * manually reconstructing a broken cluster.
+   *
+   * This field is read-only and no changes will be made by Kubernetes
+   * to the PVC after it has been created.
+   *
+   * Required, must not be nil.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeral#volumeClaimTemplate
+   */
+  readonly volumeClaimTemplate?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeral' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeral(obj: McpServerSpecDeploymentVolumesEphemeral | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'volumeClaimTemplate': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate(obj.volumeClaimTemplate),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
+ *
+ * @schema McpServerSpecDeploymentVolumesFc
+ */
+export interface McpServerSpecDeploymentVolumesFc {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesFc#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * lun is Optional: FC target lun number
+   *
+   * @schema McpServerSpecDeploymentVolumesFc#lun
+   */
+  readonly lun?: number;
+
+  /**
+   * readOnly is Optional: Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema McpServerSpecDeploymentVolumesFc#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * targetWWNs is Optional: FC target worldwide names (WWNs)
+   *
+   * @schema McpServerSpecDeploymentVolumesFc#targetWWNs
+   */
+  readonly targetWwNs?: string[];
+
+  /**
+   * wwids Optional: FC volume world wide identifiers (wwids)
+   * Either wwids or combination of targetWWNs and lun must be set, but not both simultaneously.
+   *
+   * @schema McpServerSpecDeploymentVolumesFc#wwids
+   */
+  readonly wwids?: string[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesFc' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesFc(obj: McpServerSpecDeploymentVolumesFc | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'lun': obj.lun,
+    'readOnly': obj.readOnly,
+    'targetWWNs': obj.targetWwNs?.map(y => y),
+    'wwids': obj.wwids?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flexVolume represents a generic volume resource that is
+ * provisioned/attached using an exec based plugin.
+ * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
+ *
+ * @schema McpServerSpecDeploymentVolumesFlexVolume
+ */
+export interface McpServerSpecDeploymentVolumesFlexVolume {
+  /**
+   * driver is the name of the driver to use for this volume.
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolume#driver
+   */
+  readonly driver: string;
+
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * options is Optional: this field holds extra command options if any.
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolume#options
+   */
+  readonly options?: { [key: string]: string };
+
+  /**
+   * readOnly is Optional: defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is Optional: secretRef is reference to the secret object containing
+   * sensitive information to pass to the plugin scripts. This may be
+   * empty if no secret object is specified. If the secret object
+   * contains more than one secret, all secrets are passed to the plugin
+   * scripts.
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolume#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesFlexVolumeSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesFlexVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesFlexVolume(obj: McpServerSpecDeploymentVolumesFlexVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'driver': obj.driver,
+    'fsType': obj.fsType,
+    'options': ((obj.options) === undefined) ? undefined : (Object.entries(obj.options).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesFlexVolumeSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+ * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesFlocker
+ */
+export interface McpServerSpecDeploymentVolumesFlocker {
+  /**
+   * datasetName is Name of the dataset stored as metadata -> name on the dataset for Flocker
+   * should be considered as deprecated
+   *
+   * @schema McpServerSpecDeploymentVolumesFlocker#datasetName
+   */
+  readonly datasetName?: string;
+
+  /**
+   * datasetUUID is the UUID of the dataset. This is unique identifier of a Flocker dataset
+   *
+   * @schema McpServerSpecDeploymentVolumesFlocker#datasetUUID
+   */
+  readonly datasetUuid?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesFlocker' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesFlocker(obj: McpServerSpecDeploymentVolumesFlocker | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'datasetName': obj.datasetName,
+    'datasetUUID': obj.datasetUuid,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gcePersistentDisk represents a GCE Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+ * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+ *
+ * @schema McpServerSpecDeploymentVolumesGcePersistentDisk
+ */
+export interface McpServerSpecDeploymentVolumesGcePersistentDisk {
+  /**
+   * fsType is filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema McpServerSpecDeploymentVolumesGcePersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * partition is the partition in the volume that you want to mount.
+   * If omitted, the default is to mount by volume name.
+   * Examples: For volume /dev/sda1, you specify the partition as "1".
+   * Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema McpServerSpecDeploymentVolumesGcePersistentDisk#partition
+   */
+  readonly partition?: number;
+
+  /**
+   * pdName is unique name of the PD resource in GCE. Used to identify the disk in GCE.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @schema McpServerSpecDeploymentVolumesGcePersistentDisk#pdName
+   */
+  readonly pdName: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesGcePersistentDisk#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesGcePersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesGcePersistentDisk(obj: McpServerSpecDeploymentVolumesGcePersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'partition': obj.partition,
+    'pdName': obj.pdName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * gitRepo represents a git repository at a particular revision.
+ * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
+ * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+ * into the Pod's container.
+ *
+ * @schema McpServerSpecDeploymentVolumesGitRepo
+ */
+export interface McpServerSpecDeploymentVolumesGitRepo {
+  /**
+   * directory is the target directory name.
+   * Must not contain or start with '..'.  If '.' is supplied, the volume directory will be the
+   * git repository.  Otherwise, if specified, the volume will contain the git repository in
+   * the subdirectory with the given name.
+   *
+   * @schema McpServerSpecDeploymentVolumesGitRepo#directory
+   */
+  readonly directory?: string;
+
+  /**
+   * repository is the URL
+   *
+   * @schema McpServerSpecDeploymentVolumesGitRepo#repository
+   */
+  readonly repository: string;
+
+  /**
+   * revision is the commit hash for the specified revision.
+   *
+   * @schema McpServerSpecDeploymentVolumesGitRepo#revision
+   */
+  readonly revision?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesGitRepo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesGitRepo(obj: McpServerSpecDeploymentVolumesGitRepo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'directory': obj.directory,
+    'repository': obj.repository,
+    'revision': obj.revision,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+ * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesGlusterfs
+ */
+export interface McpServerSpecDeploymentVolumesGlusterfs {
+  /**
+   * endpoints is the endpoint name that details Glusterfs topology.
+   *
+   * @schema McpServerSpecDeploymentVolumesGlusterfs#endpoints
+   */
+  readonly endpoints: string;
+
+  /**
+   * path is the Glusterfs volume path.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @schema McpServerSpecDeploymentVolumesGlusterfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesGlusterfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesGlusterfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesGlusterfs(obj: McpServerSpecDeploymentVolumesGlusterfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'endpoints': obj.endpoints,
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * hostPath represents a pre-existing file or directory on the host
+ * machine that is directly exposed to the container. This is generally
+ * used for system agents or other privileged things that are allowed
+ * to see the host machine. Most containers will NOT need this.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+ *
+ * @schema McpServerSpecDeploymentVolumesHostPath
+ */
+export interface McpServerSpecDeploymentVolumesHostPath {
+  /**
+   * path of the directory on the host.
+   * If the path is a symlink, it will follow the link to the real path.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @schema McpServerSpecDeploymentVolumesHostPath#path
+   */
+  readonly path: string;
+
+  /**
+   * type for HostPath Volume
+   * Defaults to ""
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   *
+   * @default More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+   * @schema McpServerSpecDeploymentVolumesHostPath#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesHostPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesHostPath(obj: McpServerSpecDeploymentVolumesHostPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+ * The volume is resolved at pod startup depending on which PullPolicy value is provided:
+ *
+ * - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+ * - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+ * - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+ *
+ * The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+ * A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+ * The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+ * The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+ * The volume will be mounted read-only (ro) and non-executable files (noexec).
+ * Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+ * The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+ *
+ * @schema McpServerSpecDeploymentVolumesImage
+ */
+export interface McpServerSpecDeploymentVolumesImage {
+  /**
+   * Policy for pulling OCI objects. Possible values are:
+   * Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+   * Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+   * IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+   * Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+   *
+   * @default Always if :latest tag is specified, or IfNotPresent otherwise.
+   * @schema McpServerSpecDeploymentVolumesImage#pullPolicy
+   */
+  readonly pullPolicy?: string;
+
+  /**
+   * Required: Image or artifact reference to be used.
+   * Behaves in the same way as pod.spec.containers[*].image.
+   * Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
+   * More info: https://kubernetes.io/docs/concepts/containers/images
+   * This field is optional to allow higher level config management to default or override
+   * container images in workload controllers like Deployments and StatefulSets.
+   *
+   * @schema McpServerSpecDeploymentVolumesImage#reference
+   */
+  readonly reference?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesImage' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesImage(obj: McpServerSpecDeploymentVolumesImage | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'pullPolicy': obj.pullPolicy,
+    'reference': obj.reference,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * iscsi represents an ISCSI Disk resource that is attached to a
+ * kubelet's host machine and then exposed to the pod.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
+ *
+ * @schema McpServerSpecDeploymentVolumesIscsi
+ */
+export interface McpServerSpecDeploymentVolumesIscsi {
+  /**
+   * chapAuthDiscovery defines whether support iSCSI Discovery CHAP authentication
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#chapAuthDiscovery
+   */
+  readonly chapAuthDiscovery?: boolean;
+
+  /**
+   * chapAuthSession defines whether support iSCSI Session CHAP authentication
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#chapAuthSession
+   */
+  readonly chapAuthSession?: boolean;
+
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * initiatorName is the custom iSCSI Initiator Name.
+   * If initiatorName is specified with iscsiInterface simultaneously, new iSCSI interface
+   * <target portal>:<volume name> will be created for the connection.
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#initiatorName
+   */
+  readonly initiatorName?: string;
+
+  /**
+   * iqn is the target iSCSI Qualified Name.
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#iqn
+   */
+  readonly iqn: string;
+
+  /**
+   * iscsiInterface is the interface Name that uses an iSCSI transport.
+   * Defaults to 'default' (tcp).
+   *
+   * @default default' (tcp).
+   * @schema McpServerSpecDeploymentVolumesIscsi#iscsiInterface
+   */
+  readonly iscsiInterface?: string;
+
+  /**
+   * lun represents iSCSI Target Lun number.
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#lun
+   */
+  readonly lun: number;
+
+  /**
+   * portals is the iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#portals
+   */
+  readonly portals?: string[];
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesIscsi#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesIscsiSecretRef;
+
+  /**
+   * targetPortal is iSCSI Target Portal. The Portal is either an IP or ip_addr:port if the port
+   * is other than default (typically TCP ports 860 and 3260).
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsi#targetPortal
+   */
+  readonly targetPortal: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesIscsi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesIscsi(obj: McpServerSpecDeploymentVolumesIscsi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'chapAuthDiscovery': obj.chapAuthDiscovery,
+    'chapAuthSession': obj.chapAuthSession,
+    'fsType': obj.fsType,
+    'initiatorName': obj.initiatorName,
+    'iqn': obj.iqn,
+    'iscsiInterface': obj.iscsiInterface,
+    'lun': obj.lun,
+    'portals': obj.portals?.map(y => y),
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesIscsiSecretRef(obj.secretRef),
+    'targetPortal': obj.targetPortal,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nfs represents an NFS mount on the host that shares a pod's lifetime
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+ *
+ * @schema McpServerSpecDeploymentVolumesNfs
+ */
+export interface McpServerSpecDeploymentVolumesNfs {
+  /**
+   * path that is exported by the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema McpServerSpecDeploymentVolumesNfs#path
+   */
+  readonly path: string;
+
+  /**
+   * readOnly here will force the NFS export to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesNfs#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * server is the hostname or IP address of the NFS server.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+   *
+   * @schema McpServerSpecDeploymentVolumesNfs#server
+   */
+  readonly server: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesNfs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesNfs(obj: McpServerSpecDeploymentVolumesNfs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'path': obj.path,
+    'readOnly': obj.readOnly,
+    'server': obj.server,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * persistentVolumeClaimVolumeSource represents a reference to a
+ * PersistentVolumeClaim in the same namespace.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+ *
+ * @schema McpServerSpecDeploymentVolumesPersistentVolumeClaim
+ */
+export interface McpServerSpecDeploymentVolumesPersistentVolumeClaim {
+  /**
+   * claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+   *
+   * @schema McpServerSpecDeploymentVolumesPersistentVolumeClaim#claimName
+   */
+  readonly claimName: string;
+
+  /**
+   * readOnly Will force the ReadOnly setting in VolumeMounts.
+   * Default false.
+   *
+   * @schema McpServerSpecDeploymentVolumesPersistentVolumeClaim#readOnly
+   */
+  readonly readOnly?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesPersistentVolumeClaim' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesPersistentVolumeClaim(obj: McpServerSpecDeploymentVolumesPersistentVolumeClaim | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'claimName': obj.claimName,
+    'readOnly': obj.readOnly,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+ * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesPhotonPersistentDisk
+ */
+export interface McpServerSpecDeploymentVolumesPhotonPersistentDisk {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesPhotonPersistentDisk#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * pdID is the ID that identifies Photon Controller persistent disk
+   *
+   * @schema McpServerSpecDeploymentVolumesPhotonPersistentDisk#pdID
+   */
+  readonly pdId: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesPhotonPersistentDisk' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesPhotonPersistentDisk(obj: McpServerSpecDeploymentVolumesPhotonPersistentDisk | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'pdID': obj.pdId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+ * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+ * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+ * is on.
+ *
+ * @schema McpServerSpecDeploymentVolumesPortworxVolume
+ */
+export interface McpServerSpecDeploymentVolumesPortworxVolume {
+  /**
+   * fSType represents the filesystem type to mount
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesPortworxVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema McpServerSpecDeploymentVolumesPortworxVolume#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * volumeID uniquely identifies a Portworx volume
+   *
+   * @schema McpServerSpecDeploymentVolumesPortworxVolume#volumeID
+   */
+  readonly volumeId: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesPortworxVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesPortworxVolume(obj: McpServerSpecDeploymentVolumesPortworxVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'volumeID': obj.volumeId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * projected items for all in one resources secrets, configmaps, and downward API
+ *
+ * @schema McpServerSpecDeploymentVolumesProjected
+ */
+export interface McpServerSpecDeploymentVolumesProjected {
+  /**
+   * defaultMode are the mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjected#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * sources is the list of volume projections. Each entry in this list
+   * handles one source.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjected#sources
+   */
+  readonly sources?: McpServerSpecDeploymentVolumesProjectedSources[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjected' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjected(obj: McpServerSpecDeploymentVolumesProjected | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'sources': obj.sources?.map(y => toJson_McpServerSpecDeploymentVolumesProjectedSources(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+ * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesQuobyte
+ */
+export interface McpServerSpecDeploymentVolumesQuobyte {
+  /**
+   * group to map volume access to
+   * Default is no group
+   *
+   * @default no group
+   * @schema McpServerSpecDeploymentVolumesQuobyte#group
+   */
+  readonly group?: string;
+
+  /**
+   * readOnly here will force the Quobyte volume to be mounted with read-only permissions.
+   * Defaults to false.
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesQuobyte#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * registry represents a single or multiple Quobyte Registry services
+   * specified as a string as host:port pair (multiple entries are separated with commas)
+   * which acts as the central registry for volumes
+   *
+   * @schema McpServerSpecDeploymentVolumesQuobyte#registry
+   */
+  readonly registry: string;
+
+  /**
+   * tenant owning the given Quobyte volume in the Backend
+   * Used with dynamically provisioned Quobyte volumes, value is set by the plugin
+   *
+   * @schema McpServerSpecDeploymentVolumesQuobyte#tenant
+   */
+  readonly tenant?: string;
+
+  /**
+   * user to map volume access to
+   * Defaults to serivceaccount user
+   *
+   * @default serivceaccount user
+   * @schema McpServerSpecDeploymentVolumesQuobyte#user
+   */
+  readonly user?: string;
+
+  /**
+   * volume is a string that references an already created Quobyte volume by name.
+   *
+   * @schema McpServerSpecDeploymentVolumesQuobyte#volume
+   */
+  readonly volume: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesQuobyte' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesQuobyte(obj: McpServerSpecDeploymentVolumesQuobyte | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'group': obj.group,
+    'readOnly': obj.readOnly,
+    'registry': obj.registry,
+    'tenant': obj.tenant,
+    'user': obj.user,
+    'volume': obj.volume,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+ * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesRbd
+ */
+export interface McpServerSpecDeploymentVolumesRbd {
+  /**
+   * fsType is the filesystem type of the volume that you want to mount.
+   * Tip: Ensure that the filesystem type is supported by the host operating system.
+   * Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
+   *
+   * @schema McpServerSpecDeploymentVolumesRbd#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * image is the rados image name.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesRbd#image
+   */
+  readonly image: string;
+
+  /**
+   * keyring is the path to key ring for RBDUser.
+   * Default is /etc/ceph/keyring.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default etc/ceph/keyring.
+   * @schema McpServerSpecDeploymentVolumesRbd#keyring
+   */
+  readonly keyring?: string;
+
+  /**
+   * monitors is a collection of Ceph monitors.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @schema McpServerSpecDeploymentVolumesRbd#monitors
+   */
+  readonly monitors: string[];
+
+  /**
+   * pool is the rados pool name.
+   * Default is rbd.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default rbd.
+   * @schema McpServerSpecDeploymentVolumesRbd#pool
+   */
+  readonly pool?: string;
+
+  /**
+   * readOnly here will force the ReadOnly setting in VolumeMounts.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default false.
+   * @schema McpServerSpecDeploymentVolumesRbd#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef is name of the authentication secret for RBDUser. If provided
+   * overrides keyring.
+   * Default is nil.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default nil.
+   * @schema McpServerSpecDeploymentVolumesRbd#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesRbdSecretRef;
+
+  /**
+   * user is the rados user name.
+   * Default is admin.
+   * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   *
+   * @default admin.
+   * @schema McpServerSpecDeploymentVolumesRbd#user
+   */
+  readonly user?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesRbd' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesRbd(obj: McpServerSpecDeploymentVolumesRbd | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'image': obj.image,
+    'keyring': obj.keyring,
+    'monitors': obj.monitors?.map(y => y),
+    'pool': obj.pool,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesRbdSecretRef(obj.secretRef),
+    'user': obj.user,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+ * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesScaleIo
+ */
+export interface McpServerSpecDeploymentVolumesScaleIo {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs".
+   * Default is "xfs".
+   *
+   * @default xfs".
+   * @schema McpServerSpecDeploymentVolumesScaleIo#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * gateway is the host address of the ScaleIO API Gateway.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#gateway
+   */
+  readonly gateway: string;
+
+  /**
+   * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#protectionDomain
+   */
+  readonly protectionDomain?: string;
+
+  /**
+   * readOnly Defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @default false (read/write). ReadOnly here will force
+   * @schema McpServerSpecDeploymentVolumesScaleIo#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef references to the secret for ScaleIO user and other
+   * sensitive information. If this is not provided, Login operation will fail.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#secretRef
+   */
+  readonly secretRef: McpServerSpecDeploymentVolumesScaleIoSecretRef;
+
+  /**
+   * sslEnabled Flag enable/disable SSL communication with Gateway, default false
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#sslEnabled
+   */
+  readonly sslEnabled?: boolean;
+
+  /**
+   * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.
+   * Default is ThinProvisioned.
+   *
+   * @default ThinProvisioned.
+   * @schema McpServerSpecDeploymentVolumesScaleIo#storageMode
+   */
+  readonly storageMode?: string;
+
+  /**
+   * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#storagePool
+   */
+  readonly storagePool?: string;
+
+  /**
+   * system is the name of the storage system as configured in ScaleIO.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#system
+   */
+  readonly system: string;
+
+  /**
+   * volumeName is the name of a volume already created in the ScaleIO system
+   * that is associated with this volume source.
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIo#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesScaleIo' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesScaleIo(obj: McpServerSpecDeploymentVolumesScaleIo | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'gateway': obj.gateway,
+    'protectionDomain': obj.protectionDomain,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesScaleIoSecretRef(obj.secretRef),
+    'sslEnabled': obj.sslEnabled,
+    'storageMode': obj.storageMode,
+    'storagePool': obj.storagePool,
+    'system': obj.system,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret represents a secret that should populate this volume.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+ *
+ * @schema McpServerSpecDeploymentVolumesSecret
+ */
+export interface McpServerSpecDeploymentVolumesSecret {
+  /**
+   * defaultMode is Optional: mode bits used to set permissions on created files by default.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values
+   * for mode bits. Defaults to 0644.
+   * Directories within the path are not affected by this setting.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @default 0644.
+   * @schema McpServerSpecDeploymentVolumesSecret#defaultMode
+   */
+  readonly defaultMode?: number;
+
+  /**
+   * items If unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesSecret#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesSecretItems[];
+
+  /**
+   * optional field specify whether the Secret or its keys must be defined
+   *
+   * @schema McpServerSpecDeploymentVolumesSecret#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * secretName is the name of the secret in the pod's namespace to use.
+   * More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+   *
+   * @schema McpServerSpecDeploymentVolumesSecret#secretName
+   */
+  readonly secretName?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesSecret(obj: McpServerSpecDeploymentVolumesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'defaultMode': obj.defaultMode,
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesSecretItems(y)),
+    'optional': obj.optional,
+    'secretName': obj.secretName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+ * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesStorageos
+ */
+export interface McpServerSpecDeploymentVolumesStorageos {
+  /**
+   * fsType is the filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageos#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * readOnly defaults to false (read/write). ReadOnly here will force
+   * the ReadOnly setting in VolumeMounts.
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageos#readOnly
+   */
+  readonly readOnly?: boolean;
+
+  /**
+   * secretRef specifies the secret to use for obtaining the StorageOS API
+   * credentials.  If not specified, default values will be attempted.
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageos#secretRef
+   */
+  readonly secretRef?: McpServerSpecDeploymentVolumesStorageosSecretRef;
+
+  /**
+   * volumeName is the human-readable name of the StorageOS volume.  Volume
+   * names are only unique within a namespace.
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageos#volumeName
+   */
+  readonly volumeName?: string;
+
+  /**
+   * volumeNamespace specifies the scope of the volume within StorageOS.  If no
+   * namespace is specified then the Pod's namespace will be used.  This allows the
+   * Kubernetes name scoping to be mirrored within StorageOS for tighter integration.
+   * Set VolumeName to any name to override the default behaviour.
+   * Set to "default" if you are not using namespaces within StorageOS.
+   * Namespaces that do not pre-exist within StorageOS will be created.
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageos#volumeNamespace
+   */
+  readonly volumeNamespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesStorageos' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesStorageos(obj: McpServerSpecDeploymentVolumesStorageos | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'readOnly': obj.readOnly,
+    'secretRef': toJson_McpServerSpecDeploymentVolumesStorageosSecretRef(obj.secretRef),
+    'volumeName': obj.volumeName,
+    'volumeNamespace': obj.volumeNamespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+ * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+ * are redirected to the csi.vsphere.vmware.com CSI driver.
+ *
+ * @schema McpServerSpecDeploymentVolumesVsphereVolume
+ */
+export interface McpServerSpecDeploymentVolumesVsphereVolume {
+  /**
+   * fsType is filesystem type to mount.
+   * Must be a filesystem type supported by the host operating system.
+   * Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
+   *
+   * @schema McpServerSpecDeploymentVolumesVsphereVolume#fsType
+   */
+  readonly fsType?: string;
+
+  /**
+   * storagePolicyID is the storage Policy Based Management (SPBM) profile ID associated with the StoragePolicyName.
+   *
+   * @schema McpServerSpecDeploymentVolumesVsphereVolume#storagePolicyID
+   */
+  readonly storagePolicyId?: string;
+
+  /**
+   * storagePolicyName is the storage Policy Based Management (SPBM) profile name.
+   *
+   * @schema McpServerSpecDeploymentVolumesVsphereVolume#storagePolicyName
+   */
+  readonly storagePolicyName?: string;
+
+  /**
+   * volumePath is the path that identifies vSphere volume vmdk
+   *
+   * @schema McpServerSpecDeploymentVolumesVsphereVolume#volumePath
+   */
+  readonly volumePath: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesVsphereVolume' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesVsphereVolume(obj: McpServerSpecDeploymentVolumesVsphereVolume | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fsType': obj.fsType,
+    'storagePolicyID': obj.storagePolicyId,
+    'storagePolicyName': obj.storagePolicyName,
+    'volumePath': obj.volumePath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: SecretRef is reference to the authentication secret for User, default is empty.
+ * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+ *
+ * @schema McpServerSpecDeploymentVolumesCephfsSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesCephfsSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesCephfsSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCephfsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCephfsSecretRef(obj: McpServerSpecDeploymentVolumesCephfsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is optional: points to a secret object containing parameters used to connect
+ * to OpenStack.
+ *
+ * @schema McpServerSpecDeploymentVolumesCinderSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesCinderSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesCinderSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCinderSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCinderSecretRef(obj: McpServerSpecDeploymentVolumesCinderSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema McpServerSpecDeploymentVolumesConfigMapItems
+ */
+export interface McpServerSpecDeploymentVolumesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesConfigMapItems(obj: McpServerSpecDeploymentVolumesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * nodePublishSecretRef is a reference to the secret object containing
+ * sensitive information to pass to the CSI driver to complete the CSI
+ * NodePublishVolume and NodeUnpublishVolume calls.
+ * This field is optional, and  may be empty if no secret is required. If the
+ * secret object contains more than one secret, all secret references are passed.
+ *
+ * @schema McpServerSpecDeploymentVolumesCsiNodePublishSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesCsiNodePublishSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesCsiNodePublishSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesCsiNodePublishSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesCsiNodePublishSecretRef(obj: McpServerSpecDeploymentVolumesCsiNodePublishSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema McpServerSpecDeploymentVolumesDownwardApiItems
+ */
+export interface McpServerSpecDeploymentVolumesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesDownwardApiItems(obj: McpServerSpecDeploymentVolumesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * sizeLimit is the total amount of local storage required for this EmptyDir volume.
+ * The size limit is also applicable for memory medium.
+ * The maximum usage on memory medium EmptyDir would be the minimum value between
+ * the SizeLimit specified here and the sum of memory limits of all containers in a pod.
+ * The default is nil which means that the limit is undefined.
+ * More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+ *
+ * @schema McpServerSpecDeploymentVolumesEmptyDirSizeLimit
+ */
+export class McpServerSpecDeploymentVolumesEmptyDirSizeLimit {
+  public static fromNumber(value: number): McpServerSpecDeploymentVolumesEmptyDirSizeLimit {
+    return new McpServerSpecDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  public static fromString(value: string): McpServerSpecDeploymentVolumesEmptyDirSizeLimit {
+    return new McpServerSpecDeploymentVolumesEmptyDirSizeLimit(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * Will be used to create a stand-alone PVC to provision the volume.
+ * The pod in which this EphemeralVolumeSource is embedded will be the
+ * owner of the PVC, i.e. the PVC will be deleted together with the
+ * pod.  The name of the PVC will be `<pod name>-<volume name>` where
+ * `<volume name>` is the name from the `PodSpec.Volumes` array
+ * entry. Pod validation will reject the pod if the concatenated name
+ * is not valid for a PVC (for example, too long).
+ *
+ * An existing PVC with that name that is not owned by the pod
+ * will *not* be used for the pod to avoid using an unrelated
+ * volume by mistake. Starting the pod is then blocked until
+ * the unrelated PVC is removed. If such a pre-created PVC is
+ * meant to be used by the pod, the PVC has to updated with an
+ * owner reference to the pod once the pod exists. Normally
+ * this should not be necessary, but it may be useful when
+ * manually reconstructing a broken cluster.
+ *
+ * This field is read-only and no changes will be made by Kubernetes
+ * to the PVC after it has been created.
+ *
+ * Required, must not be nil.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate {
+  /**
+   * May contain labels and annotations that will be copied into the PVC
+   * when creating it. No other fields are allowed and will be rejected during
+   * validation.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate#metadata
+   */
+  readonly metadata?: any;
+
+  /**
+   * The specification for the PersistentVolumeClaim. The entire content is
+   * copied unchanged into the PVC that gets created from this
+   * template. The same fields as in a PersistentVolumeClaim
+   * are also valid here.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate#spec
+   */
+  readonly spec: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is Optional: secretRef is reference to the secret object containing
+ * sensitive information to pass to the plugin scripts. This may be
+ * empty if no secret object is specified. If the secret object
+ * contains more than one secret, all secrets are passed to the plugin
+ * scripts.
+ *
+ * @schema McpServerSpecDeploymentVolumesFlexVolumeSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesFlexVolumeSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesFlexVolumeSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesFlexVolumeSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesFlexVolumeSecretRef(obj: McpServerSpecDeploymentVolumesFlexVolumeSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is the CHAP Secret for iSCSI target and initiator authentication
+ *
+ * @schema McpServerSpecDeploymentVolumesIscsiSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesIscsiSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesIscsiSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesIscsiSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesIscsiSecretRef(obj: McpServerSpecDeploymentVolumesIscsiSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projection that may be projected along with other supported volume types.
+ * Exactly one of these fields must be set.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSources
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSources {
+  /**
+   * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+   * of ClusterTrustBundle objects in an auto-updating file.
+   *
+   * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+   *
+   * ClusterTrustBundle objects can either be selected by name, or by the
+   * combination of signer name and a label selector.
+   *
+   * Kubelet performs aggressive normalization of the PEM contents written
+   * into the pod filesystem.  Esoteric PEM features such as inter-block
+   * comments and block headers are stripped.  Certificates are deduplicated.
+   * The ordering of certificates within the file is arbitrary, and Kubelet
+   * may change the order over time.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#clusterTrustBundle
+   */
+  readonly clusterTrustBundle?: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle;
+
+  /**
+   * configMap information about the configMap data to project
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#configMap
+   */
+  readonly configMap?: McpServerSpecDeploymentVolumesProjectedSourcesConfigMap;
+
+  /**
+   * downwardAPI information about the downwardAPI data to project
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#downwardAPI
+   */
+  readonly downwardApi?: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi;
+
+  /**
+   * Projects an auto-rotating credential bundle (private key and certificate
+   * chain) that the pod can use either as a TLS client or server.
+   *
+   * Kubelet generates a private key and uses it to send a
+   * PodCertificateRequest to the named signer.  Once the signer approves the
+   * request and issues a certificate chain, Kubelet writes the key and
+   * certificate chain to the pod filesystem.  The pod does not start until
+   * certificates have been issued for each podCertificate projected volume
+   * source in its spec.
+   *
+   * Kubelet will begin trying to rotate the certificate at the time indicated
+   * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+   * timestamp.
+   *
+   * Kubelet can write a single file, indicated by the credentialBundlePath
+   * field, or separate files, indicated by the keyPath and
+   * certificateChainPath fields.
+   *
+   * The credential bundle is a single file in PEM format.  The first PEM
+   * entry is the private key (in PKCS#8 format), and the remaining PEM
+   * entries are the certificate chain issued by the signer (typically,
+   * signers will return their certificate chain in leaf-to-root order).
+   *
+   * Prefer using the credential bundle format, since your application code
+   * can read it atomically.  If you use keyPath and certificateChainPath,
+   * your application must make two separate file reads. If these coincide
+   * with a certificate rotation, it is possible that the private key and leaf
+   * certificate you read may not correspond to each other.  Your application
+   * will need to check for this condition, and re-read until they are
+   * consistent.
+   *
+   * The named signer controls chooses the format of the certificate it
+   * issues; consult the signer implementation's documentation to learn how to
+   * use the certificates it issues.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#podCertificate
+   */
+  readonly podCertificate?: McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate;
+
+  /**
+   * secret information about the secret data to project
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#secret
+   */
+  readonly secret?: McpServerSpecDeploymentVolumesProjectedSourcesSecret;
+
+  /**
+   * serviceAccountToken is information about the serviceAccountToken data to project
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSources#serviceAccountToken
+   */
+  readonly serviceAccountToken?: McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSources(obj: McpServerSpecDeploymentVolumesProjectedSources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'clusterTrustBundle': toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle(obj.clusterTrustBundle),
+    'configMap': toJson_McpServerSpecDeploymentVolumesProjectedSourcesConfigMap(obj.configMap),
+    'downwardAPI': toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi(obj.downwardApi),
+    'podCertificate': toJson_McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate(obj.podCertificate),
+    'secret': toJson_McpServerSpecDeploymentVolumesProjectedSourcesSecret(obj.secret),
+    'serviceAccountToken': toJson_McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken(obj.serviceAccountToken),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef is name of the authentication secret for RBDUser. If provided
+ * overrides keyring.
+ * Default is nil.
+ * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+ *
+ * @default nil.
+ * @schema McpServerSpecDeploymentVolumesRbdSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesRbdSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesRbdSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesRbdSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesRbdSecretRef(obj: McpServerSpecDeploymentVolumesRbdSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef references to the secret for ScaleIO user and other
+ * sensitive information. If this is not provided, Login operation will fail.
+ *
+ * @schema McpServerSpecDeploymentVolumesScaleIoSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesScaleIoSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesScaleIoSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesScaleIoSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesScaleIoSecretRef(obj: McpServerSpecDeploymentVolumesScaleIoSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema McpServerSpecDeploymentVolumesSecretItems
+ */
+export interface McpServerSpecDeploymentVolumesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema McpServerSpecDeploymentVolumesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesSecretItems(obj: McpServerSpecDeploymentVolumesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secretRef specifies the secret to use for obtaining the StorageOS API
+ * credentials.  If not specified, default values will be attempted.
+ *
+ * @schema McpServerSpecDeploymentVolumesStorageosSecretRef
+ */
+export interface McpServerSpecDeploymentVolumesStorageosSecretRef {
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesStorageosSecretRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesStorageosSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesStorageosSecretRef(obj: McpServerSpecDeploymentVolumesStorageosSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef
+ */
+export interface McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef(obj: McpServerSpecDeploymentVolumesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef
+ */
+export interface McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef(obj: McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The specification for the PersistentVolumeClaim. The entire content is
+ * copied unchanged into the PVC that gets created from this
+ * template. The same fields as in a PersistentVolumeClaim
+ * are also valid here.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec {
+  /**
+   * accessModes contains the desired access modes the volume should have.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#accessModes
+   */
+  readonly accessModes?: string[];
+
+  /**
+   * dataSource field can be used to specify either:
+   * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+   * * An existing PVC (PersistentVolumeClaim)
+   * If the provisioner or an external controller can support the specified data source,
+   * it will create a new volume based on the contents of the specified data source.
+   * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+   * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+   * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSource
+   */
+  readonly dataSource?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource;
+
+  /**
+   * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+   * volume is desired. This may be any object from a non-empty API group (non
+   * core object) or a PersistentVolumeClaim object.
+   * When this field is specified, volume binding will only succeed if the type of
+   * the specified object matches some installed volume populator or dynamic
+   * provisioner.
+   * This field will replace the functionality of the dataSource field and as such
+   * if both fields are non-empty, they must have the same value. For backwards
+   * compatibility, when namespace isn't specified in dataSourceRef,
+   * both fields (dataSource and dataSourceRef) will be set to the same
+   * value automatically if one of them is empty and the other is non-empty.
+   * When namespace is specified in dataSourceRef,
+   * dataSource isn't set to the same value and must be empty.
+   * There are three important differences between dataSource and dataSourceRef:
+   * * While dataSource only allows two specific types of objects, dataSourceRef
+   * allows any non-core object, as well as PersistentVolumeClaim objects.
+   * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+   * preserves all values, and generates an error if a disallowed value is
+   * specified.
+   * * While dataSource only allows local objects, dataSourceRef allows objects
+   * in any namespaces.
+   * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+   * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#dataSourceRef
+   */
+  readonly dataSourceRef?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef;
+
+  /**
+   * resources represents the minimum resources the volume should have.
+   * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+   * that are lower than previous value but must still be higher than capacity recorded in the
+   * status field of the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#resources
+   */
+  readonly resources?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources;
+
+  /**
+   * selector is a label query over volumes to consider for binding.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#selector
+   */
+  readonly selector?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector;
+
+  /**
+   * storageClassName is the name of the StorageClass required by the claim.
+   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#storageClassName
+   */
+  readonly storageClassName?: string;
+
+  /**
+   * volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+   * If specified, the CSI driver will create or update the volume with the attributes defined
+   * in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+   * it can be changed after the claim is created. An empty string or nil value indicates that no
+   * VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+   * this field can be reset to its previous value (including nil) to cancel the modification.
+   * If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+   * set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+   * exists.
+   * More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeAttributesClassName
+   */
+  readonly volumeAttributesClassName?: string;
+
+  /**
+   * volumeMode defines what type of volume is required by the claim.
+   * Value of Filesystem is implied when not included in claim spec.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeMode
+   */
+  readonly volumeMode?: string;
+
+  /**
+   * volumeName is the binding reference to the PersistentVolume backing this claim.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec#volumeName
+   */
+  readonly volumeName?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessModes': obj.accessModes?.map(y => y),
+    'dataSource': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj.dataSource),
+    'dataSourceRef': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj.dataSourceRef),
+    'resources': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj.resources),
+    'selector': toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj.selector),
+    'storageClassName': obj.storageClassName,
+    'volumeAttributesClassName': obj.volumeAttributesClassName,
+    'volumeMode': obj.volumeMode,
+    'volumeName': obj.volumeName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+ * of ClusterTrustBundle objects in an auto-updating file.
+ *
+ * Alpha, gated by the ClusterTrustBundleProjection feature gate.
+ *
+ * ClusterTrustBundle objects can either be selected by name, or by the
+ * combination of signer name and a label selector.
+ *
+ * Kubelet performs aggressive normalization of the PEM contents written
+ * into the pod filesystem.  Esoteric PEM features such as inter-block
+ * comments and block headers are stripped.  Certificates are deduplicated.
+ * The ordering of certificates within the file is arbitrary, and Kubelet
+ * may change the order over time.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle {
+  /**
+   * Select all ClusterTrustBundles that match this label selector.  Only has
+   * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+   * interpreted as "match nothing".  If set but empty, interpreted as "match
+   * everything".
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#labelSelector
+   */
+  readonly labelSelector?: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector;
+
+  /**
+   * Select a single ClusterTrustBundle by object name.  Mutually-exclusive
+   * with signerName and labelSelector.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#name
+   */
+  readonly name?: string;
+
+  /**
+   * If true, don't block pod startup if the referenced ClusterTrustBundle(s)
+   * aren't available.  If using name, then the named ClusterTrustBundle is
+   * allowed not to exist.  If using signerName, then the combination of
+   * signerName and labelSelector is allowed to match zero
+   * ClusterTrustBundles.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#optional
+   */
+  readonly optional?: boolean;
+
+  /**
+   * Relative path from the volume root to write the bundle.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#path
+   */
+  readonly path: string;
+
+  /**
+   * Select all ClusterTrustBundles that match this signer name.
+   * Mutually-exclusive with name.  The contents of all selected
+   * ClusterTrustBundles will be unified and deduplicated.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle#signerName
+   */
+  readonly signerName?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle(obj: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundle | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'labelSelector': toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj.labelSelector),
+    'name': obj.name,
+    'optional': obj.optional,
+    'path': obj.path,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * configMap information about the configMap data to project
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMap
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesConfigMap {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * ConfigMap will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the ConfigMap,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMap#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMap#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional specify whether the ConfigMap or its keys must be defined
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMap#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesConfigMap(obj: McpServerSpecDeploymentVolumesProjectedSourcesConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * downwardAPI information about the downwardAPI data to project
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi {
+  /**
+   * Items is a list of DownwardAPIVolume file
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi(obj: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems(y)),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Projects an auto-rotating credential bundle (private key and certificate
+ * chain) that the pod can use either as a TLS client or server.
+ *
+ * Kubelet generates a private key and uses it to send a
+ * PodCertificateRequest to the named signer.  Once the signer approves the
+ * request and issues a certificate chain, Kubelet writes the key and
+ * certificate chain to the pod filesystem.  The pod does not start until
+ * certificates have been issued for each podCertificate projected volume
+ * source in its spec.
+ *
+ * Kubelet will begin trying to rotate the certificate at the time indicated
+ * by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+ * timestamp.
+ *
+ * Kubelet can write a single file, indicated by the credentialBundlePath
+ * field, or separate files, indicated by the keyPath and
+ * certificateChainPath fields.
+ *
+ * The credential bundle is a single file in PEM format.  The first PEM
+ * entry is the private key (in PKCS#8 format), and the remaining PEM
+ * entries are the certificate chain issued by the signer (typically,
+ * signers will return their certificate chain in leaf-to-root order).
+ *
+ * Prefer using the credential bundle format, since your application code
+ * can read it atomically.  If you use keyPath and certificateChainPath,
+ * your application must make two separate file reads. If these coincide
+ * with a certificate rotation, it is possible that the private key and leaf
+ * certificate you read may not correspond to each other.  Your application
+ * will need to check for this condition, and re-read until they are
+ * consistent.
+ *
+ * The named signer controls chooses the format of the certificate it
+ * issues; consult the signer implementation's documentation to learn how to
+ * use the certificates it issues.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate {
+  /**
+   * Write the certificate chain at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#certificateChainPath
+   */
+  readonly certificateChainPath?: string;
+
+  /**
+   * Write the credential bundle at this path in the projected volume.
+   *
+   * The credential bundle is a single file that contains multiple PEM blocks.
+   * The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+   * key.
+   *
+   * The remaining blocks are CERTIFICATE blocks, containing the issued
+   * certificate chain from the signer (leaf and any intermediates).
+   *
+   * Using credentialBundlePath lets your Pod's application code make a single
+   * atomic read that retrieves a consistent key and certificate chain.  If you
+   * project them to separate files, your application code will need to
+   * additionally check that the leaf certificate was issued to the key.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#credentialBundlePath
+   */
+  readonly credentialBundlePath?: string;
+
+  /**
+   * Write the key at this path in the projected volume.
+   *
+   * Most applications should use credentialBundlePath.  When using keyPath
+   * and certificateChainPath, your application needs to check that the key
+   * and leaf certificate are consistent, because it is possible to read the
+   * files mid-rotation.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#keyPath
+   */
+  readonly keyPath?: string;
+
+  /**
+   * The type of keypair Kubelet will generate for the pod.
+   *
+   * Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+   * "ECDSAP521", and "ED25519".
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#keyType
+   */
+  readonly keyType: string;
+
+  /**
+   * maxExpirationSeconds is the maximum lifetime permitted for the
+   * certificate.
+   *
+   * Kubelet copies this value verbatim into the PodCertificateRequests it
+   * generates for this projection.
+   *
+   * If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+   * will reject values shorter than 3600 (1 hour).  The maximum allowable
+   * value is 7862400 (91 days).
+   *
+   * The signer implementation is then free to issue a certificate with any
+   * lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+   * seconds (1 hour).  This constraint is enforced by kube-apiserver.
+   * `kubernetes.io` signers will never issue certificates with a lifetime
+   * longer than 24 hours.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#maxExpirationSeconds
+   */
+  readonly maxExpirationSeconds?: number;
+
+  /**
+   * Kubelet's generated CSRs will be addressed to this signer.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate#signerName
+   */
+  readonly signerName: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate(obj: McpServerSpecDeploymentVolumesProjectedSourcesPodCertificate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'certificateChainPath': obj.certificateChainPath,
+    'credentialBundlePath': obj.credentialBundlePath,
+    'keyPath': obj.keyPath,
+    'keyType': obj.keyType,
+    'maxExpirationSeconds': obj.maxExpirationSeconds,
+    'signerName': obj.signerName,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * secret information about the secret data to project
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecret
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesSecret {
+  /**
+   * items if unspecified, each key-value pair in the Data field of the referenced
+   * Secret will be projected into the volume as a file whose name is the
+   * key and content is the value. If specified, the listed keys will be
+   * projected into the specified paths, and unlisted keys will not be
+   * present. If a key is specified which is not present in the Secret,
+   * the volume setup will error unless it is marked optional. Paths must be
+   * relative and may not contain the '..' path or start with '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecret#items
+   */
+  readonly items?: McpServerSpecDeploymentVolumesProjectedSourcesSecretItems[];
+
+  /**
+   * Name of the referent.
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * optional field specify whether the Secret or its key must be defined
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecret#optional
+   */
+  readonly optional?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesSecret(obj: McpServerSpecDeploymentVolumesProjectedSourcesSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_McpServerSpecDeploymentVolumesProjectedSourcesSecretItems(y)),
+    'name': obj.name,
+    'optional': obj.optional,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountToken is information about the serviceAccountToken data to project
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken {
+  /**
+   * audience is the intended audience of the token. A recipient of a token
+   * must identify itself with an identifier specified in the audience of the
+   * token, and otherwise should reject the token. The audience defaults to the
+   * identifier of the apiserver.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * expirationSeconds is the requested duration of validity of the service
+   * account token. As the token approaches expiration, the kubelet volume
+   * plugin will proactively rotate the service account token. The kubelet will
+   * start trying to rotate the token if the token is older than 80 percent of
+   * its time to live or if the token is older than 24 hours.Defaults to 1 hour
+   * and must be at least 10 minutes.
+   *
+   * @default 1 hour
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken#expirationSeconds
+   */
+  readonly expirationSeconds?: number;
+
+  /**
+   * path is the path relative to the mount point of the file to project the
+   * token into.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken(obj: McpServerSpecDeploymentVolumesProjectedSourcesServiceAccountToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'expirationSeconds': obj.expirationSeconds,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor {
+    return new McpServerSpecDeploymentVolumesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * dataSource field can be used to specify either:
+ * * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+ * * An existing PVC (PersistentVolumeClaim)
+ * If the provisioner or an external controller can support the specified data source,
+ * it will create a new volume based on the contents of the specified data source.
+ * When the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,
+ * and dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.
+ * If the namespace is specified, then dataSourceRef will not be copied to dataSource.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * dataSourceRef specifies the object from which to populate the volume with data, if a non-empty
+ * volume is desired. This may be any object from a non-empty API group (non
+ * core object) or a PersistentVolumeClaim object.
+ * When this field is specified, volume binding will only succeed if the type of
+ * the specified object matches some installed volume populator or dynamic
+ * provisioner.
+ * This field will replace the functionality of the dataSource field and as such
+ * if both fields are non-empty, they must have the same value. For backwards
+ * compatibility, when namespace isn't specified in dataSourceRef,
+ * both fields (dataSource and dataSourceRef) will be set to the same
+ * value automatically if one of them is empty and the other is non-empty.
+ * When namespace is specified in dataSourceRef,
+ * dataSource isn't set to the same value and must be empty.
+ * There are three important differences between dataSource and dataSourceRef:
+ * * While dataSource only allows two specific types of objects, dataSourceRef
+ * allows any non-core object, as well as PersistentVolumeClaim objects.
+ * * While dataSource ignores disallowed values (dropping them), dataSourceRef
+ * preserves all values, and generates an error if a disallowed value is
+ * specified.
+ * * While dataSource only allows local objects, dataSourceRef allows objects
+ * in any namespaces.
+ * (Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.
+ * (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef {
+  /**
+   * APIGroup is the group for the resource being referenced.
+   * If APIGroup is not specified, the specified Kind must be in the core API group.
+   * For any other third-party types, APIGroup is required.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#apiGroup
+   */
+  readonly apiGroup?: string;
+
+  /**
+   * Kind is the type of resource being referenced
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#kind
+   */
+  readonly kind: string;
+
+  /**
+   * Name is the name of resource being referenced
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace is the namespace of resource being referenced
+   * Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+   * (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiGroup': obj.apiGroup,
+    'kind': obj.kind,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * resources represents the minimum resources the volume should have.
+ * If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+ * that are lower than previous value but must still be higher than capacity recorded in the
+ * status field of the claim.
+ * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources {
+  /**
+   * Limits describes the maximum amount of compute resources allowed.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#limits
+   */
+  readonly limits?: { [key: string]: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits };
+
+  /**
+   * Requests describes the minimum amount of compute resources required.
+   * If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+   * otherwise to an implementation-defined value. Requests cannot exceed Limits.
+   * More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources#requests
+   */
+  readonly requests?: { [key: string]: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests };
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResources | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'limits': ((obj.limits) === undefined) ? undefined : (Object.entries(obj.limits).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+    'requests': ((obj.requests) === undefined) ? undefined : (Object.entries(obj.requests).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1]?.value }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * selector is a label query over volumes to consider for binding.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchExpressions
+   */
+  readonly matchExpressions?: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select all ClusterTrustBundles that match this label selector.  Only has
+ * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+ * interpreted as "match nothing".  If set but empty, interpreted as "match
+ * everything".
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector(obj: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems(obj: McpServerSpecDeploymentVolumesProjectedSourcesConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * DownwardAPIVolumeFile represents information to create the file containing the pod field
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems {
+  /**
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems#fieldRef
+   */
+  readonly fieldRef?: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef;
+
+  /**
+   * Optional: mode bits used to set permissions on this file, must be an octal value
+   * between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems#path
+   */
+  readonly path: string;
+
+  /**
+   * Selects a resource of the container: only resources limits and requests
+   * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems#resourceFieldRef
+   */
+  readonly resourceFieldRef?: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems(obj: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fieldRef': toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj.fieldRef),
+    'mode': obj.mode,
+    'path': obj.path,
+    'resourceFieldRef': toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj.resourceFieldRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Maps a string key to a path within a volume.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecretItems
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesSecretItems {
+  /**
+   * key is the key to project.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * mode is Optional: mode bits used to set permissions on this file.
+   * Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+   * YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+   * If not specified, the volume defaultMode will be used.
+   * This might be in conflict with other options that affect the file
+   * mode, like fsGroup, and the result can be other mode bits set.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecretItems#mode
+   */
+  readonly mode?: number;
+
+  /**
+   * path is the relative path of the file to map the key to.
+   * May not be an absolute path.
+   * May not contain the path element '..'.
+   * May not start with the string '..'.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesSecretItems#path
+   */
+  readonly path: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesSecretItems(obj: McpServerSpecDeploymentVolumesProjectedSourcesSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'mode': obj.mode,
+    'path': obj.path,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits
+ */
+export class McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+  public static fromNumber(value: number): McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  public static fromString(value: string): McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits {
+    return new McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesLimits(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests
+ */
+export class McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+  public static fromNumber(value: number): McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  public static fromString(value: string): McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests {
+    return new McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecResourcesRequests(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions
+ */
+export interface McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions(obj: McpServerSpecDeploymentVolumesEphemeralVolumeClaimTemplateSpecSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions(obj: McpServerSpecDeploymentVolumesProjectedSourcesClusterTrustBundleLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef {
+  /**
+   * Version of the schema the FieldPath is written in terms of, defaults to "v1".
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Path of the field to select in the specified API version.
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef#fieldPath
+   */
+  readonly fieldPath: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef(obj: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'fieldPath': obj.fieldPath,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Selects a resource of the container: only resources limits and requests
+ * (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef
+ */
+export interface McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef {
+  /**
+   * Container name: required for volumes, optional for env vars
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#containerName
+   */
+  readonly containerName?: string;
+
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#divisor
+   */
+  readonly divisor?: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor;
+
+  /**
+   * Required: resource to select
+   *
+   * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef#resource
+   */
+  readonly resource: string;
+
+}
+
+/**
+ * Converts an object of type 'McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef(obj: McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'containerName': obj.containerName,
+    'divisor': obj.divisor?.value,
+    'resource': obj.resource,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specifies the output format of the exposed resources, defaults to "1"
+ *
+ * @schema McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor
+ */
+export class McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+  public static fromNumber(value: number): McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  public static fromString(value: string): McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor {
+    return new McpServerSpecDeploymentVolumesProjectedSourcesDownwardApiItemsResourceFieldRefDivisor(value);
+  }
+  private constructor(public readonly value: number | string) {
+  }
+}
 
 
 /**
@@ -664,6 +20622,8 @@ export interface ModelConfigProps {
   readonly metadata?: ApiObjectMetadata;
 
   /**
+   * ModelConfigSpec defines the desired state of ModelConfig.
+   *
    * @schema ModelConfig#spec
    */
   readonly spec?: ModelConfigSpec;
@@ -686,6 +20646,8 @@ export function toJson_ModelConfigProps(obj: ModelConfigProps | undefined): Reco
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * ModelConfigSpec defines the desired state of ModelConfig.
+ *
  * @schema ModelConfigSpec
  */
 export interface ModelConfigSpec {
@@ -711,7 +20673,7 @@ export interface ModelConfigSpec {
   readonly apiKeySecretKey?: string;
 
   /**
-   * The reference to the secret that contains the API key. Can either be a reference to the name of a secret in the same namespace as the referencing ModelConfig, or a reference to the name of a Secret in a different namespace in the form <namespace>/<name>
+   * The reference to the secret that contains the API key. Must be a reference to the name of a secret in the same namespace as the referencing ModelConfig
    *
    * @schema ModelConfigSpec#apiKeySecretRef
    */
@@ -731,6 +20693,13 @@ export interface ModelConfigSpec {
 
   /**
    * Gemini-specific configuration
+   *
+   * @schema ModelConfigSpec#gemini
+   */
+  readonly gemini?: any;
+
+  /**
+   * Gemini Vertex AI-specific configuration
    *
    * @schema ModelConfigSpec#geminiVertexAI
    */
@@ -786,6 +20755,7 @@ export function toJson_ModelConfigSpec(obj: ModelConfigSpec | undefined): Record
     'apiKeySecretRef': obj.apiKeySecretRef,
     'azureOpenAI': toJson_ModelConfigSpecAzureOpenAi(obj.azureOpenAi),
     'defaultHeaders': ((obj.defaultHeaders) === undefined) ? undefined : (Object.entries(obj.defaultHeaders).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'gemini': obj.gemini,
     'geminiVertexAI': toJson_ModelConfigSpecGeminiVertexAi(obj.geminiVertexAi),
     'model': obj.model,
     'modelInfo': toJson_ModelConfigSpecModelInfo(obj.modelInfo),
@@ -1014,7 +20984,7 @@ export function toJson_ModelConfigSpecAzureOpenAi(obj: ModelConfigSpecAzureOpenA
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Gemini-specific configuration
+ * Gemini Vertex AI-specific configuration
  *
  * @schema ModelConfigSpecGeminiVertexAi
  */
@@ -1317,6 +21287,8 @@ export enum ModelConfigSpecProvider {
   AZURE_OPEN_AI = "AzureOpenAI",
   /** Ollama */
   OLLAMA = "Ollama",
+  /** Gemini */
+  GEMINI = "Gemini",
   /** GeminiVertexAI */
   GEMINI_VERTEX_AI = "GeminiVertexAI",
   /** AnthropicVertexAI */
@@ -1325,42 +21297,42 @@ export enum ModelConfigSpecProvider {
 
 
 /**
- * Team is the Schema for the teams API.
+ * ModelConfig is the Schema for the modelconfigs API.
  *
- * @schema Team
+ * @schema ModelConfigV1Alpha2
  */
-export class Team extends ApiObject {
+export class ModelConfigV1Alpha2 extends ApiObject {
   /**
-   * Returns the apiVersion and kind for "Team"
+   * Returns the apiVersion and kind for "ModelConfigV1Alpha2"
    */
   public static readonly GVK: GroupVersionKind = {
-    apiVersion: 'kagent.dev/v1alpha1',
-    kind: 'Team',
+    apiVersion: 'kagent.dev/v1alpha2',
+    kind: 'ModelConfig',
   }
 
   /**
-   * Renders a Kubernetes manifest for "Team".
+   * Renders a Kubernetes manifest for "ModelConfigV1Alpha2".
    *
    * This can be used to inline resource manifests inside other objects (e.g. as templates).
    *
    * @param props initialization props
    */
-  public static manifest(props: TeamProps = {}): any {
+  public static manifest(props: ModelConfigV1Alpha2Props = {}): any {
     return {
-      ...Team.GVK,
-      ...toJson_TeamProps(props),
+      ...ModelConfigV1Alpha2.GVK,
+      ...toJson_ModelConfigV1Alpha2Props(props),
     };
   }
 
   /**
-   * Defines a "Team" API object
+   * Defines a "ModelConfigV1Alpha2" API object
    * @param scope the scope in which to define this object
    * @param id a scope-local name for the object
    * @param props initialization props
    */
-  public constructor(scope: Construct, id: string, props: TeamProps = {}) {
+  public constructor(scope: Construct, id: string, props: ModelConfigV1Alpha2Props = {}) {
     super(scope, id, {
-      ...Team.GVK,
+      ...ModelConfigV1Alpha2.GVK,
       ...props,
     });
   }
@@ -1372,41 +21344,41 @@ export class Team extends ApiObject {
     const resolved = super.toJson();
 
     return {
-      ...Team.GVK,
-      ...toJson_TeamProps(resolved),
+      ...ModelConfigV1Alpha2.GVK,
+      ...toJson_ModelConfigV1Alpha2Props(resolved),
     };
   }
 }
 
 /**
- * Team is the Schema for the teams API.
+ * ModelConfig is the Schema for the modelconfigs API.
  *
- * @schema Team
+ * @schema ModelConfigV1Alpha2
  */
-export interface TeamProps {
+export interface ModelConfigV1Alpha2Props {
   /**
-   * @schema Team#metadata
+   * @schema ModelConfigV1Alpha2#metadata
    */
   readonly metadata?: ApiObjectMetadata;
 
   /**
-   * TeamSpec defines the desired state of Team.
+   * ModelConfigSpec defines the desired state of ModelConfig.
    *
-   * @schema Team#spec
+   * @schema ModelConfigV1Alpha2#spec
    */
-  readonly spec?: TeamSpec;
+  readonly spec?: ModelConfigV1Alpha2Spec;
 
 }
 
 /**
- * Converts an object of type 'TeamProps' to JSON representation.
+ * Converts an object of type 'ModelConfigV1Alpha2Props' to JSON representation.
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamProps(obj: TeamProps | undefined): Record<string, any> | undefined {
+export function toJson_ModelConfigV1Alpha2Props(obj: ModelConfigV1Alpha2Props | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
     'metadata': obj.metadata,
-    'spec': toJson_TeamSpec(obj.spec),
+    'spec': toJson_ModelConfigV1Alpha2Spec(obj.spec),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1414,78 +21386,757 @@ export function toJson_TeamProps(obj: TeamProps | undefined): Record<string, any
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * TeamSpec defines the desired state of Team.
+ * ModelConfigSpec defines the desired state of ModelConfig.
  *
- * @schema TeamSpec
+ * @schema ModelConfigV1Alpha2Spec
  */
-export interface TeamSpec {
+export interface ModelConfigV1Alpha2Spec {
   /**
-   * @schema TeamSpec#description
+   * Anthropic-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#anthropic
+   */
+  readonly anthropic?: ModelConfigV1Alpha2SpecAnthropic;
+
+  /**
+   * Anthropic-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#anthropicVertexAI
+   */
+  readonly anthropicVertexAi?: ModelConfigV1Alpha2SpecAnthropicVertexAi;
+
+  /**
+   * The name of the secret that contains the API key. Must be a reference to the name of a secret in the same namespace as the referencing ModelConfig
+   *
+   * @schema ModelConfigV1Alpha2Spec#apiKeySecret
+   */
+  readonly apiKeySecret?: string;
+
+  /**
+   * The key in the secret that contains the API key
+   *
+   * @schema ModelConfigV1Alpha2Spec#apiKeySecretKey
+   */
+  readonly apiKeySecretKey?: string;
+
+  /**
+   * Azure OpenAI-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#azureOpenAI
+   */
+  readonly azureOpenAi?: ModelConfigV1Alpha2SpecAzureOpenAi;
+
+  /**
+   * @schema ModelConfigV1Alpha2Spec#defaultHeaders
+   */
+  readonly defaultHeaders?: { [key: string]: string };
+
+  /**
+   * Gemini-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#gemini
+   */
+  readonly gemini?: any;
+
+  /**
+   * Gemini Vertex AI-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#geminiVertexAI
+   */
+  readonly geminiVertexAi?: ModelConfigV1Alpha2SpecGeminiVertexAi;
+
+  /**
+   * @schema ModelConfigV1Alpha2Spec#model
+   */
+  readonly model: string;
+
+  /**
+   * Ollama-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#ollama
+   */
+  readonly ollama?: ModelConfigV1Alpha2SpecOllama;
+
+  /**
+   * OpenAI-specific configuration
+   *
+   * @schema ModelConfigV1Alpha2Spec#openAI
+   */
+  readonly openAi?: ModelConfigV1Alpha2SpecOpenAi;
+
+  /**
+   * The provider of the model
+   *
+   * @schema ModelConfigV1Alpha2Spec#provider
+   */
+  readonly provider: ModelConfigV1Alpha2SpecProvider;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2Spec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2Spec(obj: ModelConfigV1Alpha2Spec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'anthropic': toJson_ModelConfigV1Alpha2SpecAnthropic(obj.anthropic),
+    'anthropicVertexAI': toJson_ModelConfigV1Alpha2SpecAnthropicVertexAi(obj.anthropicVertexAi),
+    'apiKeySecret': obj.apiKeySecret,
+    'apiKeySecretKey': obj.apiKeySecretKey,
+    'azureOpenAI': toJson_ModelConfigV1Alpha2SpecAzureOpenAi(obj.azureOpenAi),
+    'defaultHeaders': ((obj.defaultHeaders) === undefined) ? undefined : (Object.entries(obj.defaultHeaders).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'gemini': obj.gemini,
+    'geminiVertexAI': toJson_ModelConfigV1Alpha2SpecGeminiVertexAi(obj.geminiVertexAi),
+    'model': obj.model,
+    'ollama': toJson_ModelConfigV1Alpha2SpecOllama(obj.ollama),
+    'openAI': toJson_ModelConfigV1Alpha2SpecOpenAi(obj.openAi),
+    'provider': obj.provider,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Anthropic-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecAnthropic
+ */
+export interface ModelConfigV1Alpha2SpecAnthropic {
+  /**
+   * Base URL for the Anthropic API (overrides default)
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropic#baseUrl
+   */
+  readonly baseUrl?: string;
+
+  /**
+   * Maximum tokens to generate
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropic#maxTokens
+   */
+  readonly maxTokens?: number;
+
+  /**
+   * Temperature for sampling
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropic#temperature
+   */
+  readonly temperature?: string;
+
+  /**
+   * Top-k sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropic#topK
+   */
+  readonly topK?: number;
+
+  /**
+   * Top-p sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropic#topP
+   */
+  readonly topP?: string;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecAnthropic' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecAnthropic(obj: ModelConfigV1Alpha2SpecAnthropic | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'baseUrl': obj.baseUrl,
+    'maxTokens': obj.maxTokens,
+    'temperature': obj.temperature,
+    'topK': obj.topK,
+    'topP': obj.topP,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Anthropic-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi
+ */
+export interface ModelConfigV1Alpha2SpecAnthropicVertexAi {
+  /**
+   * The project location
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#location
+   */
+  readonly location: string;
+
+  /**
+   * Maximum tokens to generate
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#maxTokens
+   */
+  readonly maxTokens?: number;
+
+  /**
+   * The project ID
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#projectID
+   */
+  readonly projectId: string;
+
+  /**
+   * Stop sequences
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#stopSequences
+   */
+  readonly stopSequences?: string[];
+
+  /**
+   * Temperature
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#temperature
+   */
+  readonly temperature?: string;
+
+  /**
+   * Top-k sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#topK
+   */
+  readonly topK?: string;
+
+  /**
+   * Top-p sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecAnthropicVertexAi#topP
+   */
+  readonly topP?: string;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecAnthropicVertexAi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecAnthropicVertexAi(obj: ModelConfigV1Alpha2SpecAnthropicVertexAi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'location': obj.location,
+    'maxTokens': obj.maxTokens,
+    'projectID': obj.projectId,
+    'stopSequences': obj.stopSequences?.map(y => y),
+    'temperature': obj.temperature,
+    'topK': obj.topK,
+    'topP': obj.topP,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Azure OpenAI-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecAzureOpenAi
+ */
+export interface ModelConfigV1Alpha2SpecAzureOpenAi {
+  /**
+   * API version for the Azure OpenAI API
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#apiVersion
+   */
+  readonly apiVersion: string;
+
+  /**
+   * Azure AD token for authentication
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#azureAdToken
+   */
+  readonly azureAdToken?: string;
+
+  /**
+   * Deployment name for the Azure OpenAI API
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#azureDeployment
+   */
+  readonly azureDeployment?: string;
+
+  /**
+   * Endpoint for the Azure OpenAI API
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#azureEndpoint
+   */
+  readonly azureEndpoint: string;
+
+  /**
+   * Maximum tokens to generate
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#maxTokens
+   */
+  readonly maxTokens?: number;
+
+  /**
+   * Temperature for sampling
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#temperature
+   */
+  readonly temperature?: string;
+
+  /**
+   * Top-p sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecAzureOpenAi#topP
+   */
+  readonly topP?: string;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecAzureOpenAi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecAzureOpenAi(obj: ModelConfigV1Alpha2SpecAzureOpenAi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'azureAdToken': obj.azureAdToken,
+    'azureDeployment': obj.azureDeployment,
+    'azureEndpoint': obj.azureEndpoint,
+    'maxTokens': obj.maxTokens,
+    'temperature': obj.temperature,
+    'topP': obj.topP,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Gemini Vertex AI-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecGeminiVertexAi
+ */
+export interface ModelConfigV1Alpha2SpecGeminiVertexAi {
+  /**
+   * Candidate count
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#candidateCount
+   */
+  readonly candidateCount?: number;
+
+  /**
+   * The project location
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#location
+   */
+  readonly location: string;
+
+  /**
+   * Maximum output tokens
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#maxOutputTokens
+   */
+  readonly maxOutputTokens?: number;
+
+  /**
+   * The project ID
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#projectID
+   */
+  readonly projectId: string;
+
+  /**
+   * Response mime type
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#responseMimeType
+   */
+  readonly responseMimeType?: string;
+
+  /**
+   * Stop sequences
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#stopSequences
+   */
+  readonly stopSequences?: string[];
+
+  /**
+   * Temperature
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#temperature
+   */
+  readonly temperature?: string;
+
+  /**
+   * Top-k sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#topK
+   */
+  readonly topK?: string;
+
+  /**
+   * Top-p sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecGeminiVertexAi#topP
+   */
+  readonly topP?: string;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecGeminiVertexAi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecGeminiVertexAi(obj: ModelConfigV1Alpha2SpecGeminiVertexAi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'candidateCount': obj.candidateCount,
+    'location': obj.location,
+    'maxOutputTokens': obj.maxOutputTokens,
+    'projectID': obj.projectId,
+    'responseMimeType': obj.responseMimeType,
+    'stopSequences': obj.stopSequences?.map(y => y),
+    'temperature': obj.temperature,
+    'topK': obj.topK,
+    'topP': obj.topP,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Ollama-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecOllama
+ */
+export interface ModelConfigV1Alpha2SpecOllama {
+  /**
+   * Host for the Ollama API
+   *
+   * @schema ModelConfigV1Alpha2SpecOllama#host
+   */
+  readonly host?: string;
+
+  /**
+   * Options for the Ollama API
+   *
+   * @schema ModelConfigV1Alpha2SpecOllama#options
+   */
+  readonly options?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecOllama' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecOllama(obj: ModelConfigV1Alpha2SpecOllama | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'host': obj.host,
+    'options': ((obj.options) === undefined) ? undefined : (Object.entries(obj.options).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * OpenAI-specific configuration
+ *
+ * @schema ModelConfigV1Alpha2SpecOpenAi
+ */
+export interface ModelConfigV1Alpha2SpecOpenAi {
+  /**
+   * Base URL for the OpenAI API (overrides default)
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#baseUrl
+   */
+  readonly baseUrl?: string;
+
+  /**
+   * Frequency penalty
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#frequencyPenalty
+   */
+  readonly frequencyPenalty?: string;
+
+  /**
+   * Maximum tokens to generate
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#maxTokens
+   */
+  readonly maxTokens?: number;
+
+  /**
+   * N value
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#n
+   */
+  readonly n?: number;
+
+  /**
+   * Organization ID for the OpenAI API
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#organization
+   */
+  readonly organization?: string;
+
+  /**
+   * Presence penalty
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#presencePenalty
+   */
+  readonly presencePenalty?: string;
+
+  /**
+   * Reasoning effort
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#reasoningEffort
+   */
+  readonly reasoningEffort?: ModelConfigV1Alpha2SpecOpenAiReasoningEffort;
+
+  /**
+   * Seed value
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#seed
+   */
+  readonly seed?: number;
+
+  /**
+   * Temperature for sampling
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#temperature
+   */
+  readonly temperature?: string;
+
+  /**
+   * Timeout
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#timeout
+   */
+  readonly timeout?: number;
+
+  /**
+   * Top-p sampling parameter
+   *
+   * @schema ModelConfigV1Alpha2SpecOpenAi#topP
+   */
+  readonly topP?: string;
+
+}
+
+/**
+ * Converts an object of type 'ModelConfigV1Alpha2SpecOpenAi' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ModelConfigV1Alpha2SpecOpenAi(obj: ModelConfigV1Alpha2SpecOpenAi | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'baseUrl': obj.baseUrl,
+    'frequencyPenalty': obj.frequencyPenalty,
+    'maxTokens': obj.maxTokens,
+    'n': obj.n,
+    'organization': obj.organization,
+    'presencePenalty': obj.presencePenalty,
+    'reasoningEffort': obj.reasoningEffort,
+    'seed': obj.seed,
+    'temperature': obj.temperature,
+    'timeout': obj.timeout,
+    'topP': obj.topP,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The provider of the model
+ *
+ * @schema ModelConfigV1Alpha2SpecProvider
+ */
+export enum ModelConfigV1Alpha2SpecProvider {
+  /** Anthropic */
+  ANTHROPIC = "Anthropic",
+  /** OpenAI */
+  OPEN_AI = "OpenAI",
+  /** AzureOpenAI */
+  AZURE_OPEN_AI = "AzureOpenAI",
+  /** Ollama */
+  OLLAMA = "Ollama",
+  /** Gemini */
+  GEMINI = "Gemini",
+  /** GeminiVertexAI */
+  GEMINI_VERTEX_AI = "GeminiVertexAI",
+  /** AnthropicVertexAI */
+  ANTHROPIC_VERTEX_AI = "AnthropicVertexAI",
+}
+
+/**
+ * Reasoning effort
+ *
+ * @schema ModelConfigV1Alpha2SpecOpenAiReasoningEffort
+ */
+export enum ModelConfigV1Alpha2SpecOpenAiReasoningEffort {
+  /** minimal */
+  MINIMAL = "minimal",
+  /** low */
+  LOW = "low",
+  /** medium */
+  MEDIUM = "medium",
+  /** high */
+  HIGH = "high",
+}
+
+
+/**
+ * RemoteMCPServer is the Schema for the RemoteMCPServers API.
+ *
+ * @schema RemoteMCPServer
+ */
+export class RemoteMcpServer extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "RemoteMCPServer"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'kagent.dev/v1alpha2',
+    kind: 'RemoteMCPServer',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "RemoteMCPServer".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: RemoteMcpServerProps = {}): any {
+    return {
+      ...RemoteMcpServer.GVK,
+      ...toJson_RemoteMcpServerProps(props),
+    };
+  }
+
+  /**
+   * Defines a "RemoteMCPServer" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: RemoteMcpServerProps = {}) {
+    super(scope, id, {
+      ...RemoteMcpServer.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...RemoteMcpServer.GVK,
+      ...toJson_RemoteMcpServerProps(resolved),
+    };
+  }
+}
+
+/**
+ * RemoteMCPServer is the Schema for the RemoteMCPServers API.
+ *
+ * @schema RemoteMCPServer
+ */
+export interface RemoteMcpServerProps {
+  /**
+   * @schema RemoteMCPServer#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * RemoteMCPServerSpec defines the desired state of RemoteMCPServer.
+   *
+   * @schema RemoteMCPServer#spec
+   */
+  readonly spec?: RemoteMcpServerSpec;
+
+}
+
+/**
+ * Converts an object of type 'RemoteMcpServerProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_RemoteMcpServerProps(obj: RemoteMcpServerProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_RemoteMcpServerSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * RemoteMCPServerSpec defines the desired state of RemoteMCPServer.
+ *
+ * @schema RemoteMcpServerSpec
+ */
+export interface RemoteMcpServerSpec {
+  /**
+   * @schema RemoteMcpServerSpec#description
    */
   readonly description: string;
 
   /**
-   * @schema TeamSpec#magenticOneTeamConfig
+   * @schema RemoteMcpServerSpec#headersFrom
    */
-  readonly magenticOneTeamConfig?: TeamSpecMagenticOneTeamConfig;
+  readonly headersFrom?: RemoteMcpServerSpecHeadersFrom[];
 
   /**
-   * @schema TeamSpec#maxTurns
+   * @schema RemoteMcpServerSpec#protocol
    */
-  readonly maxTurns: number;
+  readonly protocol?: RemoteMcpServerSpecProtocol;
 
   /**
-   * Can either be a reference to the name of a ModelConfig in the same namespace as the referencing Team, or a reference to the name of a ModelConfig in a different namespace in the form <namespace>/<name>
-   *
-   * @schema TeamSpec#modelConfig
+   * @schema RemoteMcpServerSpec#sseReadTimeout
    */
-  readonly modelConfig: string;
+  readonly sseReadTimeout?: string;
 
   /**
-   * Each Participant can either be a reference to the name of an Agent in the same namespace as the referencing Team, or a reference to the name of an Agent in a different namespace in the form <namespace>/<name>
-   *
-   * @schema TeamSpec#participants
+   * @schema RemoteMcpServerSpec#terminateOnClose
    */
-  readonly participants: string[];
+  readonly terminateOnClose?: boolean;
 
   /**
-   * @schema TeamSpec#roundRobinTeamConfig
+   * @schema RemoteMcpServerSpec#timeout
    */
-  readonly roundRobinTeamConfig?: any;
+  readonly timeout?: string;
 
   /**
-   * @schema TeamSpec#selectorTeamConfig
+   * @schema RemoteMcpServerSpec#url
    */
-  readonly selectorTeamConfig?: TeamSpecSelectorTeamConfig;
-
-  /**
-   * @schema TeamSpec#swarmTeamConfig
-   */
-  readonly swarmTeamConfig?: any;
-
-  /**
-   * @schema TeamSpec#terminationCondition
-   */
-  readonly terminationCondition: TeamSpecTerminationCondition;
+  readonly url: string;
 
 }
 
 /**
- * Converts an object of type 'TeamSpec' to JSON representation.
+ * Converts an object of type 'RemoteMcpServerSpec' to JSON representation.
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpec(obj: TeamSpec | undefined): Record<string, any> | undefined {
+export function toJson_RemoteMcpServerSpec(obj: RemoteMcpServerSpec | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
     'description': obj.description,
-    'magenticOneTeamConfig': toJson_TeamSpecMagenticOneTeamConfig(obj.magenticOneTeamConfig),
-    'maxTurns': obj.maxTurns,
-    'modelConfig': obj.modelConfig,
-    'participants': obj.participants?.map(y => y),
-    'roundRobinTeamConfig': obj.roundRobinTeamConfig,
-    'selectorTeamConfig': toJson_TeamSpecSelectorTeamConfig(obj.selectorTeamConfig),
-    'swarmTeamConfig': obj.swarmTeamConfig,
-    'terminationCondition': toJson_TeamSpecTerminationCondition(obj.terminationCondition),
+    'headersFrom': obj.headersFrom?.map(y => toJson_RemoteMcpServerSpecHeadersFrom(y)),
+    'protocol': obj.protocol,
+    'sseReadTimeout': obj.sseReadTimeout,
+    'terminateOnClose': obj.terminateOnClose,
+    'timeout': obj.timeout,
+    'url': obj.url,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1493,164 +22144,40 @@ export function toJson_TeamSpec(obj: TeamSpec | undefined): Record<string, any> 
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * @schema TeamSpecMagenticOneTeamConfig
- */
-export interface TeamSpecMagenticOneTeamConfig {
-  /**
-   * @schema TeamSpecMagenticOneTeamConfig#finalAnswerPrompt
-   */
-  readonly finalAnswerPrompt: string;
-
-  /**
-   * @schema TeamSpecMagenticOneTeamConfig#maxStalls
-   */
-  readonly maxStalls: number;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecMagenticOneTeamConfig' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecMagenticOneTeamConfig(obj: TeamSpecMagenticOneTeamConfig | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'finalAnswerPrompt': obj.finalAnswerPrompt,
-    'maxStalls': obj.maxStalls,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecSelectorTeamConfig
- */
-export interface TeamSpecSelectorTeamConfig {
-  /**
-   * @schema TeamSpecSelectorTeamConfig#selectorPrompt
-   */
-  readonly selectorPrompt: string;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecSelectorTeamConfig' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecSelectorTeamConfig(obj: TeamSpecSelectorTeamConfig | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'selectorPrompt': obj.selectorPrompt,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationCondition
- */
-export interface TeamSpecTerminationCondition {
-  /**
-   * @schema TeamSpecTerminationCondition#finalTextMessageTermination
-   */
-  readonly finalTextMessageTermination?: TeamSpecTerminationConditionFinalTextMessageTermination;
-
-  /**
-   * ONEOF: maxMessageTermination, textMentionTermination, orTermination
-   *
-   * @schema TeamSpecTerminationCondition#maxMessageTermination
-   */
-  readonly maxMessageTermination?: TeamSpecTerminationConditionMaxMessageTermination;
-
-  /**
-   * @schema TeamSpecTerminationCondition#orTermination
-   */
-  readonly orTermination?: TeamSpecTerminationConditionOrTermination;
-
-  /**
-   * @schema TeamSpecTerminationCondition#stopMessageTermination
-   */
-  readonly stopMessageTermination?: any;
-
-  /**
-   * @schema TeamSpecTerminationCondition#textMentionTermination
-   */
-  readonly textMentionTermination?: TeamSpecTerminationConditionTextMentionTermination;
-
-  /**
-   * @schema TeamSpecTerminationCondition#textMessageTermination
-   */
-  readonly textMessageTermination?: TeamSpecTerminationConditionTextMessageTermination;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationCondition' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationCondition(obj: TeamSpecTerminationCondition | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'finalTextMessageTermination': toJson_TeamSpecTerminationConditionFinalTextMessageTermination(obj.finalTextMessageTermination),
-    'maxMessageTermination': toJson_TeamSpecTerminationConditionMaxMessageTermination(obj.maxMessageTermination),
-    'orTermination': toJson_TeamSpecTerminationConditionOrTermination(obj.orTermination),
-    'stopMessageTermination': obj.stopMessageTermination,
-    'textMentionTermination': toJson_TeamSpecTerminationConditionTextMentionTermination(obj.textMentionTermination),
-    'textMessageTermination': toJson_TeamSpecTerminationConditionTextMessageTermination(obj.textMessageTermination),
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationConditionFinalTextMessageTermination
- */
-export interface TeamSpecTerminationConditionFinalTextMessageTermination {
-  /**
-   * @schema TeamSpecTerminationConditionFinalTextMessageTermination#source
-   */
-  readonly source: string;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionFinalTextMessageTermination' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionFinalTextMessageTermination(obj: TeamSpecTerminationConditionFinalTextMessageTermination | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'source': obj.source,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * ONEOF: maxMessageTermination, textMentionTermination, orTermination
+ * ValueRef represents a configuration value
  *
- * @schema TeamSpecTerminationConditionMaxMessageTermination
+ * @schema RemoteMcpServerSpecHeadersFrom
  */
-export interface TeamSpecTerminationConditionMaxMessageTermination {
+export interface RemoteMcpServerSpecHeadersFrom {
   /**
-   * @schema TeamSpecTerminationConditionMaxMessageTermination#maxMessages
+   * @schema RemoteMcpServerSpecHeadersFrom#name
    */
-  readonly maxMessages: number;
+  readonly name: string;
+
+  /**
+   * @schema RemoteMcpServerSpecHeadersFrom#value
+   */
+  readonly value?: string;
+
+  /**
+   * ValueSource defines a source for configuration values from a Secret or ConfigMap
+   *
+   * @schema RemoteMcpServerSpecHeadersFrom#valueFrom
+   */
+  readonly valueFrom?: RemoteMcpServerSpecHeadersFromValueFrom;
 
 }
 
 /**
- * Converts an object of type 'TeamSpecTerminationConditionMaxMessageTermination' to JSON representation.
+ * Converts an object of type 'RemoteMcpServerSpecHeadersFrom' to JSON representation.
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionMaxMessageTermination(obj: TeamSpecTerminationConditionMaxMessageTermination | undefined): Record<string, any> | undefined {
+export function toJson_RemoteMcpServerSpecHeadersFrom(obj: RemoteMcpServerSpecHeadersFrom | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
-    'maxMessages': obj.maxMessages,
+    'name': obj.name,
+    'value': obj.value,
+    'valueFrom': toJson_RemoteMcpServerSpecHeadersFromValueFrom(obj.valueFrom),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1658,24 +22185,52 @@ export function toJson_TeamSpecTerminationConditionMaxMessageTermination(obj: Te
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * @schema TeamSpecTerminationConditionOrTermination
+ * @schema RemoteMcpServerSpecProtocol
  */
-export interface TeamSpecTerminationConditionOrTermination {
+export enum RemoteMcpServerSpecProtocol {
+  /** SSE */
+  SSE = "SSE",
+  /** STREAMABLE_HTTP */
+  STREAMABLE_UNDERSCORE_HTTP = "STREAMABLE_HTTP",
+}
+
+/**
+ * ValueSource defines a source for configuration values from a Secret or ConfigMap
+ *
+ * @schema RemoteMcpServerSpecHeadersFromValueFrom
+ */
+export interface RemoteMcpServerSpecHeadersFromValueFrom {
   /**
-   * @schema TeamSpecTerminationConditionOrTermination#conditions
+   * The key of the ConfigMap or Secret.
+   *
+   * @schema RemoteMcpServerSpecHeadersFromValueFrom#key
    */
-  readonly conditions: TeamSpecTerminationConditionOrTerminationConditions[];
+  readonly key: string;
+
+  /**
+   * The name of the ConfigMap or Secret.
+   *
+   * @schema RemoteMcpServerSpecHeadersFromValueFrom#name
+   */
+  readonly name: string;
+
+  /**
+   * @schema RemoteMcpServerSpecHeadersFromValueFrom#type
+   */
+  readonly type: RemoteMcpServerSpecHeadersFromValueFromType;
 
 }
 
 /**
- * Converts an object of type 'TeamSpecTerminationConditionOrTermination' to JSON representation.
+ * Converts an object of type 'RemoteMcpServerSpecHeadersFromValueFrom' to JSON representation.
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionOrTermination(obj: TeamSpecTerminationConditionOrTermination | undefined): Record<string, any> | undefined {
+export function toJson_RemoteMcpServerSpecHeadersFromValueFrom(obj: RemoteMcpServerSpecHeadersFromValueFrom | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
-    'conditions': obj.conditions?.map(y => toJson_TeamSpecTerminationConditionOrTerminationConditions(y)),
+    'key': obj.key,
+    'name': obj.name,
+    'type': obj.type,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1683,135 +22238,14 @@ export function toJson_TeamSpecTerminationConditionOrTermination(obj: TeamSpecTe
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * @schema TeamSpecTerminationConditionTextMentionTermination
+ * @schema RemoteMcpServerSpecHeadersFromValueFromType
  */
-export interface TeamSpecTerminationConditionTextMentionTermination {
-  /**
-   * @schema TeamSpecTerminationConditionTextMentionTermination#text
-   */
-  readonly text: string;
-
+export enum RemoteMcpServerSpecHeadersFromValueFromType {
+  /** ConfigMap */
+  CONFIG_MAP = "ConfigMap",
+  /** Secret */
+  SECRET = "Secret",
 }
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionTextMentionTermination' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionTextMentionTermination(obj: TeamSpecTerminationConditionTextMentionTermination | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'text': obj.text,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationConditionTextMessageTermination
- */
-export interface TeamSpecTerminationConditionTextMessageTermination {
-  /**
-   * @schema TeamSpecTerminationConditionTextMessageTermination#source
-   */
-  readonly source: string;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionTextMessageTermination' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionTextMessageTermination(obj: TeamSpecTerminationConditionTextMessageTermination | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'source': obj.source,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationConditionOrTerminationConditions
- */
-export interface TeamSpecTerminationConditionOrTerminationConditions {
-  /**
-   * @schema TeamSpecTerminationConditionOrTerminationConditions#maxMessageTermination
-   */
-  readonly maxMessageTermination?: TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination;
-
-  /**
-   * @schema TeamSpecTerminationConditionOrTerminationConditions#textMentionTermination
-   */
-  readonly textMentionTermination?: TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionOrTerminationConditions' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionOrTerminationConditions(obj: TeamSpecTerminationConditionOrTerminationConditions | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'maxMessageTermination': toJson_TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination(obj.maxMessageTermination),
-    'textMentionTermination': toJson_TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination(obj.textMentionTermination),
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination
- */
-export interface TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination {
-  /**
-   * @schema TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination#maxMessages
-   */
-  readonly maxMessages: number;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination(obj: TeamSpecTerminationConditionOrTerminationConditionsMaxMessageTermination | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'maxMessages': obj.maxMessages,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-
-/**
- * @schema TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination
- */
-export interface TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination {
-  /**
-   * @schema TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination#text
-   */
-  readonly text: string;
-
-}
-
-/**
- * Converts an object of type 'TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination' to JSON representation.
- */
-/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
-export function toJson_TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination(obj: TeamSpecTerminationConditionOrTerminationConditionsTextMentionTermination | undefined): Record<string, any> | undefined {
-  if (obj === undefined) { return undefined; }
-  const result = {
-    'text': obj.text,
-  };
-  // filter undefined values
-  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
-}
-/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 
 /**
@@ -1910,6 +22344,8 @@ export function toJson_ToolServerProps(obj: ToolServerProps | undefined): Record
  */
 export interface ToolServerSpec {
   /**
+   * Only one of stdio, sse, or streamableHttp can be specified.
+   *
    * @schema ToolServerSpec#config
    */
   readonly config: ToolServerSpecConfig;
@@ -1937,6 +22373,8 @@ export function toJson_ToolServerSpec(obj: ToolServerSpec | undefined): Record<s
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * Only one of stdio, sse, or streamableHttp can be specified.
+ *
  * @schema ToolServerSpecConfig
  */
 export interface ToolServerSpecConfig {
@@ -1955,6 +22393,11 @@ export interface ToolServerSpecConfig {
    */
   readonly streamableHttp?: ToolServerSpecConfigStreamableHttp;
 
+  /**
+   * @schema ToolServerSpecConfig#type
+   */
+  readonly type?: string;
+
 }
 
 /**
@@ -1967,6 +22410,7 @@ export function toJson_ToolServerSpecConfig(obj: ToolServerSpecConfig | undefine
     'sse': toJson_ToolServerSpecConfigSse(obj.sse),
     'stdio': toJson_ToolServerSpecConfigStdio(obj.stdio),
     'streamableHttp': toJson_ToolServerSpecConfigStreamableHttp(obj.streamableHttp),
+    'type': obj.type,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
