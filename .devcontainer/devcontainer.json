@@ -19,8 +19,9 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	// Home-manager initialization is now handled automatically by the container entrypoint
-	// See Dockerfile for idempotent setup with conflict resolution
+	// Codespaces overrides the entrypoint, so we need to run initialization manually
+	// This calls the same script that would run via entrypoint in normal Docker environments
+	"postCreateCommand": "bash /home/code/entrypoint.sh echo 'Initialization complete'",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
