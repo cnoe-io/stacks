@@ -17,7 +17,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash -c 'echo \"🚀 Initializing home-manager configuration...\" && if [ ! -f ~/.home-manager-initialized ]; then rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && nix --extra-experimental-features \"nix-command flakes\" run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure && touch ~/.home-manager-initialized && echo \"✅ Home-manager initialized!\"; else echo \"✅ Home-manager already initialized.\"; fi'"
+	"postCreateCommand": "bash -c 'echo \"🚀 Initializing home-manager configuration...\" && if [ ! -f ~/.home-manager-initialized ]; then rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || . ~/.nix-profile/etc/profile.d/nix.sh 2>/dev/null && export NIX_CONFIG=\"experimental-features = nix-command flakes\" && nix run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure && touch ~/.home-manager-initialized && echo \"✅ Home-manager initialized!\"; else echo \"✅ Home-manager already initialized.\"; fi'"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
