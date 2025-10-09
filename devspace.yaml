@@ -1,0 +1,283 @@
+version: v2beta1
+name: backstage
+
+# This is a list of `pipelines` that DevSpace can execute (you can define your own)
+pipelines:
+  dev: |-
+    # Deploy the application and then start dev
+    run_default_pipeline dev
+
+    # Open VSCode as soon as we are done
+    # code --folder-uri vscode-remote://ssh-remote+backstage.devspace/workspace
+
+# This is a list of `images` that DevSpace can build for this project
+# We recommend to skip image building during development (devspace dev) as much as possible
+images:
+  backstage:
+    image: gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe
+    dockerfile: ./Dockerfile
+    buildArgs:
+      NODE_ENV: production
+    docker:
+      useBuildKit: true
+
+# Deployments are managed by CDK8s - DevSpace only attaches to existing deployment
+# This is a list of `dev` containers that are based on the containers created by your deployments
+dev:
+  app:
+    # Attach to the production Backstage pod and swap only the image
+    namespace: backstage
+    imageSelector: ghcr.io/pittampalliorg/backstage-app:v25
+    container: backstage
+    devImage: docker.io/vpittamp23/ubuntu-nix-backstage:v11
+
+    # Override the command to keep container running
+    command: ['sleep', 'infinity']
+
+    # Environment variables to optimize Nix builds
+    env:
+      - name: NIX_BUILD_CORES
+        value: '16' # Use up to 16 cores for parallel builds
+      - name: NIX_MAX_JOBS
+        value: '8' # Run up to 8 build jobs in parallel
+      - name: NODE_OPTIONS
+        value: '--max-old-space-size=16384' # 16GB heap for Node.js
+      - name: YARN_CACHE_FOLDER
+        value: '/home/code/.cache/yarn' # Persistent yarn cache
+      - name: npm_config_cache
+        value: '/home/code/.cache/npm' # Persistent npm cache
+      - name: NODE_ENV
+        value: development
+      - name: CHOKIDAR_USEPOLLING
+        value: '1'
+      - name: BROWSER
+        value: none
+      - name: APP_CONFIG_app_baseUrl
+        value: http://localhost:3000
+      - name: APP_CONFIG_backend_baseUrl
+        value: http://localhost:7007
+      - name: APP_CONFIG_backend_cors_origin
+        value: http://localhost:3000
+      - name: APP_CONFIG_app_signIn_provider
+        value: keycloak-oidc
+
+    # Resource overrides for development (adjusted for available cluster resources)
+    resources:
+      limits:
+        cpu: '4' # Allow up to 4 CPU cores for builds
+        memory: '16Gi' # 16GB RAM for Nix builds and caching
+        ephemeral-storage: '100Gi' # Plenty of disk space for Nix store
+      requests:
+        cpu: '500m' # Request 0.5 CPU cores minimum
+        memory: '4Gi' # Request 4GB RAM minimum
+        ephemeral-storage: '20Gi' # Request 20GB disk space
+
+    # Enable sync with the new v11 image that has proper permissions
+    sync:
+      - path: ./:/workspace
+        excludePaths:
+          - node_modules/
+          - '**/node_modules/'
+          - .git/
+          - dist/
+          - .build-version
+          - .devbox/
+        printLogs: true
+        waitInitialSync: true
+    #   excludePaths:
+    #   - node_modules/
+    #   printLogs: true
+    #   waitInitialSync: true
+    # - path: ~/.codex:/home/node/.codex
+    # # Map tmux configuration from host into the container
+    # - path: ~/.tmux.conf:/home/node/.tmux.conf
+    #   printLogs: false
+    # - path: ~/.tmux:/home/node/.tmux
+    #   printLogs: false
+    # - path: ~/.config/tmux:/home/node/.config/tmux
+    #   printLogs: false
+    # # Also map for root, since attach often runs as root
+    # - path: ~/.tmux.conf:/root/.tmux.conf
+    #   printLogs: false
+    # - path: ~/.tmux:/root/.tmux
+    #   printLogs: false
+    # - path: ~/.config/tmux:/root/.config/tmux
+    #   printLogs: false
+    # # Sync Claude Code credentials
+    #   - path: ~/.claude:/home/node/.claude
+    #  excludePaths:
+    #  - "*.log"
+    #  - "*.tmp"
+    #  - shell-snapshots/
+    #  - todos/
+    #  printLogs: true
+
+    # Open a terminal and use the following command to start it
+    # terminal:
+    #   command: ./devspace_start.sh
+
+    # yarn install --ignore-engines --network-timeout 600000 || echo "Yarn install failed, continuing..."
+    # Persistent volumes are now managed by CDK8s deployment
+    # Commenting out to avoid duplicate mounts since the deployment already has them
+    # persistPaths:
+    #   - path: /nix
+    #     volumePath: backstage-dev-nix-store
+    #     readOnly: false
+    #   - path: /home/code/.cache
+    #     volumePath: backstage-dev-home-cache
+    #     readOnly: false
+    #   - path: /home/code/.local
+    #     volumePath: backstage-dev-home-local
+    #     readOnly: false
+
+    # Terminal configuration - install Nix first, then run home-manager
+    terminal:
+      enabled: true
+      command: |-
+        bash -c '
+        echo "========================================"
+        echo "🚀 Initializing DevSpace Environment"
+        echo "========================================"
+        echo ""
+
+        # First, ensure Nix is installed
+        if [ ! -d "/nix/store" ] || [ ! -f "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]; then
+          echo "📦 Installing Nix (first run with this volume)..."
+          echo "This will take a few minutes..."
+
+          curl -L https://nixos.org/nix/install > /tmp/install-nix.sh
+          chmod +x /tmp/install-nix.sh
+
+          sudo bash /tmp/install-nix.sh --daemon --yes
+
+          echo "✅ Nix installation completed!"
+        fi
+
+        # Start Nix daemon if not running
+        if ! pgrep -x nix-daemon > /dev/null; then
+          echo "🔧 Starting Nix daemon..."
+          sudo /nix/var/nix/profiles/default/bin/nix-daemon > /tmp/nix-daemon.log 2>&1 &
+          sleep 2
+        fi
+
+        # Source Nix environment
+        if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+        elif [ -f /home/code/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /home/code/.nix-profile/etc/profile.d/nix.sh
+        fi
+
+        export NIX_CONFIG="experimental-features = nix-command flakes"
+        export PATH="/nix/var/nix/profiles/default/bin:/home/code/.nix-profile/bin:$PATH"
+
+        # Check if home-manager is already initialized
+        if [ ! -f /home/code/.home-manager-initialized ]; then
+          echo ""
+          echo "📦 Running home-manager initialization..."
+          echo "This may take a few minutes on first run."
+          echo ""
+
+          # Remove conflicting files
+          rm -f /home/code/.bashrc /home/code/.profile /home/code/.bash_profile 2>/dev/null || true
+
+          # Run home-manager switch with explicit experimental features
+          if nix --extra-experimental-features "nix-command flakes" run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure; then
+            touch /home/code/.home-manager-initialized
+            echo ""
+            echo "✅ Home-manager initialization completed!"
+          else
+            echo ""
+            echo "⚠️  Home-manager had some issues, but continuing..."
+          fi
+        else
+          echo "✅ Home-manager already initialized."
+        fi
+
+        echo ""
+        echo "========================================"
+        echo "✨ DevSpace environment ready!"
+        echo "========================================"
+        echo ""
+
+        # Start interactive bash with Nix environment
+        exec bash --rcfile <(echo ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || . /home/code/.nix-profile/etc/profile.d/nix.sh 2>/dev/null; export NIX_CONFIG=\"experimental-features = nix-command flakes\"")
+        '
+      workDir: /workspace
+      disableReplace: true # Don't replace the pod
+      disableScreen: false # Keep screen for session preservation
+      disableTTY: false # Keep TTY for interactive shell
+
+    attach:
+      enabled: true
+      disableReplace: false # We DO want to replace the pod with our dev image
+      disableTTY: false # Keep TTY for interactive mode
+
+    # # Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)
+    # ssh:
+    #   enabled: true
+    #   useInclude: true  # Use separate devspace_config file to avoid modifying read-only NixOS config
+    #   localHostname: backstage.devspace
+    #   localPort: 22100  # Changed to avoid conflict
+    # Make the following commands from my local machine available inside the dev container
+    proxyCommands:
+      # - command: devspace
+      # - command: kubectl
+      # - command: helm
+      # - command: git
+      # - command: idpbuilder
+      # - command: docker
+      - gitCredentials: true
+    workingDir: /workspace
+    # Forward the following ports to be able access your application via localhost
+    ports:
+      - port: '3000:3000' # Frontend
+      - port: '7007:7007' # Backend API
+      # - port: "9229:9229"      # Node.js debugger
+    # # Open the following URLs once they return an HTTP status code other than 502 or 503
+    # open:
+    #   - url: http://localhost:3000
+
+    # Environment variables are managed by CDK8s deployment
+# Configure local registry for Gitea
+localRegistry:
+  enabled: false # We're using external Gitea registry
+
+# Use the `commands` section to define repeatable dev workflows for this project
+commands:
+  deploy-prod:
+    command: |-
+      echo "Deploying production image..."
+      # This command can be used when deployments are configured
+      # For now, it's a placeholder since deployments are commented out
+      echo "Note: Deployment configuration is currently commented out in devspace.yaml"
+      echo "Uncomment the deployments section to use this command"
+      # devspace deploy --skip-build
+
+  migrate-db:
+    command: |-
+      echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
+      echo 'Anyone using this project can invoke it via "devspace run migrate-db"'
+
+  dev-vscode:
+    command: |-
+      echo "Starting DevSpace with VS Code integration..."
+      echo ""
+      echo "VS Code will automatically open once DevSpace SSH is ready."
+      echo ""
+
+      # Try to launch the Windows batch file in background (if available)
+      if [ -f "/mnt/c/Users/VinodPittampalli/devspace_vscode_launcher.bat" ]; then
+        echo "Launching VS Code monitor in background..."
+        cmd.exe /c "start /min C:\\Users\\VinodPittampalli\\devspace_vscode_launcher.bat" 2>/dev/null &
+      fi
+
+      # Run devspace dev normally (which will also try to launch VS Code)
+      devspace dev
+
+# Define dependencies to other projects with a devspace.yaml
+# dependencies:
+#   api:
+#     git: https://...  # Git-based dependencies
+#     tag: v1.0.0
+#   ui:
+#     path: ./ui        # Path-based dependencies (for monorepos)

@@ -4,7 +4,6 @@
 	"name": "Docker in Docker",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "docker.io/vpittamp23/ubuntu-nix-backstage:v11",
-
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
 			"version": "latest",
@@ -15,16 +14,12 @@
 			"version": "latest"
 		}
 	},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postStartCommand' for non-blocking initialization that won't fail the container startup
-	"postStartCommand": "bash -c 'echo \"🚀 Initializing home-manager configuration...\" && if [ ! -f ~/.home-manager-initialized ]; then if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh; elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then . ~/.nix-profile/etc/profile.d/nix.sh; else echo \"⚠️  Nix not found, skipping home-manager initialization\"; exit 0; fi && rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && export NIX_CONFIG=\"experimental-features = nix-command flakes\" && nix run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure && touch ~/.home-manager-initialized && echo \"✅ Home-manager initialized!\"; else echo \"✅ Home-manager already initialized.\"; fi || echo \"⚠️  Home-manager initialization skipped\"'"
-
+	"postStartCommand": "bash -c 'echo \"========================================\" && echo \"🚀 Initializing DevContainer Environment\" && echo \"========================================\" && echo \"\" && if [ ! -d \"/nix/store\" ] || [ ! -f \"/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh\" ]; then echo \"📦 Installing Nix (first run)...\" && echo \"This will take a few minutes...\" && echo \"\" && curl -L https://nixos.org/nix/install > /tmp/install-nix.sh && chmod +x /tmp/install-nix.sh && sudo bash /tmp/install-nix.sh --daemon --yes && echo \"✅ Nix installation completed!\" && echo \"\"; fi && if ! pgrep -x nix-daemon > /dev/null; then echo \"🔧 Starting Nix daemon...\" && sudo /nix/var/nix/profiles/default/bin/nix-daemon > /tmp/nix-daemon.log 2>&1 & sleep 2; fi && if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh; elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then . ~/.nix-profile/etc/profile.d/nix.sh; fi && export NIX_CONFIG=\"experimental-features = nix-command flakes\" && export PATH=\"/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH\" && if [ ! -f ~/.home-manager-initialized ]; then echo \"\" && echo \"📦 Running home-manager initialization...\" && echo \"This may take a few minutes on first run.\" && echo \"\" && rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && if nix --extra-experimental-features \"nix-command flakes\" run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure; then touch ~/.home-manager-initialized && echo \"\" && echo \"✅ Home-manager initialization completed!\"; else echo \"\" && echo \"⚠️  Home-manager had some issues, but continuing...\"; fi; else echo \"✅ Home-manager already initialized.\"; fi && echo \"\" && echo \"========================================\" && echo \"✨ DevContainer environment ready!\" && echo \"========================================\" && echo \"\" || { echo \"⚠️  Initialization had issues, but container is starting...\"; exit 0; }'"
 	// Configure tool-specific properties.
 	// "customizations": {},
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
