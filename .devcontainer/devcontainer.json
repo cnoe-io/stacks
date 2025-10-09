@@ -19,8 +19,8 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash -c 'echo \"🚀 Initializing home-manager configuration...\" && if [ ! -f ~/.home-manager-initialized ]; then rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || . ~/.nix-profile/etc/profile.d/nix.sh 2>/dev/null && export NIX_CONFIG=\"experimental-features = nix-command flakes\" && nix run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure && touch ~/.home-manager-initialized && echo \"✅ Home-manager initialized!\"; else echo \"✅ Home-manager already initialized.\"; fi'"
+	// Use 'postStartCommand' for non-blocking initialization that won't fail the container startup
+	"postStartCommand": "bash -c 'echo \"🚀 Initializing home-manager configuration...\" && if [ ! -f ~/.home-manager-initialized ]; then if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh; elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then . ~/.nix-profile/etc/profile.d/nix.sh; else echo \"⚠️  Nix not found, skipping home-manager initialization\"; exit 0; fi && rm -f ~/.bashrc ~/.profile ~/.bash_profile 2>/dev/null || true && export NIX_CONFIG=\"experimental-features = nix-command flakes\" && nix run home-manager -- switch --flake github:vpittamp/nixos-config#code --impure && touch ~/.home-manager-initialized && echo \"✅ Home-manager initialized!\"; else echo \"✅ Home-manager already initialized.\"; fi || echo \"⚠️  Home-manager initialization skipped\"'"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
