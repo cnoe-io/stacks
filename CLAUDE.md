@@ -184,6 +184,14 @@ kubectl describe mcpserver -n kagent <server-name>         # MCP server status
 # - MCP server not ready: Check kmcp-controller has ServiceAccount permissions
 # - Dashboard ingress: Access via https://kagent.cnoe.localtest.me:8443 (domain-based routing)
 # - Controller errors: Ensure RBAC includes configmaps, secrets, deployments, agents CRDs
+
+# KNOWN ISSUE (kagent v0.6.3):
+# The kagent-controller has upstream bugs causing nil pointer dereferences during initialization:
+#   - findAgentsUsingMCPService (line 261): crashes when indexing MCP servers
+#   - findAgentsUsingModelConfig (line 302): crashes when indexing model configs
+# The controller enters CrashLoopBackOff on startup even with empty cluster (no resources).
+# Workaround: Use kagent-dashboard directly (works without controller) or wait for upstream fix.
+# Dashboard remains fully functional at https://kagent.cnoe.localtest.me:8443
 ```
 
 **kagent Architecture**:
