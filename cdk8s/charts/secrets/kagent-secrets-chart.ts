@@ -49,22 +49,19 @@ export class KagentSecretsChart extends Chart {
           {
             secretKey: 'openai_api_key',
             remoteRef: {
-              key: 'llm-providers-openai',
-              property: 'api_key',
+              key: 'OPENAI-API-KEY',
             },
           },
           {
             secretKey: 'anthropic_api_key',
             remoteRef: {
-              key: 'llm-providers-anthropic',
-              property: 'api_key',
+              key: 'ANTHROPIC-API-KEY',
             },
           },
           {
             secretKey: 'gemini_api_key',
             remoteRef: {
-              key: 'llm-providers-gemini',
-              property: 'api_key',
+              key: 'GEMINI-API-KEY',
             },
           },
         ],
