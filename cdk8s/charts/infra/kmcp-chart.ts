@@ -52,6 +52,11 @@ export class KmcpChart extends Chart {
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
         },
         {
+          apiGroups: [''],
+          resources: ['serviceaccounts'],
+          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+        },
+        {
           apiGroups: ['apps'],
           resources: ['deployments', 'deployments/status'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
@@ -117,7 +122,7 @@ export class KmcpChart extends Chart {
           },
           spec: {
             serviceAccountName: controllerSA.name,
-            securityContext: createKagentSecurityContext(false),
+            securityContext: {},
             containers: [
               {
                 name: 'controller',

@@ -70,7 +70,8 @@ export function createFastMCPServer(
   name: string,
   namespace: string,
   packageName: string,
-  env?: Record<string, string>
+  env?: Record<string, string>,
+  image?: string
 ): McpServer {
   return createMCPServer(
     scope,
@@ -79,6 +80,7 @@ export function createFastMCPServer(
     'uvx',
     [packageName],
     3000,
-    env
+    env,
+    image || 'python:3.12-slim' // Default Python image with pip/uvx support
   );
 }
