@@ -3,7 +3,7 @@
 {
 	"name": "Docker in Docker",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "docker.io/vpittamp23/ubuntu-nix-backstage:v13",
+	"image": "docker.io/vpittamp23/ubuntu-nix-backstage:v14",
 
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
