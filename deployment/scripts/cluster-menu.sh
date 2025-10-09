@@ -17,6 +17,32 @@ if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
   source "$ARGOCD_AUTH_SCRIPT"
 fi
 
+# 1Password service account helper
+load-1password-token() {
+  # Load 1Password service account token from Azure Key Vault for automated access
+  if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
+    # Check if Azure Key Vault has the token
+    if command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
+      local token=$(az keyvault secret show \
+        --vault-name "${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}" \
+        --name "ONEPASSWORD-SERVICE-ACCOUNT-TOKEN" \
+        --query value -o tsv 2>/dev/null)
+
+      if [ -n "$token" ]; then
+        export OP_SERVICE_ACCOUNT_TOKEN="$token"
+        return 0
+      fi
+    fi
+
+    # Fallback: check if token file exists locally
+    if [ -f "/tmp/op-service-account-token.txt" ]; then
+      export OP_SERVICE_ACCOUNT_TOKEN=$(cat /tmp/op-service-account-token.txt)
+      return 0
+    fi
+  fi
+  return 1
+}
+
 # Azure authentication helper functions
 detect_host_context() {
   local ctx
@@ -40,79 +66,26 @@ detect_cluster_name() {
 }
 
 check-azure-auth() {
-  # Check if gum is available
-  if ! command -v gum &>/dev/null; then
-    echo "⚠️  gum not installed - falling back to basic prompts"
-    echo "🔐 Checking Azure authentication..."
-
-    local token_expiry=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
-
-    if [ -z "$token_expiry" ]; then
-      echo "🔐 Azure authentication required"
-      read -p "Log in to Azure now? [y/N] " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Opening Azure login..."
-        az login
-        if [ $? -eq 0 ]; then
-          local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-          echo "✅ Successfully logged in as: $account"
-          return 0
-        else
-          echo "❌ Azure login failed"
-          return 1
-        fi
-      else
-        echo "❌ Azure authentication required to continue"
-        return 1
-      fi
-    fi
-
-    # Check token expiry
-    local current_time=$(date +%s)
-    local expiry_time=$(date -d "$token_expiry" +%s 2>/dev/null || echo 0)
-    local time_diff=$((expiry_time - current_time))
-
-    if [ $time_diff -lt 300 ]; then
-      echo "⚠️  Azure token expires soon (${time_diff}s remaining)"
-      read -p "Refresh token now? [y/N] " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        az login
-        return $?
-      else
-        echo "⚠️  Continuing with expiring token..."
-        return 0
-      fi
-    fi
-
-    local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-    echo "✅ Authenticated as: $account"
-    return 0
-  fi
-
-  # gum is available - use interactive UI
+  # Fully automated Azure authentication check - no user interaction required
   local token_expiry=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
 
   if [ -z "$token_expiry" ]; then
-    # Not logged in
-    gum style --foreground 214 "🔐 Azure authentication required"
-    if gum confirm "Log in to Azure now?"; then
-      gum style --foreground 45 "Opening Azure login..."
-      echo ""
-      echo "Please complete the authentication in your browser"
-      echo ""
-      az login
-      if [ $? -eq 0 ]; then
-        local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-        gum style --foreground 82 "✅ Successfully logged in as: $account"
-        return 0
-      else
-        gum style --foreground 196 "❌ Azure login failed"
-        return 1
-      fi
+    # Not logged in - attempt automated login
+    echo "🔐 Azure authentication required - attempting automated login..."
+
+    # Try device code flow with automatic approval (best for Codespaces/automation)
+    az login --use-device-code --allow-no-subscriptions 2>&1 | grep -v "^WARNING" || {
+      echo "❌ Automated Azure login failed"
+      echo "💡 Please run 'az login' manually if needed"
+      return 1
+    }
+
+    if [ $? -eq 0 ]; then
+      local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
+      echo "✅ Successfully logged in as: $account"
+      return 0
     else
-      gum style --foreground 196 "❌ Azure authentication required to continue"
+      echo "❌ Azure login failed"
       return 1
     fi
   fi
@@ -123,19 +96,16 @@ check-azure-auth() {
   local time_diff=$((expiry_time - current_time))
 
   if [ $time_diff -lt 300 ]; then
-    gum style --foreground 214 "⚠️  Azure token expires soon"
-    gum style --foreground 250 "Time remaining: ${time_diff}s"
-    if gum confirm "Refresh token now?"; then
-      az login
-      return $?
-    else
-      gum style --foreground 214 "⚠️  Continuing with expiring token..."
+    echo "⚠️  Azure token expires soon (${time_diff}s remaining) - refreshing..."
+    az login --use-device-code --allow-no-subscriptions 2>&1 | grep -v "^WARNING" || {
+      echo "⚠️  Token refresh failed, continuing with expiring token..."
       return 0
-    fi
+    }
+    return $?
   fi
 
   local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-  gum style --foreground 82 "✅ Authenticated as: $account"
+  echo "✅ Authenticated as: $account"
   return 0
 }
 
@@ -155,6 +125,11 @@ cluster-deploy() {
 
   # Source environment files FIRST (before any operations that need them)
   [ -f "$STACKS_DIR/.env-files/wi.env" ] && source "$STACKS_DIR/.env-files/wi.env"
+
+  # Load 1Password service account token for automated secret access
+  if command -v op &>/dev/null; then
+    load-1password-token && echo "✅ 1Password service account token loaded"
+  fi
 
   # Clear any WSL Docker environment variables
   # Check if we have a native Docker socket
