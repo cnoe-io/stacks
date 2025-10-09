@@ -2,8 +2,26 @@
 # Cluster management functions for stacks project
 # Source this file or run directly to access cluster-* functions
 
-# Cluster management functions
-export STACKS_DIR="${STACKS_DIR:-/workspaces/stacks}"
+# Automatically detect repository root (works in Codespaces, local, CI)
+if [ -z "$STACKS_DIR" ]; then
+  # Try git root first (most reliable)
+  if STACKS_DIR=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$STACKS_DIR" ]; then
+    export STACKS_DIR
+  # Fallback: derive from script location
+  elif [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+    export STACKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  # Last resort: common paths
+  elif [ -d "/workspaces/stacks" ]; then
+    export STACKS_DIR="/workspaces/stacks"
+  elif [ -d "/workspace/stacks" ]; then
+    export STACKS_DIR="/workspace/stacks"
+  elif [ -d "$HOME/stacks" ]; then
+    export STACKS_DIR="$HOME/stacks"
+  else
+    echo "❌ Could not detect STACKS_DIR. Please set it manually: export STACKS_DIR=/path/to/stacks"
+    return 1 2>/dev/null || exit 1
+  fi
+fi
 
 custom_bundle="$STACKS_DIR/scripts/certificates/system/ca-bundle-with-idpbuilder.crt"
 if [ -f "$custom_bundle" ]; then
