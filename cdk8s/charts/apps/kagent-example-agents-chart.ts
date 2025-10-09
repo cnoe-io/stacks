@@ -47,8 +47,7 @@ Guidelines:
         {
           type: 'McpServer',
           mcpServer: {
-            name: 'kagent-tool-server',
-            kind: 'RemoteMCPServer',
+            toolServer: 'kagent-tool-server',
             toolNames: ['k8s_get_resources', 'k8s_get_available_api_resources'],
           },
         },
@@ -81,8 +80,7 @@ Be helpful, accurate, and cite sources when appropriate.`,
         {
           type: 'McpServer',
           mcpServer: {
-            name: 'mcp-website-fetcher',
-            kind: 'MCPServer',
+            toolServer: 'mcp-website-fetcher',
             toolNames: ['fetch'],
           },
         },
@@ -112,8 +110,7 @@ Provide clear, structured responses suitable for programmatic consumption.`,
         {
           type: 'McpServer',
           mcpServer: {
-            name: 'kagent-tool-server',
-            kind: 'RemoteMCPServer',
+            toolServer: 'kagent-tool-server',
             toolNames: ['k8s_get_resources', 'k8s_get_available_api_resources'],
           },
         },

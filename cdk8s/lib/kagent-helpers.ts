@@ -169,7 +169,7 @@ export function createAgent(
   namespace: string,
   description: string,
   systemMessage: string,
-  tools: Array<{ type: 'McpServer' | 'BuiltIn'; mcpServer?: { name: string; kind: string; toolNames?: string[] }; builtIn?: { toolName: string } }>,
+  tools: Array<{ type: 'McpServer' | 'BuiltIn'; mcpServer?: { toolServer: string; toolNames?: string[] }; builtIn?: { toolName: string } }>,
   modelConfig: string,
   a2aConfig?: {
     skills: Array<{
