@@ -85,12 +85,21 @@ detect_cluster_name() {
 
 check-azure-auth() {
   # Check Azure authentication status - only prompts if not automated
+  # Skip if SKIP_AZURE_AUTH is set (for local development)
+  if [ "${SKIP_AZURE_AUTH:-}" = "true" ]; then
+    echo "⏭️  Skipping Azure authentication check (SKIP_AZURE_AUTH=true)"
+    return 0
+  fi
+
   local token_expiry=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
 
   if [ -z "$token_expiry" ]; then
     # Not logged in
     echo "❌ Azure authentication required"
     echo "💡 Please authenticate with: az login"
+    echo ""
+    echo "For local development without Azure integration:"
+    echo "  export SKIP_AZURE_AUTH=true"
     echo ""
     echo "For automation, consider:"
     echo "  - Service Principal: az login --service-principal -u <app-id> -p <password> --tenant <tenant>"
@@ -111,6 +120,47 @@ check-azure-auth() {
   else
     local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
     echo "✅ Authenticated as: $account (token valid for ${time_diff}s)"
+  fi
+
+  return 0
+}
+
+# Ensure CDK8s dependencies are installed
+ensure-cdk8s-dependencies() {
+  local CDK8S_DIR="$STACKS_DIR/cdk8s"
+  
+  # Check if node_modules exists and has packages
+  if [ ! -d "$CDK8S_DIR/node_modules" ] || [ -z "$(ls -A "$CDK8S_DIR/node_modules" 2>/dev/null)" ]; then
+    echo "📦 Installing npm dependencies..."
+    npm install --prefix "$CDK8S_DIR" || {
+      echo "❌ Failed to install npm dependencies"
+      return 1
+    }
+    echo "✅ npm dependencies installed"
+  fi
+
+  # Check if critical imports exist (k8s.ts is always needed)
+  if [ ! -f "$CDK8S_DIR/imports/k8s.ts" ] || [ ! -f "$CDK8S_DIR/imports/tailscale.com.ts" ]; then
+    echo "📥 Generating CRD imports..."
+    npm run import --prefix "$CDK8S_DIR" || {
+      echo "❌ Failed to generate CRD imports"
+      return 1
+    }
+    echo "✅ CRD imports generated"
+  fi
+
+  # Check if kagent imports are complete (need full CRDs, not just MCPServer)
+  if [ -f "$CDK8S_DIR/imports/kagent.dev.ts" ]; then
+    # Check if the file has the full Agent class (not just MCPServer)
+    if ! grep -q "export class Agent" "$CDK8S_DIR/imports/kagent.dev.ts" 2>/dev/null; then
+      echo "🔧 Restoring complete kagent CRDs from backup..."
+      if [ -f "$CDK8S_DIR/crds/kagent-crds-backup.ts" ]; then
+        cp "$CDK8S_DIR/crds/kagent-crds-backup.ts" "$CDK8S_DIR/imports/kagent.dev.ts"
+        echo "✅ kagent CRDs restored"
+      else
+        echo "⚠️  Warning: kagent-crds-backup.ts not found, some charts may fail"
+      fi
+    fi
   fi
 
   return 0
@@ -146,6 +196,10 @@ cluster-deploy() {
     unset DOCKER_CERT_PATH
     export DOCKER_HOST=""
   fi
+
+  # Ensure CDK8s dependencies and imports are ready
+  echo "🔍 Checking CDK8s dependencies..."
+  ensure-cdk8s-dependencies || { cd "$ORIG_DIR"; return 1; }
 
   echo "🔨 Synthesizing CDK8s manifests..."
   cd "$CDK8S_DIR" && npm run synth || { cd "$ORIG_DIR"; return 1; }
@@ -214,6 +268,10 @@ cluster-synth() {
   fi
 
   [ -f "$STACKS_DIR/.env-files/wi.env" ] && source "$STACKS_DIR/.env-files/wi.env"
+
+  # Ensure CDK8s dependencies and imports are ready
+  echo "🔍 Checking CDK8s dependencies..."
+  ensure-cdk8s-dependencies || { cd "$ORIG_DIR"; return 1; }
 
   cd "$CDK8S_DIR" && npm run synth
   local result=$?
@@ -286,6 +344,15 @@ cluster-update-gum() {
 
   if [ -n "$HOST_CONTEXT" ]; then
     kubectl config use-context "$HOST_CONTEXT" >/dev/null 2>&1 || true
+  fi
+
+  # Ensure CDK8s dependencies and imports are ready
+  gum spin --spinner dot --title "🔍 Checking CDK8s dependencies..." -- \
+    bash -c "ensure-cdk8s-dependencies >/dev/null 2>&1"
+
+  if [ $? -ne 0 ]; then
+    gum style --foreground 196 "❌ Failed to ensure dependencies"
+    return 1
   fi
 
   # Step 1: Synthesize with spinner
@@ -375,6 +442,10 @@ cluster-update() {
   if [ -n "$HOST_CONTEXT" ]; then
     kubectl config use-context "$HOST_CONTEXT" >/dev/null 2>&1 || true
   fi
+
+  # Ensure CDK8s dependencies and imports are ready
+  echo "🔍 Checking CDK8s dependencies..."
+  ensure-cdk8s-dependencies || return 1
 
   # Step 1: Synthesize CDK8s manifests (with environment variables)
   echo "🔨 Synthesizing CDK8s manifests..."

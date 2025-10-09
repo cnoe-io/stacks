@@ -32,15 +32,15 @@ source ~/stacks/deployment/scripts/cluster-menu.sh
 
 ### 2. Available Commands
 
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `cluster-synth` | `cls` | Synthesize CDK8s manifests |
-| `cluster-deploy` | `cld` | Create/deploy cluster |
-| `cluster-update` | `clu` | Update existing cluster (idempotent) |
-| `cluster-update-gum` | `clug` | Interactive update with gum UI |
-| `cluster-recreate` | `clr` | Delete and recreate cluster |
-| `cluster-status` | `clst` | Show cluster status |
-| `cluster-menu` | `clm` | Interactive menu |
+| Command              | Alias  | Description                          |
+| -------------------- | ------ | ------------------------------------ |
+| `cluster-synth`      | `cls`  | Synthesize CDK8s manifests           |
+| `cluster-deploy`     | `cld`  | Create/deploy cluster                |
+| `cluster-update`     | `clu`  | Update existing cluster (idempotent) |
+| `cluster-update-gum` | `clug` | Interactive update with gum UI       |
+| `cluster-recreate`   | `clr`  | Delete and recreate cluster          |
+| `cluster-status`     | `clst` | Show cluster status                  |
+| `cluster-menu`       | `clm`  | Interactive menu                     |
 
 ### 3. Deploy Cluster
 
@@ -59,13 +59,15 @@ cld
 ### cluster-menu.sh
 
 Main cluster management functions with:
+
 - All cluster operations (synth, deploy, update, recreate, status)
 - Interactive menu with gum support
-- Azure authentication checks
+- Azure authentication checks (optional for local dev)
 - Manifest diff tracking
 - Aliases for quick access
 
 **Functions:**
+
 - `cluster-synth` - Synthesize CDK8s manifests
 - `cluster-deploy` - Full deployment workflow
 - `cluster-update` - Idempotent cluster update
@@ -74,9 +76,32 @@ Main cluster management functions with:
 - `cluster-status` - Show cluster and ArgoCD status
 - `cluster-menu` - Interactive menu (requires gum)
 
+**Local Development (Skip Azure Auth):**
+
+For local Kind clusters without Azure integration:
+
+```bash
+# Option 1: Export for current session
+export SKIP_AZURE_AUTH=true
+./deployment/scripts/cluster-menu.sh
+
+# Option 2: Inline for single command
+SKIP_AZURE_AUTH=true cld
+
+# Option 3: Add to your shell profile for persistent skip
+echo 'export SKIP_AZURE_AUTH=true' >> ~/.bashrc
+```
+
+This skips Azure authentication checks, useful when:
+
+- Developing locally with Kind clusters
+- Not using Azure External Secrets integration
+- Testing without cloud credentials
+
 ### deploy-linux-ssh.sh
 
 Specialized deployment script that:
+
 - Generates service account keys for Azure Workload Identity
 - Creates Kind cluster configuration dynamically
 - Mounts keys directly into Kind cluster
@@ -85,6 +110,7 @@ Specialized deployment script that:
 - Integrates with idpbuilder for package deployment
 
 **Key Features:**
+
 - Azure Workload Identity integration
 - Direct key mounting (no post-creation copying)
 - SSH NodePort support (ports 30022-30027)
@@ -92,6 +118,7 @@ Specialized deployment script that:
 - Azure authentication checks
 
 **Usage:**
+
 ```bash
 ./deployment/scripts/deploy-linux-ssh.sh \
   --package cdk8s/dist/ \
@@ -101,6 +128,7 @@ Specialized deployment script that:
 ### .bashrc-cluster
 
 Shell initialization snippet that:
+
 - Sources cluster-menu.sh
 - Shows confirmation message
 - Sets up aliases
@@ -112,6 +140,7 @@ Shell initialization snippet that:
 The `deploy-linux-ssh.sh` script generates configuration files at runtime:
 
 **kind-config.yaml** (created in deployment/config/)
+
 - Generated with current `KEYS_DIR` path and `SERVICE_ACCOUNT_ISSUER` from wi.env
 - Minimal configuration that adds only Azure Workload Identity to idpbuilder defaults
 - Mounts service account keys for custom OIDC issuer
@@ -127,6 +156,7 @@ The scripts use these environment variables:
 - `SSL_CERT_FILE` - Custom CA bundle path
 
 Load from `.env-files/wi.env`:
+
 ```bash
 source ~/stacks/.env-files/wi.env
 ```
@@ -136,12 +166,14 @@ source ~/stacks/.env-files/wi.env
 ### With ref-implementation/
 
 Deployment scripts package and deploy manifests from:
+
 - `cdk8s/dist/` - Synthesized CDK8s manifests
 - `ref-implementation/` - ArgoCD applications and configs
 
 ### With Azure Workload Identity
 
 Scripts integrate with Azure via:
+
 - `ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh`
 - `ref-implementation/azure-workload-identity/keys/` - Service account keys
 - Dynamic JWKS syncing after cluster creation
@@ -170,6 +202,7 @@ clr  # Delete and recreate fresh
 ## Dependencies
 
 **Required:**
+
 - `idpbuilder` - CNOE tool for local Kubernetes
 - `kubectl` - Kubernetes CLI
 - `kind` - Kubernetes in Docker
@@ -177,17 +210,20 @@ clr  # Delete and recreate fresh
 - `az` - Azure CLI (for Workload Identity)
 
 **Optional:**
+
 - `gum` - Better interactive UI
 - `bat` - Syntax-highlighted diff viewing
 
 ## Troubleshooting
 
 **Functions not available:**
+
 ```bash
 source ~/stacks/deployment/scripts/cluster-menu.sh
 ```
 
 **Azure auth errors:**
+
 ```bash
 az login
 ```
@@ -200,10 +236,12 @@ The config file is generated dynamically by `deploy-linux-ssh.sh`. If using idpb
 Files moved from various locations to `deployment/`:
 
 **From root:**
+
 - `cluster-menu.sh` → `deployment/scripts/cluster-menu.sh`
 - `.bashrc-cluster` → `deployment/scripts/.bashrc-cluster`
 
 **From ref-implementation:**
+
 - `deploy-linux-ssh.sh` → `deployment/scripts/deploy-linux-ssh.sh`
 - `kind-config-linux-ssh.yaml` → Removed (now generated dynamically)
 
