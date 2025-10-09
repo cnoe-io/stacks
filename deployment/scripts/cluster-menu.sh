@@ -66,28 +66,19 @@ detect_cluster_name() {
 }
 
 check-azure-auth() {
-  # Fully automated Azure authentication check - no user interaction required
+  # Check Azure authentication status - only prompts if not automated
   local token_expiry=$(az account get-access-token --query "expiresOn" -o tsv 2>/dev/null || echo "")
 
   if [ -z "$token_expiry" ]; then
-    # Not logged in - attempt automated login
-    echo "🔐 Azure authentication required - attempting automated login..."
-
-    # Try device code flow with automatic approval (best for Codespaces/automation)
-    az login --use-device-code --allow-no-subscriptions 2>&1 | grep -v "^WARNING" || {
-      echo "❌ Automated Azure login failed"
-      echo "💡 Please run 'az login' manually if needed"
-      return 1
-    }
-
-    if [ $? -eq 0 ]; then
-      local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-      echo "✅ Successfully logged in as: $account"
-      return 0
-    else
-      echo "❌ Azure login failed"
-      return 1
-    fi
+    # Not logged in
+    echo "❌ Azure authentication required"
+    echo "💡 Please authenticate with: az login"
+    echo ""
+    echo "For automation, consider:"
+    echo "  - Service Principal: az login --service-principal -u <app-id> -p <password> --tenant <tenant>"
+    echo "  - Managed Identity: Available automatically in Azure VMs/Container Instances"
+    echo "  - GitHub Actions: Use azure/login@v1 action"
+    return 1
   fi
 
   # Check token expiry
@@ -96,16 +87,14 @@ check-azure-auth() {
   local time_diff=$((expiry_time - current_time))
 
   if [ $time_diff -lt 300 ]; then
-    echo "⚠️  Azure token expires soon (${time_diff}s remaining) - refreshing..."
-    az login --use-device-code --allow-no-subscriptions 2>&1 | grep -v "^WARNING" || {
-      echo "⚠️  Token refresh failed, continuing with expiring token..."
-      return 0
-    }
-    return $?
+    echo "⚠️  Azure token expires soon (${time_diff}s remaining)"
+    echo "💡 Refresh with: az login"
+    # Continue anyway - might still work
+  else
+    local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
+    echo "✅ Authenticated as: $account (token valid for ${time_diff}s)"
   fi
 
-  local account=$(az account show --query "user.name" -o tsv 2>/dev/null)
-  echo "✅ Authenticated as: $account"
   return 0
 }
 
