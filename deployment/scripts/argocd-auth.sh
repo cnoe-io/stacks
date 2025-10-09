@@ -18,13 +18,19 @@ argocd-get-token() {
     return 0
   fi
 
-  # Try to get token from 1Password
-  if command -v op &>/dev/null && op whoami &>/dev/null; then
+  # Try to get token from 1Password (with service account support)
+  if command -v op &>/dev/null; then
+    # Check if using service account (OP_SERVICE_ACCOUNT_TOKEN set) or user account
     local token
+
+    # Try to read token - works with both service account and user account
     if token=$(op read "$ARGOCD_TOKEN_OP_PATH" 2>/dev/null); then
       echo "$token"
       return 0
     fi
+
+    # If service account token is set but read failed, it might not exist yet
+    # Fall through to generate new token
   fi
 
   # Fall back to generating new token from cluster
@@ -82,16 +88,17 @@ argocd-save-token() {
     return 0
   fi
 
-  if ! op whoami &>/dev/null; then
-    echo "⚠️  Not signed into 1Password. Run: eval \$(op signin)" >&2
+  # Check if 1Password is accessible (service account or user account)
+  if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ] && ! op whoami &>/dev/null 2>&1; then
+    echo "⚠️  Not signed into 1Password and no service account token set." >&2
     echo "Token: $token" >&2
     return 0
   fi
 
   # Check if item exists
-  if op item get "ArgoCD Developer Token" --vault CLI &>/dev/null; then
+  if op item get "ArgoCD Developer Token" --vault CLI &>/dev/null 2>&1; then
     # Update existing item
-    if op item edit "ArgoCD Developer Token" --vault CLI "credential=$token" &>/dev/null; then
+    if op item edit "ArgoCD Developer Token" --vault CLI "credential=$token" &>/dev/null 2>&1; then
       echo "✅ ArgoCD token updated in 1Password" >&2
     else
       echo "⚠️  Failed to update token in 1Password" >&2
@@ -106,7 +113,7 @@ argocd-save-token() {
       "credential=$token" \
       "server=$ARGOCD_SERVER" \
       "account=developer" \
-      --tags "argocd,automation" &>/dev/null; then
+      --tags "argocd,automation" &>/dev/null 2>&1; then
       echo "✅ ArgoCD token saved to 1Password" >&2
     else
       echo "⚠️  Failed to save token to 1Password" >&2
