@@ -193,19 +193,46 @@ export class KagentChart extends Chart {
           },
           spec: {
             serviceAccountName: controllerSA.name,
-            securityContext: createKagentSecurityContext(false),
+            securityContext: {},
+            volumes: [
+              {
+                name: 'sqlite-volume',
+                emptyDir: {
+                  sizeLimit: k8s.Quantity.fromString('500Mi'),
+                  medium: 'Memory',
+                },
+              },
+            ],
             containers: [
               {
                 name: 'controller',
                 image: 'ghcr.io/kagent-dev/kagent/controller:0.6.19',
+                args: [
+                  '-default-model-config-name',
+                  'default-model-config',
+                  '-zap-log-level',
+                  'info',
+                  '-watch-namespaces',
+                  '',
+                  '-database-type',
+                  'sqlite',
+                  '-sqlite-database-path',
+                  '/sqlite-volume/kagent.db',
+                ],
                 ports: [
                   { name: 'http', containerPort: 8083, protocol: 'TCP' },
                   { name: 'metrics', containerPort: 8080, protocol: 'TCP' },
                 ],
                 resources: createKagentResourceLimits('controller'),
+                volumeMounts: [
+                  {
+                    name: 'sqlite-volume',
+                    mountPath: '/sqlite-volume',
+                  },
+                ],
                 env: [
                   {
-                    name: 'KUBERNETES_NAMESPACE',
+                    name: 'KAGENT_NAMESPACE',
                     valueFrom: {
                       fieldRef: {
                         fieldPath: 'metadata.namespace',
@@ -281,17 +308,17 @@ export class KagentChart extends Chart {
             },
           },
           spec: {
-            securityContext: createKagentSecurityContext(false),
+            securityContext: {},
             containers: [
               {
                 name: 'dashboard',
                 image: 'cr.kagent.dev/kagent-dev/kagent/ui:0.6.19',
-                ports: [{ name: 'http', containerPort: 8082, protocol: 'TCP' }],
+                ports: [{ name: 'http', containerPort: 8080, protocol: 'TCP' }],
                 resources: createKagentResourceLimits('dashboard'),
                 env: [
                   {
-                    name: 'KAGENT_API_URL',
-                    value: `http://${appName}-controller.${ns}.svc.cluster.local:8083`,
+                    name: 'NEXT_PUBLIC_BACKEND_URL',
+                    value: `http://${appName}-controller.${ns}.svc.cluster.local:8083/api`,
                   },
                 ],
               },
@@ -318,7 +345,7 @@ export class KagentChart extends Chart {
           {
             name: 'http',
             port: 8082,
-            targetPort: k8s.IntOrString.fromNumber(8082),
+            targetPort: k8s.IntOrString.fromNumber(8080),
             protocol: 'TCP',
           },
         ],
@@ -397,7 +424,7 @@ export class KagentChart extends Chart {
           },
           spec: {
             serviceAccountName: toolsSA.name,
-            securityContext: createKagentSecurityContext(false),
+            securityContext: {},
             containers: [
               {
                 name: 'tools',
