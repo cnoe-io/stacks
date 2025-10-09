@@ -17,7 +17,56 @@
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [
+		8080,  // ArgoCD (via kubectl port-forward)
+		7007,  // Backstage (via kubectl port-forward)
+		3000,  // Gitea (via kubectl port-forward)
+		8081,  // Keycloak (via kubectl port-forward)
+		8082,  // Kargo (via kubectl port-forward)
+		8083,  // Headlamp (via kubectl port-forward)
+		8084,  // Kagent Dashboard (via kubectl port-forward)
+		8085,  // Argo Workflows (via kubectl port-forward)
+		8443   // Ingress-nginx (Kind cluster)
+	],
+
+	"portsAttributes": {
+		"8080": {
+			"label": "ArgoCD",
+			"onAutoForward": "notify"
+		},
+		"7007": {
+			"label": "Backstage",
+			"onAutoForward": "notify"
+		},
+		"3000": {
+			"label": "Gitea",
+			"onAutoForward": "notify"
+		},
+		"8081": {
+			"label": "Keycloak",
+			"onAutoForward": "notify"
+		},
+		"8082": {
+			"label": "Kargo",
+			"onAutoForward": "notify"
+		},
+		"8083": {
+			"label": "Headlamp",
+			"onAutoForward": "notify"
+		},
+		"8084": {
+			"label": "Kagent Dashboard",
+			"onAutoForward": "notify"
+		},
+		"8085": {
+			"label": "Argo Workflows",
+			"onAutoForward": "notify"
+		},
+		"8443": {
+			"label": "Ingress (Kind Cluster)",
+			"onAutoForward": "silent"
+		}
+	},
 
 	// Codespaces overrides the entrypoint, so we need to run initialization manually
 	// This calls the same script that would run via entrypoint in normal Docker environments
