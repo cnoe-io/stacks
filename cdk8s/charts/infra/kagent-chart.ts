@@ -93,6 +93,11 @@ export class KagentChart extends Chart {
           resources: ['secrets'],
           verbs: ['get', 'list', 'watch'],
         },
+        {
+          apiGroups: [''],
+          resources: ['configmaps'],
+          verbs: ['get', 'list', 'watch'],
+        },
       ],
     });
 
@@ -356,15 +361,14 @@ export class KagentChart extends Chart {
       },
     });
 
-    // Dashboard Ingress (path-based routing for idpbuilder)
+    // Dashboard Ingress (domain-based routing - CNOE standard)
+    // Note: Uses subdomain routing (kagent.cnoe.localtest.me) instead of path-based
+    // because Next.js requires basePath configuration for path-based routing
     new k8s.KubeIngress(this, 'dashboard-ingress', {
       metadata: {
         name: `${appName}-dashboard`,
         namespace: ns,
-        annotations: {
-          ...kagentSyncWave(100),
-          'nginx.ingress.kubernetes.io/rewrite-target': '/$2',
-        },
+        annotations: kagentSyncWave(100),
         labels: {
           'app.kubernetes.io/name': appName,
           'app.kubernetes.io/component': 'dashboard',
@@ -374,12 +378,12 @@ export class KagentChart extends Chart {
         ingressClassName: 'nginx',
         rules: [
           {
-            host: 'cnoe.localtest.me',
+            host: 'kagent.cnoe.localtest.me',
             http: {
               paths: [
                 {
-                  path: '/kagent-dashboard(/|$)(.*)',
-                  pathType: 'ImplementationSpecific',
+                  path: '/',
+                  pathType: 'Prefix',
                   backend: {
                     service: {
                       name: `${appName}-dashboard`,

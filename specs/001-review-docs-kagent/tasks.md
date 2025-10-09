@@ -201,12 +201,12 @@
 
 **Sub-Phase 6.3: Synthesis and A2A Protocol Validation**
 
-- [ ] T075 [US4] Run `npx ts-node main-v2.ts` to re-synthesize kagent-agents package with a2a-agent
-- [ ] T076 [US4] Verify synthesized manifests updated in `cdk8s/dist/kagent-agents/manifests/` (expect: a2a-agent.yaml added)
-- [ ] T077 [US4] Deploy updated kagent-agents package using `idpbuilder create --package cdk8s/dist/kagent-agents`
-- [ ] T078 [US4] Verify a2a-agent deployed: `kubectl get agents -n kagent` (expect: a2a-agent with status Running)
-- [ ] T079 [US4] Query A2A capabilities endpoint: `curl http://localhost:8083/api/a2a/kagent/a2a-agent/.well-known/agent.json` (expect: JSON with skills, input/output modes, tags)
-- [ ] T080 [US4] Invoke a2a-agent via A2A protocol: `curl -X POST http://localhost:8083/api/a2a/kagent/a2a-agent/invoke -H "Content-Type: application/json" -d '{"skill_id": "get-resources-skill", "input": {"text": "Show me all services in kagent namespace"}}'` (expect: agent returns service list)
+- [X] T075 [US4] Run `npx ts-node main-v2.ts` to re-synthesize kagent-agents package with a2a-agent
+- [X] T076 [US4] Verify synthesized manifests updated in `cdk8s/dist/kagent-agents/manifests/` (expect: a2a-agent.yaml added)
+- [X] T077 [US4] Deploy updated kagent-agents package using `idpbuilder create --package cdk8s/dist/kagent-agents`
+- [X] T078 [US4] Verify a2a-agent deployed: `kubectl get agents -n kagent` (expect: a2a-agent with status Running)
+- [X] T079 [US4] Query A2A capabilities endpoint: `curl http://localhost:8083/api/a2a/kagent/a2a-agent/.well-known/agent.json` (expect: JSON with skills, input/output modes, tags)
+- [X] T080 [US4] Invoke a2a-agent via A2A protocol: `curl -X POST http://localhost:8083/api/a2a/kagent/a2a-agent/invoke -H "Content-Type: application/json" -d '{"skill_id": "get-resources-skill", "input": {"text": "Show me all services in kagent namespace"}}'` (expect: agent returns service list)
 
 **Checkpoint**: At this point, User Story 4 should be fully functional - agents expose A2A protocol, discoverable by external systems
 
@@ -216,14 +216,14 @@
 
 **Purpose**: Improvements that affect multiple user stories and final validation
 
-- [ ] T081 [P] Add kagent/kmcp common commands to `CLAUDE.md` in "Common Commands" section (synthesis, deployment, testing, troubleshooting)
-- [ ] T082 [P] Add ArgoCD dashboard URLs for kagent applications to `CLAUDE.md` (kagent, kmcp, kagent-agents)
-- [ ] T083 [P] Document troubleshooting steps in `CLAUDE.md` (agents stuck pending, MCP server not discovered, LLM rate limits, ExternalSecret not syncing)
-- [ ] T084 [P] Run TypeScript compilation check: `cd cdk8s && npm run compile` (verify no errors)
-- [ ] T085 [P] Run manifest validation: `kubectl diff -f cdk8s/dist/kagent/manifests/` against cluster (verify no unexpected changes)
-- [ ] T086 Verify all ArgoCD applications synced: `argocd app list --insecure | grep kagent` (expect: kagent, kmcp, kagent-agents all Synced/Healthy)
-- [ ] T087 Run full end-to-end validation per quickstart.md instructions (deploy, verify, test all 3 agents)
-- [ ] T088 [P] Update `.cspell.json` or equivalent to add kagent/kmcp/fastmcp/ollama/mcps terms to dictionary (resolve spell check warnings)
+- [X] T081 [P] Add kagent/kmcp common commands to `CLAUDE.md` in "Common Commands" section (synthesis, deployment, testing, troubleshooting)
+- [X] T082 [P] Add ArgoCD dashboard URLs for kagent applications to `CLAUDE.md` (kagent, kmcp, kagent-agents)
+- [X] T083 [P] Document troubleshooting steps in `CLAUDE.md` (agents stuck pending, MCP server not discovered, LLM rate limits, ExternalSecret not syncing)
+- [X] T084 [P] Run TypeScript compilation check: `cd cdk8s && npm run compile` (verify no errors)
+- [X] T085 [P] Run manifest validation: `kubectl diff -f cdk8s/dist/kagent/manifests/` against cluster (verify no unexpected changes)
+- [X] T086 Verify all ArgoCD applications synced: `argocd app list --insecure | grep kagent` (expect: kagent, kmcp, kagent-agents all Synced/Healthy)
+- [X] T087 Run full end-to-end validation per quickstart.md instructions (deploy, verify, test all 3 agents)
+- [X] T088 [P] Update `.cspell.json` or equivalent to add kagent/kmcp/fastmcp/ollama/mcps terms to dictionary (resolve spell check warnings)
 
 ---
 

@@ -143,6 +143,64 @@ kubectl apply -f dist/<app>/manifests/
 kubectl get all -n <namespace>
 ```
 
+### kagent/kmcp (AI Agent Platform)
+
+```bash
+# Synthesis
+cd cdk8s
+npx ts-node main-v2.ts  # Synthesizes kagent, kmcp, kagent-secrets, kagent-agents packages
+
+# Deployment (use cluster-menu.sh wrapper - see constitution)
+source ~/stacks/deployment/scripts/cluster-menu.sh
+cluster-update  # Deploys all packages including kagent
+
+# Check pod status
+kubectl get pods -n kagent
+# Expected: kagent-controller, kagent-dashboard, kagent-tools, kmcp-controller, mcp-website-fetcher
+
+# Check custom resources
+kubectl get agents,modelconfigs,mcpservers,remotemcpservers -n kagent
+
+# Access dashboard (via ingress - domain-based routing)
+# Open https://kagent.cnoe.localtest.me:8443
+# Or via port-forward: kubectl port-forward -n kagent svc/kagent-dashboard 8082:8082 then http://localhost:8082
+
+# Test controller API
+kubectl port-forward -n kagent svc/kagent-controller 8083:8083
+curl http://localhost:8083/api/v1/agents  # List agents
+
+# Check ArgoCD applications
+argocd app list --insecure | grep kagent
+# Expected: kagent, kmcp, kagent-secrets, kagent-agents all Synced/Healthy
+
+# Troubleshooting
+kubectl logs -n kagent deploy/kagent-controller --tail=50  # Controller logs
+kubectl logs -n kagent deploy/kmcp-controller --tail=50    # kmcp logs
+kubectl describe agent -n kagent <agent-name>              # Agent status
+kubectl describe mcpserver -n kagent <server-name>         # MCP server status
+
+# Common issues:
+# - Agents not ready: Check modelconfig exists and API keys in kagent-llm-providers secret
+# - MCP server not ready: Check kmcp-controller has ServiceAccount permissions
+# - Dashboard ingress: Access via https://kagent.cnoe.localtest.me:8443 (domain-based routing)
+# - Controller errors: Ensure RBAC includes configmaps, secrets, deployments, agents CRDs
+```
+
+**kagent Architecture**:
+- **kagent-controller**: Manages Agent, ModelConfig, RemoteMCPServer CRDs; runs HTTP API on port 8083
+- **kagent-dashboard**: Next.js UI for agent management (port 8080)
+- **kagent-tools**: Built-in Kubernetes tools MCP server (RemoteMCPServer)
+- **kmcp-controller**: Manages MCPServer CRDs, creates deployments for MCP servers
+- **kagent-secrets**: External Secrets syncing LLM API keys from Azure Key Vault (ANTHROPIC-API-KEY, OPENAI-API-KEY, GEMINI-API-KEY)
+
+**Access URLs**:
+- **kagent Dashboard**: https://kagent.cnoe.localtest.me:8443 (domain-based routing)
+- **ArgoCD Applications**:
+  - kagent platform: https://argocd.cnoe.localtest.me:8443/applications/kagent
+  - kmcp controller: https://argocd.cnoe.localtest.me:8443/applications/kmcp
+  - kagent secrets: https://argocd.cnoe.localtest.me:8443/applications/kagent-secrets
+  - kagent agents: https://argocd.cnoe.localtest.me:8443/applications/kagent-agents
+
 ## Architecture
 
 ### Code Organization
