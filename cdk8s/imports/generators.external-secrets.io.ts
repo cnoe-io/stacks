@@ -241,6 +241,8 @@ export enum AcrAccessTokenSpecEnvironmentType {
   CHINA_CLOUD = "ChinaCloud",
   /** GermanCloud */
   GERMAN_CLOUD = "GermanCloud",
+  /** AzureStackCloud */
+  AZURE_STACK_CLOUD = "AzureStackCloud",
 }
 
 /**
@@ -515,6 +517,194 @@ export function toJson_AcrAccessTokenSpecAuthServicePrincipalSecretRefClientSecr
 
 
 /**
+ * CloudsmithAccessToken generates Cloudsmith access token using OIDC authentication
+ *
+ * @schema CloudsmithAccessToken
+ */
+export class CloudsmithAccessToken extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "CloudsmithAccessToken"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'generators.external-secrets.io/v1alpha1',
+    kind: 'CloudsmithAccessToken',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "CloudsmithAccessToken".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: CloudsmithAccessTokenProps = {}): any {
+    return {
+      ...CloudsmithAccessToken.GVK,
+      ...toJson_CloudsmithAccessTokenProps(props),
+    };
+  }
+
+  /**
+   * Defines a "CloudsmithAccessToken" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: CloudsmithAccessTokenProps = {}) {
+    super(scope, id, {
+      ...CloudsmithAccessToken.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...CloudsmithAccessToken.GVK,
+      ...toJson_CloudsmithAccessTokenProps(resolved),
+    };
+  }
+}
+
+/**
+ * CloudsmithAccessToken generates Cloudsmith access token using OIDC authentication
+ *
+ * @schema CloudsmithAccessToken
+ */
+export interface CloudsmithAccessTokenProps {
+  /**
+   * @schema CloudsmithAccessToken#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * @schema CloudsmithAccessToken#spec
+   */
+  readonly spec?: CloudsmithAccessTokenSpec;
+
+}
+
+/**
+ * Converts an object of type 'CloudsmithAccessTokenProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_CloudsmithAccessTokenProps(obj: CloudsmithAccessTokenProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_CloudsmithAccessTokenSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema CloudsmithAccessTokenSpec
+ */
+export interface CloudsmithAccessTokenSpec {
+  /**
+   * APIURL configures the Cloudsmith API URL. Defaults to https://api.cloudsmith.io.
+   *
+   * @default https://api.cloudsmith.io.
+   * @schema CloudsmithAccessTokenSpec#apiUrl
+   */
+  readonly apiUrl?: string;
+
+  /**
+   * OrgSlug is the organization slug in Cloudsmith
+   *
+   * @schema CloudsmithAccessTokenSpec#orgSlug
+   */
+  readonly orgSlug: string;
+
+  /**
+   * Name of the service account you are federating with
+   *
+   * @schema CloudsmithAccessTokenSpec#serviceAccountRef
+   */
+  readonly serviceAccountRef: CloudsmithAccessTokenSpecServiceAccountRef;
+
+  /**
+   * ServiceSlug is the service slug in Cloudsmith for OIDC authentication
+   *
+   * @schema CloudsmithAccessTokenSpec#serviceSlug
+   */
+  readonly serviceSlug: string;
+
+}
+
+/**
+ * Converts an object of type 'CloudsmithAccessTokenSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_CloudsmithAccessTokenSpec(obj: CloudsmithAccessTokenSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiUrl': obj.apiUrl,
+    'orgSlug': obj.orgSlug,
+    'serviceAccountRef': toJson_CloudsmithAccessTokenSpecServiceAccountRef(obj.serviceAccountRef),
+    'serviceSlug': obj.serviceSlug,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Name of the service account you are federating with
+ *
+ * @schema CloudsmithAccessTokenSpecServiceAccountRef
+ */
+export interface CloudsmithAccessTokenSpecServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema CloudsmithAccessTokenSpecServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema CloudsmithAccessTokenSpecServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema CloudsmithAccessTokenSpecServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'CloudsmithAccessTokenSpecServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_CloudsmithAccessTokenSpecServiceAccountRef(obj: CloudsmithAccessTokenSpecServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+
+/**
  * ClusterGenerator represents a cluster-wide generator which can be referenced as part of `generatorRef` fields.
  *
  * @schema ClusterGenerator
@@ -652,6 +842,11 @@ export interface ClusterGeneratorSpecGenerator {
   readonly acrAccessTokenSpec?: ClusterGeneratorSpecGeneratorAcrAccessTokenSpec;
 
   /**
+   * @schema ClusterGeneratorSpecGenerator#cloudsmithAccessTokenSpec
+   */
+  readonly cloudsmithAccessTokenSpec?: ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec;
+
+  /**
    * @schema ClusterGeneratorSpecGenerator#ecrAuthorizationTokenSpec
    */
   readonly ecrAuthorizationTokenSpec?: ClusterGeneratorSpecGeneratorEcrAuthorizationTokenSpec;
@@ -700,6 +895,13 @@ export interface ClusterGeneratorSpecGenerator {
   readonly quayAccessTokenSpec?: ClusterGeneratorSpecGeneratorQuayAccessTokenSpec;
 
   /**
+   * SSHKeySpec controls the behavior of the ssh key generator.
+   *
+   * @schema ClusterGeneratorSpecGenerator#sshKeySpec
+   */
+  readonly sshKeySpec?: ClusterGeneratorSpecGeneratorSshKeySpec;
+
+  /**
    * @schema ClusterGeneratorSpecGenerator#stsSessionTokenSpec
    */
   readonly stsSessionTokenSpec?: ClusterGeneratorSpecGeneratorStsSessionTokenSpec;
@@ -733,6 +935,7 @@ export function toJson_ClusterGeneratorSpecGenerator(obj: ClusterGeneratorSpecGe
   if (obj === undefined) { return undefined; }
   const result = {
     'acrAccessTokenSpec': toJson_ClusterGeneratorSpecGeneratorAcrAccessTokenSpec(obj.acrAccessTokenSpec),
+    'cloudsmithAccessTokenSpec': toJson_ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec(obj.cloudsmithAccessTokenSpec),
     'ecrAuthorizationTokenSpec': toJson_ClusterGeneratorSpecGeneratorEcrAuthorizationTokenSpec(obj.ecrAuthorizationTokenSpec),
     'fakeSpec': toJson_ClusterGeneratorSpecGeneratorFakeSpec(obj.fakeSpec),
     'gcrAccessTokenSpec': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpec(obj.gcrAccessTokenSpec),
@@ -741,6 +944,7 @@ export function toJson_ClusterGeneratorSpecGenerator(obj: ClusterGeneratorSpecGe
     'mfaSpec': toJson_ClusterGeneratorSpecGeneratorMfaSpec(obj.mfaSpec),
     'passwordSpec': toJson_ClusterGeneratorSpecGeneratorPasswordSpec(obj.passwordSpec),
     'quayAccessTokenSpec': toJson_ClusterGeneratorSpecGeneratorQuayAccessTokenSpec(obj.quayAccessTokenSpec),
+    'sshKeySpec': toJson_ClusterGeneratorSpecGeneratorSshKeySpec(obj.sshKeySpec),
     'stsSessionTokenSpec': toJson_ClusterGeneratorSpecGeneratorStsSessionTokenSpec(obj.stsSessionTokenSpec),
     'uuidSpec': obj.uuidSpec,
     'vaultDynamicSecretSpec': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpec(obj.vaultDynamicSecretSpec),
@@ -759,6 +963,8 @@ export function toJson_ClusterGeneratorSpecGenerator(obj: ClusterGeneratorSpecGe
 export enum ClusterGeneratorSpecKind {
   /** ACRAccessToken */
   ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
   /** ECRAuthorizationToken */
   ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
   /** Fake */
@@ -771,6 +977,8 @@ export enum ClusterGeneratorSpecKind {
   QUAY_ACCESS_TOKEN = "QuayAccessToken",
   /** Password */
   PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
   /** STSSessionToken */
   STS_SESSION_TOKEN = "STSSessionToken",
   /** UUID */
@@ -850,6 +1058,58 @@ export function toJson_ClusterGeneratorSpecGeneratorAcrAccessTokenSpec(obj: Clus
     'registry': obj.registry,
     'scope': obj.scope,
     'tenantId': obj.tenantId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec
+ */
+export interface ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec {
+  /**
+   * APIURL configures the Cloudsmith API URL. Defaults to https://api.cloudsmith.io.
+   *
+   * @default https://api.cloudsmith.io.
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec#apiUrl
+   */
+  readonly apiUrl?: string;
+
+  /**
+   * OrgSlug is the organization slug in Cloudsmith
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec#orgSlug
+   */
+  readonly orgSlug: string;
+
+  /**
+   * Name of the service account you are federating with
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec#serviceAccountRef
+   */
+  readonly serviceAccountRef: ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef;
+
+  /**
+   * ServiceSlug is the service slug in Cloudsmith for OIDC authentication
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec#serviceSlug
+   */
+  readonly serviceSlug: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec(obj: ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiUrl': obj.apiUrl,
+    'orgSlug': obj.orgSlug,
+    'serviceAccountRef': toJson_ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef(obj.serviceAccountRef),
+    'serviceSlug': obj.serviceSlug,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1278,6 +1538,53 @@ export function toJson_ClusterGeneratorSpecGeneratorQuayAccessTokenSpec(obj: Clu
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * SSHKeySpec controls the behavior of the ssh key generator.
+ *
+ * @schema ClusterGeneratorSpecGeneratorSshKeySpec
+ */
+export interface ClusterGeneratorSpecGeneratorSshKeySpec {
+  /**
+   * Comment specifies an optional comment for the SSH key
+   *
+   * @schema ClusterGeneratorSpecGeneratorSshKeySpec#comment
+   */
+  readonly comment?: string;
+
+  /**
+   * KeySize specifies the key size for RSA keys (default: 2048)
+   * For RSA keys: 2048, 3072, 4096
+   * Ignored for ed25519 keys
+   *
+   * @schema ClusterGeneratorSpecGeneratorSshKeySpec#keySize
+   */
+  readonly keySize?: number;
+
+  /**
+   * KeyType specifies the SSH key type (rsa, ed25519)
+   *
+   * @schema ClusterGeneratorSpecGeneratorSshKeySpec#keyType
+   */
+  readonly keyType?: ClusterGeneratorSpecGeneratorSshKeySpecKeyType;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorSshKeySpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorSshKeySpec(obj: ClusterGeneratorSpecGeneratorSshKeySpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'comment': obj.comment,
+    'keySize': obj.keySize,
+    'keyType': obj.keyType,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * @schema ClusterGeneratorSpecGeneratorStsSessionTokenSpec
  */
 export interface ClusterGeneratorSpecGeneratorStsSessionTokenSpec {
@@ -1583,7 +1890,57 @@ export enum ClusterGeneratorSpecGeneratorAcrAccessTokenSpecEnvironmentType {
   CHINA_CLOUD = "ChinaCloud",
   /** GermanCloud */
   GERMAN_CLOUD = "GermanCloud",
+  /** AzureStackCloud */
+  AZURE_STACK_CLOUD = "AzureStackCloud",
 }
+
+/**
+ * Name of the service account you are federating with
+ *
+ * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef
+ */
+export interface ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef(obj: ClusterGeneratorSpecGeneratorCloudsmithAccessTokenSpecServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
  * Auth defines how to authenticate with AWS
@@ -1639,6 +1996,13 @@ export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuth {
    */
   readonly workloadIdentity?: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentity;
 
+  /**
+   * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuth#workloadIdentityFederation
+   */
+  readonly workloadIdentityFederation?: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation;
+
 }
 
 /**
@@ -1650,6 +2014,7 @@ export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuth(obj: 
   const result = {
     'secretRef': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthSecretRef(obj.secretRef),
     'workloadIdentity': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentity(obj.workloadIdentity),
+    'workloadIdentityFederation': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation(obj.workloadIdentityFederation),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1863,6 +2228,18 @@ export function toJson_ClusterGeneratorSpecGeneratorQuayAccessTokenSpecServiceAc
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * KeyType specifies the SSH key type (rsa, ed25519)
+ *
+ * @schema ClusterGeneratorSpecGeneratorSshKeySpecKeyType
+ */
+export enum ClusterGeneratorSpecGeneratorSshKeySpecKeyType {
+  /** rsa */
+  RSA = "rsa",
+  /** ed25519 */
+  ED25519 = "ed25519",
+}
+
+/**
  * Auth defines how to authenticate with AWS
  *
  * @schema ClusterGeneratorSpecGeneratorStsSessionTokenSpecAuth
@@ -1977,6 +2354,15 @@ export interface ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProvider {
   readonly caProvider?: ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCaProvider;
 
   /**
+   * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+   * Only applies to Vault KV v2 stores. When enabled, write operations must include
+   * the current version of the secret to prevent unintentional overwrites.
+   *
+   * @schema ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProvider#checkAndSet
+   */
+  readonly checkAndSet?: ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet;
+
+  /**
    * ForwardInconsistent tells Vault to forward read-after-write requests to the Vault
    * leader instead of simply retrying within a loop. This can increase performance if
    * the option is enabled serverside.
@@ -2060,6 +2446,7 @@ export function toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProvid
     'auth': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuth(obj.auth),
     'caBundle': obj.caBundle,
     'caProvider': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCaProvider(obj.caProvider),
+    'checkAndSet': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet(obj.checkAndSet),
     'forwardInconsistent': obj.forwardInconsistent,
     'headers': ((obj.headers) === undefined) ? undefined : (Object.entries(obj.headers).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
     'namespace': obj.namespace,
@@ -2511,6 +2898,75 @@ export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorklo
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+ *
+ * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation
+ */
+export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation {
+  /**
+   * audience is the Secure Token Service (STS) audience which contains the resource name for the workload identity pool and the provider identifier in that pool.
+   * If specified, Audience found in the external account credential config will be overridden with the configured value.
+   * audience must be provided when serviceAccountRef or awsSecurityCredentials is configured.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+   * when using the AWS metadata server is not an option.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation#awsSecurityCredentials
+   */
+  readonly awsSecurityCredentials?: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials;
+
+  /**
+   * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+   * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+   * serviceAccountRef must be used by providing operators service account details.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation#credConfig
+   */
+  readonly credConfig?: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig;
+
+  /**
+   * externalTokenEndpoint is the endpoint explicitly set up to provide tokens, which will be matched against the
+   * credential_source.url in the provided credConfig. This field is merely to double-check the external token source
+   * URL is having the expected value.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation#externalTokenEndpoint
+   */
+  readonly externalTokenEndpoint?: string;
+
+  /**
+   * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+   * when Kubernetes is configured as provider in workload identity pool.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation#serviceAccountRef
+   */
+  readonly serviceAccountRef?: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation(obj: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederation | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'awsSecurityCredentials': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials(obj.awsSecurityCredentials),
+    'credConfig': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig(obj.credConfig),
+    'externalTokenEndpoint': obj.externalTokenEndpoint,
+    'serviceAccountRef': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef(obj.serviceAccountRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * @schema ClusterGeneratorSpecGeneratorGithubAccessTokenSpecAuthPrivateKey
  */
 export interface ClusterGeneratorSpecGeneratorGithubAccessTokenSpecAuthPrivateKey {
@@ -2846,6 +3302,38 @@ export function toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProvid
     'name': obj.name,
     'namespace': obj.namespace,
     'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+ * Only applies to Vault KV v2 stores. When enabled, write operations must include
+ * the current version of the secret to prevent unintentional overwrites.
+ *
+ * @schema ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet
+ */
+export interface ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet {
+  /**
+   * Required when true, all write operations must include a check-and-set parameter.
+   * This helps prevent unintentional overwrites of secrets.
+   *
+   * @schema ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet#required
+   */
+  readonly required?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet(obj: ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderCheckAndSet | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'required': obj.required,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -3372,6 +3860,144 @@ export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorklo
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+ * when using the AWS metadata server is not an option.
+ *
+ * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials
+ */
+export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials {
+  /**
+   * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+   * Secret should be created with below names for keys
+   * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+   * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+   * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials#awsCredentialsSecretRef
+   */
+  readonly awsCredentialsSecretRef: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef;
+
+  /**
+   * region is for configuring the AWS region to be used.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials(obj: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsCredentialsSecretRef': toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj.awsCredentialsSecretRef),
+    'region': obj.region,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+ * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+ * serviceAccountRef must be used by providing operators service account details.
+ *
+ * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig
+ */
+export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig {
+  /**
+   * key name holding the external account credential config.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#key
+   */
+  readonly key: string;
+
+  /**
+   * name of the configmap.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the configmap exists. If empty, configmap will looked up in local namespace.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig(obj: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+ * when Kubernetes is configured as provider in workload identity pool.
+ *
+ * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef
+ */
+export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef(obj: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
@@ -3725,6 +4351,14 @@ export interface ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuth
   readonly clientCert?: ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuthCertClientCert;
 
   /**
+   * Path where the Certificate authentication backend is mounted
+   * in Vault, e.g: "cert"
+   *
+   * @schema ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuthCert#path
+   */
+  readonly path?: string;
+
+  /**
    * SecretRef to a key in a Secret resource containing client private key to
    * authenticate with Vault using the Cert authentication method
    *
@@ -3742,6 +4376,7 @@ export function toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProvid
   if (obj === undefined) { return undefined; }
   const result = {
     'clientCert': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuthCertClientCert(obj.clientCert),
+    'path': obj.path,
     'secretRef': toJson_ClusterGeneratorSpecGeneratorVaultDynamicSecretSpecProviderAuthCertSecretRef(obj.secretRef),
   };
   // filter undefined values
@@ -4393,6 +5028,47 @@ export function toJson_ClusterGeneratorSpecGeneratorAcrAccessTokenSpecAuthServic
   if (obj === undefined) { return undefined; }
   const result = {
     'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+ * Secret should be created with below names for keys
+ * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+ * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+ * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+ *
+ * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef
+ */
+export interface ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef {
+  /**
+   * name of the secret.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the secret exists. If empty, secret will looked up in local namespace.
+   *
+   * @schema ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj: ClusterGeneratorSpecGeneratorGcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
     'name': obj.name,
     'namespace': obj.namespace,
   };
@@ -5943,6 +6619,13 @@ export interface GcrAccessTokenSpecAuth {
    */
   readonly workloadIdentity?: GcrAccessTokenSpecAuthWorkloadIdentity;
 
+  /**
+   * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+   *
+   * @schema GcrAccessTokenSpecAuth#workloadIdentityFederation
+   */
+  readonly workloadIdentityFederation?: GcrAccessTokenSpecAuthWorkloadIdentityFederation;
+
 }
 
 /**
@@ -5954,6 +6637,7 @@ export function toJson_GcrAccessTokenSpecAuth(obj: GcrAccessTokenSpecAuth | unde
   const result = {
     'secretRef': toJson_GcrAccessTokenSpecAuthSecretRef(obj.secretRef),
     'workloadIdentity': toJson_GcrAccessTokenSpecAuthWorkloadIdentity(obj.workloadIdentity),
+    'workloadIdentityFederation': toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederation(obj.workloadIdentityFederation),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -6026,6 +6710,75 @@ export function toJson_GcrAccessTokenSpecAuthWorkloadIdentity(obj: GcrAccessToke
     'clusterName': obj.clusterName,
     'clusterProjectID': obj.clusterProjectId,
     'serviceAccountRef': toJson_GcrAccessTokenSpecAuthWorkloadIdentityServiceAccountRef(obj.serviceAccountRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+ *
+ * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation
+ */
+export interface GcrAccessTokenSpecAuthWorkloadIdentityFederation {
+  /**
+   * audience is the Secure Token Service (STS) audience which contains the resource name for the workload identity pool and the provider identifier in that pool.
+   * If specified, Audience found in the external account credential config will be overridden with the configured value.
+   * audience must be provided when serviceAccountRef or awsSecurityCredentials is configured.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+   * when using the AWS metadata server is not an option.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation#awsSecurityCredentials
+   */
+  readonly awsSecurityCredentials?: GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials;
+
+  /**
+   * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+   * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+   * serviceAccountRef must be used by providing operators service account details.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation#credConfig
+   */
+  readonly credConfig?: GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig;
+
+  /**
+   * externalTokenEndpoint is the endpoint explicitly set up to provide tokens, which will be matched against the
+   * credential_source.url in the provided credConfig. This field is merely to double-check the external token source
+   * URL is having the expected value.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation#externalTokenEndpoint
+   */
+  readonly externalTokenEndpoint?: string;
+
+  /**
+   * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+   * when Kubernetes is configured as provider in workload identity pool.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederation#serviceAccountRef
+   */
+  readonly serviceAccountRef?: GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef;
+
+}
+
+/**
+ * Converts an object of type 'GcrAccessTokenSpecAuthWorkloadIdentityFederation' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederation(obj: GcrAccessTokenSpecAuthWorkloadIdentityFederation | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'awsSecurityCredentials': toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials(obj.awsSecurityCredentials),
+    'credConfig': toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig(obj.credConfig),
+    'externalTokenEndpoint': obj.externalTokenEndpoint,
+    'serviceAccountRef': toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef(obj.serviceAccountRef),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -6119,6 +6872,185 @@ export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityServiceAccountRef(o
   if (obj === undefined) { return undefined; }
   const result = {
     'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+ * when using the AWS metadata server is not an option.
+ *
+ * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials
+ */
+export interface GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials {
+  /**
+   * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+   * Secret should be created with below names for keys
+   * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+   * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+   * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials#awsCredentialsSecretRef
+   */
+  readonly awsCredentialsSecretRef: GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef;
+
+  /**
+   * region is for configuring the AWS region to be used.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials(obj: GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsCredentialsSecretRef': toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj.awsCredentialsSecretRef),
+    'region': obj.region,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+ * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+ * serviceAccountRef must be used by providing operators service account details.
+ *
+ * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig
+ */
+export interface GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig {
+  /**
+   * key name holding the external account credential config.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#key
+   */
+  readonly key: string;
+
+  /**
+   * name of the configmap.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the configmap exists. If empty, configmap will looked up in local namespace.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig(obj: GcrAccessTokenSpecAuthWorkloadIdentityFederationCredConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+ * when Kubernetes is configured as provider in workload identity pool.
+ *
+ * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef
+ */
+export interface GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef(obj: GcrAccessTokenSpecAuthWorkloadIdentityFederationServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+ * Secret should be created with below names for keys
+ * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+ * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+ * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+ *
+ * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef
+ */
+export interface GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef {
+  /**
+   * name of the secret.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the secret exists. If empty, secret will looked up in local namespace.
+   *
+   * @schema GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj: GcrAccessTokenSpecAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
     'name': obj.name,
     'namespace': obj.namespace,
   };
@@ -7407,6 +8339,155 @@ export function toJson_QuayAccessTokenSpecServiceAccountRef(obj: QuayAccessToken
 
 
 /**
+ * SSHKey generates SSH key pairs.
+ *
+ * @schema SSHKey
+ */
+export class SshKey extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "SSHKey"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'generators.external-secrets.io/v1alpha1',
+    kind: 'SSHKey',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "SSHKey".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: SshKeyProps = {}): any {
+    return {
+      ...SshKey.GVK,
+      ...toJson_SshKeyProps(props),
+    };
+  }
+
+  /**
+   * Defines a "SSHKey" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: SshKeyProps = {}) {
+    super(scope, id, {
+      ...SshKey.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...SshKey.GVK,
+      ...toJson_SshKeyProps(resolved),
+    };
+  }
+}
+
+/**
+ * SSHKey generates SSH key pairs.
+ *
+ * @schema SSHKey
+ */
+export interface SshKeyProps {
+  /**
+   * @schema SSHKey#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * SSHKeySpec controls the behavior of the ssh key generator.
+   *
+   * @schema SSHKey#spec
+   */
+  readonly spec?: SshKeySpec;
+
+}
+
+/**
+ * Converts an object of type 'SshKeyProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SshKeyProps(obj: SshKeyProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_SshKeySpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SSHKeySpec controls the behavior of the ssh key generator.
+ *
+ * @schema SshKeySpec
+ */
+export interface SshKeySpec {
+  /**
+   * Comment specifies an optional comment for the SSH key
+   *
+   * @schema SshKeySpec#comment
+   */
+  readonly comment?: string;
+
+  /**
+   * KeySize specifies the key size for RSA keys (default: 2048)
+   * For RSA keys: 2048, 3072, 4096
+   * Ignored for ed25519 keys
+   *
+   * @schema SshKeySpec#keySize
+   */
+  readonly keySize?: number;
+
+  /**
+   * KeyType specifies the SSH key type (rsa, ed25519)
+   *
+   * @schema SshKeySpec#keyType
+   */
+  readonly keyType?: SshKeySpecKeyType;
+
+}
+
+/**
+ * Converts an object of type 'SshKeySpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SshKeySpec(obj: SshKeySpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'comment': obj.comment,
+    'keySize': obj.keySize,
+    'keyType': obj.keyType,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * KeyType specifies the SSH key type (rsa, ed25519)
+ *
+ * @schema SshKeySpecKeyType
+ */
+export enum SshKeySpecKeyType {
+  /** rsa */
+  RSA = "rsa",
+  /** ed25519 */
+  ED25519 = "ed25519",
+}
+
+
+/**
  * STSSessionToken uses the GetSessionToken API to retrieve an authorization token.
 The authorization token is valid for 12 hours.
 The authorizationToken returned is a base64 encoded string that can be decoded.
@@ -8199,6 +9280,15 @@ export interface VaultDynamicSecretSpecProvider {
   readonly caProvider?: VaultDynamicSecretSpecProviderCaProvider;
 
   /**
+   * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+   * Only applies to Vault KV v2 stores. When enabled, write operations must include
+   * the current version of the secret to prevent unintentional overwrites.
+   *
+   * @schema VaultDynamicSecretSpecProvider#checkAndSet
+   */
+  readonly checkAndSet?: VaultDynamicSecretSpecProviderCheckAndSet;
+
+  /**
    * ForwardInconsistent tells Vault to forward read-after-write requests to the Vault
    * leader instead of simply retrying within a loop. This can increase performance if
    * the option is enabled serverside.
@@ -8282,6 +9372,7 @@ export function toJson_VaultDynamicSecretSpecProvider(obj: VaultDynamicSecretSpe
     'auth': toJson_VaultDynamicSecretSpecProviderAuth(obj.auth),
     'caBundle': obj.caBundle,
     'caProvider': toJson_VaultDynamicSecretSpecProviderCaProvider(obj.caProvider),
+    'checkAndSet': toJson_VaultDynamicSecretSpecProviderCheckAndSet(obj.checkAndSet),
     'forwardInconsistent': obj.forwardInconsistent,
     'headers': ((obj.headers) === undefined) ? undefined : (Object.entries(obj.headers).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
     'namespace': obj.namespace,
@@ -8506,6 +9597,38 @@ export function toJson_VaultDynamicSecretSpecProviderCaProvider(obj: VaultDynami
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+ * Only applies to Vault KV v2 stores. When enabled, write operations must include
+ * the current version of the secret to prevent unintentional overwrites.
+ *
+ * @schema VaultDynamicSecretSpecProviderCheckAndSet
+ */
+export interface VaultDynamicSecretSpecProviderCheckAndSet {
+  /**
+   * Required when true, all write operations must include a check-and-set parameter.
+   * This helps prevent unintentional overwrites of secrets.
+   *
+   * @schema VaultDynamicSecretSpecProviderCheckAndSet#required
+   */
+  readonly required?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'VaultDynamicSecretSpecProviderCheckAndSet' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_VaultDynamicSecretSpecProviderCheckAndSet(obj: VaultDynamicSecretSpecProviderCheckAndSet | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'required': obj.required,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * The configuration used for client side related TLS communication, when the Vault server
  * requires mutual authentication. Only used if the Server URL is using HTTPS protocol.
  * This parameter is ignored for plain HTTP protocol connection.
@@ -8641,6 +9764,14 @@ export interface VaultDynamicSecretSpecProviderAuthCert {
   readonly clientCert?: VaultDynamicSecretSpecProviderAuthCertClientCert;
 
   /**
+   * Path where the Certificate authentication backend is mounted
+   * in Vault, e.g: "cert"
+   *
+   * @schema VaultDynamicSecretSpecProviderAuthCert#path
+   */
+  readonly path?: string;
+
+  /**
    * SecretRef to a key in a Secret resource containing client private key to
    * authenticate with Vault using the Cert authentication method
    *
@@ -8658,6 +9789,7 @@ export function toJson_VaultDynamicSecretSpecProviderAuthCert(obj: VaultDynamicS
   if (obj === undefined) { return undefined; }
   const result = {
     'clientCert': toJson_VaultDynamicSecretSpecProviderAuthCertClientCert(obj.clientCert),
+    'path': obj.path,
     'secretRef': toJson_VaultDynamicSecretSpecProviderAuthCertSecretRef(obj.secretRef),
   };
   // filter undefined values

@@ -4,6 +4,5106 @@ import { Construct } from 'constructs';
 
 
 /**
+ * ClusterExternalSecret is the Schema for the clusterexternalsecrets API.
+ *
+ * @schema ClusterExternalSecret
+ */
+export class ClusterExternalSecret extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "ClusterExternalSecret"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'external-secrets.io/v1',
+    kind: 'ClusterExternalSecret',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "ClusterExternalSecret".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: ClusterExternalSecretProps = {}): any {
+    return {
+      ...ClusterExternalSecret.GVK,
+      ...toJson_ClusterExternalSecretProps(props),
+    };
+  }
+
+  /**
+   * Defines a "ClusterExternalSecret" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: ClusterExternalSecretProps = {}) {
+    super(scope, id, {
+      ...ClusterExternalSecret.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...ClusterExternalSecret.GVK,
+      ...toJson_ClusterExternalSecretProps(resolved),
+    };
+  }
+}
+
+/**
+ * ClusterExternalSecret is the Schema for the clusterexternalsecrets API.
+ *
+ * @schema ClusterExternalSecret
+ */
+export interface ClusterExternalSecretProps {
+  /**
+   * @schema ClusterExternalSecret#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * ClusterExternalSecretSpec defines the desired state of ClusterExternalSecret.
+   *
+   * @schema ClusterExternalSecret#spec
+   */
+  readonly spec?: ClusterExternalSecretSpec;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretProps(obj: ClusterExternalSecretProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_ClusterExternalSecretSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterExternalSecretSpec defines the desired state of ClusterExternalSecret.
+ *
+ * @schema ClusterExternalSecretSpec
+ */
+export interface ClusterExternalSecretSpec {
+  /**
+   * The metadata of the external secrets to be created
+   *
+   * @schema ClusterExternalSecretSpec#externalSecretMetadata
+   */
+  readonly externalSecretMetadata?: ClusterExternalSecretSpecExternalSecretMetadata;
+
+  /**
+   * The name of the external secrets to be created.
+   * Defaults to the name of the ClusterExternalSecret
+   *
+   * @default the name of the ClusterExternalSecret
+   * @schema ClusterExternalSecretSpec#externalSecretName
+   */
+  readonly externalSecretName?: string;
+
+  /**
+   * The spec for the ExternalSecrets to be created
+   *
+   * @schema ClusterExternalSecretSpec#externalSecretSpec
+   */
+  readonly externalSecretSpec: ClusterExternalSecretSpecExternalSecretSpec;
+
+  /**
+   * The labels to select by to find the Namespaces to create the ExternalSecrets in.
+   * Deprecated: Use NamespaceSelectors instead.
+   *
+   * @schema ClusterExternalSecretSpec#namespaceSelector
+   */
+  readonly namespaceSelector?: ClusterExternalSecretSpecNamespaceSelector;
+
+  /**
+   * A list of labels to select by to find the Namespaces to create the ExternalSecrets in. The selectors are ORed.
+   *
+   * @schema ClusterExternalSecretSpec#namespaceSelectors
+   */
+  readonly namespaceSelectors?: ClusterExternalSecretSpecNamespaceSelectors[];
+
+  /**
+   * Choose namespaces by name. This field is ORed with anything that NamespaceSelectors ends up choosing.
+   * Deprecated: Use NamespaceSelectors instead.
+   *
+   * @schema ClusterExternalSecretSpec#namespaces
+   */
+  readonly namespaces?: string[];
+
+  /**
+   * The time in which the controller should reconcile its objects and recheck namespaces for labels.
+   *
+   * @schema ClusterExternalSecretSpec#refreshTime
+   */
+  readonly refreshTime?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpec(obj: ClusterExternalSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'externalSecretMetadata': toJson_ClusterExternalSecretSpecExternalSecretMetadata(obj.externalSecretMetadata),
+    'externalSecretName': obj.externalSecretName,
+    'externalSecretSpec': toJson_ClusterExternalSecretSpecExternalSecretSpec(obj.externalSecretSpec),
+    'namespaceSelector': toJson_ClusterExternalSecretSpecNamespaceSelector(obj.namespaceSelector),
+    'namespaceSelectors': obj.namespaceSelectors?.map(y => toJson_ClusterExternalSecretSpecNamespaceSelectors(y)),
+    'namespaces': obj.namespaces?.map(y => y),
+    'refreshTime': obj.refreshTime,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The metadata of the external secrets to be created
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretMetadata
+ */
+export interface ClusterExternalSecretSpecExternalSecretMetadata {
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretMetadata(obj: ClusterExternalSecretSpecExternalSecretMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The spec for the ExternalSecrets to be created
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpec
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpec {
+  /**
+   * Data defines the connection between the Kubernetes Secret keys and the Provider data
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#data
+   */
+  readonly data?: ClusterExternalSecretSpecExternalSecretSpecData[];
+
+  /**
+   * DataFrom is used to fetch all properties from a specific Provider data
+   * If multiple entries are specified, the Secret keys are merged in the specified order
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#dataFrom
+   */
+  readonly dataFrom?: ClusterExternalSecretSpecExternalSecretSpecDataFrom[];
+
+  /**
+   * RefreshInterval is the amount of time before the values are read again from the SecretStore provider,
+   * specified as Golang Duration strings.
+   * Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+   * Example values: "1h", "2h30m", "10s"
+   * May be set to zero to fetch and create it once. Defaults to 1h.
+   *
+   * @default 1h.
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#refreshInterval
+   */
+  readonly refreshInterval?: string;
+
+  /**
+   * RefreshPolicy determines how the ExternalSecret should be refreshed:
+   * - CreatedOnce: Creates the Secret only if it does not exist and does not update it thereafter
+   * - Periodic: Synchronizes the Secret from the external source at regular intervals specified by refreshInterval.
+   * No periodic updates occur if refreshInterval is 0.
+   * - OnChange: Only synchronizes the Secret when the ExternalSecret's metadata or specification changes
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#refreshPolicy
+   */
+  readonly refreshPolicy?: ClusterExternalSecretSpecExternalSecretSpecRefreshPolicy;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#secretStoreRef
+   */
+  readonly secretStoreRef?: ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef;
+
+  /**
+   * ExternalSecretTarget defines the Kubernetes Secret to be created
+   * There can be only one target per ExternalSecret.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpec#target
+   */
+  readonly target?: ClusterExternalSecretSpecExternalSecretSpecTarget;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpec(obj: ClusterExternalSecretSpecExternalSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': obj.data?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecData(y)),
+    'dataFrom': obj.dataFrom?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecDataFrom(y)),
+    'refreshInterval': obj.refreshInterval,
+    'refreshPolicy': obj.refreshPolicy,
+    'secretStoreRef': toJson_ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef(obj.secretStoreRef),
+    'target': toJson_ClusterExternalSecretSpecExternalSecretSpecTarget(obj.target),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The labels to select by to find the Namespaces to create the ExternalSecrets in.
+ * Deprecated: Use NamespaceSelectors instead.
+ *
+ * @schema ClusterExternalSecretSpecNamespaceSelector
+ */
+export interface ClusterExternalSecretSpecNamespaceSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelector#matchExpressions
+   */
+  readonly matchExpressions?: ClusterExternalSecretSpecNamespaceSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecNamespaceSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecNamespaceSelector(obj: ClusterExternalSecretSpecNamespaceSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterExternalSecretSpecNamespaceSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector is a label query over a set of resources. The result of matchLabels and
+ * matchExpressions are ANDed. An empty label selector matches all objects. A null
+ * label selector matches no objects.
+ *
+ * @schema ClusterExternalSecretSpecNamespaceSelectors
+ */
+export interface ClusterExternalSecretSpecNamespaceSelectors {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectors#matchExpressions
+   */
+  readonly matchExpressions?: ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectors#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecNamespaceSelectors' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecNamespaceSelectors(obj: ClusterExternalSecretSpecNamespaceSelectors | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ExternalSecretData defines the connection between the Kubernetes Secret key (spec.data.<key>) and the Provider data.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecData
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecData {
+  /**
+   * RemoteRef points to the remote secret and defines
+   * which secret (version/property/..) to fetch.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecData#remoteRef
+   */
+  readonly remoteRef: ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef;
+
+  /**
+   * The key in the Kubernetes Secret to store the value.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecData#secretKey
+   */
+  readonly secretKey: string;
+
+  /**
+   * SourceRef allows you to override the source
+   * from which the value will be pulled.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecData#sourceRef
+   */
+  readonly sourceRef?: ClusterExternalSecretSpecExternalSecretSpecDataSourceRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecData' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecData(obj: ClusterExternalSecretSpecExternalSecretSpecData | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'remoteRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef(obj.remoteRef),
+    'secretKey': obj.secretKey,
+    'sourceRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRef(obj.sourceRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFrom
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFrom {
+  /**
+   * Used to extract multiple key/value pairs from one secret
+   * Note: Extract does not support sourceRef.Generator or sourceRef.GeneratorRef.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFrom#extract
+   */
+  readonly extract?: ClusterExternalSecretSpecExternalSecretSpecDataFromExtract;
+
+  /**
+   * Used to find secrets based on tags or regular expressions
+   * Note: Find does not support sourceRef.Generator or sourceRef.GeneratorRef.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFrom#find
+   */
+  readonly find?: ClusterExternalSecretSpecExternalSecretSpecDataFromFind;
+
+  /**
+   * Used to rewrite secret Keys after getting them from the secret Provider
+   * Multiple Rewrite operations can be provided. They are applied in a layered order (first to last)
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFrom#rewrite
+   */
+  readonly rewrite?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite[];
+
+  /**
+   * SourceRef points to a store or generator
+   * which contains secret values ready to use.
+   * Use this in combination with Extract or Find pull values out of
+   * a specific SecretStore.
+   * When sourceRef points to a generator Extract or Find is not supported.
+   * The generator returns a static map of values
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFrom#sourceRef
+   */
+  readonly sourceRef?: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFrom(obj: ClusterExternalSecretSpecExternalSecretSpecDataFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'extract': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromExtract(obj.extract),
+    'find': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromFind(obj.find),
+    'rewrite': obj.rewrite?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite(y)),
+    'sourceRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef(obj.sourceRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * RefreshPolicy determines how the ExternalSecret should be refreshed:
+ * - CreatedOnce: Creates the Secret only if it does not exist and does not update it thereafter
+ * - Periodic: Synchronizes the Secret from the external source at regular intervals specified by refreshInterval.
+ * No periodic updates occur if refreshInterval is 0.
+ * - OnChange: Only synchronizes the Secret when the ExternalSecret's metadata or specification changes
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecRefreshPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecRefreshPolicy {
+  /** CreatedOnce */
+  CREATED_ONCE = "CreatedOnce",
+  /** Periodic */
+  PERIODIC = "Periodic",
+  /** OnChange */
+  ON_CHANGE = "OnChange",
+}
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretSpecExternalSecretSpecSecretStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef(obj: ClusterExternalSecretSpecExternalSecretSpecSecretStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ExternalSecretTarget defines the Kubernetes Secret to be created
+ * There can be only one target per ExternalSecret.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTarget
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTarget {
+  /**
+   * CreationPolicy defines rules on how to create the resulting Secret.
+   * Defaults to "Owner"
+   *
+   * @default Owner"
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTarget#creationPolicy
+   */
+  readonly creationPolicy?: ClusterExternalSecretSpecExternalSecretSpecTargetCreationPolicy;
+
+  /**
+   * DeletionPolicy defines rules on how to delete the resulting Secret.
+   * Defaults to "Retain"
+   *
+   * @default Retain"
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTarget#deletionPolicy
+   */
+  readonly deletionPolicy?: ClusterExternalSecretSpecExternalSecretSpecTargetDeletionPolicy;
+
+  /**
+   * Immutable defines if the final secret will be immutable
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTarget#immutable
+   */
+  readonly immutable?: boolean;
+
+  /**
+   * The name of the Secret resource to be managed.
+   * Defaults to the .metadata.name of the ExternalSecret resource
+   *
+   * @default the .metadata.name of the ExternalSecret resource
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTarget#name
+   */
+  readonly name?: string;
+
+  /**
+   * Template defines a blueprint for the created Secret resource.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTarget#template
+   */
+  readonly template?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplate;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTarget' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTarget(obj: ClusterExternalSecretSpecExternalSecretSpecTarget | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'creationPolicy': obj.creationPolicy,
+    'deletionPolicy': obj.deletionPolicy,
+    'immutable': obj.immutable,
+    'name': obj.name,
+    'template': toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplate(obj.template),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterExternalSecretSpecNamespaceSelectorMatchExpressions
+ */
+export interface ClusterExternalSecretSpecNamespaceSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecNamespaceSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecNamespaceSelectorMatchExpressions(obj: ClusterExternalSecretSpecNamespaceSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions
+ */
+export interface ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions(obj: ClusterExternalSecretSpecNamespaceSelectorsMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * RemoteRef points to the remote secret and defines
+ * which secret (version/property/..) to fetch.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefDecodingStrategy;
+
+  /**
+   * Key is the key used in the Provider, mandatory
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+   *
+   * @default None
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#metadataPolicy
+   */
+  readonly metadataPolicy?: ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefMetadataPolicy;
+
+  /**
+   * Used to select a specific property of the Provider value (if a map), if supported
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#property
+   */
+  readonly property?: string;
+
+  /**
+   * Used to select a specific version of the Provider value, if supported
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef#version
+   */
+  readonly version?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataRemoteRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'key': obj.key,
+    'metadataPolicy': obj.metadataPolicy,
+    'property': obj.property,
+    'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SourceRef allows you to override the source
+ * from which the value will be pulled.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataSourceRef {
+  /**
+   * GeneratorRef points to a generator custom resource.
+   *
+   * Deprecated: The generatorRef is not implemented in .data[].
+   * this will be removed with v1.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRef#generatorRef
+   */
+  readonly generatorRef?: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRef#storeRef
+   */
+  readonly storeRef?: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef(obj.generatorRef),
+    'storeRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef(obj.storeRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to extract multiple key/value pairs from one secret
+ * Note: Extract does not support sourceRef.Generator or sourceRef.GeneratorRef.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromExtract {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataFromExtractConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataFromExtractDecodingStrategy;
+
+  /**
+   * Key is the key used in the Provider, mandatory
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#key
+   */
+  readonly key: string;
+
+  /**
+   * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+   *
+   * @default None
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#metadataPolicy
+   */
+  readonly metadataPolicy?: ClusterExternalSecretSpecExternalSecretSpecDataFromExtractMetadataPolicy;
+
+  /**
+   * Used to select a specific property of the Provider value (if a map), if supported
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#property
+   */
+  readonly property?: string;
+
+  /**
+   * Used to select a specific version of the Provider value, if supported
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtract#version
+   */
+  readonly version?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromExtract' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromExtract(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromExtract | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'key': obj.key,
+    'metadataPolicy': obj.metadataPolicy,
+    'property': obj.property,
+    'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to find secrets based on tags or regular expressions
+ * Note: Find does not support sourceRef.Generator or sourceRef.GeneratorRef.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromFind {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataFromFindConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretSpecExternalSecretSpecDataFromFindDecodingStrategy;
+
+  /**
+   * Finds secrets based on the name.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind#name
+   */
+  readonly name?: ClusterExternalSecretSpecExternalSecretSpecDataFromFindName;
+
+  /**
+   * A root path to start the find operations.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind#path
+   */
+  readonly path?: string;
+
+  /**
+   * Find secrets based on tags.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFind#tags
+   */
+  readonly tags?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromFind' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromFind(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromFind | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'name': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromFindName(obj.name),
+    'path': obj.path,
+    'tags': ((obj.tags) === undefined) ? undefined : (Object.entries(obj.tags).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite {
+  /**
+   * Used to merge key/values in one single Secret
+   * The resulting key will contain all values from the specified secrets
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite#merge
+   */
+  readonly merge?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge;
+
+  /**
+   * Used to rewrite with regular expressions.
+   * The resulting key will be the output of a regexp.ReplaceAll operation.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite#regexp
+   */
+  readonly regexp?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp;
+
+  /**
+   * Used to apply string transformation on the secrets.
+   * The resulting key will be the output of the template applied by the operation.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite#transform
+   */
+  readonly transform?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromRewrite | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'merge': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge(obj.merge),
+    'regexp': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp(obj.regexp),
+    'transform': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform(obj.transform),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SourceRef points to a store or generator
+ * which contains secret values ready to use.
+ * Use this in combination with Extract or Find pull values out of
+ * a specific SecretStore.
+ * When sourceRef points to a generator Extract or Find is not supported.
+ * The generator returns a static map of values
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef {
+  /**
+   * GeneratorRef points to a generator custom resource.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef#generatorRef
+   */
+  readonly generatorRef?: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef#storeRef
+   */
+  readonly storeRef?: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef(obj.generatorRef),
+    'storeRef': toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef(obj.storeRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretSpecExternalSecretSpecSecretStoreRefKind
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecSecretStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * CreationPolicy defines rules on how to create the resulting Secret.
+ * Defaults to "Owner"
+ *
+ * @default Owner"
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetCreationPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetCreationPolicy {
+  /** Owner */
+  OWNER = "Owner",
+  /** Orphan */
+  ORPHAN = "Orphan",
+  /** Merge */
+  MERGE = "Merge",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * DeletionPolicy defines rules on how to delete the resulting Secret.
+ * Defaults to "Retain"
+ *
+ * @default Retain"
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetDeletionPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetDeletionPolicy {
+  /** Delete */
+  DELETE = "Delete",
+  /** Merge */
+  MERGE = "Merge",
+  /** Retain */
+  RETAIN = "Retain",
+}
+
+/**
+ * Template defines a blueprint for the created Secret resource.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplate {
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#data
+   */
+  readonly data?: { [key: string]: string };
+
+  /**
+   * EngineVersion specifies the template engine version
+   * that should be used to compile/execute the
+   * template specified in .data and .templateFrom[].
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#engineVersion
+   */
+  readonly engineVersion?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateEngineVersion;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#mergePolicy
+   */
+  readonly mergePolicy?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMergePolicy;
+
+  /**
+   * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#metadata
+   */
+  readonly metadata?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#templateFrom
+   */
+  readonly templateFrom?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom[];
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplate#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplate(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': ((obj.data) === undefined) ? undefined : (Object.entries(obj.data).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'engineVersion': obj.engineVersion,
+    'mergePolicy': obj.mergePolicy,
+    'metadata': toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata(obj.metadata),
+    'templateFrom': obj.templateFrom?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom(y)),
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefConversionStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefDecodingStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+ *
+ * @default None
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefMetadataPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataRemoteRefMetadataPolicy {
+  /** None */
+  NONE = "None",
+  /** Fetch */
+  FETCH = "Fetch",
+}
+
+/**
+ * GeneratorRef points to a generator custom resource.
+ *
+ * Deprecated: The generatorRef is not implemented in .data[].
+ * this will be removed with v1.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef#kind
+   */
+  readonly kind: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtractConversionStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromExtractConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtractDecodingStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromExtractDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+ *
+ * @default None
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromExtractMetadataPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromExtractMetadataPolicy {
+  /** None */
+  NONE = "None",
+  /** Fetch */
+  FETCH = "Fetch",
+}
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFindConversionStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromFindConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFindDecodingStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromFindDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Finds secrets based on the name.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFindName
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromFindName {
+  /**
+   * Finds secrets base
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromFindName#regexp
+   */
+  readonly regexp?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromFindName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromFindName(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromFindName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'regexp': obj.regexp,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to merge key/values in one single Secret
+ * The resulting key will contain all values from the specified secrets
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge {
+  /**
+   * Used to define the policy to use in conflict resolution.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge#conflictPolicy
+   */
+  readonly conflictPolicy?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeConflictPolicy;
+
+  /**
+   * Used to define the target key of the merge operation.
+   * Required if strategy is JSON. Ignored otherwise.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge#into
+   */
+  readonly into?: string;
+
+  /**
+   * Used to define key priority in conflict resolution.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge#priority
+   */
+  readonly priority?: string[];
+
+  /**
+   * Used to define the policy when a key in the priority list does not exist in the input.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge#priorityPolicy
+   */
+  readonly priorityPolicy?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergePriorityPolicy;
+
+  /**
+   * Used to define the strategy to use in the merge operation.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge#strategy
+   */
+  readonly strategy?: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeStrategy;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMerge | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conflictPolicy': obj.conflictPolicy,
+    'into': obj.into,
+    'priority': obj.priority?.map(y => y),
+    'priorityPolicy': obj.priorityPolicy,
+    'strategy': obj.strategy,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to rewrite with regular expressions.
+ * The resulting key will be the output of a regexp.ReplaceAll operation.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp {
+  /**
+   * Used to define the regular expression of a re.Compiler.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp#source
+   */
+  readonly source: string;
+
+  /**
+   * Used to define the target pattern of a ReplaceAll operation.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp#target
+   */
+  readonly target: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteRegexp | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'source': obj.source,
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to apply string transformation on the secrets.
+ * The resulting key will be the output of the template applied by the operation.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform {
+  /**
+   * Used to define the template to apply on the secret name.
+   * `.value ` will specify the secret name in the template.
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform#template
+   */
+  readonly template: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteTransform | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'template': obj.template,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * GeneratorRef points to a generator custom resource.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef#kind
+   */
+  readonly kind: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef(obj: ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EngineVersion specifies the template engine version
+ * that should be used to compile/execute the
+ * template specified in .data and .templateFrom[].
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateEngineVersion
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetTemplateEngineVersion {
+  /** v2 */
+  V2 = "v2",
+}
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMergePolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMergePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** Merge */
+  MERGE = "Merge",
+}
+
+/**
+ * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata {
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata#finalizers
+   */
+  readonly finalizers?: string[];
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'finalizers': obj.finalizers?.map(y => y),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom {
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom#configMap
+   */
+  readonly configMap?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom#literal
+   */
+  readonly literal?: string;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom#secret
+   */
+  readonly secret?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom#target
+   */
+  readonly target?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromTarget;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMap': toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap(obj.configMap),
+    'literal': obj.literal,
+    'secret': toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret(obj.secret),
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRefKind
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataSourceRefGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+  /** MFA */
+  MFA = "MFA",
+}
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRefKind
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataSourceRefStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * Used to define the policy to use in conflict resolution.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeConflictPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeConflictPolicy {
+  /** Ignore */
+  IGNORE = "Ignore",
+  /** Error */
+  ERROR = "Error",
+}
+
+/**
+ * Used to define the policy when a key in the priority list does not exist in the input.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergePriorityPolicy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergePriorityPolicy {
+  /** IgnoreNotFound */
+  IGNORE_NOT_FOUND = "IgnoreNotFound",
+  /** Strict */
+  STRICT = "Strict",
+}
+
+/**
+ * Used to define the strategy to use in the merge operation.
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeStrategy
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromRewriteMergeStrategy {
+  /** Extract */
+  EXTRACT = "Extract",
+  /** JSON */
+  JSON = "JSON",
+}
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRefKind
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+  /** MFA */
+  MFA = "MFA",
+}
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRefKind
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecDataFromSourceRefStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap#items
+   */
+  readonly items: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret#items
+   */
+  readonly items: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromTarget
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromTarget {
+  /** Data */
+  DATA = "Data",
+  /** Annotations */
+  ANNOTATIONS = "Annotations",
+  /** Labels */
+  LABELS = "Labels",
+}
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems#templateAs
+   */
+  readonly templateAs?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems
+ */
+export interface ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems#templateAs
+   */
+  readonly templateAs?: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems(obj: ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+/**
+ * @schema ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs
+ */
+export enum ClusterExternalSecretSpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+
+/**
+ * ClusterExternalSecret is the Schema for the clusterexternalsecrets API.
+ *
+ * @schema ClusterExternalSecretV1Beta1
+ */
+export class ClusterExternalSecretV1Beta1 extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "ClusterExternalSecretV1Beta1"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'external-secrets.io/v1beta1',
+    kind: 'ClusterExternalSecret',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "ClusterExternalSecretV1Beta1".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: ClusterExternalSecretV1Beta1Props = {}): any {
+    return {
+      ...ClusterExternalSecretV1Beta1.GVK,
+      ...toJson_ClusterExternalSecretV1Beta1Props(props),
+    };
+  }
+
+  /**
+   * Defines a "ClusterExternalSecretV1Beta1" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: ClusterExternalSecretV1Beta1Props = {}) {
+    super(scope, id, {
+      ...ClusterExternalSecretV1Beta1.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...ClusterExternalSecretV1Beta1.GVK,
+      ...toJson_ClusterExternalSecretV1Beta1Props(resolved),
+    };
+  }
+}
+
+/**
+ * ClusterExternalSecret is the Schema for the clusterexternalsecrets API.
+ *
+ * @schema ClusterExternalSecretV1Beta1
+ */
+export interface ClusterExternalSecretV1Beta1Props {
+  /**
+   * @schema ClusterExternalSecretV1Beta1#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * ClusterExternalSecretSpec defines the desired state of ClusterExternalSecret.
+   *
+   * @schema ClusterExternalSecretV1Beta1#spec
+   */
+  readonly spec?: ClusterExternalSecretV1Beta1Spec;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1Props' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1Props(obj: ClusterExternalSecretV1Beta1Props | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_ClusterExternalSecretV1Beta1Spec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ClusterExternalSecretSpec defines the desired state of ClusterExternalSecret.
+ *
+ * @schema ClusterExternalSecretV1Beta1Spec
+ */
+export interface ClusterExternalSecretV1Beta1Spec {
+  /**
+   * The metadata of the external secrets to be created
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#externalSecretMetadata
+   */
+  readonly externalSecretMetadata?: ClusterExternalSecretV1Beta1SpecExternalSecretMetadata;
+
+  /**
+   * The name of the external secrets to be created.
+   * Defaults to the name of the ClusterExternalSecret
+   *
+   * @default the name of the ClusterExternalSecret
+   * @schema ClusterExternalSecretV1Beta1Spec#externalSecretName
+   */
+  readonly externalSecretName?: string;
+
+  /**
+   * The spec for the ExternalSecrets to be created
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#externalSecretSpec
+   */
+  readonly externalSecretSpec: ClusterExternalSecretV1Beta1SpecExternalSecretSpec;
+
+  /**
+   * The labels to select by to find the Namespaces to create the ExternalSecrets in
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#namespaceSelector
+   */
+  readonly namespaceSelector?: ClusterExternalSecretV1Beta1SpecNamespaceSelector;
+
+  /**
+   * A list of labels to select by to find the Namespaces to create the ExternalSecrets in. The selectors are ORed.
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#namespaceSelectors
+   */
+  readonly namespaceSelectors?: ClusterExternalSecretV1Beta1SpecNamespaceSelectors[];
+
+  /**
+   * Choose namespaces by name. This field is ORed with anything that NamespaceSelectors ends up choosing.
+   * Deprecated: Use NamespaceSelectors instead.
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#namespaces
+   */
+  readonly namespaces?: string[];
+
+  /**
+   * The time in which the controller should reconcile its objects and recheck namespaces for labels.
+   *
+   * @schema ClusterExternalSecretV1Beta1Spec#refreshTime
+   */
+  readonly refreshTime?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1Spec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1Spec(obj: ClusterExternalSecretV1Beta1Spec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'externalSecretMetadata': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretMetadata(obj.externalSecretMetadata),
+    'externalSecretName': obj.externalSecretName,
+    'externalSecretSpec': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpec(obj.externalSecretSpec),
+    'namespaceSelector': toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelector(obj.namespaceSelector),
+    'namespaceSelectors': obj.namespaceSelectors?.map(y => toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectors(y)),
+    'namespaces': obj.namespaces?.map(y => y),
+    'refreshTime': obj.refreshTime,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The metadata of the external secrets to be created
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretMetadata
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretMetadata {
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretMetadata(obj: ClusterExternalSecretV1Beta1SpecExternalSecretMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The spec for the ExternalSecrets to be created
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpec {
+  /**
+   * Data defines the connection between the Kubernetes Secret keys and the Provider data
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#data
+   */
+  readonly data?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecData[];
+
+  /**
+   * DataFrom is used to fetch all properties from a specific Provider data
+   * If multiple entries are specified, the Secret keys are merged in the specified order
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#dataFrom
+   */
+  readonly dataFrom?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom[];
+
+  /**
+   * RefreshInterval is the amount of time before the values are read again from the SecretStore provider,
+   * specified as Golang Duration strings.
+   * Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+   * Example values: "1h", "2h30m", "10s"
+   * May be set to zero to fetch and create it once. Defaults to 1h.
+   *
+   * @default 1h.
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#refreshInterval
+   */
+  readonly refreshInterval?: string;
+
+  /**
+   * RefreshPolicy determines how the ExternalSecret should be refreshed:
+   * - CreatedOnce: Creates the Secret only if it does not exist and does not update it thereafter
+   * - Periodic: Synchronizes the Secret from the external source at regular intervals specified by refreshInterval.
+   * No periodic updates occur if refreshInterval is 0.
+   * - OnChange: Only synchronizes the Secret when the ExternalSecret's metadata or specification changes
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#refreshPolicy
+   */
+  readonly refreshPolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecRefreshPolicy;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#secretStoreRef
+   */
+  readonly secretStoreRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef;
+
+  /**
+   * ExternalSecretTarget defines the Kubernetes Secret to be created
+   * There can be only one target per ExternalSecret.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpec#target
+   */
+  readonly target?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpec(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': obj.data?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecData(y)),
+    'dataFrom': obj.dataFrom?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom(y)),
+    'refreshInterval': obj.refreshInterval,
+    'refreshPolicy': obj.refreshPolicy,
+    'secretStoreRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef(obj.secretStoreRef),
+    'target': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget(obj.target),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The labels to select by to find the Namespaces to create the ExternalSecrets in
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelector
+ */
+export interface ClusterExternalSecretV1Beta1SpecNamespaceSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelector#matchExpressions
+   */
+  readonly matchExpressions?: ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecNamespaceSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelector(obj: ClusterExternalSecretV1Beta1SpecNamespaceSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector is a label query over a set of resources. The result of matchLabels and
+ * matchExpressions are ANDed. An empty label selector matches all objects. A null
+ * label selector matches no objects.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectors
+ */
+export interface ClusterExternalSecretV1Beta1SpecNamespaceSelectors {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectors#matchExpressions
+   */
+  readonly matchExpressions?: ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectors#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecNamespaceSelectors' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectors(obj: ClusterExternalSecretV1Beta1SpecNamespaceSelectors | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ExternalSecretData defines the connection between the Kubernetes Secret key (spec.data.<key>) and the Provider data.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecData
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecData {
+  /**
+   * RemoteRef points to the remote secret and defines
+   * which secret (version/property/..) to fetch.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecData#remoteRef
+   */
+  readonly remoteRef: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef;
+
+  /**
+   * The key in the Kubernetes Secret to store the value.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecData#secretKey
+   */
+  readonly secretKey: string;
+
+  /**
+   * SourceRef allows you to override the source
+   * from which the value will be pulled.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecData#sourceRef
+   */
+  readonly sourceRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecData' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecData(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecData | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'remoteRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef(obj.remoteRef),
+    'secretKey': obj.secretKey,
+    'sourceRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef(obj.sourceRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom {
+  /**
+   * Used to extract multiple key/value pairs from one secret
+   * Note: Extract does not support sourceRef.Generator or sourceRef.GeneratorRef.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom#extract
+   */
+  readonly extract?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract;
+
+  /**
+   * Used to find secrets based on tags or regular expressions
+   * Note: Find does not support sourceRef.Generator or sourceRef.GeneratorRef.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom#find
+   */
+  readonly find?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind;
+
+  /**
+   * Used to rewrite secret Keys after getting them from the secret Provider
+   * Multiple Rewrite operations can be provided. They are applied in a layered order (first to last)
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom#rewrite
+   */
+  readonly rewrite?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite[];
+
+  /**
+   * SourceRef points to a store or generator
+   * which contains secret values ready to use.
+   * Use this in combination with Extract or Find pull values out of
+   * a specific SecretStore.
+   * When sourceRef points to a generator Extract or Find is not supported.
+   * The generator returns a static map of values
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom#sourceRef
+   */
+  readonly sourceRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'extract': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract(obj.extract),
+    'find': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind(obj.find),
+    'rewrite': obj.rewrite?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite(y)),
+    'sourceRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef(obj.sourceRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * RefreshPolicy determines how the ExternalSecret should be refreshed:
+ * - CreatedOnce: Creates the Secret only if it does not exist and does not update it thereafter
+ * - Periodic: Synchronizes the Secret from the external source at regular intervals specified by refreshInterval.
+ * No periodic updates occur if refreshInterval is 0.
+ * - OnChange: Only synchronizes the Secret when the ExternalSecret's metadata or specification changes
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecRefreshPolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecRefreshPolicy {
+  /** CreatedOnce */
+  CREATED_ONCE = "CreatedOnce",
+  /** Periodic */
+  PERIODIC = "Periodic",
+  /** OnChange */
+  ON_CHANGE = "OnChange",
+}
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ExternalSecretTarget defines the Kubernetes Secret to be created
+ * There can be only one target per ExternalSecret.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget {
+  /**
+   * CreationPolicy defines rules on how to create the resulting Secret.
+   * Defaults to "Owner"
+   *
+   * @default Owner"
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget#creationPolicy
+   */
+  readonly creationPolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetCreationPolicy;
+
+  /**
+   * DeletionPolicy defines rules on how to delete the resulting Secret.
+   * Defaults to "Retain"
+   *
+   * @default Retain"
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget#deletionPolicy
+   */
+  readonly deletionPolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetDeletionPolicy;
+
+  /**
+   * Immutable defines if the final secret will be immutable
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget#immutable
+   */
+  readonly immutable?: boolean;
+
+  /**
+   * The name of the Secret resource to be managed.
+   * Defaults to the .metadata.name of the ExternalSecret resource
+   *
+   * @default the .metadata.name of the ExternalSecret resource
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget#name
+   */
+  readonly name?: string;
+
+  /**
+   * Template defines a blueprint for the created Secret resource.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget#template
+   */
+  readonly template?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTarget | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'creationPolicy': obj.creationPolicy,
+    'deletionPolicy': obj.deletionPolicy,
+    'immutable': obj.immutable,
+    'name': obj.name,
+    'template': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate(obj.template),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions
+ */
+export interface ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions(obj: ClusterExternalSecretV1Beta1SpecNamespaceSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions
+ */
+export interface ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions(obj: ClusterExternalSecretV1Beta1SpecNamespaceSelectorsMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * RemoteRef points to the remote secret and defines
+ * which secret (version/property/..) to fetch.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefDecodingStrategy;
+
+  /**
+   * Key is the key used in the Provider, mandatory
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#key
+   */
+  readonly key: string;
+
+  /**
+   * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+   *
+   * @default None
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#metadataPolicy
+   */
+  readonly metadataPolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefMetadataPolicy;
+
+  /**
+   * Used to select a specific property of the Provider value (if a map), if supported
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#property
+   */
+  readonly property?: string;
+
+  /**
+   * Used to select a specific version of the Provider value, if supported
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef#version
+   */
+  readonly version?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'key': obj.key,
+    'metadataPolicy': obj.metadataPolicy,
+    'property': obj.property,
+    'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SourceRef allows you to override the source
+ * from which the value will be pulled.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef {
+  /**
+   * GeneratorRef points to a generator custom resource.
+   *
+   * Deprecated: The generatorRef is not implemented in .data[].
+   * this will be removed with v1.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef#generatorRef
+   */
+  readonly generatorRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef#storeRef
+   */
+  readonly storeRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef(obj.generatorRef),
+    'storeRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef(obj.storeRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to extract multiple key/value pairs from one secret
+ * Note: Extract does not support sourceRef.Generator or sourceRef.GeneratorRef.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractDecodingStrategy;
+
+  /**
+   * Key is the key used in the Provider, mandatory
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#key
+   */
+  readonly key: string;
+
+  /**
+   * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+   *
+   * @default None
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#metadataPolicy
+   */
+  readonly metadataPolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractMetadataPolicy;
+
+  /**
+   * Used to select a specific property of the Provider value (if a map), if supported
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#property
+   */
+  readonly property?: string;
+
+  /**
+   * Used to select a specific version of the Provider value, if supported
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract#version
+   */
+  readonly version?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtract | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'key': obj.key,
+    'metadataPolicy': obj.metadataPolicy,
+    'property': obj.property,
+    'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to find secrets based on tags or regular expressions
+ * Note: Find does not support sourceRef.Generator or sourceRef.GeneratorRef.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind {
+  /**
+   * Used to define a conversion Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindConversionStrategy;
+
+  /**
+   * Used to define a decoding Strategy
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind#decodingStrategy
+   */
+  readonly decodingStrategy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindDecodingStrategy;
+
+  /**
+   * Finds secrets based on the name.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind#name
+   */
+  readonly name?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName;
+
+  /**
+   * A root path to start the find operations.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind#path
+   */
+  readonly path?: string;
+
+  /**
+   * Find secrets based on tags.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind#tags
+   */
+  readonly tags?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFind | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'decodingStrategy': obj.decodingStrategy,
+    'name': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName(obj.name),
+    'path': obj.path,
+    'tags': ((obj.tags) === undefined) ? undefined : (Object.entries(obj.tags).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite {
+  /**
+   * Used to rewrite with regular expressions.
+   * The resulting key will be the output of a regexp.ReplaceAll operation.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite#regexp
+   */
+  readonly regexp?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp;
+
+  /**
+   * Used to apply string transformation on the secrets.
+   * The resulting key will be the output of the template applied by the operation.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite#transform
+   */
+  readonly transform?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewrite | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'regexp': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp(obj.regexp),
+    'transform': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform(obj.transform),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SourceRef points to a store or generator
+ * which contains secret values ready to use.
+ * Use this in combination with Extract or Find pull values out of
+ * a specific SecretStore.
+ * When sourceRef points to a generator Extract or Find is not supported.
+ * The generator returns a static map of values
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef {
+  /**
+   * GeneratorRef points to a generator custom resource.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef#generatorRef
+   */
+  readonly generatorRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef;
+
+  /**
+   * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef#storeRef
+   */
+  readonly storeRef?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef(obj.generatorRef),
+    'storeRef': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef(obj.storeRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRefKind
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecSecretStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * CreationPolicy defines rules on how to create the resulting Secret.
+ * Defaults to "Owner"
+ *
+ * @default Owner"
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetCreationPolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetCreationPolicy {
+  /** Owner */
+  OWNER = "Owner",
+  /** Orphan */
+  ORPHAN = "Orphan",
+  /** Merge */
+  MERGE = "Merge",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * DeletionPolicy defines rules on how to delete the resulting Secret.
+ * Defaults to "Retain"
+ *
+ * @default Retain"
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetDeletionPolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetDeletionPolicy {
+  /** Delete */
+  DELETE = "Delete",
+  /** Merge */
+  MERGE = "Merge",
+  /** Retain */
+  RETAIN = "Retain",
+}
+
+/**
+ * Template defines a blueprint for the created Secret resource.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate {
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#data
+   */
+  readonly data?: { [key: string]: string };
+
+  /**
+   * EngineVersion specifies the template engine version
+   * that should be used to compile/execute the
+   * template specified in .data and .templateFrom[].
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#engineVersion
+   */
+  readonly engineVersion?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateEngineVersion;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#mergePolicy
+   */
+  readonly mergePolicy?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMergePolicy;
+
+  /**
+   * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#metadata
+   */
+  readonly metadata?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#templateFrom
+   */
+  readonly templateFrom?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom[];
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': ((obj.data) === undefined) ? undefined : (Object.entries(obj.data).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'engineVersion': obj.engineVersion,
+    'mergePolicy': obj.mergePolicy,
+    'metadata': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata(obj.metadata),
+    'templateFrom': obj.templateFrom?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom(y)),
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefConversionStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefDecodingStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+ *
+ * @default None
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefMetadataPolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataRemoteRefMetadataPolicy {
+  /** None */
+  NONE = "None",
+  /** Fetch */
+  FETCH = "Fetch",
+}
+
+/**
+ * GeneratorRef points to a generator custom resource.
+ *
+ * Deprecated: The generatorRef is not implemented in .data[].
+ * this will be removed with v1.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef#kind
+   */
+  readonly kind: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractConversionStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractDecodingStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Policy for fetching tags/labels from provider secrets, possible options are Fetch, None. Defaults to None
+ *
+ * @default None
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractMetadataPolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromExtractMetadataPolicy {
+  /** None */
+  NONE = "None",
+  /** Fetch */
+  FETCH = "Fetch",
+}
+
+/**
+ * Used to define a conversion Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindConversionStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindConversionStrategy {
+  /** Default */
+  DEFAULT = "Default",
+  /** Unicode */
+  UNICODE = "Unicode",
+}
+
+/**
+ * Used to define a decoding Strategy
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindDecodingStrategy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindDecodingStrategy {
+  /** Auto */
+  AUTO = "Auto",
+  /** Base64 */
+  BASE64 = "Base64",
+  /** Base64URL */
+  BASE64_URL = "Base64URL",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * Finds secrets based on the name.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName {
+  /**
+   * Finds secrets base
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName#regexp
+   */
+  readonly regexp?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromFindName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'regexp': obj.regexp,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to rewrite with regular expressions.
+ * The resulting key will be the output of a regexp.ReplaceAll operation.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp {
+  /**
+   * Used to define the regular expression of a re.Compiler.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp#source
+   */
+  readonly source: string;
+
+  /**
+   * Used to define the target pattern of a ReplaceAll operation.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp#target
+   */
+  readonly target: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteRegexp | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'source': obj.source,
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Used to apply string transformation on the secrets.
+ * The resulting key will be the output of the template applied by the operation.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform {
+  /**
+   * Used to define the template to apply on the secret name.
+   * `.value ` will specify the secret name in the template.
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform#template
+   */
+  readonly template: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromRewriteTransform | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'template': obj.template,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * GeneratorRef points to a generator custom resource.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef#kind
+   */
+  readonly kind: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretStoreRef defines which SecretStore to fetch the ExternalSecret data.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   * Defaults to `SecretStore`
+   *
+   * @default SecretStore`
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef#kind
+   */
+  readonly kind?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRefKind;
+
+  /**
+   * Name of the SecretStore resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EngineVersion specifies the template engine version
+ * that should be used to compile/execute the
+ * template specified in .data and .templateFrom[].
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateEngineVersion
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateEngineVersion {
+  /** v2 */
+  V2 = "v2",
+}
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMergePolicy
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMergePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** Merge */
+  MERGE = "Merge",
+}
+
+/**
+ * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata {
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom {
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom#configMap
+   */
+  readonly configMap?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom#literal
+   */
+  readonly literal?: string;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom#secret
+   */
+  readonly secret?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom#target
+   */
+  readonly target?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromTarget;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMap': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap(obj.configMap),
+    'literal': obj.literal,
+    'secret': toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret(obj.secret),
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRefKind
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+}
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRefKind
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataSourceRefStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRefKind
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+}
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ * Defaults to `SecretStore`
+ *
+ * @default SecretStore`
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRefKind
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecDataFromSourceRefStoreRefKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap#items
+   */
+  readonly items: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret#items
+   */
+  readonly items: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromTarget
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromTarget {
+  /** Data */
+  DATA = "Data",
+  /** Annotations */
+  ANNOTATIONS = "Annotations",
+  /** Labels */
+  LABELS = "Labels",
+}
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems#templateAs
+   */
+  readonly templateAs?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems
+ */
+export interface ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems#templateAs
+   */
+  readonly templateAs?: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems(obj: ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromConfigMapItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+/**
+ * @schema ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs
+ */
+export enum ClusterExternalSecretV1Beta1SpecExternalSecretSpecTargetTemplateTemplateFromSecretItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+
+/**
+ *
+ *
+ * @schema ClusterPushSecret
+ */
+export class ClusterPushSecret extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "ClusterPushSecret"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'external-secrets.io/v1alpha1',
+    kind: 'ClusterPushSecret',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "ClusterPushSecret".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: ClusterPushSecretProps = {}): any {
+    return {
+      ...ClusterPushSecret.GVK,
+      ...toJson_ClusterPushSecretProps(props),
+    };
+  }
+
+  /**
+   * Defines a "ClusterPushSecret" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: ClusterPushSecretProps = {}) {
+    super(scope, id, {
+      ...ClusterPushSecret.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...ClusterPushSecret.GVK,
+      ...toJson_ClusterPushSecretProps(resolved),
+    };
+  }
+}
+
+/**
+ * @schema ClusterPushSecret
+ */
+export interface ClusterPushSecretProps {
+  /**
+   * @schema ClusterPushSecret#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * @schema ClusterPushSecret#spec
+   */
+  readonly spec?: ClusterPushSecretSpec;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretProps(obj: ClusterPushSecretProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_ClusterPushSecretSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpec
+ */
+export interface ClusterPushSecretSpec {
+  /**
+   * A list of labels to select by to find the Namespaces to create the ExternalSecrets in. The selectors are ORed.
+   *
+   * @schema ClusterPushSecretSpec#namespaceSelectors
+   */
+  readonly namespaceSelectors?: ClusterPushSecretSpecNamespaceSelectors[];
+
+  /**
+   * The metadata of the external secrets to be created
+   *
+   * @schema ClusterPushSecretSpec#pushSecretMetadata
+   */
+  readonly pushSecretMetadata?: ClusterPushSecretSpecPushSecretMetadata;
+
+  /**
+   * The name of the push secrets to be created.
+   * Defaults to the name of the ClusterPushSecret
+   *
+   * @default the name of the ClusterPushSecret
+   * @schema ClusterPushSecretSpec#pushSecretName
+   */
+  readonly pushSecretName?: string;
+
+  /**
+   * PushSecretSpec defines what to do with the secrets.
+   *
+   * @schema ClusterPushSecretSpec#pushSecretSpec
+   */
+  readonly pushSecretSpec: ClusterPushSecretSpecPushSecretSpec;
+
+  /**
+   * The time in which the controller should reconcile its objects and recheck namespaces for labels.
+   *
+   * @schema ClusterPushSecretSpec#refreshTime
+   */
+  readonly refreshTime?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpec(obj: ClusterPushSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'namespaceSelectors': obj.namespaceSelectors?.map(y => toJson_ClusterPushSecretSpecNamespaceSelectors(y)),
+    'pushSecretMetadata': toJson_ClusterPushSecretSpecPushSecretMetadata(obj.pushSecretMetadata),
+    'pushSecretName': obj.pushSecretName,
+    'pushSecretSpec': toJson_ClusterPushSecretSpecPushSecretSpec(obj.pushSecretSpec),
+    'refreshTime': obj.refreshTime,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector is a label query over a set of resources. The result of matchLabels and
+ * matchExpressions are ANDed. An empty label selector matches all objects. A null
+ * label selector matches no objects.
+ *
+ * @schema ClusterPushSecretSpecNamespaceSelectors
+ */
+export interface ClusterPushSecretSpecNamespaceSelectors {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecNamespaceSelectors#matchExpressions
+   */
+  readonly matchExpressions?: ClusterPushSecretSpecNamespaceSelectorsMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecNamespaceSelectors#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecNamespaceSelectors' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecNamespaceSelectors(obj: ClusterPushSecretSpecNamespaceSelectors | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterPushSecretSpecNamespaceSelectorsMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The metadata of the external secrets to be created
+ *
+ * @schema ClusterPushSecretSpecPushSecretMetadata
+ */
+export interface ClusterPushSecretSpecPushSecretMetadata {
+  /**
+   * @schema ClusterPushSecretSpecPushSecretMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretMetadata(obj: ClusterPushSecretSpecPushSecretMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * PushSecretSpec defines what to do with the secrets.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpec
+ */
+export interface ClusterPushSecretSpecPushSecretSpec {
+  /**
+   * Secret Data that should be pushed to providers
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#data
+   */
+  readonly data?: ClusterPushSecretSpecPushSecretSpecData[];
+
+  /**
+   * Deletion Policy to handle Secrets in the provider.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#deletionPolicy
+   */
+  readonly deletionPolicy?: ClusterPushSecretSpecPushSecretSpecDeletionPolicy;
+
+  /**
+   * The Interval to which External Secrets will try to push a secret definition
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#refreshInterval
+   */
+  readonly refreshInterval?: string;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpec#secretStoreRefs
+   */
+  readonly secretStoreRefs: ClusterPushSecretSpecPushSecretSpecSecretStoreRefs[];
+
+  /**
+   * The Secret Selector (k8s source) for the Push Secret
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#selector
+   */
+  readonly selector: ClusterPushSecretSpecPushSecretSpecSelector;
+
+  /**
+   * Template defines a blueprint for the created Secret resource.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#template
+   */
+  readonly template?: ClusterPushSecretSpecPushSecretSpecTemplate;
+
+  /**
+   * UpdatePolicy to handle Secrets in the provider.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpec#updatePolicy
+   */
+  readonly updatePolicy?: ClusterPushSecretSpecPushSecretSpecUpdatePolicy;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpec(obj: ClusterPushSecretSpecPushSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': obj.data?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecData(y)),
+    'deletionPolicy': obj.deletionPolicy,
+    'refreshInterval': obj.refreshInterval,
+    'secretStoreRefs': obj.secretStoreRefs?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefs(y)),
+    'selector': toJson_ClusterPushSecretSpecPushSecretSpecSelector(obj.selector),
+    'template': toJson_ClusterPushSecretSpecPushSecretSpecTemplate(obj.template),
+    'updatePolicy': obj.updatePolicy,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterPushSecretSpecNamespaceSelectorsMatchExpressions
+ */
+export interface ClusterPushSecretSpecNamespaceSelectorsMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterPushSecretSpecNamespaceSelectorsMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterPushSecretSpecNamespaceSelectorsMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterPushSecretSpecNamespaceSelectorsMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecNamespaceSelectorsMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecNamespaceSelectorsMatchExpressions(obj: ClusterPushSecretSpecNamespaceSelectorsMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecData
+ */
+export interface ClusterPushSecretSpecPushSecretSpecData {
+  /**
+   * Used to define a conversion Strategy for the secret keys
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecData#conversionStrategy
+   */
+  readonly conversionStrategy?: ClusterPushSecretSpecPushSecretSpecDataConversionStrategy;
+
+  /**
+   * Match a given Secret Key to be pushed to the provider.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecData#match
+   */
+  readonly match: ClusterPushSecretSpecPushSecretSpecDataMatch;
+
+  /**
+   * Metadata is metadata attached to the secret.
+   * The structure of metadata is provider specific, please look it up in the provider documentation.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecData#metadata
+   */
+  readonly metadata?: any;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecData' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecData(obj: ClusterPushSecretSpecPushSecretSpecData | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'match': toJson_ClusterPushSecretSpecPushSecretSpecDataMatch(obj.match),
+    'metadata': obj.metadata,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Deletion Policy to handle Secrets in the provider.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecDeletionPolicy
+ */
+export enum ClusterPushSecretSpecPushSecretSpecDeletionPolicy {
+  /** Delete */
+  DELETE = "Delete",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefs
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSecretStoreRefs {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefs#kind
+   */
+  readonly kind?: ClusterPushSecretSpecPushSecretSpecSecretStoreRefsKind;
+
+  /**
+   * Optionally, sync to secret stores with label selector
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefs#labelSelector
+   */
+  readonly labelSelector?: ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector;
+
+  /**
+   * Optionally, sync to the SecretStore of the given name
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefs#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSecretStoreRefs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefs(obj: ClusterPushSecretSpecPushSecretSpecSecretStoreRefs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'labelSelector': toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector(obj.labelSelector),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The Secret Selector (k8s source) for the Push Secret
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelector
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSelector {
+  /**
+   * Point to a generator to create a Secret.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelector#generatorRef
+   */
+  readonly generatorRef?: ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef;
+
+  /**
+   * Select a Secret to Push.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelector#secret
+   */
+  readonly secret?: ClusterPushSecretSpecPushSecretSpecSelectorSecret;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSelector(obj: ClusterPushSecretSpecPushSecretSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef(obj.generatorRef),
+    'secret': toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecret(obj.secret),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Template defines a blueprint for the created Secret resource.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplate
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplate {
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#data
+   */
+  readonly data?: { [key: string]: string };
+
+  /**
+   * EngineVersion specifies the template engine version
+   * that should be used to compile/execute the
+   * template specified in .data and .templateFrom[].
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#engineVersion
+   */
+  readonly engineVersion?: ClusterPushSecretSpecPushSecretSpecTemplateEngineVersion;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#mergePolicy
+   */
+  readonly mergePolicy?: ClusterPushSecretSpecPushSecretSpecTemplateMergePolicy;
+
+  /**
+   * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#metadata
+   */
+  readonly metadata?: ClusterPushSecretSpecPushSecretSpecTemplateMetadata;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#templateFrom
+   */
+  readonly templateFrom?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom[];
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplate#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplate(obj: ClusterPushSecretSpecPushSecretSpecTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': ((obj.data) === undefined) ? undefined : (Object.entries(obj.data).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'engineVersion': obj.engineVersion,
+    'mergePolicy': obj.mergePolicy,
+    'metadata': toJson_ClusterPushSecretSpecPushSecretSpecTemplateMetadata(obj.metadata),
+    'templateFrom': obj.templateFrom?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom(y)),
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * UpdatePolicy to handle Secrets in the provider.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecUpdatePolicy
+ */
+export enum ClusterPushSecretSpecPushSecretSpecUpdatePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** IfNotExists */
+  IF_NOT_EXISTS = "IfNotExists",
+}
+
+/**
+ * Used to define a conversion Strategy for the secret keys
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecDataConversionStrategy
+ */
+export enum ClusterPushSecretSpecPushSecretSpecDataConversionStrategy {
+  /** None */
+  NONE = "None",
+  /** ReverseUnicode */
+  REVERSE_UNICODE = "ReverseUnicode",
+}
+
+/**
+ * Match a given Secret Key to be pushed to the provider.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecDataMatch
+ */
+export interface ClusterPushSecretSpecPushSecretSpecDataMatch {
+  /**
+   * Remote Refs to push to providers.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecDataMatch#remoteRef
+   */
+  readonly remoteRef: ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef;
+
+  /**
+   * Secret Key to be pushed
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecDataMatch#secretKey
+   */
+  readonly secretKey?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecDataMatch' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecDataMatch(obj: ClusterPushSecretSpecPushSecretSpecDataMatch | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'remoteRef': toJson_ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef(obj.remoteRef),
+    'secretKey': obj.secretKey,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsKind
+ */
+export enum ClusterPushSecretSpecPushSecretSpecSecretStoreRefsKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * Optionally, sync to secret stores with label selector
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector(obj: ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Point to a generator to create a Secret.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef#kind
+   */
+  readonly kind: ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef(obj: ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select a Secret to Push.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecret
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSelectorSecret {
+  /**
+   * Name of the Secret.
+   * The Secret must exist in the same namespace as the PushSecret manifest.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * Selector chooses secrets using a labelSelector.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecret#selector
+   */
+  readonly selector?: ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSelectorSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecret(obj: ClusterPushSecretSpecPushSecretSpecSelectorSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'selector': toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector(obj.selector),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EngineVersion specifies the template engine version
+ * that should be used to compile/execute the
+ * template specified in .data and .templateFrom[].
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateEngineVersion
+ */
+export enum ClusterPushSecretSpecPushSecretSpecTemplateEngineVersion {
+  /** v2 */
+  V2 = "v2",
+}
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateMergePolicy
+ */
+export enum ClusterPushSecretSpecPushSecretSpecTemplateMergePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** Merge */
+  MERGE = "Merge",
+}
+
+/**
+ * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateMetadata
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateMetadata {
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateMetadata#finalizers
+   */
+  readonly finalizers?: string[];
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateMetadata(obj: ClusterPushSecretSpecPushSecretSpecTemplateMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'finalizers': obj.finalizers?.map(y => y),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom {
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom#configMap
+   */
+  readonly configMap?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom#literal
+   */
+  readonly literal?: string;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom#secret
+   */
+  readonly secret?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom#target
+   */
+  readonly target?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromTarget;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom(obj: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMap': toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap(obj.configMap),
+    'literal': obj.literal,
+    'secret': toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret(obj.secret),
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Remote Refs to push to providers.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef
+ */
+export interface ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef {
+  /**
+   * Name of the property in the resulting secret
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef#property
+   */
+  readonly property?: string;
+
+  /**
+   * Name of the resulting provider secret.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef#remoteKey
+   */
+  readonly remoteKey: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef(obj: ClusterPushSecretSpecPushSecretSpecDataMatchRemoteRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'property': obj.property,
+    'remoteKey': obj.remoteKey,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions(obj: ClusterPushSecretSpecPushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRefKind
+ */
+export enum ClusterPushSecretSpecPushSecretSpecSelectorGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+  /** MFA */
+  MFA = "MFA",
+}
+
+/**
+ * Selector chooses secrets using a labelSelector.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector#matchExpressions
+   */
+  readonly matchExpressions?: ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector(obj: ClusterPushSecretSpecPushSecretSpecSelectorSecretSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap#items
+   */
+  readonly items: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap(obj: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret#items
+   */
+  readonly items: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret(obj: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromTarget
+ */
+export enum ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromTarget {
+  /** Data */
+  DATA = "Data",
+  /** Annotations */
+  ANNOTATIONS = "Annotations",
+  /** Labels */
+  LABELS = "Labels",
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions
+ */
+export interface ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions(obj: ClusterPushSecretSpecPushSecretSpecSelectorSecretSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems#templateAs
+   */
+  readonly templateAs?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems(obj: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems
+ */
+export interface ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems#templateAs
+   */
+  readonly templateAs?: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems(obj: ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs
+ */
+export enum ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+/**
+ * @schema ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItemsTemplateAs
+ */
+export enum ClusterPushSecretSpecPushSecretSpecTemplateTemplateFromSecretItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+
+/**
  * ClusterSecretStore represents a secure external location for storing secrets, which can be referenced as part of `storeRef` fields.
  *
  * @schema ClusterSecretStore
@@ -313,7 +5413,8 @@ export interface ClusterSecretStoreSpecProvider {
   readonly gcpsm?: ClusterSecretStoreSpecProviderGcpsm;
 
   /**
-   * Github configures this store to push Github Action secrets using Github API provider
+   * Github configures this store to push GitHub Action secrets using GitHub API provider.
+   * Note: This provider only supports write operations (PushSecret) and cannot fetch secrets from GitHub
    *
    * @schema ClusterSecretStoreSpecProvider#github
    */
@@ -353,6 +5454,13 @@ export interface ClusterSecretStoreSpecProvider {
    * @schema ClusterSecretStoreSpecProvider#kubernetes
    */
   readonly kubernetes?: ClusterSecretStoreSpecProviderKubernetes;
+
+  /**
+   * Ngrok configures this store to sync secrets using the ngrok provider.
+   *
+   * @schema ClusterSecretStoreSpecProvider#ngrok
+   */
+  readonly ngrok?: ClusterSecretStoreSpecProviderNgrok;
 
   /**
    * Onboardbase configures this store to sync secrets using the Onboardbase provider
@@ -438,6 +5546,13 @@ export interface ClusterSecretStoreSpecProvider {
   readonly vault?: ClusterSecretStoreSpecProviderVault;
 
   /**
+   * Volcengine configures this store to sync secrets using the Volcengine provider
+   *
+   * @schema ClusterSecretStoreSpecProvider#volcengine
+   */
+  readonly volcengine?: ClusterSecretStoreSpecProviderVolcengine;
+
+  /**
    * Webhook configures this store to sync secrets using a generic templated webhook
    *
    * @schema ClusterSecretStoreSpecProvider#webhook
@@ -488,6 +5603,7 @@ export function toJson_ClusterSecretStoreSpecProvider(obj: ClusterSecretStoreSpe
     'infisical': toJson_ClusterSecretStoreSpecProviderInfisical(obj.infisical),
     'keepersecurity': toJson_ClusterSecretStoreSpecProviderKeepersecurity(obj.keepersecurity),
     'kubernetes': toJson_ClusterSecretStoreSpecProviderKubernetes(obj.kubernetes),
+    'ngrok': toJson_ClusterSecretStoreSpecProviderNgrok(obj.ngrok),
     'onboardbase': toJson_ClusterSecretStoreSpecProviderOnboardbase(obj.onboardbase),
     'onepassword': toJson_ClusterSecretStoreSpecProviderOnepassword(obj.onepassword),
     'onepasswordSDK': toJson_ClusterSecretStoreSpecProviderOnepasswordSdk(obj.onepasswordSdk),
@@ -500,6 +5616,7 @@ export function toJson_ClusterSecretStoreSpecProvider(obj: ClusterSecretStoreSpe
     'secretserver': toJson_ClusterSecretStoreSpecProviderSecretserver(obj.secretserver),
     'senhasegura': toJson_ClusterSecretStoreSpecProviderSenhasegura(obj.senhasegura),
     'vault': toJson_ClusterSecretStoreSpecProviderVault(obj.vault),
+    'volcengine': toJson_ClusterSecretStoreSpecProviderVolcengine(obj.volcengine),
     'webhook': toJson_ClusterSecretStoreSpecProviderWebhook(obj.webhook),
     'yandexcertificatemanager': toJson_ClusterSecretStoreSpecProviderYandexcertificatemanager(obj.yandexcertificatemanager),
     'yandexlockbox': toJson_ClusterSecretStoreSpecProviderYandexlockbox(obj.yandexlockbox),
@@ -800,10 +5917,21 @@ export interface ClusterSecretStoreSpecProviderAzurekv {
   readonly authType?: ClusterSecretStoreSpecProviderAzurekvAuthType;
 
   /**
+   * CustomCloudConfig defines custom Azure Stack Hub or Azure Stack Edge endpoints.
+   * Required when EnvironmentType is AzureStackCloud.
+   * IMPORTANT: This feature REQUIRES UseAzureSDK to be set to true. Custom cloud
+   * configuration is not supported with the legacy go-autorest SDK.
+   *
+   * @schema ClusterSecretStoreSpecProviderAzurekv#customCloudConfig
+   */
+  readonly customCloudConfig?: ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig;
+
+  /**
    * EnvironmentType specifies the Azure cloud environment endpoints to use for
    * connecting and authenticating with Azure. By default it points to the public cloud AAD endpoint.
    * The following endpoints are available, also see here: https://github.com/Azure/go-autorest/blob/main/autorest/azure/environments.go#L152
-   * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud
+   * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud, AzureStackCloud
+   * Use AzureStackCloud when you need to configure custom Azure Stack Hub or Azure Stack Edge endpoints.
    *
    * @schema ClusterSecretStoreSpecProviderAzurekv#environmentType
    */
@@ -832,6 +5960,15 @@ export interface ClusterSecretStoreSpecProviderAzurekv {
   readonly tenantId?: string;
 
   /**
+   * UseAzureSDK enables the use of the new Azure SDK for Go (azcore-based) instead of the legacy go-autorest SDK.
+   * This is experimental and may have behavioral differences. Defaults to false (legacy SDK).
+   *
+   * @default false (legacy SDK).
+   * @schema ClusterSecretStoreSpecProviderAzurekv#useAzureSDK
+   */
+  readonly useAzureSdk?: boolean;
+
+  /**
    * Vault Url from which the secrets to be fetched from.
    *
    * @schema ClusterSecretStoreSpecProviderAzurekv#vaultUrl
@@ -849,10 +5986,12 @@ export function toJson_ClusterSecretStoreSpecProviderAzurekv(obj: ClusterSecretS
   const result = {
     'authSecretRef': toJson_ClusterSecretStoreSpecProviderAzurekvAuthSecretRef(obj.authSecretRef),
     'authType': obj.authType,
+    'customCloudConfig': toJson_ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig(obj.customCloudConfig),
     'environmentType': obj.environmentType,
     'identityId': obj.identityId,
     'serviceAccountRef': toJson_ClusterSecretStoreSpecProviderAzurekvServiceAccountRef(obj.serviceAccountRef),
     'tenantId': obj.tenantId,
+    'useAzureSDK': obj.useAzureSdk,
     'vaultUrl': obj.vaultUrl,
   };
   // filter undefined values
@@ -1288,6 +6427,11 @@ export interface ClusterSecretStoreSpecProviderFake {
    */
   readonly data: ClusterSecretStoreSpecProviderFakeData[];
 
+  /**
+   * @schema ClusterSecretStoreSpecProviderFake#validationResult
+   */
+  readonly validationResult?: number;
+
 }
 
 /**
@@ -1298,6 +6442,7 @@ export function toJson_ClusterSecretStoreSpecProviderFake(obj: ClusterSecretStor
   if (obj === undefined) { return undefined; }
   const result = {
     'data': obj.data?.map(y => toJson_ClusterSecretStoreSpecProviderFakeData(y)),
+    'validationResult': obj.validationResult,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1369,6 +6514,17 @@ export interface ClusterSecretStoreSpecProviderGcpsm {
    */
   readonly projectId?: string;
 
+  /**
+   * SecretVersionSelectionPolicy specifies how the provider selects a secret version
+   * when "latest" is disabled or destroyed.
+   * Possible values are:
+   * - LatestOrFail: the provider always uses "latest", or fails if that version is disabled/destroyed.
+   * - LatestOrFetch: the provider falls back to fetching the latest version if the version is DESTROYED or DISABLED
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsm#secretVersionSelectionPolicy
+   */
+  readonly secretVersionSelectionPolicy?: string;
+
 }
 
 /**
@@ -1381,6 +6537,7 @@ export function toJson_ClusterSecretStoreSpecProviderGcpsm(obj: ClusterSecretSto
     'auth': toJson_ClusterSecretStoreSpecProviderGcpsmAuth(obj.auth),
     'location': obj.location,
     'projectID': obj.projectId,
+    'secretVersionSelectionPolicy': obj.secretVersionSelectionPolicy,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -1388,7 +6545,8 @@ export function toJson_ClusterSecretStoreSpecProviderGcpsm(obj: ClusterSecretSto
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Github configures this store to push Github Action secrets using Github API provider
+ * Github configures this store to push GitHub Action secrets using GitHub API provider.
+ * Note: This provider only supports write operations (PushSecret) and cannot fetch secrets from GitHub
  *
  * @schema ClusterSecretStoreSpecProviderGithub
  */
@@ -1726,6 +6884,51 @@ export function toJson_ClusterSecretStoreSpecProviderKubernetes(obj: ClusterSecr
     'authRef': toJson_ClusterSecretStoreSpecProviderKubernetesAuthRef(obj.authRef),
     'remoteNamespace': obj.remoteNamespace,
     'server': toJson_ClusterSecretStoreSpecProviderKubernetesServer(obj.server),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Ngrok configures this store to sync secrets using the ngrok provider.
+ *
+ * @schema ClusterSecretStoreSpecProviderNgrok
+ */
+export interface ClusterSecretStoreSpecProviderNgrok {
+  /**
+   * APIURL is the URL of the ngrok API.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrok#apiUrl
+   */
+  readonly apiUrl?: string;
+
+  /**
+   * Auth configures how the ngrok provider authenticates with the ngrok API.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrok#auth
+   */
+  readonly auth: ClusterSecretStoreSpecProviderNgrokAuth;
+
+  /**
+   * Vault configures the ngrok vault to sync secrets with.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrok#vault
+   */
+  readonly vault: ClusterSecretStoreSpecProviderNgrokVault;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderNgrok' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderNgrok(obj: ClusterSecretStoreSpecProviderNgrok | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiUrl': obj.apiUrl,
+    'auth': toJson_ClusterSecretStoreSpecProviderNgrokAuth(obj.auth),
+    'vault': toJson_ClusterSecretStoreSpecProviderNgrokVault(obj.vault),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -2209,6 +7412,13 @@ export function toJson_ClusterSecretStoreSpecProviderScaleway(obj: ClusterSecret
  */
 export interface ClusterSecretStoreSpecProviderSecretserver {
   /**
+   * Domain is the secret server domain.
+   *
+   * @schema ClusterSecretStoreSpecProviderSecretserver#domain
+   */
+  readonly domain?: string;
+
+  /**
    * Password is the secret server account password.
    *
    * @schema ClusterSecretStoreSpecProviderSecretserver#password
@@ -2239,6 +7449,7 @@ export interface ClusterSecretStoreSpecProviderSecretserver {
 export function toJson_ClusterSecretStoreSpecProviderSecretserver(obj: ClusterSecretStoreSpecProviderSecretserver | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
+    'domain': obj.domain,
     'password': toJson_ClusterSecretStoreSpecProviderSecretserverPassword(obj.password),
     'serverURL': obj.serverUrl,
     'username': toJson_ClusterSecretStoreSpecProviderSecretserverUsername(obj.username),
@@ -2332,6 +7543,15 @@ export interface ClusterSecretStoreSpecProviderVault {
   readonly caProvider?: ClusterSecretStoreSpecProviderVaultCaProvider;
 
   /**
+   * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+   * Only applies to Vault KV v2 stores. When enabled, write operations must include
+   * the current version of the secret to prevent unintentional overwrites.
+   *
+   * @schema ClusterSecretStoreSpecProviderVault#checkAndSet
+   */
+  readonly checkAndSet?: ClusterSecretStoreSpecProviderVaultCheckAndSet;
+
+  /**
    * ForwardInconsistent tells Vault to forward read-after-write requests to the Vault
    * leader instead of simply retrying within a loop. This can increase performance if
    * the option is enabled serverside.
@@ -2415,6 +7635,7 @@ export function toJson_ClusterSecretStoreSpecProviderVault(obj: ClusterSecretSto
     'auth': toJson_ClusterSecretStoreSpecProviderVaultAuth(obj.auth),
     'caBundle': obj.caBundle,
     'caProvider': toJson_ClusterSecretStoreSpecProviderVaultCaProvider(obj.caProvider),
+    'checkAndSet': toJson_ClusterSecretStoreSpecProviderVaultCheckAndSet(obj.checkAndSet),
     'forwardInconsistent': obj.forwardInconsistent,
     'headers': ((obj.headers) === undefined) ? undefined : (Object.entries(obj.headers).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
     'namespace': obj.namespace,
@@ -2423,6 +7644,44 @@ export function toJson_ClusterSecretStoreSpecProviderVault(obj: ClusterSecretSto
     'server': obj.server,
     'tls': toJson_ClusterSecretStoreSpecProviderVaultTls(obj.tls),
     'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volcengine configures this store to sync secrets using the Volcengine provider
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengine
+ */
+export interface ClusterSecretStoreSpecProviderVolcengine {
+  /**
+   * Auth defines the authentication method to use.
+   * If not specified, the provider will try to use IRSA (IAM Role for Service Account).
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengine#auth
+   */
+  readonly auth?: ClusterSecretStoreSpecProviderVolcengineAuth;
+
+  /**
+   * Region specifies the Volcengine region to connect to.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengine#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengine' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengine(obj: ClusterSecretStoreSpecProviderVolcengine | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'auth': toJson_ClusterSecretStoreSpecProviderVolcengineAuth(obj.auth),
+    'region': obj.region,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -2548,7 +7807,7 @@ export interface ClusterSecretStoreSpecProviderYandexcertificatemanager {
   readonly apiEndpoint?: string;
 
   /**
-   * Auth defines the information necessary to authenticate against Yandex Certificate Manager
+   * Auth defines the information necessary to authenticate against Yandex.Cloud
    *
    * @schema ClusterSecretStoreSpecProviderYandexcertificatemanager#auth
    */
@@ -2560,6 +7819,13 @@ export interface ClusterSecretStoreSpecProviderYandexcertificatemanager {
    * @schema ClusterSecretStoreSpecProviderYandexcertificatemanager#caProvider
    */
   readonly caProvider?: ClusterSecretStoreSpecProviderYandexcertificatemanagerCaProvider;
+
+  /**
+   * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as certificate ID or certificate name
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexcertificatemanager#fetching
+   */
+  readonly fetching?: ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching;
 
 }
 
@@ -2573,6 +7839,7 @@ export function toJson_ClusterSecretStoreSpecProviderYandexcertificatemanager(ob
     'apiEndpoint': obj.apiEndpoint,
     'auth': toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerAuth(obj.auth),
     'caProvider': toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerCaProvider(obj.caProvider),
+    'fetching': toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching(obj.fetching),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -2593,7 +7860,7 @@ export interface ClusterSecretStoreSpecProviderYandexlockbox {
   readonly apiEndpoint?: string;
 
   /**
-   * Auth defines the information necessary to authenticate against Yandex Lockbox
+   * Auth defines the information necessary to authenticate against Yandex.Cloud
    *
    * @schema ClusterSecretStoreSpecProviderYandexlockbox#auth
    */
@@ -2605,6 +7872,13 @@ export interface ClusterSecretStoreSpecProviderYandexlockbox {
    * @schema ClusterSecretStoreSpecProviderYandexlockbox#caProvider
    */
   readonly caProvider?: ClusterSecretStoreSpecProviderYandexlockboxCaProvider;
+
+  /**
+   * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID or secret name
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexlockbox#fetching
+   */
+  readonly fetching?: ClusterSecretStoreSpecProviderYandexlockboxFetching;
 
 }
 
@@ -2618,6 +7892,7 @@ export function toJson_ClusterSecretStoreSpecProviderYandexlockbox(obj: ClusterS
     'apiEndpoint': obj.apiEndpoint,
     'auth': toJson_ClusterSecretStoreSpecProviderYandexlockboxAuth(obj.auth),
     'caProvider': toJson_ClusterSecretStoreSpecProviderYandexlockboxCaProvider(obj.caProvider),
+    'fetching': toJson_ClusterSecretStoreSpecProviderYandexlockboxFetching(obj.fetching),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -3003,10 +8278,68 @@ export enum ClusterSecretStoreSpecProviderAzurekvAuthType {
 }
 
 /**
+ * CustomCloudConfig defines custom Azure Stack Hub or Azure Stack Edge endpoints.
+ * Required when EnvironmentType is AzureStackCloud.
+ * IMPORTANT: This feature REQUIRES UseAzureSDK to be set to true. Custom cloud
+ * configuration is not supported with the legacy go-autorest SDK.
+ *
+ * @schema ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig
+ */
+export interface ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig {
+  /**
+   * ActiveDirectoryEndpoint is the AAD endpoint for authentication
+   * Required when using custom cloud configuration
+   *
+   * @schema ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig#activeDirectoryEndpoint
+   */
+  readonly activeDirectoryEndpoint: string;
+
+  /**
+   * KeyVaultDNSSuffix is the DNS suffix for Key Vault URLs
+   *
+   * @schema ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig#keyVaultDNSSuffix
+   */
+  readonly keyVaultDnsSuffix?: string;
+
+  /**
+   * KeyVaultEndpoint is the Key Vault service endpoint
+   *
+   * @schema ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig#keyVaultEndpoint
+   */
+  readonly keyVaultEndpoint?: string;
+
+  /**
+   * ResourceManagerEndpoint is the Azure Resource Manager endpoint
+   *
+   * @schema ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig#resourceManagerEndpoint
+   */
+  readonly resourceManagerEndpoint?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig(obj: ClusterSecretStoreSpecProviderAzurekvCustomCloudConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'activeDirectoryEndpoint': obj.activeDirectoryEndpoint,
+    'keyVaultDNSSuffix': obj.keyVaultDnsSuffix,
+    'keyVaultEndpoint': obj.keyVaultEndpoint,
+    'resourceManagerEndpoint': obj.resourceManagerEndpoint,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * EnvironmentType specifies the Azure cloud environment endpoints to use for
  * connecting and authenticating with Azure. By default it points to the public cloud AAD endpoint.
  * The following endpoints are available, also see here: https://github.com/Azure/go-autorest/blob/main/autorest/azure/environments.go#L152
- * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud
+ * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud, AzureStackCloud
+ * Use AzureStackCloud when you need to configure custom Azure Stack Hub or Azure Stack Edge endpoints.
  *
  * @schema ClusterSecretStoreSpecProviderAzurekvEnvironmentType
  */
@@ -3019,6 +8352,8 @@ export enum ClusterSecretStoreSpecProviderAzurekvEnvironmentType {
   CHINA_CLOUD = "ChinaCloud",
   /** GermanCloud */
   GERMAN_CLOUD = "GermanCloud",
+  /** AzureStackCloud */
+  AZURE_STACK_CLOUD = "AzureStackCloud",
 }
 
 /**
@@ -3678,6 +9013,13 @@ export interface ClusterSecretStoreSpecProviderGcpsmAuth {
    */
   readonly workloadIdentity?: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentity;
 
+  /**
+   * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuth#workloadIdentityFederation
+   */
+  readonly workloadIdentityFederation?: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation;
+
 }
 
 /**
@@ -3689,6 +9031,7 @@ export function toJson_ClusterSecretStoreSpecProviderGcpsmAuth(obj: ClusterSecre
   const result = {
     'secretRef': toJson_ClusterSecretStoreSpecProviderGcpsmAuthSecretRef(obj.secretRef),
     'workloadIdentity': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentity(obj.workloadIdentity),
+    'workloadIdentityFederation': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation(obj.workloadIdentityFederation),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -3848,9 +9191,49 @@ export function toJson_ClusterSecretStoreSpecProviderIbmAuth(obj: ClusterSecretS
  */
 export interface ClusterSecretStoreSpecProviderInfisicalAuth {
   /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#awsAuthCredentials
+   */
+  readonly awsAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials;
+
+  /**
    * @schema ClusterSecretStoreSpecProviderInfisicalAuth#azureAuthCredentials
    */
   readonly azureAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#gcpIamAuthCredentials
+   */
+  readonly gcpIamAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#gcpIdTokenAuthCredentials
+   */
+  readonly gcpIdTokenAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#jwtAuthCredentials
+   */
+  readonly jwtAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#kubernetesAuthCredentials
+   */
+  readonly kubernetesAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#ldapAuthCredentials
+   */
+  readonly ldapAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#ociAuthCredentials
+   */
+  readonly ociAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials;
+
+  /**
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuth#tokenAuthCredentials
+   */
+  readonly tokenAuthCredentials?: ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials;
 
   /**
    * @schema ClusterSecretStoreSpecProviderInfisicalAuth#universalAuthCredentials
@@ -3866,7 +9249,15 @@ export interface ClusterSecretStoreSpecProviderInfisicalAuth {
 export function toJson_ClusterSecretStoreSpecProviderInfisicalAuth(obj: ClusterSecretStoreSpecProviderInfisicalAuth | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
+    'awsAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials(obj.awsAuthCredentials),
     'azureAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentials(obj.azureAuthCredentials),
+    'gcpIamAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials(obj.gcpIamAuthCredentials),
+    'gcpIdTokenAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials(obj.gcpIdTokenAuthCredentials),
+    'jwtAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials(obj.jwtAuthCredentials),
+    'kubernetesAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials(obj.kubernetesAuthCredentials),
+    'ldapAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials(obj.ldapAuthCredentials),
+    'ociAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials(obj.ociAuthCredentials),
+    'tokenAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials(obj.tokenAuthCredentials),
     'universalAuthCredentials': toJson_ClusterSecretStoreSpecProviderInfisicalAuthUniversalAuthCredentials(obj.universalAuthCredentials),
   };
   // filter undefined values
@@ -4117,6 +9508,64 @@ export function toJson_ClusterSecretStoreSpecProviderKubernetesServer(obj: Clust
     'caBundle': obj.caBundle,
     'caProvider': toJson_ClusterSecretStoreSpecProviderKubernetesServerCaProvider(obj.caProvider),
     'url': obj.url,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Auth configures how the ngrok provider authenticates with the ngrok API.
+ *
+ * @schema ClusterSecretStoreSpecProviderNgrokAuth
+ */
+export interface ClusterSecretStoreSpecProviderNgrokAuth {
+  /**
+   * APIKey is the API Key used to authenticate with ngrok. See https://ngrok.com/docs/api/#authentication
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokAuth#apiKey
+   */
+  readonly apiKey?: ClusterSecretStoreSpecProviderNgrokAuthApiKey;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderNgrokAuth' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderNgrokAuth(obj: ClusterSecretStoreSpecProviderNgrokAuth | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiKey': toJson_ClusterSecretStoreSpecProviderNgrokAuthApiKey(obj.apiKey),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Vault configures the ngrok vault to sync secrets with.
+ *
+ * @schema ClusterSecretStoreSpecProviderNgrokVault
+ */
+export interface ClusterSecretStoreSpecProviderNgrokVault {
+  /**
+   * Name is the name of the ngrok vault to sync secrets with.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokVault#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderNgrokVault' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderNgrokVault(obj: ClusterSecretStoreSpecProviderNgrokVault | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -4834,6 +10283,38 @@ export function toJson_ClusterSecretStoreSpecProviderVaultCaProvider(obj: Cluste
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+ * Only applies to Vault KV v2 stores. When enabled, write operations must include
+ * the current version of the secret to prevent unintentional overwrites.
+ *
+ * @schema ClusterSecretStoreSpecProviderVaultCheckAndSet
+ */
+export interface ClusterSecretStoreSpecProviderVaultCheckAndSet {
+  /**
+   * Required when true, all write operations must include a check-and-set parameter.
+   * This helps prevent unintentional overwrites of secrets.
+   *
+   * @schema ClusterSecretStoreSpecProviderVaultCheckAndSet#required
+   */
+  readonly required?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVaultCheckAndSet' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVaultCheckAndSet(obj: ClusterSecretStoreSpecProviderVaultCheckAndSet | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'required': obj.required,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * The configuration used for client side related TLS communication, when the Vault server
  * requires mutual authentication. Only used if the Server URL is using HTTPS protocol.
  * This parameter is ignored for plain HTTP protocol connection.
@@ -4890,6 +10371,37 @@ export enum ClusterSecretStoreSpecProviderVaultVersion {
   /** v2 */
   V2 = "v2",
 }
+
+/**
+ * Auth defines the authentication method to use.
+ * If not specified, the provider will try to use IRSA (IAM Role for Service Account).
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengineAuth
+ */
+export interface ClusterSecretStoreSpecProviderVolcengineAuth {
+  /**
+   * SecretRef defines the static credentials to use for authentication.
+   * If not set, IRSA is used.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuth#secretRef
+   */
+  readonly secretRef?: ClusterSecretStoreSpecProviderVolcengineAuthSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengineAuth' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengineAuth(obj: ClusterSecretStoreSpecProviderVolcengineAuth | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'secretRef': toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
  * Auth specifies a authorization protocol. Only one protocol may be set.
@@ -5038,7 +10550,7 @@ export function toJson_ClusterSecretStoreSpecProviderWebhookSecrets(obj: Cluster
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Auth defines the information necessary to authenticate against Yandex Certificate Manager
+ * Auth defines the information necessary to authenticate against Yandex.Cloud
  *
  * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerAuth
  */
@@ -5097,7 +10609,44 @@ export function toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerCaP
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Auth defines the information necessary to authenticate against Yandex Lockbox
+ * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as certificate ID or certificate name
+ *
+ * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching
+ */
+export interface ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching {
+  /**
+   * ByID configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID.
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching#byID
+   */
+  readonly byId?: any;
+
+  /**
+   * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching#byName
+   */
+  readonly byName?: ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching(obj: ClusterSecretStoreSpecProviderYandexcertificatemanagerFetching | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'byID': obj.byId,
+    'byName': toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName(obj.byName),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Auth defines the information necessary to authenticate against Yandex.Cloud
  *
  * @schema ClusterSecretStoreSpecProviderYandexlockboxAuth
  */
@@ -5149,6 +10698,43 @@ export function toJson_ClusterSecretStoreSpecProviderYandexlockboxCaProvider(obj
   if (obj === undefined) { return undefined; }
   const result = {
     'certSecretRef': toJson_ClusterSecretStoreSpecProviderYandexlockboxCaProviderCertSecretRef(obj.certSecretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID or secret name
+ *
+ * @schema ClusterSecretStoreSpecProviderYandexlockboxFetching
+ */
+export interface ClusterSecretStoreSpecProviderYandexlockboxFetching {
+  /**
+   * ByID configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID.
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexlockboxFetching#byID
+   */
+  readonly byId?: any;
+
+  /**
+   * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexlockboxFetching#byName
+   */
+  readonly byName?: ClusterSecretStoreSpecProviderYandexlockboxFetchingByName;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderYandexlockboxFetching' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderYandexlockboxFetching(obj: ClusterSecretStoreSpecProviderYandexlockboxFetching | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'byID': obj.byId,
+    'byName': toJson_ClusterSecretStoreSpecProviderYandexlockboxFetchingByName(obj.byName),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -6316,6 +11902,75 @@ export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentity(o
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+ *
+ * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation
+ */
+export interface ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation {
+  /**
+   * audience is the Secure Token Service (STS) audience which contains the resource name for the workload identity pool and the provider identifier in that pool.
+   * If specified, Audience found in the external account credential config will be overridden with the configured value.
+   * audience must be provided when serviceAccountRef or awsSecurityCredentials is configured.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+   * when using the AWS metadata server is not an option.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#awsSecurityCredentials
+   */
+  readonly awsSecurityCredentials?: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials;
+
+  /**
+   * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+   * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+   * serviceAccountRef must be used by providing operators service account details.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#credConfig
+   */
+  readonly credConfig?: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig;
+
+  /**
+   * externalTokenEndpoint is the endpoint explicitly set up to provide tokens, which will be matched against the
+   * credential_source.url in the provided credConfig. This field is merely to double-check the external token source
+   * URL is having the expected value.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#externalTokenEndpoint
+   */
+  readonly externalTokenEndpoint?: string;
+
+  /**
+   * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+   * when Kubernetes is configured as provider in workload identity pool.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#serviceAccountRef
+   */
+  readonly serviceAccountRef?: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation(obj: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'awsSecurityCredentials': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials(obj.awsSecurityCredentials),
+    'credConfig': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig(obj.credConfig),
+    'externalTokenEndpoint': obj.externalTokenEndpoint,
+    'serviceAccountRef': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef(obj.serviceAccountRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
@@ -6473,6 +12128,34 @@ export function toJson_ClusterSecretStoreSpecProviderIbmAuthSecretRef(obj: Clust
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId(obj.identityId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * @schema ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentials
  */
 export interface ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentials {
@@ -6503,6 +12186,301 @@ export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCrede
   const result = {
     'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId(obj.identityId),
     'resource': toJson_ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource(obj.resource),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials#serviceAccountKeyFilePath
+   */
+  readonly serviceAccountKeyFilePath: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId(obj.identityId),
+    'serviceAccountKeyFilePath': toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath(obj.serviceAccountKeyFilePath),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId(obj.identityId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials#jwt
+   */
+  readonly jwt: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId(obj.identityId),
+    'jwt': toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt(obj.jwt),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials#serviceAccountTokenPath
+   */
+  readonly serviceAccountTokenPath?: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId(obj.identityId),
+    'serviceAccountTokenPath': toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath(obj.serviceAccountTokenPath),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#ldapPassword
+   */
+  readonly ldapPassword: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#ldapUsername
+   */
+  readonly ldapUsername: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId(obj.identityId),
+    'ldapPassword': toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword(obj.ldapPassword),
+    'ldapUsername': toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername(obj.ldapUsername),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#fingerprint
+   */
+  readonly fingerprint: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#identityId
+   */
+  readonly identityId: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#privateKey
+   */
+  readonly privateKey: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#privateKeyPassphrase
+   */
+  readonly privateKeyPassphrase?: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#region
+   */
+  readonly region: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#tenancyId
+   */
+  readonly tenancyId: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials#userId
+   */
+  readonly userId: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fingerprint': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint(obj.fingerprint),
+    'identityId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId(obj.identityId),
+    'privateKey': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey(obj.privateKey),
+    'privateKeyPassphrase': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase(obj.privateKeyPassphrase),
+    'region': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion(obj.region),
+    'tenancyId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId(obj.tenancyId),
+    'userId': toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId(obj.userId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials#accessToken
+   */
+  readonly accessToken: ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials(obj: ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessToken': toJson_ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken(obj.accessToken),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -6711,6 +12689,35 @@ export function toJson_ClusterSecretStoreSpecProviderKubernetesServerCaProvider(
     'name': obj.name,
     'namespace': obj.namespace,
     'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * APIKey is the API Key used to authenticate with ngrok. See https://ngrok.com/docs/api/#authentication
+ *
+ * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKey
+ */
+export interface ClusterSecretStoreSpecProviderNgrokAuthApiKey {
+  /**
+   * SecretRef is a reference to a secret containing the ngrok API key.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKey#secretRef
+   */
+  readonly secretRef?: ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderNgrokAuthApiKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderNgrokAuthApiKey(obj: ClusterSecretStoreSpecProviderNgrokAuthApiKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'secretRef': toJson_ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef(obj.secretRef),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -7438,6 +13445,14 @@ export interface ClusterSecretStoreSpecProviderVaultAuthCert {
   readonly clientCert?: ClusterSecretStoreSpecProviderVaultAuthCertClientCert;
 
   /**
+   * Path where the Certificate authentication backend is mounted
+   * in Vault, e.g: "cert"
+   *
+   * @schema ClusterSecretStoreSpecProviderVaultAuthCert#path
+   */
+  readonly path?: string;
+
+  /**
    * SecretRef to a key in a Secret resource containing client private key to
    * authenticate with Vault using the Cert authentication method
    *
@@ -7455,6 +13470,7 @@ export function toJson_ClusterSecretStoreSpecProviderVaultAuthCert(obj: ClusterS
   if (obj === undefined) { return undefined; }
   const result = {
     'clientCert': toJson_ClusterSecretStoreSpecProviderVaultAuthCertClientCert(obj.clientCert),
+    'path': obj.path,
     'secretRef': toJson_ClusterSecretStoreSpecProviderVaultAuthCertSecretRef(obj.secretRef),
   };
   // filter undefined values
@@ -7925,6 +13941,52 @@ export function toJson_ClusterSecretStoreSpecProviderVaultTlsKeySecretRef(obj: C
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * SecretRef defines the static credentials to use for authentication.
+ * If not set, IRSA is used.
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRef
+ */
+export interface ClusterSecretStoreSpecProviderVolcengineAuthSecretRef {
+  /**
+   * AccessKeyID is the reference to the secret containing the Access Key ID.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRef#accessKeyID
+   */
+  readonly accessKeyId: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId;
+
+  /**
+   * SecretAccessKey is the reference to the secret containing the Secret Access Key.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRef#secretAccessKey
+   */
+  readonly secretAccessKey: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey;
+
+  /**
+   * Token is the reference to the secret containing the STS(Security Token Service) Token.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRef#token
+   */
+  readonly token?: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengineAuthSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRef(obj: ClusterSecretStoreSpecProviderVolcengineAuthSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessKeyID': toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId(obj.accessKeyId),
+    'secretAccessKey': toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey(obj.secretAccessKey),
+    'token': toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken(obj.token),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * NTLMProtocol configures the store to use NTLM for auth
  *
  * @schema ClusterSecretStoreSpecProviderWebhookAuthNtlm
@@ -8118,6 +14180,35 @@ export function toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerCaP
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+ *
+ * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName
+ */
+export interface ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName {
+  /**
+   * The folder to fetch secrets from
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName#folderID
+   */
+  readonly folderId: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName(obj: ClusterSecretStoreSpecProviderYandexcertificatemanagerFetchingByName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'folderID': obj.folderId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * The authorized key used for authentication
  *
  * @schema ClusterSecretStoreSpecProviderYandexlockboxAuthAuthorizedKeySecretRef
@@ -8206,6 +14297,35 @@ export function toJson_ClusterSecretStoreSpecProviderYandexlockboxCaProviderCert
     'key': obj.key,
     'name': obj.name,
     'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+ *
+ * @schema ClusterSecretStoreSpecProviderYandexlockboxFetchingByName
+ */
+export interface ClusterSecretStoreSpecProviderYandexlockboxFetchingByName {
+  /**
+   * The folder to fetch secrets from
+   *
+   * @schema ClusterSecretStoreSpecProviderYandexlockboxFetchingByName#folderID
+   */
+  readonly folderId: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderYandexlockboxFetchingByName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderYandexlockboxFetchingByName(obj: ClusterSecretStoreSpecProviderYandexlockboxFetchingByName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'folderID': obj.folderId,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -9549,6 +15669,144 @@ export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentitySe
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+ * when using the AWS metadata server is not an option.
+ *
+ * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials
+ */
+export interface ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials {
+  /**
+   * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+   * Secret should be created with below names for keys
+   * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+   * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+   * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials#awsCredentialsSecretRef
+   */
+  readonly awsCredentialsSecretRef: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef;
+
+  /**
+   * region is for configuring the AWS region to be used.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials(obj: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsCredentialsSecretRef': toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj.awsCredentialsSecretRef),
+    'region': obj.region,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+ * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+ * serviceAccountRef must be used by providing operators service account details.
+ *
+ * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig
+ */
+export interface ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig {
+  /**
+   * key name holding the external account credential config.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#key
+   */
+  readonly key: string;
+
+  /**
+   * name of the configmap.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the configmap exists. If empty, configmap will looked up in local namespace.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig(obj: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+ * when Kubernetes is configured as provider in workload identity pool.
+ *
+ * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef
+ */
+export interface ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef(obj: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * AccessToken is used for authentication.
  *
  * @schema ClusterSecretStoreSpecProviderGitlabAuthSecretRefAccessToken
@@ -9646,6 +15904,54 @@ export function toJson_ClusterSecretStoreSpecProviderIbmAuthSecretRefSecretApiKe
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
  * @schema ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId
  */
 export interface ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId {
@@ -9727,6 +16033,870 @@ export interface ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentials
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource(obj: ClusterSecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath(obj: ClusterSecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt(obj: ClusterSecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath(obj: ClusterSecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword(obj: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername(obj: ClusterSecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId(obj: ClusterSecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken
+ */
+export interface ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken(obj: ClusterSecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
     'key': obj.key,
@@ -9989,6 +17159,53 @@ export enum ClusterSecretStoreSpecProviderKubernetesServerCaProviderType {
   /** ConfigMap */
   CONFIG_MAP = "ConfigMap",
 }
+
+/**
+ * SecretRef is a reference to a secret containing the ngrok API key.
+ *
+ * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef
+ */
+export interface ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef(obj: ClusterSecretStoreSpecProviderNgrokAuthApiKeySecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
  * The ConnectToken is used for authentication to a 1Password Connect Server.
@@ -10800,6 +18017,147 @@ export function toJson_ClusterSecretStoreSpecProviderVaultAuthUserPassSecretRef(
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * AccessKeyID is the reference to the secret containing the Access Key ID.
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId
+ */
+export interface ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId(obj: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretAccessKey is the reference to the secret containing the Secret Access Key.
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey
+ */
+export interface ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey(obj: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Token is the reference to the secret containing the STS(Security Token Service) Token.
+ *
+ * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken
+ */
+export interface ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken(obj: ClusterSecretStoreSpecProviderVolcengineAuthSecretRefToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
@@ -10887,6 +18245,47 @@ export function toJson_ClusterSecretStoreSpecProviderWebhookAuthNtlmUsernameSecr
   if (obj === undefined) { return undefined; }
   const result = {
     'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+ * Secret should be created with below names for keys
+ * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+ * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+ * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+ *
+ * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef
+ */
+export interface ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef {
+  /**
+   * name of the secret.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the secret exists. If empty, secret will looked up in local namespace.
+   *
+   * @schema ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj: ClusterSecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
     'name': obj.name,
     'namespace': obj.namespace,
   };
@@ -23042,7 +30441,7 @@ export interface ExternalSecretSpecDataFromRewriteMerge {
    *
    * @schema ExternalSecretSpecDataFromRewriteMerge#conflictPolicy
    */
-  readonly conflictPolicy?: string;
+  readonly conflictPolicy?: ExternalSecretSpecDataFromRewriteMergeConflictPolicy;
 
   /**
    * Used to define the target key of the merge operation.
@@ -23060,11 +30459,18 @@ export interface ExternalSecretSpecDataFromRewriteMerge {
   readonly priority?: string[];
 
   /**
+   * Used to define the policy when a key in the priority list does not exist in the input.
+   *
+   * @schema ExternalSecretSpecDataFromRewriteMerge#priorityPolicy
+   */
+  readonly priorityPolicy?: ExternalSecretSpecDataFromRewriteMergePriorityPolicy;
+
+  /**
    * Used to define the strategy to use in the merge operation.
    *
    * @schema ExternalSecretSpecDataFromRewriteMerge#strategy
    */
-  readonly strategy?: string;
+  readonly strategy?: ExternalSecretSpecDataFromRewriteMergeStrategy;
 
 }
 
@@ -23078,6 +30484,7 @@ export function toJson_ExternalSecretSpecDataFromRewriteMerge(obj: ExternalSecre
     'conflictPolicy': obj.conflictPolicy,
     'into': obj.into,
     'priority': obj.priority?.map(y => y),
+    'priorityPolicy': obj.priorityPolicy,
     'strategy': obj.strategy,
   };
   // filter undefined values
@@ -23272,6 +30679,11 @@ export interface ExternalSecretSpecTargetTemplateMetadata {
   readonly annotations?: { [key: string]: string };
 
   /**
+   * @schema ExternalSecretSpecTargetTemplateMetadata#finalizers
+   */
+  readonly finalizers?: string[];
+
+  /**
    * @schema ExternalSecretSpecTargetTemplateMetadata#labels
    */
   readonly labels?: { [key: string]: string };
@@ -23286,6 +30698,7 @@ export function toJson_ExternalSecretSpecTargetTemplateMetadata(obj: ExternalSec
   if (obj === undefined) { return undefined; }
   const result = {
     'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'finalizers': obj.finalizers?.map(y => y),
     'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
   };
   // filter undefined values
@@ -23346,6 +30759,8 @@ export enum ExternalSecretSpecDataSourceRefGeneratorRefKind {
   ACR_ACCESS_TOKEN = "ACRAccessToken",
   /** ClusterGenerator */
   CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
   /** ECRAuthorizationToken */
   ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
   /** Fake */
@@ -23358,6 +30773,8 @@ export enum ExternalSecretSpecDataSourceRefGeneratorRefKind {
   QUAY_ACCESS_TOKEN = "QuayAccessToken",
   /** Password */
   PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
   /** STSSessionToken */
   STS_SESSION_TOKEN = "STSSessionToken",
   /** UUID */
@@ -23387,6 +30804,42 @@ export enum ExternalSecretSpecDataSourceRefStoreRefKind {
 }
 
 /**
+ * Used to define the policy to use in conflict resolution.
+ *
+ * @schema ExternalSecretSpecDataFromRewriteMergeConflictPolicy
+ */
+export enum ExternalSecretSpecDataFromRewriteMergeConflictPolicy {
+  /** Ignore */
+  IGNORE = "Ignore",
+  /** Error */
+  ERROR = "Error",
+}
+
+/**
+ * Used to define the policy when a key in the priority list does not exist in the input.
+ *
+ * @schema ExternalSecretSpecDataFromRewriteMergePriorityPolicy
+ */
+export enum ExternalSecretSpecDataFromRewriteMergePriorityPolicy {
+  /** IgnoreNotFound */
+  IGNORE_NOT_FOUND = "IgnoreNotFound",
+  /** Strict */
+  STRICT = "Strict",
+}
+
+/**
+ * Used to define the strategy to use in the merge operation.
+ *
+ * @schema ExternalSecretSpecDataFromRewriteMergeStrategy
+ */
+export enum ExternalSecretSpecDataFromRewriteMergeStrategy {
+  /** Extract */
+  EXTRACT = "Extract",
+  /** JSON */
+  JSON = "JSON",
+}
+
+/**
  * Specify the Kind of the generator resource
  *
  * @schema ExternalSecretSpecDataFromSourceRefGeneratorRefKind
@@ -23396,6 +30849,8 @@ export enum ExternalSecretSpecDataFromSourceRefGeneratorRefKind {
   ACR_ACCESS_TOKEN = "ACRAccessToken",
   /** ClusterGenerator */
   CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
   /** ECRAuthorizationToken */
   ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
   /** Fake */
@@ -23408,6 +30863,8 @@ export enum ExternalSecretSpecDataFromSourceRefGeneratorRefKind {
   QUAY_ACCESS_TOKEN = "QuayAccessToken",
   /** Password */
   PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
   /** STSSessionToken */
   STS_SESSION_TOKEN = "STSSessionToken",
   /** UUID */
@@ -24939,6 +32396,8 @@ export enum ExternalSecretV1Beta1SpecDataSourceRefGeneratorRefKind {
   QUAY_ACCESS_TOKEN = "QuayAccessToken",
   /** Password */
   PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
   /** STSSessionToken */
   STS_SESSION_TOKEN = "STSSessionToken",
   /** UUID */
@@ -24987,6 +32446,8 @@ export enum ExternalSecretV1Beta1SpecDataFromSourceRefGeneratorRefKind {
   QUAY_ACCESS_TOKEN = "QuayAccessToken",
   /** Password */
   PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
   /** STSSessionToken */
   STS_SESSION_TOKEN = "STSSessionToken",
   /** UUID */
@@ -25175,6 +32636,1051 @@ export enum ExternalSecretV1Beta1SpecTargetTemplateTemplateFromConfigMapItemsTem
  * @schema ExternalSecretV1Beta1SpecTargetTemplateTemplateFromSecretItemsTemplateAs
  */
 export enum ExternalSecretV1Beta1SpecTargetTemplateTemplateFromSecretItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+
+/**
+ *
+ *
+ * @schema PushSecret
+ */
+export class PushSecret extends ApiObject {
+  /**
+   * Returns the apiVersion and kind for "PushSecret"
+   */
+  public static readonly GVK: GroupVersionKind = {
+    apiVersion: 'external-secrets.io/v1alpha1',
+    kind: 'PushSecret',
+  }
+
+  /**
+   * Renders a Kubernetes manifest for "PushSecret".
+   *
+   * This can be used to inline resource manifests inside other objects (e.g. as templates).
+   *
+   * @param props initialization props
+   */
+  public static manifest(props: PushSecretProps = {}): any {
+    return {
+      ...PushSecret.GVK,
+      ...toJson_PushSecretProps(props),
+    };
+  }
+
+  /**
+   * Defines a "PushSecret" API object
+   * @param scope the scope in which to define this object
+   * @param id a scope-local name for the object
+   * @param props initialization props
+   */
+  public constructor(scope: Construct, id: string, props: PushSecretProps = {}) {
+    super(scope, id, {
+      ...PushSecret.GVK,
+      ...props,
+    });
+  }
+
+  /**
+   * Renders the object to Kubernetes JSON.
+   */
+  public toJson(): any {
+    const resolved = super.toJson();
+
+    return {
+      ...PushSecret.GVK,
+      ...toJson_PushSecretProps(resolved),
+    };
+  }
+}
+
+/**
+ * @schema PushSecret
+ */
+export interface PushSecretProps {
+  /**
+   * @schema PushSecret#metadata
+   */
+  readonly metadata?: ApiObjectMetadata;
+
+  /**
+   * PushSecretSpec configures the behavior of the PushSecret.
+   *
+   * @schema PushSecret#spec
+   */
+  readonly spec?: PushSecretSpec;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretProps' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretProps(obj: PushSecretProps | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'metadata': obj.metadata,
+    'spec': toJson_PushSecretSpec(obj.spec),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * PushSecretSpec configures the behavior of the PushSecret.
+ *
+ * @schema PushSecretSpec
+ */
+export interface PushSecretSpec {
+  /**
+   * Secret Data that should be pushed to providers
+   *
+   * @schema PushSecretSpec#data
+   */
+  readonly data?: PushSecretSpecData[];
+
+  /**
+   * Deletion Policy to handle Secrets in the provider.
+   *
+   * @schema PushSecretSpec#deletionPolicy
+   */
+  readonly deletionPolicy?: PushSecretSpecDeletionPolicy;
+
+  /**
+   * The Interval to which External Secrets will try to push a secret definition
+   *
+   * @schema PushSecretSpec#refreshInterval
+   */
+  readonly refreshInterval?: string;
+
+  /**
+   * @schema PushSecretSpec#secretStoreRefs
+   */
+  readonly secretStoreRefs: PushSecretSpecSecretStoreRefs[];
+
+  /**
+   * The Secret Selector (k8s source) for the Push Secret
+   *
+   * @schema PushSecretSpec#selector
+   */
+  readonly selector: PushSecretSpecSelector;
+
+  /**
+   * Template defines a blueprint for the created Secret resource.
+   *
+   * @schema PushSecretSpec#template
+   */
+  readonly template?: PushSecretSpecTemplate;
+
+  /**
+   * UpdatePolicy to handle Secrets in the provider.
+   *
+   * @schema PushSecretSpec#updatePolicy
+   */
+  readonly updatePolicy?: PushSecretSpecUpdatePolicy;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpec' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpec(obj: PushSecretSpec | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': obj.data?.map(y => toJson_PushSecretSpecData(y)),
+    'deletionPolicy': obj.deletionPolicy,
+    'refreshInterval': obj.refreshInterval,
+    'secretStoreRefs': obj.secretStoreRefs?.map(y => toJson_PushSecretSpecSecretStoreRefs(y)),
+    'selector': toJson_PushSecretSpecSelector(obj.selector),
+    'template': toJson_PushSecretSpecTemplate(obj.template),
+    'updatePolicy': obj.updatePolicy,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecData
+ */
+export interface PushSecretSpecData {
+  /**
+   * Used to define a conversion Strategy for the secret keys
+   *
+   * @schema PushSecretSpecData#conversionStrategy
+   */
+  readonly conversionStrategy?: PushSecretSpecDataConversionStrategy;
+
+  /**
+   * Match a given Secret Key to be pushed to the provider.
+   *
+   * @schema PushSecretSpecData#match
+   */
+  readonly match: PushSecretSpecDataMatch;
+
+  /**
+   * Metadata is metadata attached to the secret.
+   * The structure of metadata is provider specific, please look it up in the provider documentation.
+   *
+   * @schema PushSecretSpecData#metadata
+   */
+  readonly metadata?: any;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecData' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecData(obj: PushSecretSpecData | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'conversionStrategy': obj.conversionStrategy,
+    'match': toJson_PushSecretSpecDataMatch(obj.match),
+    'metadata': obj.metadata,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Deletion Policy to handle Secrets in the provider.
+ *
+ * @schema PushSecretSpecDeletionPolicy
+ */
+export enum PushSecretSpecDeletionPolicy {
+  /** Delete */
+  DELETE = "Delete",
+  /** None */
+  NONE = "None",
+}
+
+/**
+ * @schema PushSecretSpecSecretStoreRefs
+ */
+export interface PushSecretSpecSecretStoreRefs {
+  /**
+   * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+   *
+   * @schema PushSecretSpecSecretStoreRefs#kind
+   */
+  readonly kind?: PushSecretSpecSecretStoreRefsKind;
+
+  /**
+   * Optionally, sync to secret stores with label selector
+   *
+   * @schema PushSecretSpecSecretStoreRefs#labelSelector
+   */
+  readonly labelSelector?: PushSecretSpecSecretStoreRefsLabelSelector;
+
+  /**
+   * Optionally, sync to the SecretStore of the given name
+   *
+   * @schema PushSecretSpecSecretStoreRefs#name
+   */
+  readonly name?: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSecretStoreRefs' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSecretStoreRefs(obj: PushSecretSpecSecretStoreRefs | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'kind': obj.kind,
+    'labelSelector': toJson_PushSecretSpecSecretStoreRefsLabelSelector(obj.labelSelector),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * The Secret Selector (k8s source) for the Push Secret
+ *
+ * @schema PushSecretSpecSelector
+ */
+export interface PushSecretSpecSelector {
+  /**
+   * Point to a generator to create a Secret.
+   *
+   * @schema PushSecretSpecSelector#generatorRef
+   */
+  readonly generatorRef?: PushSecretSpecSelectorGeneratorRef;
+
+  /**
+   * Select a Secret to Push.
+   *
+   * @schema PushSecretSpecSelector#secret
+   */
+  readonly secret?: PushSecretSpecSelectorSecret;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSelector(obj: PushSecretSpecSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'generatorRef': toJson_PushSecretSpecSelectorGeneratorRef(obj.generatorRef),
+    'secret': toJson_PushSecretSpecSelectorSecret(obj.secret),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Template defines a blueprint for the created Secret resource.
+ *
+ * @schema PushSecretSpecTemplate
+ */
+export interface PushSecretSpecTemplate {
+  /**
+   * @schema PushSecretSpecTemplate#data
+   */
+  readonly data?: { [key: string]: string };
+
+  /**
+   * EngineVersion specifies the template engine version
+   * that should be used to compile/execute the
+   * template specified in .data and .templateFrom[].
+   *
+   * @schema PushSecretSpecTemplate#engineVersion
+   */
+  readonly engineVersion?: PushSecretSpecTemplateEngineVersion;
+
+  /**
+   * @schema PushSecretSpecTemplate#mergePolicy
+   */
+  readonly mergePolicy?: PushSecretSpecTemplateMergePolicy;
+
+  /**
+   * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+   *
+   * @schema PushSecretSpecTemplate#metadata
+   */
+  readonly metadata?: PushSecretSpecTemplateMetadata;
+
+  /**
+   * @schema PushSecretSpecTemplate#templateFrom
+   */
+  readonly templateFrom?: PushSecretSpecTemplateTemplateFrom[];
+
+  /**
+   * @schema PushSecretSpecTemplate#type
+   */
+  readonly type?: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplate' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplate(obj: PushSecretSpecTemplate | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'data': ((obj.data) === undefined) ? undefined : (Object.entries(obj.data).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'engineVersion': obj.engineVersion,
+    'mergePolicy': obj.mergePolicy,
+    'metadata': toJson_PushSecretSpecTemplateMetadata(obj.metadata),
+    'templateFrom': obj.templateFrom?.map(y => toJson_PushSecretSpecTemplateTemplateFrom(y)),
+    'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * UpdatePolicy to handle Secrets in the provider.
+ *
+ * @schema PushSecretSpecUpdatePolicy
+ */
+export enum PushSecretSpecUpdatePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** IfNotExists */
+  IF_NOT_EXISTS = "IfNotExists",
+}
+
+/**
+ * Used to define a conversion Strategy for the secret keys
+ *
+ * @schema PushSecretSpecDataConversionStrategy
+ */
+export enum PushSecretSpecDataConversionStrategy {
+  /** None */
+  NONE = "None",
+  /** ReverseUnicode */
+  REVERSE_UNICODE = "ReverseUnicode",
+}
+
+/**
+ * Match a given Secret Key to be pushed to the provider.
+ *
+ * @schema PushSecretSpecDataMatch
+ */
+export interface PushSecretSpecDataMatch {
+  /**
+   * Remote Refs to push to providers.
+   *
+   * @schema PushSecretSpecDataMatch#remoteRef
+   */
+  readonly remoteRef: PushSecretSpecDataMatchRemoteRef;
+
+  /**
+   * Secret Key to be pushed
+   *
+   * @schema PushSecretSpecDataMatch#secretKey
+   */
+  readonly secretKey?: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecDataMatch' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecDataMatch(obj: PushSecretSpecDataMatch | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'remoteRef': toJson_PushSecretSpecDataMatchRemoteRef(obj.remoteRef),
+    'secretKey': obj.secretKey,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Kind of the SecretStore resource (SecretStore or ClusterSecretStore)
+ *
+ * @schema PushSecretSpecSecretStoreRefsKind
+ */
+export enum PushSecretSpecSecretStoreRefsKind {
+  /** SecretStore */
+  SECRET_STORE = "SecretStore",
+  /** ClusterSecretStore */
+  CLUSTER_SECRET_STORE = "ClusterSecretStore",
+}
+
+/**
+ * Optionally, sync to secret stores with label selector
+ *
+ * @schema PushSecretSpecSecretStoreRefsLabelSelector
+ */
+export interface PushSecretSpecSecretStoreRefsLabelSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema PushSecretSpecSecretStoreRefsLabelSelector#matchExpressions
+   */
+  readonly matchExpressions?: PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema PushSecretSpecSecretStoreRefsLabelSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSecretStoreRefsLabelSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSecretStoreRefsLabelSelector(obj: PushSecretSpecSecretStoreRefsLabelSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Point to a generator to create a Secret.
+ *
+ * @schema PushSecretSpecSelectorGeneratorRef
+ */
+export interface PushSecretSpecSelectorGeneratorRef {
+  /**
+   * Specify the apiVersion of the generator resource
+   *
+   * @schema PushSecretSpecSelectorGeneratorRef#apiVersion
+   */
+  readonly apiVersion?: string;
+
+  /**
+   * Specify the Kind of the generator resource
+   *
+   * @schema PushSecretSpecSelectorGeneratorRef#kind
+   */
+  readonly kind: PushSecretSpecSelectorGeneratorRefKind;
+
+  /**
+   * Specify the name of the generator resource
+   *
+   * @schema PushSecretSpecSelectorGeneratorRef#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSelectorGeneratorRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSelectorGeneratorRef(obj: PushSecretSpecSelectorGeneratorRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiVersion': obj.apiVersion,
+    'kind': obj.kind,
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Select a Secret to Push.
+ *
+ * @schema PushSecretSpecSelectorSecret
+ */
+export interface PushSecretSpecSelectorSecret {
+  /**
+   * Name of the Secret.
+   * The Secret must exist in the same namespace as the PushSecret manifest.
+   *
+   * @schema PushSecretSpecSelectorSecret#name
+   */
+  readonly name?: string;
+
+  /**
+   * Selector chooses secrets using a labelSelector.
+   *
+   * @schema PushSecretSpecSelectorSecret#selector
+   */
+  readonly selector?: PushSecretSpecSelectorSecretSelector;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSelectorSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSelectorSecret(obj: PushSecretSpecSelectorSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
+    'selector': toJson_PushSecretSpecSelectorSecretSelector(obj.selector),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * EngineVersion specifies the template engine version
+ * that should be used to compile/execute the
+ * template specified in .data and .templateFrom[].
+ *
+ * @schema PushSecretSpecTemplateEngineVersion
+ */
+export enum PushSecretSpecTemplateEngineVersion {
+  /** v2 */
+  V2 = "v2",
+}
+
+/**
+ * @schema PushSecretSpecTemplateMergePolicy
+ */
+export enum PushSecretSpecTemplateMergePolicy {
+  /** Replace */
+  REPLACE = "Replace",
+  /** Merge */
+  MERGE = "Merge",
+}
+
+/**
+ * ExternalSecretTemplateMetadata defines metadata fields for the Secret blueprint.
+ *
+ * @schema PushSecretSpecTemplateMetadata
+ */
+export interface PushSecretSpecTemplateMetadata {
+  /**
+   * @schema PushSecretSpecTemplateMetadata#annotations
+   */
+  readonly annotations?: { [key: string]: string };
+
+  /**
+   * @schema PushSecretSpecTemplateMetadata#finalizers
+   */
+  readonly finalizers?: string[];
+
+  /**
+   * @schema PushSecretSpecTemplateMetadata#labels
+   */
+  readonly labels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateMetadata' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateMetadata(obj: PushSecretSpecTemplateMetadata | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'annotations': ((obj.annotations) === undefined) ? undefined : (Object.entries(obj.annotations).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+    'finalizers': obj.finalizers?.map(y => y),
+    'labels': ((obj.labels) === undefined) ? undefined : (Object.entries(obj.labels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFrom
+ */
+export interface PushSecretSpecTemplateTemplateFrom {
+  /**
+   * @schema PushSecretSpecTemplateTemplateFrom#configMap
+   */
+  readonly configMap?: PushSecretSpecTemplateTemplateFromConfigMap;
+
+  /**
+   * @schema PushSecretSpecTemplateTemplateFrom#literal
+   */
+  readonly literal?: string;
+
+  /**
+   * @schema PushSecretSpecTemplateTemplateFrom#secret
+   */
+  readonly secret?: PushSecretSpecTemplateTemplateFromSecret;
+
+  /**
+   * @schema PushSecretSpecTemplateTemplateFrom#target
+   */
+  readonly target?: PushSecretSpecTemplateTemplateFromTarget;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateTemplateFrom' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateTemplateFrom(obj: PushSecretSpecTemplateTemplateFrom | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'configMap': toJson_PushSecretSpecTemplateTemplateFromConfigMap(obj.configMap),
+    'literal': obj.literal,
+    'secret': toJson_PushSecretSpecTemplateTemplateFromSecret(obj.secret),
+    'target': obj.target,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Remote Refs to push to providers.
+ *
+ * @schema PushSecretSpecDataMatchRemoteRef
+ */
+export interface PushSecretSpecDataMatchRemoteRef {
+  /**
+   * Name of the property in the resulting secret
+   *
+   * @schema PushSecretSpecDataMatchRemoteRef#property
+   */
+  readonly property?: string;
+
+  /**
+   * Name of the resulting provider secret.
+   *
+   * @schema PushSecretSpecDataMatchRemoteRef#remoteKey
+   */
+  readonly remoteKey: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecDataMatchRemoteRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecDataMatchRemoteRef(obj: PushSecretSpecDataMatchRemoteRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'property': obj.property,
+    'remoteKey': obj.remoteKey,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions
+ */
+export interface PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions(obj: PushSecretSpecSecretStoreRefsLabelSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Specify the Kind of the generator resource
+ *
+ * @schema PushSecretSpecSelectorGeneratorRefKind
+ */
+export enum PushSecretSpecSelectorGeneratorRefKind {
+  /** ACRAccessToken */
+  ACR_ACCESS_TOKEN = "ACRAccessToken",
+  /** ClusterGenerator */
+  CLUSTER_GENERATOR = "ClusterGenerator",
+  /** CloudsmithAccessToken */
+  CLOUDSMITH_ACCESS_TOKEN = "CloudsmithAccessToken",
+  /** ECRAuthorizationToken */
+  ECR_AUTHORIZATION_TOKEN = "ECRAuthorizationToken",
+  /** Fake */
+  FAKE = "Fake",
+  /** GCRAccessToken */
+  GCR_ACCESS_TOKEN = "GCRAccessToken",
+  /** GithubAccessToken */
+  GITHUB_ACCESS_TOKEN = "GithubAccessToken",
+  /** QuayAccessToken */
+  QUAY_ACCESS_TOKEN = "QuayAccessToken",
+  /** Password */
+  PASSWORD = "Password",
+  /** SSHKey */
+  SSH_KEY = "SSHKey",
+  /** STSSessionToken */
+  STS_SESSION_TOKEN = "STSSessionToken",
+  /** UUID */
+  UUID = "UUID",
+  /** VaultDynamicSecret */
+  VAULT_DYNAMIC_SECRET = "VaultDynamicSecret",
+  /** Webhook */
+  WEBHOOK = "Webhook",
+  /** Grafana */
+  GRAFANA = "Grafana",
+  /** MFA */
+  MFA = "MFA",
+}
+
+/**
+ * Selector chooses secrets using a labelSelector.
+ *
+ * @schema PushSecretSpecSelectorSecretSelector
+ */
+export interface PushSecretSpecSelectorSecretSelector {
+  /**
+   * matchExpressions is a list of label selector requirements. The requirements are ANDed.
+   *
+   * @schema PushSecretSpecSelectorSecretSelector#matchExpressions
+   */
+  readonly matchExpressions?: PushSecretSpecSelectorSecretSelectorMatchExpressions[];
+
+  /**
+   * matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+   * map is equivalent to an element of matchExpressions, whose key field is "key", the
+   * operator is "In", and the values array contains only "value". The requirements are ANDed.
+   *
+   * @schema PushSecretSpecSelectorSecretSelector#matchLabels
+   */
+  readonly matchLabels?: { [key: string]: string };
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSelectorSecretSelector' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSelectorSecretSelector(obj: PushSecretSpecSelectorSecretSelector | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'matchExpressions': obj.matchExpressions?.map(y => toJson_PushSecretSpecSelectorSecretSelectorMatchExpressions(y)),
+    'matchLabels': ((obj.matchLabels) === undefined) ? undefined : (Object.entries(obj.matchLabels).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromConfigMap
+ */
+export interface PushSecretSpecTemplateTemplateFromConfigMap {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema PushSecretSpecTemplateTemplateFromConfigMap#items
+   */
+  readonly items: PushSecretSpecTemplateTemplateFromConfigMapItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema PushSecretSpecTemplateTemplateFromConfigMap#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateTemplateFromConfigMap' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateTemplateFromConfigMap(obj: PushSecretSpecTemplateTemplateFromConfigMap | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_PushSecretSpecTemplateTemplateFromConfigMapItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromSecret
+ */
+export interface PushSecretSpecTemplateTemplateFromSecret {
+  /**
+   * A list of keys in the ConfigMap/Secret to use as templates for Secret data
+   *
+   * @schema PushSecretSpecTemplateTemplateFromSecret#items
+   */
+  readonly items: PushSecretSpecTemplateTemplateFromSecretItems[];
+
+  /**
+   * The name of the ConfigMap/Secret resource
+   *
+   * @schema PushSecretSpecTemplateTemplateFromSecret#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateTemplateFromSecret' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateTemplateFromSecret(obj: PushSecretSpecTemplateTemplateFromSecret | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'items': obj.items?.map(y => toJson_PushSecretSpecTemplateTemplateFromSecretItems(y)),
+    'name': obj.name,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromTarget
+ */
+export enum PushSecretSpecTemplateTemplateFromTarget {
+  /** Data */
+  DATA = "Data",
+  /** Annotations */
+  ANNOTATIONS = "Annotations",
+  /** Labels */
+  LABELS = "Labels",
+}
+
+/**
+ * A label selector requirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @schema PushSecretSpecSelectorSecretSelectorMatchExpressions
+ */
+export interface PushSecretSpecSelectorSecretSelectorMatchExpressions {
+  /**
+   * key is the label key that the selector applies to.
+   *
+   * @schema PushSecretSpecSelectorSecretSelectorMatchExpressions#key
+   */
+  readonly key: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists and DoesNotExist.
+   *
+   * @schema PushSecretSpecSelectorSecretSelectorMatchExpressions#operator
+   */
+  readonly operator: string;
+
+  /**
+   * values is an array of string values. If the operator is In or NotIn,
+   * the values array must be non-empty. If the operator is Exists or DoesNotExist,
+   * the values array must be empty. This array is replaced during a strategic
+   * merge patch.
+   *
+   * @schema PushSecretSpecSelectorSecretSelectorMatchExpressions#values
+   */
+  readonly values?: string[];
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecSelectorSecretSelectorMatchExpressions' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecSelectorSecretSelectorMatchExpressions(obj: PushSecretSpecSelectorSecretSelectorMatchExpressions | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'operator': obj.operator,
+    'values': obj.values?.map(y => y),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromConfigMapItems
+ */
+export interface PushSecretSpecTemplateTemplateFromConfigMapItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema PushSecretSpecTemplateTemplateFromConfigMapItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema PushSecretSpecTemplateTemplateFromConfigMapItems#templateAs
+   */
+  readonly templateAs?: PushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateTemplateFromConfigMapItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateTemplateFromConfigMapItems(obj: PushSecretSpecTemplateTemplateFromConfigMapItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromSecretItems
+ */
+export interface PushSecretSpecTemplateTemplateFromSecretItems {
+  /**
+   * A key in the ConfigMap/Secret
+   *
+   * @schema PushSecretSpecTemplateTemplateFromSecretItems#key
+   */
+  readonly key: string;
+
+  /**
+   * @schema PushSecretSpecTemplateTemplateFromSecretItems#templateAs
+   */
+  readonly templateAs?: PushSecretSpecTemplateTemplateFromSecretItemsTemplateAs;
+
+}
+
+/**
+ * Converts an object of type 'PushSecretSpecTemplateTemplateFromSecretItems' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_PushSecretSpecTemplateTemplateFromSecretItems(obj: PushSecretSpecTemplateTemplateFromSecretItems | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'templateAs': obj.templateAs,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs
+ */
+export enum PushSecretSpecTemplateTemplateFromConfigMapItemsTemplateAs {
+  /** Values */
+  VALUES = "Values",
+  /** KeysAndValues */
+  KEYS_AND_VALUES = "KeysAndValues",
+}
+
+/**
+ * @schema PushSecretSpecTemplateTemplateFromSecretItemsTemplateAs
+ */
+export enum PushSecretSpecTemplateTemplateFromSecretItemsTemplateAs {
   /** Values */
   VALUES = "Values",
   /** KeysAndValues */
@@ -25492,7 +33998,8 @@ export interface SecretStoreSpecProvider {
   readonly gcpsm?: SecretStoreSpecProviderGcpsm;
 
   /**
-   * Github configures this store to push Github Action secrets using Github API provider
+   * Github configures this store to push GitHub Action secrets using GitHub API provider.
+   * Note: This provider only supports write operations (PushSecret) and cannot fetch secrets from GitHub
    *
    * @schema SecretStoreSpecProvider#github
    */
@@ -25532,6 +34039,13 @@ export interface SecretStoreSpecProvider {
    * @schema SecretStoreSpecProvider#kubernetes
    */
   readonly kubernetes?: SecretStoreSpecProviderKubernetes;
+
+  /**
+   * Ngrok configures this store to sync secrets using the ngrok provider.
+   *
+   * @schema SecretStoreSpecProvider#ngrok
+   */
+  readonly ngrok?: SecretStoreSpecProviderNgrok;
 
   /**
    * Onboardbase configures this store to sync secrets using the Onboardbase provider
@@ -25617,6 +34131,13 @@ export interface SecretStoreSpecProvider {
   readonly vault?: SecretStoreSpecProviderVault;
 
   /**
+   * Volcengine configures this store to sync secrets using the Volcengine provider
+   *
+   * @schema SecretStoreSpecProvider#volcengine
+   */
+  readonly volcengine?: SecretStoreSpecProviderVolcengine;
+
+  /**
    * Webhook configures this store to sync secrets using a generic templated webhook
    *
    * @schema SecretStoreSpecProvider#webhook
@@ -25667,6 +34188,7 @@ export function toJson_SecretStoreSpecProvider(obj: SecretStoreSpecProvider | un
     'infisical': toJson_SecretStoreSpecProviderInfisical(obj.infisical),
     'keepersecurity': toJson_SecretStoreSpecProviderKeepersecurity(obj.keepersecurity),
     'kubernetes': toJson_SecretStoreSpecProviderKubernetes(obj.kubernetes),
+    'ngrok': toJson_SecretStoreSpecProviderNgrok(obj.ngrok),
     'onboardbase': toJson_SecretStoreSpecProviderOnboardbase(obj.onboardbase),
     'onepassword': toJson_SecretStoreSpecProviderOnepassword(obj.onepassword),
     'onepasswordSDK': toJson_SecretStoreSpecProviderOnepasswordSdk(obj.onepasswordSdk),
@@ -25679,6 +34201,7 @@ export function toJson_SecretStoreSpecProvider(obj: SecretStoreSpecProvider | un
     'secretserver': toJson_SecretStoreSpecProviderSecretserver(obj.secretserver),
     'senhasegura': toJson_SecretStoreSpecProviderSenhasegura(obj.senhasegura),
     'vault': toJson_SecretStoreSpecProviderVault(obj.vault),
+    'volcengine': toJson_SecretStoreSpecProviderVolcengine(obj.volcengine),
     'webhook': toJson_SecretStoreSpecProviderWebhook(obj.webhook),
     'yandexcertificatemanager': toJson_SecretStoreSpecProviderYandexcertificatemanager(obj.yandexcertificatemanager),
     'yandexlockbox': toJson_SecretStoreSpecProviderYandexlockbox(obj.yandexlockbox),
@@ -25979,10 +34502,21 @@ export interface SecretStoreSpecProviderAzurekv {
   readonly authType?: SecretStoreSpecProviderAzurekvAuthType;
 
   /**
+   * CustomCloudConfig defines custom Azure Stack Hub or Azure Stack Edge endpoints.
+   * Required when EnvironmentType is AzureStackCloud.
+   * IMPORTANT: This feature REQUIRES UseAzureSDK to be set to true. Custom cloud
+   * configuration is not supported with the legacy go-autorest SDK.
+   *
+   * @schema SecretStoreSpecProviderAzurekv#customCloudConfig
+   */
+  readonly customCloudConfig?: SecretStoreSpecProviderAzurekvCustomCloudConfig;
+
+  /**
    * EnvironmentType specifies the Azure cloud environment endpoints to use for
    * connecting and authenticating with Azure. By default it points to the public cloud AAD endpoint.
    * The following endpoints are available, also see here: https://github.com/Azure/go-autorest/blob/main/autorest/azure/environments.go#L152
-   * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud
+   * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud, AzureStackCloud
+   * Use AzureStackCloud when you need to configure custom Azure Stack Hub or Azure Stack Edge endpoints.
    *
    * @schema SecretStoreSpecProviderAzurekv#environmentType
    */
@@ -26011,6 +34545,15 @@ export interface SecretStoreSpecProviderAzurekv {
   readonly tenantId?: string;
 
   /**
+   * UseAzureSDK enables the use of the new Azure SDK for Go (azcore-based) instead of the legacy go-autorest SDK.
+   * This is experimental and may have behavioral differences. Defaults to false (legacy SDK).
+   *
+   * @default false (legacy SDK).
+   * @schema SecretStoreSpecProviderAzurekv#useAzureSDK
+   */
+  readonly useAzureSdk?: boolean;
+
+  /**
    * Vault Url from which the secrets to be fetched from.
    *
    * @schema SecretStoreSpecProviderAzurekv#vaultUrl
@@ -26028,10 +34571,12 @@ export function toJson_SecretStoreSpecProviderAzurekv(obj: SecretStoreSpecProvid
   const result = {
     'authSecretRef': toJson_SecretStoreSpecProviderAzurekvAuthSecretRef(obj.authSecretRef),
     'authType': obj.authType,
+    'customCloudConfig': toJson_SecretStoreSpecProviderAzurekvCustomCloudConfig(obj.customCloudConfig),
     'environmentType': obj.environmentType,
     'identityId': obj.identityId,
     'serviceAccountRef': toJson_SecretStoreSpecProviderAzurekvServiceAccountRef(obj.serviceAccountRef),
     'tenantId': obj.tenantId,
+    'useAzureSDK': obj.useAzureSdk,
     'vaultUrl': obj.vaultUrl,
   };
   // filter undefined values
@@ -26467,6 +35012,11 @@ export interface SecretStoreSpecProviderFake {
    */
   readonly data: SecretStoreSpecProviderFakeData[];
 
+  /**
+   * @schema SecretStoreSpecProviderFake#validationResult
+   */
+  readonly validationResult?: number;
+
 }
 
 /**
@@ -26477,6 +35027,7 @@ export function toJson_SecretStoreSpecProviderFake(obj: SecretStoreSpecProviderF
   if (obj === undefined) { return undefined; }
   const result = {
     'data': obj.data?.map(y => toJson_SecretStoreSpecProviderFakeData(y)),
+    'validationResult': obj.validationResult,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -26548,6 +35099,17 @@ export interface SecretStoreSpecProviderGcpsm {
    */
   readonly projectId?: string;
 
+  /**
+   * SecretVersionSelectionPolicy specifies how the provider selects a secret version
+   * when "latest" is disabled or destroyed.
+   * Possible values are:
+   * - LatestOrFail: the provider always uses "latest", or fails if that version is disabled/destroyed.
+   * - LatestOrFetch: the provider falls back to fetching the latest version if the version is DESTROYED or DISABLED
+   *
+   * @schema SecretStoreSpecProviderGcpsm#secretVersionSelectionPolicy
+   */
+  readonly secretVersionSelectionPolicy?: string;
+
 }
 
 /**
@@ -26560,6 +35122,7 @@ export function toJson_SecretStoreSpecProviderGcpsm(obj: SecretStoreSpecProvider
     'auth': toJson_SecretStoreSpecProviderGcpsmAuth(obj.auth),
     'location': obj.location,
     'projectID': obj.projectId,
+    'secretVersionSelectionPolicy': obj.secretVersionSelectionPolicy,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -26567,7 +35130,8 @@ export function toJson_SecretStoreSpecProviderGcpsm(obj: SecretStoreSpecProvider
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Github configures this store to push Github Action secrets using Github API provider
+ * Github configures this store to push GitHub Action secrets using GitHub API provider.
+ * Note: This provider only supports write operations (PushSecret) and cannot fetch secrets from GitHub
  *
  * @schema SecretStoreSpecProviderGithub
  */
@@ -26905,6 +35469,51 @@ export function toJson_SecretStoreSpecProviderKubernetes(obj: SecretStoreSpecPro
     'authRef': toJson_SecretStoreSpecProviderKubernetesAuthRef(obj.authRef),
     'remoteNamespace': obj.remoteNamespace,
     'server': toJson_SecretStoreSpecProviderKubernetesServer(obj.server),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Ngrok configures this store to sync secrets using the ngrok provider.
+ *
+ * @schema SecretStoreSpecProviderNgrok
+ */
+export interface SecretStoreSpecProviderNgrok {
+  /**
+   * APIURL is the URL of the ngrok API.
+   *
+   * @schema SecretStoreSpecProviderNgrok#apiUrl
+   */
+  readonly apiUrl?: string;
+
+  /**
+   * Auth configures how the ngrok provider authenticates with the ngrok API.
+   *
+   * @schema SecretStoreSpecProviderNgrok#auth
+   */
+  readonly auth: SecretStoreSpecProviderNgrokAuth;
+
+  /**
+   * Vault configures the ngrok vault to sync secrets with.
+   *
+   * @schema SecretStoreSpecProviderNgrok#vault
+   */
+  readonly vault: SecretStoreSpecProviderNgrokVault;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderNgrok' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderNgrok(obj: SecretStoreSpecProviderNgrok | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiUrl': obj.apiUrl,
+    'auth': toJson_SecretStoreSpecProviderNgrokAuth(obj.auth),
+    'vault': toJson_SecretStoreSpecProviderNgrokVault(obj.vault),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -27388,6 +35997,13 @@ export function toJson_SecretStoreSpecProviderScaleway(obj: SecretStoreSpecProvi
  */
 export interface SecretStoreSpecProviderSecretserver {
   /**
+   * Domain is the secret server domain.
+   *
+   * @schema SecretStoreSpecProviderSecretserver#domain
+   */
+  readonly domain?: string;
+
+  /**
    * Password is the secret server account password.
    *
    * @schema SecretStoreSpecProviderSecretserver#password
@@ -27418,6 +36034,7 @@ export interface SecretStoreSpecProviderSecretserver {
 export function toJson_SecretStoreSpecProviderSecretserver(obj: SecretStoreSpecProviderSecretserver | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
+    'domain': obj.domain,
     'password': toJson_SecretStoreSpecProviderSecretserverPassword(obj.password),
     'serverURL': obj.serverUrl,
     'username': toJson_SecretStoreSpecProviderSecretserverUsername(obj.username),
@@ -27511,6 +36128,15 @@ export interface SecretStoreSpecProviderVault {
   readonly caProvider?: SecretStoreSpecProviderVaultCaProvider;
 
   /**
+   * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+   * Only applies to Vault KV v2 stores. When enabled, write operations must include
+   * the current version of the secret to prevent unintentional overwrites.
+   *
+   * @schema SecretStoreSpecProviderVault#checkAndSet
+   */
+  readonly checkAndSet?: SecretStoreSpecProviderVaultCheckAndSet;
+
+  /**
    * ForwardInconsistent tells Vault to forward read-after-write requests to the Vault
    * leader instead of simply retrying within a loop. This can increase performance if
    * the option is enabled serverside.
@@ -27594,6 +36220,7 @@ export function toJson_SecretStoreSpecProviderVault(obj: SecretStoreSpecProvider
     'auth': toJson_SecretStoreSpecProviderVaultAuth(obj.auth),
     'caBundle': obj.caBundle,
     'caProvider': toJson_SecretStoreSpecProviderVaultCaProvider(obj.caProvider),
+    'checkAndSet': toJson_SecretStoreSpecProviderVaultCheckAndSet(obj.checkAndSet),
     'forwardInconsistent': obj.forwardInconsistent,
     'headers': ((obj.headers) === undefined) ? undefined : (Object.entries(obj.headers).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {})),
     'namespace': obj.namespace,
@@ -27602,6 +36229,44 @@ export function toJson_SecretStoreSpecProviderVault(obj: SecretStoreSpecProvider
     'server': obj.server,
     'tls': toJson_SecretStoreSpecProviderVaultTls(obj.tls),
     'version': obj.version,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Volcengine configures this store to sync secrets using the Volcengine provider
+ *
+ * @schema SecretStoreSpecProviderVolcengine
+ */
+export interface SecretStoreSpecProviderVolcengine {
+  /**
+   * Auth defines the authentication method to use.
+   * If not specified, the provider will try to use IRSA (IAM Role for Service Account).
+   *
+   * @schema SecretStoreSpecProviderVolcengine#auth
+   */
+  readonly auth?: SecretStoreSpecProviderVolcengineAuth;
+
+  /**
+   * Region specifies the Volcengine region to connect to.
+   *
+   * @schema SecretStoreSpecProviderVolcengine#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengine' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengine(obj: SecretStoreSpecProviderVolcengine | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'auth': toJson_SecretStoreSpecProviderVolcengineAuth(obj.auth),
+    'region': obj.region,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -27727,7 +36392,7 @@ export interface SecretStoreSpecProviderYandexcertificatemanager {
   readonly apiEndpoint?: string;
 
   /**
-   * Auth defines the information necessary to authenticate against Yandex Certificate Manager
+   * Auth defines the information necessary to authenticate against Yandex.Cloud
    *
    * @schema SecretStoreSpecProviderYandexcertificatemanager#auth
    */
@@ -27739,6 +36404,13 @@ export interface SecretStoreSpecProviderYandexcertificatemanager {
    * @schema SecretStoreSpecProviderYandexcertificatemanager#caProvider
    */
   readonly caProvider?: SecretStoreSpecProviderYandexcertificatemanagerCaProvider;
+
+  /**
+   * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as certificate ID or certificate name
+   *
+   * @schema SecretStoreSpecProviderYandexcertificatemanager#fetching
+   */
+  readonly fetching?: SecretStoreSpecProviderYandexcertificatemanagerFetching;
 
 }
 
@@ -27752,6 +36424,7 @@ export function toJson_SecretStoreSpecProviderYandexcertificatemanager(obj: Secr
     'apiEndpoint': obj.apiEndpoint,
     'auth': toJson_SecretStoreSpecProviderYandexcertificatemanagerAuth(obj.auth),
     'caProvider': toJson_SecretStoreSpecProviderYandexcertificatemanagerCaProvider(obj.caProvider),
+    'fetching': toJson_SecretStoreSpecProviderYandexcertificatemanagerFetching(obj.fetching),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -27772,7 +36445,7 @@ export interface SecretStoreSpecProviderYandexlockbox {
   readonly apiEndpoint?: string;
 
   /**
-   * Auth defines the information necessary to authenticate against Yandex Lockbox
+   * Auth defines the information necessary to authenticate against Yandex.Cloud
    *
    * @schema SecretStoreSpecProviderYandexlockbox#auth
    */
@@ -27784,6 +36457,13 @@ export interface SecretStoreSpecProviderYandexlockbox {
    * @schema SecretStoreSpecProviderYandexlockbox#caProvider
    */
   readonly caProvider?: SecretStoreSpecProviderYandexlockboxCaProvider;
+
+  /**
+   * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID or secret name
+   *
+   * @schema SecretStoreSpecProviderYandexlockbox#fetching
+   */
+  readonly fetching?: SecretStoreSpecProviderYandexlockboxFetching;
 
 }
 
@@ -27797,6 +36477,7 @@ export function toJson_SecretStoreSpecProviderYandexlockbox(obj: SecretStoreSpec
     'apiEndpoint': obj.apiEndpoint,
     'auth': toJson_SecretStoreSpecProviderYandexlockboxAuth(obj.auth),
     'caProvider': toJson_SecretStoreSpecProviderYandexlockboxCaProvider(obj.caProvider),
+    'fetching': toJson_SecretStoreSpecProviderYandexlockboxFetching(obj.fetching),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -28182,10 +36863,68 @@ export enum SecretStoreSpecProviderAzurekvAuthType {
 }
 
 /**
+ * CustomCloudConfig defines custom Azure Stack Hub or Azure Stack Edge endpoints.
+ * Required when EnvironmentType is AzureStackCloud.
+ * IMPORTANT: This feature REQUIRES UseAzureSDK to be set to true. Custom cloud
+ * configuration is not supported with the legacy go-autorest SDK.
+ *
+ * @schema SecretStoreSpecProviderAzurekvCustomCloudConfig
+ */
+export interface SecretStoreSpecProviderAzurekvCustomCloudConfig {
+  /**
+   * ActiveDirectoryEndpoint is the AAD endpoint for authentication
+   * Required when using custom cloud configuration
+   *
+   * @schema SecretStoreSpecProviderAzurekvCustomCloudConfig#activeDirectoryEndpoint
+   */
+  readonly activeDirectoryEndpoint: string;
+
+  /**
+   * KeyVaultDNSSuffix is the DNS suffix for Key Vault URLs
+   *
+   * @schema SecretStoreSpecProviderAzurekvCustomCloudConfig#keyVaultDNSSuffix
+   */
+  readonly keyVaultDnsSuffix?: string;
+
+  /**
+   * KeyVaultEndpoint is the Key Vault service endpoint
+   *
+   * @schema SecretStoreSpecProviderAzurekvCustomCloudConfig#keyVaultEndpoint
+   */
+  readonly keyVaultEndpoint?: string;
+
+  /**
+   * ResourceManagerEndpoint is the Azure Resource Manager endpoint
+   *
+   * @schema SecretStoreSpecProviderAzurekvCustomCloudConfig#resourceManagerEndpoint
+   */
+  readonly resourceManagerEndpoint?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderAzurekvCustomCloudConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderAzurekvCustomCloudConfig(obj: SecretStoreSpecProviderAzurekvCustomCloudConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'activeDirectoryEndpoint': obj.activeDirectoryEndpoint,
+    'keyVaultDNSSuffix': obj.keyVaultDnsSuffix,
+    'keyVaultEndpoint': obj.keyVaultEndpoint,
+    'resourceManagerEndpoint': obj.resourceManagerEndpoint,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * EnvironmentType specifies the Azure cloud environment endpoints to use for
  * connecting and authenticating with Azure. By default it points to the public cloud AAD endpoint.
  * The following endpoints are available, also see here: https://github.com/Azure/go-autorest/blob/main/autorest/azure/environments.go#L152
- * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud
+ * PublicCloud, USGovernmentCloud, ChinaCloud, GermanCloud, AzureStackCloud
+ * Use AzureStackCloud when you need to configure custom Azure Stack Hub or Azure Stack Edge endpoints.
  *
  * @schema SecretStoreSpecProviderAzurekvEnvironmentType
  */
@@ -28198,6 +36937,8 @@ export enum SecretStoreSpecProviderAzurekvEnvironmentType {
   CHINA_CLOUD = "ChinaCloud",
   /** GermanCloud */
   GERMAN_CLOUD = "GermanCloud",
+  /** AzureStackCloud */
+  AZURE_STACK_CLOUD = "AzureStackCloud",
 }
 
 /**
@@ -28857,6 +37598,13 @@ export interface SecretStoreSpecProviderGcpsmAuth {
    */
   readonly workloadIdentity?: SecretStoreSpecProviderGcpsmAuthWorkloadIdentity;
 
+  /**
+   * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuth#workloadIdentityFederation
+   */
+  readonly workloadIdentityFederation?: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation;
+
 }
 
 /**
@@ -28868,6 +37616,7 @@ export function toJson_SecretStoreSpecProviderGcpsmAuth(obj: SecretStoreSpecProv
   const result = {
     'secretRef': toJson_SecretStoreSpecProviderGcpsmAuthSecretRef(obj.secretRef),
     'workloadIdentity': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentity(obj.workloadIdentity),
+    'workloadIdentityFederation': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation(obj.workloadIdentityFederation),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -29027,9 +37776,49 @@ export function toJson_SecretStoreSpecProviderIbmAuth(obj: SecretStoreSpecProvid
  */
 export interface SecretStoreSpecProviderInfisicalAuth {
   /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#awsAuthCredentials
+   */
+  readonly awsAuthCredentials?: SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials;
+
+  /**
    * @schema SecretStoreSpecProviderInfisicalAuth#azureAuthCredentials
    */
   readonly azureAuthCredentials?: SecretStoreSpecProviderInfisicalAuthAzureAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#gcpIamAuthCredentials
+   */
+  readonly gcpIamAuthCredentials?: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#gcpIdTokenAuthCredentials
+   */
+  readonly gcpIdTokenAuthCredentials?: SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#jwtAuthCredentials
+   */
+  readonly jwtAuthCredentials?: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#kubernetesAuthCredentials
+   */
+  readonly kubernetesAuthCredentials?: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#ldapAuthCredentials
+   */
+  readonly ldapAuthCredentials?: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#ociAuthCredentials
+   */
+  readonly ociAuthCredentials?: SecretStoreSpecProviderInfisicalAuthOciAuthCredentials;
+
+  /**
+   * @schema SecretStoreSpecProviderInfisicalAuth#tokenAuthCredentials
+   */
+  readonly tokenAuthCredentials?: SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials;
 
   /**
    * @schema SecretStoreSpecProviderInfisicalAuth#universalAuthCredentials
@@ -29045,7 +37834,15 @@ export interface SecretStoreSpecProviderInfisicalAuth {
 export function toJson_SecretStoreSpecProviderInfisicalAuth(obj: SecretStoreSpecProviderInfisicalAuth | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
+    'awsAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials(obj.awsAuthCredentials),
     'azureAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthAzureAuthCredentials(obj.azureAuthCredentials),
+    'gcpIamAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials(obj.gcpIamAuthCredentials),
+    'gcpIdTokenAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials(obj.gcpIdTokenAuthCredentials),
+    'jwtAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials(obj.jwtAuthCredentials),
+    'kubernetesAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials(obj.kubernetesAuthCredentials),
+    'ldapAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials(obj.ldapAuthCredentials),
+    'ociAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentials(obj.ociAuthCredentials),
+    'tokenAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials(obj.tokenAuthCredentials),
     'universalAuthCredentials': toJson_SecretStoreSpecProviderInfisicalAuthUniversalAuthCredentials(obj.universalAuthCredentials),
   };
   // filter undefined values
@@ -29296,6 +38093,64 @@ export function toJson_SecretStoreSpecProviderKubernetesServer(obj: SecretStoreS
     'caBundle': obj.caBundle,
     'caProvider': toJson_SecretStoreSpecProviderKubernetesServerCaProvider(obj.caProvider),
     'url': obj.url,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Auth configures how the ngrok provider authenticates with the ngrok API.
+ *
+ * @schema SecretStoreSpecProviderNgrokAuth
+ */
+export interface SecretStoreSpecProviderNgrokAuth {
+  /**
+   * APIKey is the API Key used to authenticate with ngrok. See https://ngrok.com/docs/api/#authentication
+   *
+   * @schema SecretStoreSpecProviderNgrokAuth#apiKey
+   */
+  readonly apiKey?: SecretStoreSpecProviderNgrokAuthApiKey;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderNgrokAuth' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderNgrokAuth(obj: SecretStoreSpecProviderNgrokAuth | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'apiKey': toJson_SecretStoreSpecProviderNgrokAuthApiKey(obj.apiKey),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Vault configures the ngrok vault to sync secrets with.
+ *
+ * @schema SecretStoreSpecProviderNgrokVault
+ */
+export interface SecretStoreSpecProviderNgrokVault {
+  /**
+   * Name is the name of the ngrok vault to sync secrets with.
+   *
+   * @schema SecretStoreSpecProviderNgrokVault#name
+   */
+  readonly name: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderNgrokVault' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderNgrokVault(obj: SecretStoreSpecProviderNgrokVault | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'name': obj.name,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -30013,6 +38868,38 @@ export function toJson_SecretStoreSpecProviderVaultCaProvider(obj: SecretStoreSp
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * CheckAndSet defines the Check-And-Set (CAS) settings for PushSecret operations.
+ * Only applies to Vault KV v2 stores. When enabled, write operations must include
+ * the current version of the secret to prevent unintentional overwrites.
+ *
+ * @schema SecretStoreSpecProviderVaultCheckAndSet
+ */
+export interface SecretStoreSpecProviderVaultCheckAndSet {
+  /**
+   * Required when true, all write operations must include a check-and-set parameter.
+   * This helps prevent unintentional overwrites of secrets.
+   *
+   * @schema SecretStoreSpecProviderVaultCheckAndSet#required
+   */
+  readonly required?: boolean;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVaultCheckAndSet' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVaultCheckAndSet(obj: SecretStoreSpecProviderVaultCheckAndSet | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'required': obj.required,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * The configuration used for client side related TLS communication, when the Vault server
  * requires mutual authentication. Only used if the Server URL is using HTTPS protocol.
  * This parameter is ignored for plain HTTP protocol connection.
@@ -30069,6 +38956,37 @@ export enum SecretStoreSpecProviderVaultVersion {
   /** v2 */
   V2 = "v2",
 }
+
+/**
+ * Auth defines the authentication method to use.
+ * If not specified, the provider will try to use IRSA (IAM Role for Service Account).
+ *
+ * @schema SecretStoreSpecProviderVolcengineAuth
+ */
+export interface SecretStoreSpecProviderVolcengineAuth {
+  /**
+   * SecretRef defines the static credentials to use for authentication.
+   * If not set, IRSA is used.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuth#secretRef
+   */
+  readonly secretRef?: SecretStoreSpecProviderVolcengineAuthSecretRef;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengineAuth' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengineAuth(obj: SecretStoreSpecProviderVolcengineAuth | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'secretRef': toJson_SecretStoreSpecProviderVolcengineAuthSecretRef(obj.secretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
  * Auth specifies a authorization protocol. Only one protocol may be set.
@@ -30217,7 +39135,7 @@ export function toJson_SecretStoreSpecProviderWebhookSecrets(obj: SecretStoreSpe
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Auth defines the information necessary to authenticate against Yandex Certificate Manager
+ * Auth defines the information necessary to authenticate against Yandex.Cloud
  *
  * @schema SecretStoreSpecProviderYandexcertificatemanagerAuth
  */
@@ -30276,7 +39194,44 @@ export function toJson_SecretStoreSpecProviderYandexcertificatemanagerCaProvider
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
- * Auth defines the information necessary to authenticate against Yandex Lockbox
+ * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as certificate ID or certificate name
+ *
+ * @schema SecretStoreSpecProviderYandexcertificatemanagerFetching
+ */
+export interface SecretStoreSpecProviderYandexcertificatemanagerFetching {
+  /**
+   * ByID configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID.
+   *
+   * @schema SecretStoreSpecProviderYandexcertificatemanagerFetching#byID
+   */
+  readonly byId?: any;
+
+  /**
+   * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+   *
+   * @schema SecretStoreSpecProviderYandexcertificatemanagerFetching#byName
+   */
+  readonly byName?: SecretStoreSpecProviderYandexcertificatemanagerFetchingByName;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderYandexcertificatemanagerFetching' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderYandexcertificatemanagerFetching(obj: SecretStoreSpecProviderYandexcertificatemanagerFetching | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'byID': obj.byId,
+    'byName': toJson_SecretStoreSpecProviderYandexcertificatemanagerFetchingByName(obj.byName),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Auth defines the information necessary to authenticate against Yandex.Cloud
  *
  * @schema SecretStoreSpecProviderYandexlockboxAuth
  */
@@ -30328,6 +39283,43 @@ export function toJson_SecretStoreSpecProviderYandexlockboxCaProvider(obj: Secre
   if (obj === undefined) { return undefined; }
   const result = {
     'certSecretRef': toJson_SecretStoreSpecProviderYandexlockboxCaProviderCertSecretRef(obj.certSecretRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * FetchingPolicy configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID or secret name
+ *
+ * @schema SecretStoreSpecProviderYandexlockboxFetching
+ */
+export interface SecretStoreSpecProviderYandexlockboxFetching {
+  /**
+   * ByID configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret ID.
+   *
+   * @schema SecretStoreSpecProviderYandexlockboxFetching#byID
+   */
+  readonly byId?: any;
+
+  /**
+   * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+   *
+   * @schema SecretStoreSpecProviderYandexlockboxFetching#byName
+   */
+  readonly byName?: SecretStoreSpecProviderYandexlockboxFetchingByName;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderYandexlockboxFetching' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderYandexlockboxFetching(obj: SecretStoreSpecProviderYandexlockboxFetching | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'byID': obj.byId,
+    'byName': toJson_SecretStoreSpecProviderYandexlockboxFetchingByName(obj.byName),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -31495,6 +40487,75 @@ export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentity(obj: Sec
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * GCPWorkloadIdentityFederation holds the configurations required for generating federated access tokens.
+ *
+ * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation
+ */
+export interface SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation {
+  /**
+   * audience is the Secure Token Service (STS) audience which contains the resource name for the workload identity pool and the provider identifier in that pool.
+   * If specified, Audience found in the external account credential config will be overridden with the configured value.
+   * audience must be provided when serviceAccountRef or awsSecurityCredentials is configured.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#audience
+   */
+  readonly audience?: string;
+
+  /**
+   * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+   * when using the AWS metadata server is not an option.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#awsSecurityCredentials
+   */
+  readonly awsSecurityCredentials?: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials;
+
+  /**
+   * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+   * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+   * serviceAccountRef must be used by providing operators service account details.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#credConfig
+   */
+  readonly credConfig?: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig;
+
+  /**
+   * externalTokenEndpoint is the endpoint explicitly set up to provide tokens, which will be matched against the
+   * credential_source.url in the provided credConfig. This field is merely to double-check the external token source
+   * URL is having the expected value.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#externalTokenEndpoint
+   */
+  readonly externalTokenEndpoint?: string;
+
+  /**
+   * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+   * when Kubernetes is configured as provider in workload identity pool.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation#serviceAccountRef
+   */
+  readonly serviceAccountRef?: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation(obj: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederation | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audience': obj.audience,
+    'awsSecurityCredentials': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials(obj.awsSecurityCredentials),
+    'credConfig': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig(obj.credConfig),
+    'externalTokenEndpoint': obj.externalTokenEndpoint,
+    'serviceAccountRef': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef(obj.serviceAccountRef),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
@@ -31652,6 +40713,34 @@ export function toJson_SecretStoreSpecProviderIbmAuthSecretRef(obj: SecretStoreS
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthAwsAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId(obj.identityId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * @schema SecretStoreSpecProviderInfisicalAuthAzureAuthCredentials
  */
 export interface SecretStoreSpecProviderInfisicalAuthAzureAuthCredentials {
@@ -31682,6 +40771,301 @@ export function toJson_SecretStoreSpecProviderInfisicalAuthAzureAuthCredentials(
   const result = {
     'identityId': toJson_SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId(obj.identityId),
     'resource': toJson_SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource(obj.resource),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials#serviceAccountKeyFilePath
+   */
+  readonly serviceAccountKeyFilePath: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId(obj.identityId),
+    'serviceAccountKeyFilePath': toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath(obj.serviceAccountKeyFilePath),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId(obj.identityId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials#jwt
+   */
+  readonly jwt: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId(obj.identityId),
+    'jwt': toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt(obj.jwt),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials#serviceAccountTokenPath
+   */
+  readonly serviceAccountTokenPath?: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId(obj.identityId),
+    'serviceAccountTokenPath': toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath(obj.serviceAccountTokenPath),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#ldapPassword
+   */
+  readonly ldapPassword: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials#ldapUsername
+   */
+  readonly ldapUsername: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId(obj.identityId),
+    'ldapPassword': toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword(obj.ldapPassword),
+    'ldapUsername': toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername(obj.ldapUsername),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#fingerprint
+   */
+  readonly fingerprint: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#identityId
+   */
+  readonly identityId: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#privateKey
+   */
+  readonly privateKey: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#privateKeyPassphrase
+   */
+  readonly privateKeyPassphrase?: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#region
+   */
+  readonly region: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#tenancyId
+   */
+  readonly tenancyId: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId;
+
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentials#userId
+   */
+  readonly userId: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'fingerprint': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint(obj.fingerprint),
+    'identityId': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId(obj.identityId),
+    'privateKey': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey(obj.privateKey),
+    'privateKeyPassphrase': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase(obj.privateKeyPassphrase),
+    'region': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion(obj.region),
+    'tenancyId': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId(obj.tenancyId),
+    'userId': toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId(obj.userId),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials
+ */
+export interface SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials {
+  /**
+   * A reference to a specific 'key' within a Secret resource.
+   * In some instances, `key` is a required field.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials#accessToken
+   */
+  readonly accessToken: SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials(obj: SecretStoreSpecProviderInfisicalAuthTokenAuthCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessToken': toJson_SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken(obj.accessToken),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -31890,6 +41274,35 @@ export function toJson_SecretStoreSpecProviderKubernetesServerCaProvider(obj: Se
     'name': obj.name,
     'namespace': obj.namespace,
     'type': obj.type,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * APIKey is the API Key used to authenticate with ngrok. See https://ngrok.com/docs/api/#authentication
+ *
+ * @schema SecretStoreSpecProviderNgrokAuthApiKey
+ */
+export interface SecretStoreSpecProviderNgrokAuthApiKey {
+  /**
+   * SecretRef is a reference to a secret containing the ngrok API key.
+   *
+   * @schema SecretStoreSpecProviderNgrokAuthApiKey#secretRef
+   */
+  readonly secretRef?: SecretStoreSpecProviderNgrokAuthApiKeySecretRef;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderNgrokAuthApiKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderNgrokAuthApiKey(obj: SecretStoreSpecProviderNgrokAuthApiKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'secretRef': toJson_SecretStoreSpecProviderNgrokAuthApiKeySecretRef(obj.secretRef),
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -32617,6 +42030,14 @@ export interface SecretStoreSpecProviderVaultAuthCert {
   readonly clientCert?: SecretStoreSpecProviderVaultAuthCertClientCert;
 
   /**
+   * Path where the Certificate authentication backend is mounted
+   * in Vault, e.g: "cert"
+   *
+   * @schema SecretStoreSpecProviderVaultAuthCert#path
+   */
+  readonly path?: string;
+
+  /**
    * SecretRef to a key in a Secret resource containing client private key to
    * authenticate with Vault using the Cert authentication method
    *
@@ -32634,6 +42055,7 @@ export function toJson_SecretStoreSpecProviderVaultAuthCert(obj: SecretStoreSpec
   if (obj === undefined) { return undefined; }
   const result = {
     'clientCert': toJson_SecretStoreSpecProviderVaultAuthCertClientCert(obj.clientCert),
+    'path': obj.path,
     'secretRef': toJson_SecretStoreSpecProviderVaultAuthCertSecretRef(obj.secretRef),
   };
   // filter undefined values
@@ -33104,6 +42526,52 @@ export function toJson_SecretStoreSpecProviderVaultTlsKeySecretRef(obj: SecretSt
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * SecretRef defines the static credentials to use for authentication.
+ * If not set, IRSA is used.
+ *
+ * @schema SecretStoreSpecProviderVolcengineAuthSecretRef
+ */
+export interface SecretStoreSpecProviderVolcengineAuthSecretRef {
+  /**
+   * AccessKeyID is the reference to the secret containing the Access Key ID.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRef#accessKeyID
+   */
+  readonly accessKeyId: SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId;
+
+  /**
+   * SecretAccessKey is the reference to the secret containing the Secret Access Key.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRef#secretAccessKey
+   */
+  readonly secretAccessKey: SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey;
+
+  /**
+   * Token is the reference to the secret containing the STS(Security Token Service) Token.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRef#token
+   */
+  readonly token?: SecretStoreSpecProviderVolcengineAuthSecretRefToken;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengineAuthSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengineAuthSecretRef(obj: SecretStoreSpecProviderVolcengineAuthSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'accessKeyID': toJson_SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId(obj.accessKeyId),
+    'secretAccessKey': toJson_SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey(obj.secretAccessKey),
+    'token': toJson_SecretStoreSpecProviderVolcengineAuthSecretRefToken(obj.token),
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * NTLMProtocol configures the store to use NTLM for auth
  *
  * @schema SecretStoreSpecProviderWebhookAuthNtlm
@@ -33297,6 +42765,35 @@ export function toJson_SecretStoreSpecProviderYandexcertificatemanagerCaProvider
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+ *
+ * @schema SecretStoreSpecProviderYandexcertificatemanagerFetchingByName
+ */
+export interface SecretStoreSpecProviderYandexcertificatemanagerFetchingByName {
+  /**
+   * The folder to fetch secrets from
+   *
+   * @schema SecretStoreSpecProviderYandexcertificatemanagerFetchingByName#folderID
+   */
+  readonly folderId: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderYandexcertificatemanagerFetchingByName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderYandexcertificatemanagerFetchingByName(obj: SecretStoreSpecProviderYandexcertificatemanagerFetchingByName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'folderID': obj.folderId,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * The authorized key used for authentication
  *
  * @schema SecretStoreSpecProviderYandexlockboxAuthAuthorizedKeySecretRef
@@ -33385,6 +42882,35 @@ export function toJson_SecretStoreSpecProviderYandexlockboxCaProviderCertSecretR
     'key': obj.key,
     'name': obj.name,
     'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * ByName configures the provider to interpret the `data.secretKey.remoteRef.key` field in ExternalSecret as secret name.
+ *
+ * @schema SecretStoreSpecProviderYandexlockboxFetchingByName
+ */
+export interface SecretStoreSpecProviderYandexlockboxFetchingByName {
+  /**
+   * The folder to fetch secrets from
+   *
+   * @schema SecretStoreSpecProviderYandexlockboxFetchingByName#folderID
+   */
+  readonly folderId: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderYandexlockboxFetchingByName' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderYandexlockboxFetchingByName(obj: SecretStoreSpecProviderYandexlockboxFetchingByName | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'folderID': obj.folderId,
   };
   // filter undefined values
   return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
@@ -34728,6 +44254,144 @@ export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityServiceAc
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * awsSecurityCredentials is for configuring AWS region and credentials to use for obtaining the access token,
+ * when using the AWS metadata server is not an option.
+ *
+ * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials
+ */
+export interface SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials {
+  /**
+   * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+   * Secret should be created with below names for keys
+   * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+   * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+   * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials#awsCredentialsSecretRef
+   */
+  readonly awsCredentialsSecretRef: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef;
+
+  /**
+   * region is for configuring the AWS region to be used.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials#region
+   */
+  readonly region: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials(obj: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentials | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'awsCredentialsSecretRef': toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj.awsCredentialsSecretRef),
+    'region': obj.region,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * credConfig holds the configmap reference containing the GCP external account credential configuration in JSON format and the key name containing the json data.
+ * For using Kubernetes cluster as the identity provider, use serviceAccountRef instead. Operators mounted serviceaccount token cannot be used as the token source, instead
+ * serviceAccountRef must be used by providing operators service account details.
+ *
+ * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig
+ */
+export interface SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig {
+  /**
+   * key name holding the external account credential config.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#key
+   */
+  readonly key: string;
+
+  /**
+   * name of the configmap.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the configmap exists. If empty, configmap will looked up in local namespace.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig(obj: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationCredConfig | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * serviceAccountRef is the reference to the kubernetes ServiceAccount to be used for obtaining the tokens,
+ * when Kubernetes is configured as provider in workload identity pool.
+ *
+ * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef
+ */
+export interface SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef {
+  /**
+   * Audience specifies the `aud` claim for the service account token
+   * If the service account uses a well-known annotation for e.g. IRSA or GCP Workload Identity
+   * then this audiences will be appended to the list
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#audiences
+   */
+  readonly audiences?: string[];
+
+  /**
+   * The name of the ServiceAccount resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#name
+   */
+  readonly name: string;
+
+  /**
+   * Namespace of the resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef(obj: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationServiceAccountRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'audiences': obj.audiences?.map(y => y),
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * AccessToken is used for authentication.
  *
  * @schema SecretStoreSpecProviderGitlabAuthSecretRefAccessToken
@@ -34825,6 +44489,54 @@ export function toJson_SecretStoreSpecProviderIbmAuthSecretRefSecretApiKeySecret
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
+ * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthAwsAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
  * @schema SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId
  */
 export interface SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsIdentityId {
@@ -34906,6 +44618,870 @@ export interface SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResourc
  */
 /* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 export function toJson_SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource(obj: SecretStoreSpecProviderInfisicalAuthAzureAuthCredentialsResource | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath
+ */
+export interface SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath(obj: SecretStoreSpecProviderInfisicalAuthGcpIamAuthCredentialsServiceAccountKeyFilePath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthGcpIdTokenAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt
+ */
+export interface SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt(obj: SecretStoreSpecProviderInfisicalAuthJwtAuthCredentialsJwt | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath
+ */
+export interface SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath(obj: SecretStoreSpecProviderInfisicalAuthKubernetesAuthCredentialsServiceAccountTokenPath | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword
+ */
+export interface SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword(obj: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapPassword | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername
+ */
+export interface SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername(obj: SecretStoreSpecProviderInfisicalAuthLdapAuthCredentialsLdapUsername | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsFingerprint | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsIdentityId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsPrivateKeyPassphrase | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsRegion | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsTenancyId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId
+ */
+export interface SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId(obj: SecretStoreSpecProviderInfisicalAuthOciAuthCredentialsUserId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * A reference to a specific 'key' within a Secret resource.
+ * In some instances, `key` is a required field.
+ *
+ * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken
+ */
+export interface SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken(obj: SecretStoreSpecProviderInfisicalAuthTokenAuthCredentialsAccessToken | undefined): Record<string, any> | undefined {
   if (obj === undefined) { return undefined; }
   const result = {
     'key': obj.key,
@@ -35168,6 +45744,53 @@ export enum SecretStoreSpecProviderKubernetesServerCaProviderType {
   /** ConfigMap */
   CONFIG_MAP = "ConfigMap",
 }
+
+/**
+ * SecretRef is a reference to a secret containing the ngrok API key.
+ *
+ * @schema SecretStoreSpecProviderNgrokAuthApiKeySecretRef
+ */
+export interface SecretStoreSpecProviderNgrokAuthApiKeySecretRef {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderNgrokAuthApiKeySecretRef#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderNgrokAuthApiKeySecretRef#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderNgrokAuthApiKeySecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderNgrokAuthApiKeySecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderNgrokAuthApiKeySecretRef(obj: SecretStoreSpecProviderNgrokAuthApiKeySecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
  * The ConnectToken is used for authentication to a 1Password Connect Server.
@@ -35979,6 +46602,147 @@ export function toJson_SecretStoreSpecProviderVaultAuthUserPassSecretRef(obj: Se
 /* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
 
 /**
+ * AccessKeyID is the reference to the secret containing the Access Key ID.
+ *
+ * @schema SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId
+ */
+export interface SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId(obj: SecretStoreSpecProviderVolcengineAuthSecretRefAccessKeyId | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * SecretAccessKey is the reference to the secret containing the Secret Access Key.
+ *
+ * @schema SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey
+ */
+export interface SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey(obj: SecretStoreSpecProviderVolcengineAuthSecretRefSecretAccessKey | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * Token is the reference to the secret containing the STS(Security Token Service) Token.
+ *
+ * @schema SecretStoreSpecProviderVolcengineAuthSecretRefToken
+ */
+export interface SecretStoreSpecProviderVolcengineAuthSecretRefToken {
+  /**
+   * A key in the referenced Secret.
+   * Some instances of this field may be defaulted, in others it may be required.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefToken#key
+   */
+  readonly key?: string;
+
+  /**
+   * The name of the Secret resource being referred to.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefToken#name
+   */
+  readonly name?: string;
+
+  /**
+   * The namespace of the Secret resource being referred to.
+   * Ignored if referent is not cluster-scoped, otherwise defaults to the namespace of the referent.
+   *
+   * @schema SecretStoreSpecProviderVolcengineAuthSecretRefToken#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderVolcengineAuthSecretRefToken' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderVolcengineAuthSecretRefToken(obj: SecretStoreSpecProviderVolcengineAuthSecretRefToken | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
+    'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
  * A reference to a specific 'key' within a Secret resource.
  * In some instances, `key` is a required field.
  *
@@ -36066,6 +46830,47 @@ export function toJson_SecretStoreSpecProviderWebhookAuthNtlmUsernameSecret(obj:
   if (obj === undefined) { return undefined; }
   const result = {
     'key': obj.key,
+    'name': obj.name,
+    'namespace': obj.namespace,
+  };
+  // filter undefined values
+  return Object.entries(result).reduce((r, i) => (i[1] === undefined) ? r : ({ ...r, [i[0]]: i[1] }), {});
+}
+/* eslint-enable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+
+/**
+ * awsCredentialsSecretRef is the reference to the secret which holds the AWS credentials.
+ * Secret should be created with below names for keys
+ * - aws_access_key_id: Access Key ID, which is the unique identifier for the AWS account or the IAM user.
+ * - aws_secret_access_key: Secret Access Key, which is used to authenticate requests made to AWS services.
+ * - aws_session_token: Session Token, is the short-lived token to authenticate requests made to AWS services.
+ *
+ * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef
+ */
+export interface SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef {
+  /**
+   * name of the secret.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#name
+   */
+  readonly name: string;
+
+  /**
+   * namespace in which the secret exists. If empty, secret will looked up in local namespace.
+   *
+   * @schema SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef#namespace
+   */
+  readonly namespace?: string;
+
+}
+
+/**
+ * Converts an object of type 'SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef' to JSON representation.
+ */
+/* eslint-disable max-len, @stylistic/max-len, quote-props, @stylistic/quote-props */
+export function toJson_SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef(obj: SecretStoreSpecProviderGcpsmAuthWorkloadIdentityFederationAwsSecurityCredentialsAwsCredentialsSecretRef | undefined): Record<string, any> | undefined {
+  if (obj === undefined) { return undefined; }
+  const result = {
     'name': obj.name,
     'namespace': obj.namespace,
   };

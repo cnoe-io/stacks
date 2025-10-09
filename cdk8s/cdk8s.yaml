@@ -8,8 +8,7 @@ imports:
   - cnoe.io_localbuilds:=https://raw.githubusercontent.com/cnoe-io/idpbuilder/main/pkg/controllers/resources/idpbuilder.cnoe.io_localbuilds.yaml
   - helm:oci://ghcr.io/akuity/kargo-charts/kargo@1.6.1
   - helm:oci://ghcr.io/cnoe-io/helm-charts/ai-platform-engineering@0.1.10
-  - /tmp/external-secrets-crds.yaml
-  - /tmp/kgateway-crds.yaml
-  - /tmp/tailscale-proxygroups-crd.yaml
-  - /tmp/kmcp-mcpserver-crd.yaml
-  - /tmp/kagent-all-crds.yaml
+  - crds/external-secrets-crds.yaml
+  - crds/kgateway-placeholder.yaml
+  - crds/tailscale-proxygroups-crd.yaml
+  - crds/kmcp-mcpserver-crd.yaml

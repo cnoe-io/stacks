@@ -6,7 +6,9 @@
   "license": "Apache-2.0",
   "private": true,
   "scripts": {
+    "preimport": "command -v helm >/dev/null 2>&1 || (echo '❌ Helm not found. Install via: nix profile install nixpkgs#kubernetes-helm' && exit 1)",
     "import": "cdk8s import",
+    "postimport": "echo '✅ CRD imports generated. Note: kagent.dev.ts preserved from repository.'",
     "synth": "npx cdk8s synth",
     "compile": "tsc --build",
     "watch": "tsc --build -w",

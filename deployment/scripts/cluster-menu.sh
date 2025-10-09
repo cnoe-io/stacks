@@ -3,7 +3,7 @@
 # Source this file or run directly to access cluster-* functions
 
 # Cluster management functions
-export STACKS_DIR="${STACKS_DIR:-$HOME/stacks}"
+export STACKS_DIR="${STACKS_DIR:-/workspaces/stacks}"
 
 custom_bundle="$STACKS_DIR/scripts/certificates/system/ca-bundle-with-idpbuilder.crt"
 if [ -f "$custom_bundle" ]; then
