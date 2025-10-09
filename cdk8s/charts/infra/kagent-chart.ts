@@ -211,7 +211,7 @@ export class KagentChart extends Chart {
             containers: [
               {
                 name: 'controller',
-                image: 'ghcr.io/kagent-dev/kagent/controller:0.6.19',
+                image: 'ghcr.io/kagent-dev/kagent/controller:0.6.3',
                 args: [
                   '-default-model-config-name',
                   'default-model-config',
@@ -317,7 +317,7 @@ export class KagentChart extends Chart {
             containers: [
               {
                 name: 'dashboard',
-                image: 'cr.kagent.dev/kagent-dev/kagent/ui:0.6.19',
+                image: 'cr.kagent.dev/kagent-dev/kagent/ui:0.6.3',
                 ports: [{ name: 'http', containerPort: 8080, protocol: 'TCP' }],
                 resources: createKagentResourceLimits('dashboard'),
                 env: [
