@@ -1,5 +1,9 @@
 # Override values for idpbuilder local deployment
+# Global configuration shared across all subcharts
 global:
+  slim:
+    enabled: false
+
   externalSecrets:
     enabled: true
     secretStoreRef:
@@ -13,6 +17,9 @@ global:
     create: false
     secretName: "llm-secret"
     externalSecrets:
+      secretStoreRef:
+        name: "vault-eticloud"
+        kind: ClusterSecretStore
       data:
       - secretKey: LLM_PROVIDER
         remoteRef:
@@ -30,6 +37,12 @@ global:
         remoteRef:
           key: secret/ai-platform-engineering/global
           property: AZURE_OPENAI_API_VERSION
+      - secretKey: OPENAI_API_VERSION
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: secret/ai-platform-engineering/global
+          property: AZURE_OPENAI_API_VERSION
       - secretKey: AZURE_OPENAI_DEPLOYMENT
         remoteRef:
           key: secret/ai-platform-engineering/global
@@ -42,16 +55,20 @@ supervisor-agent:
     tag: "latest"
   env:
     EXTERNAL_URL: "https://cnoe.localtest.me:8443/ai-platform-engineering"
-
+    RAG_AGENT_PORT: 8099
 agent-argocd:
   nameOverride: "agent-argocd"
   image:
     repository: "ghcr.io/cnoe-io/agent-argocd"
+    tag: "latest"
     pullPolicy: "Always"
-    tag: "0.1.15"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-argocd"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-argocd-secret"
     externalSecrets:
@@ -74,9 +91,9 @@ agent-aws:
   image:
     repository: "ghcr.io/cnoe-io/agent-aws"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
-    mode: "stdio"
+    mode: "stdio" # Options: stdio, http
     # image: # HOT FIX: will be modified in the helm chart itself in the future
     #   repository: "public.ecr.aws/awslabs-mcp/awslabs/eks-mcp-server"
     #   tag: "sha-e18497bbc401f08334ea8b966db1f235b647bfed"
@@ -102,10 +119,14 @@ agent-backstage:
   image:
     repository: "ghcr.io/cnoe-io/agent-backstage"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-backstage"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-backstage-secret"
     externalSecrets:
@@ -124,10 +145,14 @@ agent-confluence:
   image:
     repository: "ghcr.io/cnoe-io/agent-confluence"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-confluence"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-confluence-secret"
     externalSecrets:
@@ -150,10 +175,9 @@ agent-github:
   image:
     repository: "ghcr.io/cnoe-io/agent-github"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
-    image:
-      tag: "0.1.15"
+    useRemoteMcpServer: true
   agentSecrets:
     secretName: "agent-github-secret"
     externalSecrets:
@@ -168,10 +192,14 @@ agent-jira:
   image:
     repository: "ghcr.io/cnoe-io/agent-jira"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-jira"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-jira-secret"
     externalSecrets:
@@ -195,10 +223,10 @@ agent-komodor:
   image:
     repository: "ghcr.io/cnoe-io/agent-komodor"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      tag: "latest"
   agentSecrets:
     secretName: "agent-komodor-secret"
     externalSecrets:
@@ -217,10 +245,14 @@ agent-pagerduty:
   image:
     repository: "ghcr.io/cnoe-io/agent-pagerduty"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-pagerduty"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-pagerduty-secret"
     externalSecrets:
@@ -239,10 +271,15 @@ agent-slack:
   image:
     repository: "ghcr.io/cnoe-io/agent-slack"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      repository: "ghcr.io/cnoe-io/mcp-slack"
+      tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+    pullPolicy: "Always"
   agentSecrets:
     secretName: "agent-slack-secret"
     externalSecrets:
@@ -273,10 +310,10 @@ agent-splunk:
   image:
     repository: "ghcr.io/cnoe-io/agent-splunk"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      tag: "latest"
   agentSecrets:
     secretName: "agent-splunk-secret"
     externalSecrets:
@@ -295,10 +332,10 @@ agent-webex:
   image:
     repository: "ghcr.io/cnoe-io/agent-webex"
     pullPolicy: "Always"
-    tag: "0.1.15"
+    tag: "latest"
   mcp:
     image:
-      tag: "0.1.15"
+      tag: "latest"
   agentSecrets:
     secretName: "agent-webex-secret"
     externalSecrets:
@@ -307,3 +344,48 @@ agent-webex:
         remoteRef:
           key: secret/ai-platform-engineering/webex-secret
           property: WEBEX_TOKEN
+
+rag-stack:
+  rag-webui:
+    ingress:
+      enabled: true
+      className: "nginx-internal"
+      annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt"
+      hosts:
+        - host: rag-webui.dev.outshift.io
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - rag-webui.dev.outshift.io
+          secretName: rag-webui-tls
+    nodeSelector:
+      applications: jarvis
+    tolerations:
+      - key: "applications/jarvis"
+        operator: "Equal"
+        effect: "NoSchedule"
+
+  milvus:
+    # Only override what differs from chart defaults
+    pulsarv3:
+      enabled: false  # Default is true, we need false
+    woodpecker:
+      enabled: true   # Default is false, we need true
+
+    # Jarvis node scheduling
+    nodeSelector:
+      applications: jarvis
+    tolerations:
+      - key: "applications/jarvis"
+        operator: "Equal"
+        effect: "NoSchedule"
+
+    # Performance overrides only for compute nodes
+    queryNode:
+      resources:
+        limits:
+          cpu: 4000m
+          memory: 8Gi
