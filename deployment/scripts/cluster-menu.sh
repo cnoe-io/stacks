@@ -139,14 +139,36 @@ ensure-cdk8s-dependencies() {
     echo "✅ npm dependencies installed"
   fi
 
-  # Check if critical imports exist (k8s.ts is always needed)
-  if [ ! -f "$CDK8S_DIR/imports/k8s.ts" ] || [ ! -f "$CDK8S_DIR/imports/tailscale.com.ts" ]; then
-    echo "📥 Generating CRD imports..."
-    npm run import --prefix "$CDK8S_DIR" || {
-      echo "❌ Failed to generate CRD imports"
-      return 1
-    }
-    echo "✅ CRD imports generated"
+  # Check if critical imports exist and are up-to-date
+  # Allow SKIP_CRD_IMPORT=true to bypass (for developer control)
+  if [ "${SKIP_CRD_IMPORT:-}" != "true" ]; then
+    local needs_import=false
+
+    # Check if critical import files exist
+    if [ ! -f "$CDK8S_DIR/imports/k8s.ts" ] || \
+       [ ! -f "$CDK8S_DIR/imports/tailscale.com.ts" ] || \
+       [ ! -f "$CDK8S_DIR/imports/kagent.dev.ts" ]; then
+      needs_import=true
+    fi
+
+    # Check if cdk8s.yaml is newer than imports (CRD sources changed)
+    if [ -f "$CDK8S_DIR/cdk8s.yaml" ] && \
+       [ -f "$CDK8S_DIR/imports/k8s.ts" ] && \
+       [ "$CDK8S_DIR/cdk8s.yaml" -nt "$CDK8S_DIR/imports/k8s.ts" ]; then
+      needs_import=true
+    fi
+
+    # Run import if needed
+    if [ "$needs_import" = "true" ]; then
+      echo "📥 Generating CRD imports..."
+      npm run import --prefix "$CDK8S_DIR" || {
+        echo "❌ Failed to generate CRD imports"
+        return 1
+      }
+      echo "✅ CRD imports generated"
+    fi
+  else
+    echo "⏭️  Skipping CRD import (SKIP_CRD_IMPORT=true)"
   fi
 
   # Check if kagent imports are complete (need full CRDs, not just MCPServer)
