@@ -501,6 +501,30 @@ export const applicationConfigs: ApplicationConfig[] = [
   // },
   // Add more applications here as needed
 
+  // Tailscale CRDs (Install CRDs before Tailscale operator)
+  {
+    name: 'tailscale-crds',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleCrdsChart'
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy CRDs very early, before tailscale-operator
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'tailscale',
+        'app.kubernetes.io/name': 'tailscale-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // Tailscale Operator - Remote Kubernetes Cluster Access
   {
     name: 'tailscale-operator',
@@ -527,8 +551,13 @@ export const applicationConfigs: ApplicationConfig[] = [
         ]
       }
     },
+    dependencies: {
+      tailscaleCrds: {
+        type: 'TailscaleCrdsChart'
+      }
+    },
     argocd: {
-      syncWave: '-90',
+      syncWave: '-90',  // Deploy after CRDs
       labels: {
         'app.kubernetes.io/name': 'tailscale-operator',
         'app.kubernetes.io/component': 'network-proxy'
@@ -680,7 +709,14 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         }
-      }
+      },
+      // Ignore status and spec fields updated by controllers
+      // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
+      ignoreDifferences: [
+        { group: 'kagent.dev', kind: 'Agent', jsonPointers: ['/status', '/spec'] },
+        { group: 'kagent.dev', kind: 'ModelConfig', jsonPointers: ['/status'] },
+        { group: 'kagent.dev', kind: 'MCPServer', jsonPointers: ['/status'] }
+      ]
     }
   }
 ];
