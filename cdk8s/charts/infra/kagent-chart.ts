@@ -25,13 +25,8 @@ export class KagentChart extends Chart {
     const ns = 'kagent';
     const appName = 'kagent';
 
-    // Namespace
-    new k8s.KubeNamespace(this, 'namespace', {
-      metadata: {
-        name: ns,
-        annotations: kagentSyncWave(-100),
-      },
-    });
+    // NOTE: Namespace is created by KagentCrdsChart (at sync wave -120)
+    // This chart is deployed after kagent-crds (sync wave -110), so namespace already exists
 
     // Note: CRDs are deployed via separate kagent-crds Helm chart or kubectl apply
     // We don't synthesize them here as they're large and managed by upstream
