@@ -51,3 +51,6 @@ deployment/config/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary debugging artifacts
+argocd-*-screenshot.png
