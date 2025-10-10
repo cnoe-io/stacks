@@ -563,6 +563,30 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // kagent CRDs (Install CRDs before kagent platform)
+  {
+    name: 'kagent-crds',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentCrdsChart'
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy CRDs very early, before kagent
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // kagent Platform (AI Agent Infrastructure)
   {
     name: 'kagent',
@@ -570,8 +594,13 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KagentChart'
     },
+    dependencies: {
+      kagentCrds: {
+        type: 'KagentCrdsChart'
+      }
+    },
     argocd: {
-      syncWave: '-110',  // Deploy CRDs and core infrastructure early
+      syncWave: '-110',  // Deploy after CRDs
       labels: {
         'app.kubernetes.io/component': 'platform',
         'app.kubernetes.io/part-of': 'kagent',

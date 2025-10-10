@@ -89,10 +89,14 @@ argocd-save-token() {
   fi
 
   # Check if 1Password is accessible (service account or user account)
-  if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ] && ! op whoami &>/dev/null 2>&1; then
-    echo "⚠️  Not signed into 1Password and no service account token set." >&2
-    echo "Token: $token" >&2
-    return 0
+  # If service account token is set, skip op whoami check (it would prompt for password)
+  if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
+    # No service account token, check if user is signed in
+    if ! op whoami &>/dev/null 2>&1; then
+      echo "⚠️  Not signed into 1Password and no service account token set." >&2
+      echo "Token: $token" >&2
+      return 0
+    fi
   fi
 
   # Check if item exists
