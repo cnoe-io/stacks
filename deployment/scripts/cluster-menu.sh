@@ -321,12 +321,29 @@ cluster-update-gum() {
   local CDK8S_DIR="$STACKS_DIR/cdk8s"
   local HOST_CONTEXT="$(detect_host_context)"
   local ORIG_DIR="$(pwd)"
+  local DEPLOY_DIR="$STACKS_DIR/deployment"
+  local CLUSTER_MENU_SCRIPT="$STACKS_DIR/deployment/scripts/cluster-menu.sh"
+
+  if [ "${SKIP_AZURE_CHECK:-}" != "true" ]; then
+    gum style --foreground 45 "🔐 Checking Azure authentication..."
+    if ! check-azure-auth; then
+      gum style --foreground 196 "❌ Azure authentication required"
+      return 1
+    fi
+    echo ""
+  fi
 
   # Source environment files FIRST
   [ -f "$STACKS_DIR/.env-files/wi.env" ] && {
     gum style --foreground 45 "📋 Loading environment from wi.env..."
     source "$STACKS_DIR/.env-files/wi.env"
   }
+
+  if command -v op &>/dev/null; then
+    if load-1password-token; then
+      gum style --foreground 82 "✅ 1Password service account token loaded"
+    fi
+  fi
 
   # Clear any WSL Docker environment variables
   if [[ -S /var/run/docker.sock ]]; then
@@ -348,7 +365,7 @@ cluster-update-gum() {
 
   # Ensure CDK8s dependencies and imports are ready
   gum spin --spinner dot --title "🔍 Checking CDK8s dependencies..." -- \
-    bash -c "ensure-cdk8s-dependencies >/dev/null 2>&1"
+    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; ensure-cdk8s-dependencies >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Failed to ensure dependencies"
@@ -357,7 +374,7 @@ cluster-update-gum() {
 
   # Step 1: Synthesize with spinner
   gum spin --spinner dot --title "🔨 Synthesizing CDK8s manifests..." -- \
-    bash -c "cd $CDK8S_DIR && npm run synth >/dev/null 2>&1"
+    bash -lc "cd '$CDK8S_DIR' && npm run synth >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ CDK8s synthesis failed"
@@ -369,9 +386,8 @@ cluster-update-gum() {
   gum style --foreground 82 "✅ Synthesis complete"
 
   # Step 2: Update cluster with spinner
-  local DEPLOY_DIR="$STACKS_DIR/deployment"
   gum spin --spinner dot --title "🚀 Updating cluster (idempotent)..." -- \
-    bash -c "cd $REF_DIR && idpbuilder create -p $CDK8S_DIR/dist/ -p $REF_DIR/ --kind-config $DEPLOY_DIR/config/kind-config-linux-ssh.yaml --dev-password >/dev/null 2>&1"
+    bash -lc "cd '$REF_DIR' && idpbuilder create -p '$CDK8S_DIR/dist/' -p '$REF_DIR/' --kind-config '$DEPLOY_DIR/config/kind-config-linux-ssh.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -419,11 +435,23 @@ cluster-update() {
     shift
   fi
 
+  # Mirror deploy workflow by validating Azure authentication up front
+  if [ "${SKIP_AZURE_CHECK:-}" != "true" ]; then
+    echo "🔐 Checking Azure authentication..."
+    check-azure-auth || return 1
+    echo ""
+  fi
+
   # Source environment files FIRST (needed for CDK8s synthesis)
   [ -f "$STACKS_DIR/.env-files/wi.env" ] && {
     echo "📋 Loading environment from wi.env..."
     source "$STACKS_DIR/.env-files/wi.env"
   }
+
+  # Load 1Password service account token for automated secret access
+  if command -v op &>/dev/null; then
+    load-1password-token && echo "✅ 1Password service account token loaded"
+  fi
 
   # Clear any WSL Docker environment variables
   if [[ -S /var/run/docker.sock ]]; then
@@ -645,6 +673,8 @@ cluster-menu() {
     return 1
   fi
 
+  local CLUSTER_MENU_SCRIPT="$STACKS_DIR/deployment/scripts/cluster-menu.sh"
+
   while true; do
     local choice=$(gum choose \
       "Synthesize Only" \
@@ -675,7 +705,8 @@ cluster-menu() {
         read -n 1 -s
         ;;
       "Synthesize & Deploy (with spinner)")
-        gum spin --spinner dot --title "Deploying cluster..." -- cluster-deploy >/dev/null 2>&1
+        gum spin --spinner dot --title "Deploying cluster..." -- \
+          env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; cluster-deploy >/dev/null 2>&1"
         gum style --foreground 82 "✅ Deployment complete"
         echo ""
         gum style --foreground 82 "Press any key to continue..."
