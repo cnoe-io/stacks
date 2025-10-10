@@ -1,5 +1,5 @@
 /**
- * TailscaleCrdsChart - Deploys Tailscale CRDs via Helm chart
+ * TailscaleCrdsChart - Deploys Tailscale CRDs
  *
  * This chart installs the Custom Resource Definitions required by Tailscale Operator:
  * - ProxyGroup
@@ -9,55 +9,24 @@
  * - Recorder
  *
  * Must be deployed before TailscaleOperatorChart
+ *
+ * Note: We import the CRDs from cdk8s.yaml which sources them from
+ * crds/tailscale-crds.yaml (extracted from official Helm chart)
  */
 
-import { Chart, ChartProps, Helm } from 'cdk8s';
+import { Chart, ChartProps, Include } from 'cdk8s';
 import { Construct } from 'constructs';
-import { KubeNamespace } from '../../imports/k8s';
+import * as path from 'path';
 
 export class TailscaleCrdsChart extends Chart {
   constructor(scope: Construct, id: string, props?: ChartProps) {
     super(scope, id, props);
 
-    const ns = 'tailscale';
-
-    // Create namespace with very early sync wave
-    new KubeNamespace(this, 'namespace', {
-      metadata: {
-        name: ns,
-        annotations: {
-          'argocd.argoproj.io/sync-wave': '-120',
-        },
-        labels: {
-          'app.kubernetes.io/name': 'tailscale',
-          'app.kubernetes.io/managed-by': 'cdk8s',
-        },
-      },
-    });
-
-    // Deploy Tailscale Operator with only CRDs (no operator deployment)
-    // We'll use hooks to install CRDs only
-    new Helm(this, 'tailscale-crds', {
-      chart: 'tailscale-operator',
-      helmExecutable: 'helm',
-      helmFlags: [
-        '--repo', 'https://pkgs.tailscale.com/helmcharts',
-      ],
-      namespace: ns,
-      releaseName: 'tailscale-crds',
-      values: {
-        // Install only CRDs, disable operator deployment
-        operatorConfig: {
-          image: {
-            repo: 'tailscale/k8s-operator',
-            tag: 'latest',
-          },
-        },
-        // Set replicas to 0 so operator doesn't run (we only want CRDs)
-        replicaCount: 0,
-        // Ensure CRDs are installed
-        installCRDs: true,
-      },
+    // Include the Tailscale CRDs from the crds directory
+    // These CRDs are extracted from the official Tailscale Helm chart
+    // and imported into our TypeScript types via cdk8s.yaml
+    new Include(this, 'tailscale-crds', {
+      url: path.join(__dirname, '../../crds/tailscale-crds.yaml'),
     });
   }
 }
