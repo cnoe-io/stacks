@@ -56,6 +56,57 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
     }
   },
+
+  // KubeVirt Infrastructure (Virtual Machine Platform)
+  {
+    name: 'kubevirt',
+    namespace: 'kubevirt',
+    chart: {
+      type: 'KubeVirtChart',
+      props: {
+        useEmulation: true,  // Required for Kind cluster (no KVM access)
+      }
+    },
+    argocd: {
+      syncWave: '-100',  // Deploy early with infrastructure
+      labels: {
+        'app.kubernetes.io/name': 'kubevirt',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // CDI (Containerized Data Importer) for VM Disk Images
+  {
+    name: 'cdi',
+    namespace: 'cdi',
+    chart: {
+      type: 'CdiChart'
+    },
+    argocd: {
+      syncWave: '-100',  // Deploy alongside KubeVirt
+      labels: {
+        'app.kubernetes.io/name': 'cdi',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
   
   {
     name: 'bootstrap-secrets',
