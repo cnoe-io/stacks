@@ -364,7 +364,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         syncOptions: [
           'CreateNamespace=false',        // Namespace already exists with Kargo label
           'ApplyOutOfSyncOnly=true',      // Only sync resources that actually changed
-          'RespectIgnoreDifferences=true' // Respect the ignore differences below
+          'RespectIgnoreDifferences=true', // Respect the ignore differences below
+          'SkipDryRunOnMissingResource=true' // Skip dry-run for Kargo Project/ProjectConfig CRs
         ]
       },
       ignoreDifferences: [
@@ -566,7 +567,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         automated: {
           prune: true,
           selfHeal: true
-        }
+        },
+        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
       }
     }
   },
@@ -639,7 +641,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         automated: {
           prune: true,
           selfHeal: true
-        }
+        },
+        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for RemoteMCPServer CR until CRD is installed
       }
     }
   },
@@ -651,8 +654,13 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KmcpChart'
     },
+    dependencies: {
+      kagentCrds: {
+        type: 'KagentCrdsChart'
+      }
+    },
     argocd: {
-      syncWave: '-110',  // Deploy alongside kagent
+      syncWave: '-110',  // Deploy alongside kagent, after CRDs
       labels: {
         'app.kubernetes.io/component': 'platform',
         'app.kubernetes.io/part-of': 'kagent',
@@ -662,7 +670,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         automated: {
           prune: true,
           selfHeal: true
-        }
+        },
+        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for MCPServer CRs until CRD is installed
       }
     }
   },
@@ -697,6 +706,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KagentExampleAgentsChart'
     },
+    dependencies: {
+      kagentSecrets: {
+        type: 'KagentSecretsChart'
+      }
+    },
     argocd: {
       syncWave: '50',  // After platform is ready
       labels: {
@@ -708,7 +722,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         automated: {
           prune: true,
           selfHeal: true
-        }
+        },
+        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for Agent/ModelConfig/MCPServer CRs
       },
       // Ignore status and spec fields updated by controllers
       // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
