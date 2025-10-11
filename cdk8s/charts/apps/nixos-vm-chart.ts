@@ -60,6 +60,16 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default "{vmName}-rdp"
    */
   tailscaleHostname?: string;
+
+  /**
+   * Run strategy for the VM
+   * - Always: VM starts automatically and restarts on failure
+   * - Manual: Explicit start/stop control
+   * - RerunOnFailure: Restart only on failure
+   * - Halted: VM remains stopped
+   * @default "Always"
+   */
+  runStrategy?: 'Always' | 'Manual' | 'RerunOnFailure' | 'Halted';
 }
 
 export class NixOsVmChart extends Chart {
@@ -75,6 +85,7 @@ export class NixOsVmChart extends Chart {
       targetNamespace = 'default',
       enableTailscale = true,
       tailscaleHostname,
+      runStrategy = 'Always',
     } = props;
 
     // Generate default cloud-init if not provided
@@ -91,7 +102,7 @@ export class NixOsVmChart extends Chart {
     const vm = buildVirtualMachine(this, 'vm', {
       name: vmName,
       namespace: targetNamespace,
-      runStrategy: 'Manual', // Explicit start/stop control
+      runStrategy,
       cpuCores,
       memory,
       volumes: [
