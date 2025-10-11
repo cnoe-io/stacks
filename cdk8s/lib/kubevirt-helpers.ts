@@ -27,6 +27,9 @@ export interface VirtualMachineBuilderProps {
   // Cloud-init configuration
   cloudInit?: CloudInitConfig;
 
+  // Graphics configuration (enables VNC)
+  enableGraphics?: boolean;
+
   // Additional labels and annotations
   labels?: { [key: string]: string };
   annotations?: { [key: string]: string };
@@ -42,8 +45,9 @@ export interface VolumeConfig {
   // For dataVolume or PVC volumes
   source?: string; // DataVolume or PVC name
 
-  // For cloudInit volumes
-  cloudInitData?: string;
+  // For cloudInit volumes (use Secret for data > 2048 bytes)
+  cloudInitData?: string;  // Inline cloud-init data (max 2048 bytes)
+  cloudInitSecretName?: string;  // Secret reference for larger cloud-init data
 
   // Disk bus type (virtio, sata, scsi)
   bus?: string;
@@ -110,17 +114,20 @@ export function buildVirtualMachine(
     volumes = [],
     networks = [{ name: 'default', type: 'pod' }],
     cloudInit,
+    enableGraphics = false,
     labels = {},
     annotations = {},
     terminationGracePeriodSeconds = 30,
   } = props;
 
   // Build disks array from volumes
-  const disks = volumes.map(vol => ({
+  const disks = volumes.map((vol, index) => ({
     name: vol.name,
     disk: {
       bus: vol.bus || 'virtio',
     },
+    // Set boot order for the first non-cloudInit volume
+    ...(vol.type !== 'cloudInit' && index === 0 ? { bootOrder: 1 } : {}),
   }));
 
   // Build volumes array
@@ -138,7 +145,9 @@ export function buildVirtualMachine(
     } else if (vol.type === 'cloudInit') {
       return {
         name: vol.name,
-        cloudInitNoCloud: vol.cloudInitData
+        cloudInitNoCloud: vol.cloudInitSecretName
+          ? { secretRef: { name: vol.cloudInitSecretName } }
+          : vol.cloudInitData
           ? { userData: vol.cloudInitData }
           : cloudInit?.secretName
           ? { secretRef: { name: cloudInit.secretName } }
@@ -191,13 +200,21 @@ export function buildVirtualMachine(
         domain: {
           resources: {
             requests: {
-              memory: memory,
+              memory,
               cpu: `${cpuCores}`,
             },
           },
           devices: {
             disks,
             interfaces: interfaces.length > 0 ? interfaces : undefined,
+            ...(enableGraphics ? {
+              autoattachGraphicsDevice: true,
+              inputs: [{
+                type: 'tablet',
+                bus: 'usb',
+                name: 'tablet'
+              }]
+            } : {}),
           },
         },
         networks: networkSpecs.length > 0 ? networkSpecs : undefined,
@@ -229,12 +246,14 @@ export function buildVirtualMachine(
  * @param hostname - VM hostname
  * @param username - Primary user name
  * @param sshKeys - SSH authorized keys (optional)
+ * @param password - Plain text password (will be set via chpasswd)
  */
 export function buildCloudInitUserData(
   hostname: string,
   username: string,
   sshKeys?: string[],
-  password?: string
+  password?: string,
+  installDesktop: boolean = false
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -251,16 +270,207 @@ users:
     });
   }
 
+  // Use chpasswd to set passwords (works with plain text)
+  // This is the proper way to set passwords in cloud-init
   if (password) {
-    userData += `\n    passwd: ${password}`;
-    userData += '\n    lock_passwd: false';
+    userData += `\nchpasswd:
+  list: |
+    ${username}:${password}
+    root:${password}
+  expire: false`;
   }
 
-  // Also set root password if provided
-  if (password) {
-    userData += `\n  - name: root
-    passwd: ${password}
-    lock_passwd: false`;
+  // Install desktop environment and xrdp for remote desktop access
+  if (installDesktop) {
+    userData += `
+runcmd:
+  # Configure minimal NixOS base with desktop, remote access, and dev tools
+  - |
+    cat > /etc/nixos/configuration.nix <<'NIXEOF'
+    { config, pkgs, ... }:
+    {
+      imports = [ /etc/nixos/hardware-configuration.nix ];
+
+      # Networking
+      networking.hostName = "${hostname}";
+      networking.networkmanager.enable = true;
+
+      # SSH - CRITICAL for remote management
+      services.openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = true;
+          PermitRootLogin = "no";
+        };
+      };
+
+      # XFCE Desktop Environment - minimal but functional
+      services.xserver = {
+        enable = true;
+        displayManager.lightdm.enable = true;
+        desktopManager.xfce.enable = true;
+        # Enable Xfwm for VNC compatibility
+        desktopManager.xfce.enableXfwm = true;
+      };
+
+      # Remote Desktop Protocol (xrdp)
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "xfce4-session";
+        openFirewall = true;
+      };
+
+      # Firewall - open all remote access ports
+      networking.firewall.allowedTCPPorts = [ 22 3389 5900 5901 ];
+
+      # Audio support
+      hardware.pulseaudio.enable = true;
+
+      # User configuration
+      users.users.${username} = {
+        isNormalUser = true;
+        extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
+        shell = pkgs.bash;
+      };
+
+      # Security - allow sudo without password for wheel group
+      security.sudo.wheelNeedsPassword = false;
+
+      # Allow unfree packages (some tools require this)
+      nixpkgs.config.allowUnfree = true;
+
+      # Essential system packages - keep minimal
+      environment.systemPackages = with pkgs; [
+        # Core utilities
+        wget curl vim git htop tmux
+        # Desktop apps
+        firefox
+        # Remote access
+        tigervnc
+        # NixOS management
+        home-manager nixos-rebuild
+      ];
+
+      # Nix configuration
+      nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+      system.stateVersion = "24.05";
+    }
+    NIXEOF
+  # Rebuild NixOS with base configuration (fast: ~2 minutes)
+  - nixos-rebuild switch
+  # Ensure critical services are running
+  - systemctl enable sshd && systemctl start sshd
+  - systemctl enable xrdp && systemctl start xrdp
+  # Set up VNC server for user
+  - su - ${username} -c "mkdir -p ~/.vnc"
+  - su - ${username} -c "echo '${password}' | vncpasswd -f > ~/.vnc/passwd"
+  - su - ${username} -c "chmod 600 ~/.vnc/passwd"
+  - |
+    cat > /home/${username}/.vnc/xstartup <<'VNCEOF'
+    #!/bin/sh
+    unset SESSION_MANAGER
+    unset DBUS_SESSION_BUS_ADDRESS
+    exec startxfce4
+    VNCEOF
+  - chmod +x /home/${username}/.vnc/xstartup
+  - chown ${username}:users /home/${username}/.vnc/xstartup
+  # VNC systemd service
+  - |
+    cat > /etc/systemd/system/vncserver@.service <<'SYSTEMDEOF'
+    [Unit]
+    Description=VNC Server for Display %i
+    After=network.target
+
+    [Service]
+    Type=forking
+    User=${username}
+    ExecStart=/run/current-system/sw/bin/vncserver :%i -geometry 1920x1080 -depth 24
+    ExecStop=/run/current-system/sw/bin/vncserver -kill :%i
+    Restart=on-failure
+
+    [Install]
+    WantedBy=multi-user.target
+    SYSTEMDEOF
+  - systemctl daemon-reload
+  - systemctl enable vncserver@1.service
+  - systemctl start vncserver@1.service
+  # Clone user's nixos-config repository
+  - su - ${username} -c "git clone https://github.com/vpittamp/nixos-config ~/nixos-config 2>/dev/null || echo 'nixos-config already exists or failed to clone'"
+  # Create convenience script to apply full user configuration
+  - |
+    cat > /home/${username}/apply-my-nixos-config.sh <<'APPLYEOF'
+    #!/bin/bash
+    # One-command setup: apply your full nixos-config
+    set -e
+
+    echo "=== Applying vpittamp nixos-config ==="
+
+    # Update the repo
+    cd ~/nixos-config
+    git pull
+
+    # Backup current system config
+    sudo cp /etc/nixos/configuration.nix /etc/nixos/configuration.nix.vm-base-backup
+
+    # Check if using flakes
+    if [ -f "flake.nix" ]; then
+      echo "Detected flake.nix - applying with flakes..."
+      # You'll need to specify your host name here
+      read -p "Enter your flake host name (e.g., nixos-dev-vm): " FLAKE_HOST
+      sudo nixos-rebuild switch --flake ".#\${FLAKE_HOST}"
+    elif [ -f "configuration.nix" ]; then
+      echo "Detected configuration.nix - applying traditional config..."
+      sudo cp configuration.nix /etc/nixos/configuration.nix
+      sudo nixos-rebuild switch
+    else
+      echo "ERROR: No configuration.nix or flake.nix found!"
+      echo "Please manually configure your system."
+      exit 1
+    fi
+
+    # Apply home-manager if configured
+    if [ -f "home.nix" ] || [ -f "home-manager/home.nix" ]; then
+      echo "Applying home-manager configuration..."
+      home-manager switch
+    fi
+
+    echo ""
+    echo "=== Configuration applied successfully! ==="
+    echo "You may need to log out and back in for all changes to take effect."
+    APPLYEOF
+  - chmod +x /home/${username}/apply-my-nixos-config.sh
+  - chown ${username}:users /home/${username}/apply-my-nixos-config.sh
+  # Create helpful README
+  - |
+    cat > /home/${username}/README-FIRST.txt <<'READMEEOF'
+    Welcome to your NixOS Development VM!
+    ======================================
+
+    This VM has a MINIMAL base configuration with:
+    - SSH, RDP, VNC remote access
+    - XFCE desktop
+    - Essential development tools
+    - Your nixos-config repository cloned at ~/nixos-config
+
+    To apply your FULL nixos-config:
+    ---------------------------------
+    1. SSH into this VM or open a terminal
+    2. Run: ./apply-my-nixos-config.sh
+    3. Follow the prompts
+    4. Log out and back in
+
+    Remote Access:
+    --------------
+    - SSH:  ssh -p 2222 vpittamp@100.87.204.44 (via port-forward)
+    - RDP:  100.87.204.44:33389 (via port-forward)
+    - VNC:  Port-forward 5901 then connect to localhost:5901
+
+    Default credentials: ${username} / ${password}
+
+    Your configuration repo: ~/nixos-config
+    READMEEOF
+  - chown ${username}:users /home/${username}/README-FIRST.txt`;
   }
 
   return userData;

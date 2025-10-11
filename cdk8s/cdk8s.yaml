@@ -12,7 +12,7 @@ imports:
   - crds/kgateway-placeholder.yaml
   - crds/tailscale-crds.yaml
   - crds/kmcp-mcpserver-crd.yaml
-  # KubeVirt CRDs (v1.3.1) - All VM-related CRDs
-  - crds/kubevirt-vm-crds.yaml
-  # CDI CRDs (v1.59.0) - DataVolume CRDs
-  - crds/cdi-crds.yaml
+  # KubeVirt CRDs (v1.3.1)
+  - https://github.com/kubevirt/kubevirt/releases/download/v1.3.1/kubevirt-operator.yaml
+  # CDI CRDs (v1.59.0)
+  - https://github.com/kubevirt/containerized-data-importer/releases/download/v1.59.0/cdi-operator.yaml

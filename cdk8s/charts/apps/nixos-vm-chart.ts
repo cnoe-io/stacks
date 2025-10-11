@@ -51,7 +51,7 @@ export interface NixOsVmChartProps extends ChartProps {
 
   /**
    * Enable Tailscale exposure for RDP service
-   * @default true
+   * @default false
    */
   enableTailscale?: boolean;
 
@@ -60,6 +60,22 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default "{vmName}-rdp"
    */
   tailscaleHostname?: string;
+
+  /**
+   * Run strategy for the VM
+   * - Always: VM starts automatically and restarts on failure
+   * - Manual: Explicit start/stop control
+   * - RerunOnFailure: Restart only on failure
+   * - Halted: VM remains stopped
+   * @default "Always"
+   */
+  runStrategy?: 'Always' | 'Manual' | 'RerunOnFailure' | 'Halted';
+
+  /**
+   * Enable graphics device for VNC access
+   * @default true
+   */
+  enableGraphics?: boolean;
 }
 
 export class NixOsVmChart extends Chart {
@@ -73,8 +89,10 @@ export class NixOsVmChart extends Chart {
       memory = '4Gi',
       cloudInitUserData,
       targetNamespace = 'default',
-      enableTailscale = true,
+      enableTailscale = false,
       tailscaleHostname,
+      runStrategy = 'Always',
+      enableGraphics = true,
     } = props;
 
     // Generate default cloud-init if not provided
@@ -84,16 +102,33 @@ export class NixOsVmChart extends Chart {
       [
         'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzhOKvFTkdSY8/WpeOxd7ZTII7I+klKhiIJxRdMfM5+ vpittamp@devcontainer'
       ],
-      'nixos123'  // Default password for console access
+      'nixos123',  // Default password for console access
+      true  // Install desktop environment and xrdp
     );
+
+    // Create Secret for cloud-init data (required when userData > 2048 bytes)
+    const cloudInitSecretName = `${vmName}-cloudinit`;
+    new k8s.KubeSecret(this, 'cloudinit-secret', {
+      metadata: {
+        name: cloudInitSecretName,
+        namespace: targetNamespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '5',  // Before VM creation
+        },
+      },
+      stringData: {
+        userdata: userData,
+      },
+    });
 
     // Build VirtualMachine with root disk and cloud-init disk
     const vm = buildVirtualMachine(this, 'vm', {
       name: vmName,
       namespace: targetNamespace,
-      runStrategy: 'Manual', // Explicit start/stop control
+      runStrategy,
       cpuCores,
       memory,
+      enableGraphics,
       volumes: [
         {
           name: 'rootdisk',
@@ -104,7 +139,7 @@ export class NixOsVmChart extends Chart {
         {
           name: 'cloudinitdisk',
           type: 'cloudInit',
-          cloudInitData: userData,
+          cloudInitSecretName,  // Use Secret reference instead of inline data
           bus: 'virtio',
         },
       ],
@@ -114,6 +149,11 @@ export class NixOsVmChart extends Chart {
           type: 'pod',
           interfaceType: 'masquerade',
           ports: [
+            {
+              name: 'ssh',
+              protocol: 'TCP',
+              port: 22,  // SSH port
+            },
             {
               name: 'rdp',
               protocol: 'TCP',
@@ -144,8 +184,8 @@ export class NixOsVmChart extends Chart {
     if (enableTailscale) {
       serviceAnnotations['tailscale.com/expose'] = 'true';
       serviceAnnotations['tailscale.com/hostname'] = hostname;
-      // Optional: Add tags for ACL management
-      serviceAnnotations['tailscale.com/tags'] = 'tag:k8s-vm,tag:rdp-server';
+      // Use tag:k8s which is already defined in the Tailscale ACL
+      serviceAnnotations['tailscale.com/tags'] = 'tag:k8s';
     }
 
     // Create Service to expose RDP port
@@ -161,10 +201,18 @@ export class NixOsVmChart extends Chart {
       },
       spec: {
         type: serviceType,  // LoadBalancer if Tailscale enabled, NodePort otherwise
+        // Set loadBalancerClass to 'tailscale' when using Tailscale LoadBalancer
+        loadBalancerClass: enableTailscale ? 'tailscale' : undefined,
         selector: {
           'kubevirt.io/vm': vmName,
         },
         ports: [
+          {
+            name: 'ssh',
+            protocol: 'TCP',
+            port: 22,
+            targetPort: k8s.IntOrString.fromNumber(22),
+          },
           {
             name: 'rdp',
             protocol: 'TCP',
