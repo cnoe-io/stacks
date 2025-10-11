@@ -51,7 +51,7 @@ export interface NixOsVmChartProps extends ChartProps {
 
   /**
    * Enable Tailscale exposure for RDP service
-   * @default true
+   * @default false
    */
   enableTailscale?: boolean;
 
@@ -89,7 +89,7 @@ export class NixOsVmChart extends Chart {
       memory = '4Gi',
       cloudInitUserData,
       targetNamespace = 'default',
-      enableTailscale = true,
+      enableTailscale = false,
       tailscaleHostname,
       runStrategy = 'Always',
       enableGraphics = true,
