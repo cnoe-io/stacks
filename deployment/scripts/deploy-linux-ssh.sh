@@ -123,42 +123,18 @@ else
     echo -e "${GREEN}✓ Using existing keys from ${KEYS_DIR}${NC}"
 fi
 
-# Step 3: Generate minimal Kind configuration with Azure Workload Identity
+# Step 3: Use static Kind configuration from deployment/config
 CONFIG_FILE="${DEPLOYMENT_DIR}/config/kind-config.yaml"
-echo -e "${GREEN}Generating Kind configuration with Azure Workload Identity...${NC}"
+echo -e "${GREEN}Using static Kind configuration: ${CONFIG_FILE}${NC}"
 
-# Ensure config directory exists
-mkdir -p "${DEPLOYMENT_DIR}/config"
+# Verify config file exists
+if [ ! -f "${CONFIG_FILE}" ]; then
+    echo -e "${RED}❌ Config file not found: ${CONFIG_FILE}${NC}"
+    echo -e "${YELLOW}Expected static configuration with all mounts and patches.${NC}"
+    exit 1
+fi
 
-# Use SERVICE_ACCOUNT_ISSUER from wi.env, or fall back to default
-SERVICE_ACCOUNT_ISSUER="${SERVICE_ACCOUNT_ISSUER:-https://oidcissuer65846b7df97b.z13.web.core.windows.net/}"
-
-cat > "${CONFIG_FILE}" <<EOF
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  extraMounts:
-    # Mount Azure Workload Identity service account keys
-    - hostPath: ${KEYS_DIR}
-      containerPath: /etc/kubernetes/pki/custom-keys
-      readOnly: true
-
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      extraArgs:
-        # Azure Workload Identity OIDC issuer
-        service-account-issuer: "${SERVICE_ACCOUNT_ISSUER}"
-        service-account-key-file: /etc/kubernetes/pki/custom-keys/sa.pub
-        service-account-signing-key-file: /etc/kubernetes/pki/custom-keys/sa.key
-    controllerManager:
-      extraArgs:
-        service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
-EOF
-
-echo -e "${GREEN}✓ Generated config with issuer: ${SERVICE_ACCOUNT_ISSUER}${NC}"
+echo -e "${GREEN}✓ Using Kind config from ${CONFIG_FILE}${NC}"
 
 
 # Step 4: Create cluster with idpbuilder
