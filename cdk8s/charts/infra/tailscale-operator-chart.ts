@@ -157,8 +157,8 @@ export class TailscaleOperatorChart extends Chart {
         },
         {
           apiGroups: [''],
-          resources: ['secrets', 'services', 'configmaps'],
-          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+          resources: ['secrets', 'services', 'configmaps', 'serviceaccounts'],
+          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete', 'deletecollection'],
         },
         {
           apiGroups: [''],
@@ -173,6 +173,12 @@ export class TailscaleOperatorChart extends Chart {
         {
           apiGroups: ['apps'],
           resources: ['deployments', 'statefulsets'],
+          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+        },
+        // RBAC permissions (needed for creating ServiceAccounts and RoleBindings for proxies)
+        {
+          apiGroups: ['rbac.authorization.k8s.io'],
+          resources: ['roles', 'rolebindings'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
         },
         // Ingress permissions (required for LoadBalancer service exposure)
