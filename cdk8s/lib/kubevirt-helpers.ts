@@ -27,6 +27,9 @@ export interface VirtualMachineBuilderProps {
   // Cloud-init configuration
   cloudInit?: CloudInitConfig;
 
+  // Graphics configuration (enables VNC)
+  enableGraphics?: boolean;
+
   // Additional labels and annotations
   labels?: { [key: string]: string };
   annotations?: { [key: string]: string };
@@ -110,6 +113,7 @@ export function buildVirtualMachine(
     volumes = [],
     networks = [{ name: 'default', type: 'pod' }],
     cloudInit,
+    enableGraphics = false,
     labels = {},
     annotations = {},
     terminationGracePeriodSeconds = 30,
@@ -198,6 +202,14 @@ export function buildVirtualMachine(
           devices: {
             disks,
             interfaces: interfaces.length > 0 ? interfaces : undefined,
+            ...(enableGraphics ? {
+              autoattachGraphicsDevice: true,
+              inputs: [{
+                type: 'tablet',
+                bus: 'usb',
+                name: 'tablet'
+              }]
+            } : {}),
           },
         },
         networks: networkSpecs.length > 0 ? networkSpecs : undefined,

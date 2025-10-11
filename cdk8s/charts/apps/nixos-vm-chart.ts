@@ -70,6 +70,12 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default "Always"
    */
   runStrategy?: 'Always' | 'Manual' | 'RerunOnFailure' | 'Halted';
+
+  /**
+   * Enable graphics device for VNC access
+   * @default true
+   */
+  enableGraphics?: boolean;
 }
 
 export class NixOsVmChart extends Chart {
@@ -86,6 +92,7 @@ export class NixOsVmChart extends Chart {
       enableTailscale = true,
       tailscaleHostname,
       runStrategy = 'Always',
+      enableGraphics = true,
     } = props;
 
     // Generate default cloud-init if not provided
@@ -105,6 +112,7 @@ export class NixOsVmChart extends Chart {
       runStrategy,
       cpuCores,
       memory,
+      enableGraphics,
       volumes: [
         {
           name: 'rootdisk',

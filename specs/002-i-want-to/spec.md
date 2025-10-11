@@ -185,3 +185,93 @@ As a platform engineer, I want to define VirtualMachine resources in CDK8s chart
 7. **virtctl installation**: Assumes virtctl CLI tool is installed manually or via package manager for console access and VM operations
 8. **CDI storage**: Assumes CDI's scratch space requirements (temporary storage for image conversion) are met by cluster storage capacity
 9. **Network isolation**: Assumes development/testing environment does not require strict network isolation between VMs and pods; production deployments may require NetworkPolicies
+
+## Implementation Lessons Learned *(added 2025-10-11)*
+
+### Critical Insights from Production Deployment
+
+1. **Kind Cluster Configuration Must Be Dynamic**
+   - **Lesson**: The deployment script (`deployment/scripts/deploy-linux-ssh.sh`) generates kind-config.yaml dynamically at runtime (lines 136-163). Static config files (kind-config.yaml, kind-config-linux-ssh.yaml) are NOT used.
+   - **Action**: Always update the dynamic config generation in the deployment script, never edit static config files.
+   - **Impact**: Required mount for `/home/vpittamp/stacks/nixos-images` must be added to the script's config generation, not to static YAML files.
+
+2. **DataVolume Specs Are Immutable**
+   - **Lesson**: Once a DataVolume is created, its spec cannot be modified. Attempting to update via ArgoCD results in webhook validation errors: "Cannot update DataVolume Spec".
+   - **Action**: To change DataVolume configuration (imageUrl, storageSize), must delete the existing DataVolume and recreate it.
+   - **Workaround**: `kubectl delete dv <name>`, then sync ArgoCD application to recreate with new spec.
+   - **Impact**: DataVolume updates require careful planning and downtime for attached VMs.
+
+3. **Symlinks Break Inside Containers**
+   - **Lesson**: Symlinks pointing to host-only paths (e.g., Nix store `/nix/store/...`) don't work inside containers. The nginx image server cannot serve symlinked qcow2 files.
+   - **Action**: Use actual qcow2 files or copy symlink targets to regular files before deployment.
+   - **Example**: `kubevirt-vm.qcow2` (symlink to Nix store) → Create `kubevirt-vm-actual.qcow2` as a regular file or use the Nix store path directly if mounted.
+
+4. **Sync Wave Architecture Is Critical**
+   - **Lesson**: Proper sync wave ordering prevents race conditions and deployment failures.
+   - **Verified Order**:
+     - `-110`: Operators (kubevirt-operator, cdi-operator) - Deploy CRDs
+     - `-90`: Custom Resources (KubeVirt CR, CDI CR) - Use the CRDs
+     - `-50`: Image server (nginx serving qcow2 files) - Must be ready before imports
+     - `0`: DataVolumes - Import images from image server
+     - `10`: VirtualMachines - Wait for DataVolumes to be ready
+     - `15`: Services - Expose VM ports after VM creation
+   - **Impact**: Without correct ordering, DataVolumes fail with 404 errors (image server not ready) or VMs fail to start (DataVolume not imported).
+
+5. **VirtualMachine RunStrategy Configuration**
+   - **Lesson**: `runStrategy: Manual` requires explicit start/stop commands. For auto-start behavior, use `runStrategy: Always`.
+   - **Options**:
+     - `Always`: VM starts automatically and restarts on failure (best for stateful services)
+     - `Manual`: Explicit start/stop control via virtctl or kubectl patch (best for development)
+     - `RerunOnFailure`: Restart only on failure
+     - `Halted`: VM remains stopped
+   - **Implementation**: Made runStrategy configurable in NixOsVmChart with default of `Always`.
+
+6. **ArgoCD Operation Management**
+   - **Lesson**: ArgoCD sync operations can get stuck in a loop when trying to patch immutable resources (like DataVolume specs).
+   - **Resolution**: Use `argocd app terminate-op` to kill stuck operations, then perform necessary resource cleanup (delete immutable resources) before re-syncing.
+   - **Command**: `argocd app terminate-op argocd/<app-name> --insecure`
+
+7. **Test Images Before Production**
+   - **Lesson**: Testing with small images (100MB) before using large images (21GB) saves time during development and debugging.
+   - **Strategy**:
+     - Create test image: `truncate -s 100M kubevirt-vm-test.qcow2`
+     - Validate entire pipeline with test image (import, VM start, network)
+     - Switch to production image only after validation
+   - **Impact**: Reduced DataVolume import time from 10+ minutes to seconds during testing.
+
+8. **Chart Implementation Patterns**
+   - **Lesson**: Use `ApiObject` from cdk8s directly instead of CRD-specific imports to avoid TypeScript compilation issues with complex CRDs.
+   - **Pattern**:
+     ```typescript
+     new ApiObject(this, 'vm', {
+       apiVersion: 'kubevirt.io/v1',
+       kind: 'VirtualMachine',
+       metadata: { ... },
+       spec: { ... }
+     });
+     ```
+   - **Rationale**: KubeVirt and CDI CRDs are complex and frequently updated. Using ApiObject provides flexibility without import regeneration.
+
+9. **Operator vs Custom Resource Charts**
+   - **Lesson**: Separate operator deployment from custom resource creation into distinct charts with different sync waves.
+   - **Structure**:
+     - `KubeVirtOperatorChart`: Deploys operator using `Include` with upstream YAML (sync wave -110)
+     - `KubeVirtCRChart`: Creates KubeVirt CR with configuration (sync wave -90)
+     - `CDIOperatorChart`: Deploys CDI operator (sync wave -110)
+     - `CDICRChart`: Creates CDI CR (sync wave -90)
+   - **Benefit**: Operators deploy CRDs first, then custom resources can use those CRDs without race conditions.
+
+10. **Image Server Architecture**
+    - **Lesson**: Simple nginx-based HTTP server is sufficient for local development. Use hostPath volume to mount nixos-images directory into the pod.
+    - **Configuration**:
+      - hostPath mount from host → Kind container (kind-config)
+      - hostPath volume in nginx Deployment referencing container path
+      - Service exposing port 80 for CDI to fetch images
+    - **Alternative**: For production, use OCI registry with proper versioning and authentication.
+
+### Updated Requirements Based on Implementation
+
+- **FR-029** (NEW): System MUST generate kind-config.yaml dynamically via deployment script with all required mounts (nixos-images, Azure Workload Identity keys)
+- **FR-030** (NEW): System MUST use regular qcow2 files (not symlinks) for DataVolume imports when using HTTP source
+- **FR-031** (NEW): System MUST separate operator deployment charts from custom resource charts with appropriate sync waves
+- **FR-032** (NEW): System MUST support runStrategy configuration in VirtualMachine charts with sensible defaults (Always for production, Manual for development)

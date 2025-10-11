@@ -30,7 +30,8 @@ Install KubeVirt virtualization platform into Kind cluster using CDK8s charts, e
 **Storage**:
 - PersistentVolumeClaims (local-path-provisioner for Kind cluster)
 - DataVolumes (CDI abstraction for image import to PVCs)
-- NixOS qcow2 images (hosted via NEEDS CLARIFICATION: HTTP server, OCI registry, or local file access)
+- NixOS qcow2 images (hosted via HTTP server - nginx with hostPath volume mount)
+- **CRITICAL**: qcow2 files must be regular files, not symlinks (symlinks to Nix store break inside containers)
 
 **Testing**:
 - TypeScript compilation (`npm run compile`)
@@ -189,9 +190,18 @@ Install KubeVirt virtualization platform into Kind cluster using CDK8s charts, e
 **Proceed to Phase 0**: ✅ YES
 
 **Required Actions**:
-1. Phase 0: Resolve NixOS image hosting strategy (HTTP server, OCI registry, or local file access)
-2. Phase 1: Document SecurityContext considerations for virt-launcher privileged mode
+1. ✅ Phase 0: Resolved - Using HTTP server (nginx) with hostPath volume mount
+2. ✅ Phase 1: Documented - virt-launcher requires privileges for VM emulation (acceptable for dev)
 3. Phase 2: Add production security hardening (NetworkPolicies, ESO for secrets)
+
+**Implementation Status** (Updated 2025-10-11):
+- ✅ KubeVirt and CDI operators deployed successfully
+- ✅ Image server (nginx) serving qcow2 files via HTTP
+- ✅ DataVolume import completed (100MB test image validated, 21GB production image ready)
+- ✅ VirtualMachine running with runStrategy: Always
+- ✅ All sync waves validated and working correctly
+- ✅ Chart implementation patterns established (ApiObject for CRDs)
+- ✅ Dynamic kind-config generation fixed in deployment script
 
 ## Project Structure
 
@@ -332,4 +342,74 @@ The separation enables:
 ## Complexity Tracking
 
 *No constitutional violations requiring justification. All deviations are documented in Constitution Check with rationale.*
+
+## Implementation Lessons Learned (2025-10-11)
+
+### Critical Technical Discoveries
+
+**1. Dynamic Configuration Pattern**
+- The `deployment/scripts/deploy-linux-ssh.sh` script generates kind-config.yaml dynamically (lines 136-163)
+- Static config files (`deployment/config/kind-config.yaml`) are reference templates only, NOT used during deployment
+- **Action**: Always update the script's dynamic config generation, never edit static files
+- **Impact**: nixos-images mount was missing because static files were edited instead of script
+
+**2. DataVolume Immutability**
+- DataVolume specs cannot be modified after creation (enforced by admission webhook)
+- Changing imageUrl or storageSize requires: delete DataVolume → sync ArgoCD application → recreate
+- Stuck sync operations: Use `argocd app terminate-op argocd/<app-name> --insecure` to kill loops
+- **Recommendation**: Plan DataVolume configuration carefully, use test images before production
+
+**3. Container Symlink Limitation**
+- Symlinks pointing to host-only paths (Nix store: `/nix/store/...`) don't resolve inside containers
+- nginx image server cannot serve `kubevirt-vm.qcow2` if it's a symlink to Nix store
+- **Solution**: Use regular qcow2 files (`kubevirt-vm-actual.qcow2`) or copy symlink targets
+
+**4. Verified Sync Wave Architecture**
+```
+-110: Operators (kubevirt-operator, cdi-operator) → Deploy CRDs
+ -90: Custom Resources (KubeVirt CR, CDI CR) → Use CRDs
+ -50: Image Server (nginx) → Must be ready before DataVolume imports
+   0: DataVolumes → Import images from HTTP server
+  10: VirtualMachines → Wait for DataVolume ready
+  15: Services → Expose VM ports
+```
+- Without correct ordering: 404 errors (image server not ready) or VM start failures (DataVolume not imported)
+
+**5. Chart Implementation Patterns**
+- Use `ApiObject` from cdk8s instead of CRD-specific imports (e.g., `KubeVirtualMachine` from imports)
+- Avoids TypeScript compilation issues with complex/frequently-updated CRDs
+- Pattern: `new ApiObject(this, 'id', { apiVersion: 'kubevirt.io/v1', kind: 'VirtualMachine', ... })`
+
+**6. Operator vs Custom Resource Separation**
+- Separate charts for operator deployment vs custom resource creation:
+  - `KubeVirtOperatorChart`: Uses `Include` to deploy upstream YAML (sync wave -110)
+  - `KubeVirtCRChart`: Creates KubeVirt CR with configuration (sync wave -90)
+- Prevents race conditions where CRs are created before CRDs exist
+
+**7. VirtualMachine RunStrategy**
+- `runStrategy: Manual` requires explicit start/stop (good for development)
+- `runStrategy: Always` auto-starts and restarts on failure (good for production)
+- Made configurable in chart with sensible defaults
+
+**8. Testing Strategy**
+- Use small test images (100MB via `truncate -s 100M`) to validate pipeline quickly
+- Test → Validate → Switch to production (21GB image)
+- Reduced DataVolume import testing from 10+ minutes to seconds
+
+### Updated Technical Approach
+
+**Original**:
+- Import KubeVirt CRDs into CDK8s for type-safe VirtualMachine definitions ❌
+
+**Revised**:
+- Use `ApiObject` pattern to avoid CRD import complexity ✅
+- Import CRDs for documentation reference only, not for TypeScript bindings
+
+**Original**:
+- NixOS qcow2 images (hosted via NEEDS CLARIFICATION: HTTP server, OCI registry, or local file access) ❓
+
+**Revised**:
+- HTTP server (nginx) with hostPath volume mount ✅
+- Regular qcow2 files, not symlinks ✅
+- Service URL: `http://nixos-image-server.default.svc.cluster.local/` ✅
 
