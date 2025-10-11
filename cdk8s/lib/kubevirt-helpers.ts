@@ -249,7 +249,8 @@ export function buildCloudInitUserData(
   hostname: string,
   username: string,
   sshKeys?: string[],
-  password?: string
+  password?: string,
+  installDesktop: boolean = false
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -274,6 +275,101 @@ users:
     ${username}:${password}
     root:${password}
   expire: false`;
+  }
+
+  // Install desktop environment and xrdp for remote desktop access
+  if (installDesktop) {
+    userData += `
+runcmd:
+  # Configure NixOS with XFCE desktop and xrdp
+  - |
+    cat > /etc/nixos/configuration.nix <<'NIXEOF'
+    { config, pkgs, ... }:
+    {
+      imports = [ /etc/nixos/hardware-configuration.nix ];
+
+      # Enable networking
+      networking.hostName = "${hostname}";
+      networking.networkmanager.enable = true;
+
+      # Enable XFCE Desktop Environment
+      services.xserver = {
+        enable = true;
+        displayManager.lightdm.enable = true;
+        desktopManager.xfce.enable = true;
+      };
+
+      # Enable xrdp for Remote Desktop Protocol
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "xfce4-session";
+        openFirewall = true;
+      };
+
+      # Enable TigerVNC for VNC access
+      services.xserver.desktopManager.xfce.enableXfwm = true;
+
+      # Open VNC port
+      networking.firewall.allowedTCPPorts = [ 3389 5900 5901 ];
+
+      # Enable sound
+      hardware.pulseaudio.enable = true;
+
+      # Define user accounts
+      users.users.${username} = {
+        isNormalUser = true;
+        extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
+      };
+
+      # Allow unfree packages
+      nixpkgs.config.allowUnfree = true;
+
+      # System packages
+      environment.systemPackages = with pkgs; [
+        wget curl vim git firefox tigervnc
+      ];
+
+      system.stateVersion = "24.05";
+    }
+    NIXEOF
+  # Rebuild NixOS with new configuration
+  - nixos-rebuild switch
+  # Ensure xrdp is running
+  - systemctl enable xrdp
+  - systemctl start xrdp
+  # Set up VNC server for user
+  - su - ${username} -c "mkdir -p ~/.vnc"
+  - su - ${username} -c "echo '${password}' | vncpasswd -f > ~/.vnc/passwd"
+  - su - ${username} -c "chmod 600 ~/.vnc/passwd"
+  - |
+    cat > /home/${username}/.vnc/xstartup <<'VNCEOF'
+    #!/bin/sh
+    unset SESSION_MANAGER
+    unset DBUS_SESSION_BUS_ADDRESS
+    exec startxfce4
+    VNCEOF
+  - chmod +x /home/${username}/.vnc/xstartup
+  - chown ${username}:users /home/${username}/.vnc/xstartup
+  # Create VNC systemd service
+  - |
+    cat > /etc/systemd/system/vncserver@.service <<'SYSTEMDEOF'
+    [Unit]
+    Description=VNC Server for Display %i
+    After=network.target
+
+    [Service]
+    Type=forking
+    User=${username}
+    ExecStart=/run/current-system/sw/bin/vncserver :%i -geometry 1920x1080 -depth 24
+    ExecStop=/run/current-system/sw/bin/vncserver -kill :%i
+    Restart=on-failure
+
+    [Install]
+    WantedBy=multi-user.target
+    SYSTEMDEOF
+  - systemctl daemon-reload
+  - systemctl enable vncserver@1.service
+  - systemctl start vncserver@1.service`;
   }
 
   return userData;
