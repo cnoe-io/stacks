@@ -58,22 +58,20 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // KubeVirt Infrastructure (Virtual Machine Platform)
-  // NOTE: KubeVirt and CDI operators are already deployed via kubectl
-  // Managed separately from CDK8s due to CRD import complexity
-  /*
+  // KubeVirt Operator - deploys CRDs and operator
   {
-    name: 'kubevirt',
+    name: 'kubevirt-operator',
     namespace: 'kubevirt',
     chart: {
-      type: 'KubeVirtChart',
+      type: 'KubeVirtOperatorChart',
       props: {
-        useEmulation: true,  // Required for Kind cluster (no KVM access)
+        version: 'v1.3.1'
       }
     },
     argocd: {
-      syncWave: '-100',  // Deploy early with infrastructure
+      syncWave: '-110',  // Deploy very early with CRDs
       labels: {
-        'app.kubernetes.io/name': 'kubevirt',
+        'app.kubernetes.io/name': 'kubevirt-operator',
         'app.kubernetes.io/component': 'infrastructure',
         'app.kubernetes.io/part-of': 'platform'
       },
@@ -87,17 +85,48 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // CDI (Containerized Data Importer) for VM Disk Images
+  // KubeVirt CR - creates KubeVirt instance with software emulation
   {
-    name: 'cdi',
-    namespace: 'cdi',
+    name: 'kubevirt-cr',
+    namespace: 'kubevirt',
     chart: {
-      type: 'CdiChart'
+      type: 'KubeVirtCRChart',
+      props: {
+        useEmulation: true  // Required for Kind cluster (no KVM access)
+      }
     },
     argocd: {
-      syncWave: '-100',  // Deploy alongside KubeVirt
+      syncWave: '-90',  // After operator deploys CRDs
       labels: {
-        'app.kubernetes.io/name': 'cdi',
+        'app.kubernetes.io/name': 'kubevirt-cr',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
+
+  // CDI (Containerized Data Importer) for VM Disk Images
+  // CDI Operator - deploys CRDs and operator
+  {
+    name: 'cdi-operator',
+    namespace: 'cdi',
+    chart: {
+      type: 'CDIOperatorChart',
+      props: {
+        version: 'v1.59.0'
+      }
+    },
+    argocd: {
+      syncWave: '-110',  // Deploy alongside KubeVirt operator
+      labels: {
+        'app.kubernetes.io/name': 'cdi-operator',
         'app.kubernetes.io/component': 'infrastructure',
         'app.kubernetes.io/part-of': 'platform'
       },
@@ -110,7 +139,30 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     }
   },
-  */
+
+  // CDI CR - creates CDI instance
+  {
+    name: 'cdi-cr',
+    namespace: 'cdi',
+    chart: {
+      type: 'CDICRChart'
+    },
+    argocd: {
+      syncWave: '-90',  // After operator deploys CRDs
+      labels: {
+        'app.kubernetes.io/name': 'cdi-cr',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
 
   // NixOS Image Server (HTTP server for qcow2 images)
   {

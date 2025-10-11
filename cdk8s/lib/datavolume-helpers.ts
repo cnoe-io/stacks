@@ -5,10 +5,7 @@
  * to simplify VM disk image imports from HTTP, OCI registry, or PVC sources
  */
 
-import {
-  DataVolume,
-  DataVolumeSpecStorageResourcesRequests
-} from '../imports/cdi.kubevirt.io';
+import { ApiObject } from 'cdk8s';
 
 export interface DataVolumeBuilderProps {
   name: string;
@@ -69,7 +66,7 @@ export function buildDataVolume(
   scope: any,
   id: string,
   props: DataVolumeBuilderProps
-): DataVolume {
+): ApiObject {
   const {
     name,
     namespace,
@@ -123,8 +120,7 @@ export function buildDataVolume(
       accessModes,
       resources: {
         requests: {
-          // Use the CRD-generated wrapper class to properly serialize the storage value
-          storage: DataVolumeSpecStorageResourcesRequests.fromString(storageSize),
+          storage: storageSize,
         },
       },
       ...(storageClassName ? { storageClassName } : {}),
@@ -132,7 +128,9 @@ export function buildDataVolume(
     contentType,
   };
 
-  return new DataVolume(scope, id, {
+  return new ApiObject(scope, id, {
+    apiVersion: 'cdi.kubevirt.io/v1beta1',
+    kind: 'DataVolume',
     metadata: {
       name,
       namespace,
@@ -165,7 +163,7 @@ export function buildHttpDataVolume(
   namespace: string,
   imageUrl: string,
   storageSize?: string
-): DataVolume {
+): ApiObject {
   return buildDataVolume(scope, id, {
     name,
     namespace,
@@ -197,7 +195,7 @@ export function buildRegistryDataVolume(
   registryUrl: string,
   secretRef: string,
   storageSize?: string
-): DataVolume {
+): ApiObject {
   return buildDataVolume(scope, id, {
     name,
     namespace,
@@ -230,7 +228,7 @@ export function buildPvcCloneDataVolume(
   sourcePvcName: string,
   sourcePvcNamespace?: string,
   storageSize?: string
-): DataVolume {
+): ApiObject {
   return buildDataVolume(scope, id, {
     name,
     namespace,
@@ -259,7 +257,7 @@ export function buildBlankDataVolume(
   name: string,
   namespace: string,
   storageSize?: string
-): DataVolume {
+): ApiObject {
   return buildDataVolume(scope, id, {
     name,
     namespace,

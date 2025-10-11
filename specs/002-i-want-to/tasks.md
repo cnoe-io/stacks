@@ -5,6 +5,66 @@
 
 **Organization**: Tasks are grouped by user story (US1-US4 in priority order) to enable independent implementation and testing of each story.
 
+---
+
+## ⚠️ CRITICAL: Session Context and Required Fixes
+
+### Issue from Previous Session
+
+The previous session successfully created helper libraries (`cdk8s/lib/kubevirt-helpers.ts`, `cdk8s/lib/datavolume-helpers.ts`) using the `ApiObject` pattern to avoid CRD-specific type issues. However, **the cdk8s.yaml configuration file has invalid import references** that prevent cluster recreation:
+
+```
+Error: ENOENT: no such file or directory, open '/tmp/vm-crd.yaml'
+```
+
+### Root Cause
+
+The `cdk8s/cdk8s.yaml` file contains four invalid import lines:
+```yaml
+- /tmp/vm-crd.yaml  # ❌ File doesn't exist
+- /tmp/kubevirt-cr.yaml  # ❌ File doesn't exist
+- /tmp/dv-crd.yaml  # ❌ File doesn't exist
+- /tmp/cdi-cr.yaml  # ❌ File doesn't exist
+```
+
+These were likely added during experimentation but are not needed. The KubeVirt and CDI operator YAMLs already contain all necessary CRD definitions.
+
+### Required Fix (Task T001 - DO THIS FIRST)
+
+Edit `cdk8s/cdk8s.yaml` and **remove the four /tmp lines**. Keep only:
+```yaml
+# KubeVirt CRDs (v1.3.1) - ✅ CORRECT
+- https://github.com/kubevirt/kubevirt/releases/download/v1.3.1/kubevirt-operator.yaml
+
+# CDI CRDs (v1.59.0) - ✅ CORRECT
+- https://github.com/kubevirt/containerized-data-importer/releases/download/v1.59.0/cdi-operator.yaml
+```
+
+After fixing, run:
+```bash
+cd cdk8s
+npm run import  # Should complete without ENOENT errors
+npm run compile  # Should pass TypeScript compilation
+```
+
+### Helper Libraries Already Fixed
+
+✅ The previous session already fixed the helper libraries to use `ApiObject` instead of CRD-specific types:
+- `cdk8s/lib/kubevirt-helpers.ts` - Uses `ApiObject` with `apiVersion: 'kubevirt.io/v1'`
+- `cdk8s/lib/datavolume-helpers.ts` - Uses `ApiObject` with `apiVersion: 'cdi.kubevirt.io/v1beta1'`
+
+**DO NOT MODIFY** these files - they are working correctly.
+
+### Deployment Workflow After Fix
+
+1. Fix cdk8s.yaml (T001-T002)
+2. Run CRD import (T003)
+3. Verify compilation (T004)
+4. **Recreate cluster** using `cluster-recreate` command (this is necessary to apply fixes)
+5. Proceed with user story implementation
+
+---
+
 ## Format: `[ID] [P?] [Story] Description`
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US1, US2, US3, US4)
@@ -23,14 +83,18 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Project initialization and CDK8s environment setup
+**Purpose**: Project initialization and fix CRD import issues from previous session
 
-- [ ] T001 [P] Import KubeVirt CRDs to `cdk8s/imports/kubevirt.io.ts` via `npm run import` (add KubeVirt v1.3.1 operator.yaml URL to cdk8s.yaml)
-- [ ] T002 [P] Import CDI CRDs to `cdk8s/imports/cdi.kubevirt.io.ts` via `npm run import` (add CDI v1.59.0 operator.yaml URL to cdk8s.yaml)
-- [ ] T003 Verify TypeScript compilation passes after CRD imports: `npm run compile` in cdk8s/
-- [ ] T004 Create nixos-images directory: `mkdir -p ~/stacks/nixos-images` for storing built qcow2 images
+**⚠️ CRITICAL FIX REQUIRED**: The previous session left invalid CRD import references in cdk8s.yaml that cause "ENOENT: no such file or directory" errors
 
-**Checkpoint**: CRD imports complete, TypeScript types available for VirtualMachine and DataVolume
+- [ ] T001 **FIX CRD import error**: Remove invalid /tmp references from `cdk8s/cdk8s.yaml` (lines with /tmp/vm-crd.yaml, /tmp/kubevirt-cr.yaml, /tmp/dv-crd.yaml, /tmp/cdi-cr.yaml) - these files don't exist and break CRD imports
+- [ ] T002 Verify correct CRD import URLs in `cdk8s/cdk8s.yaml`: KubeVirt v1.3.1 operator.yaml and CDI v1.59.0 operator.yaml URLs only (no /tmp files)
+- [ ] T003 Run CRD import to regenerate TypeScript bindings: `cd cdk8s && npm run import` (should complete without ENOENT errors)
+- [ ] T004 Verify TypeScript compilation passes after CRD imports: `cd cdk8s && npm run compile`
+- [ ] T005 Create nixos-images directory: `mkdir -p ~/stacks/nixos-images` for storing built qcow2 images
+- [ ] T006 Verify nixos-images mount exists in `deployment/config/kind-config.yaml` (hostPath: /home/vpittamp/stacks/nixos-images, containerPath: /home/vpittamp/stacks/nixos-images, readOnly: true)
+
+**Checkpoint**: CRD import error fixed, imports complete, TypeScript types available for VirtualMachine and DataVolume
 
 ---
 
