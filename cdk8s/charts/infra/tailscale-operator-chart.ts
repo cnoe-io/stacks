@@ -173,7 +173,7 @@ export class TailscaleOperatorChart extends Chart {
         {
           apiGroups: ['apps'],
           resources: ['deployments', 'statefulsets'],
-          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete', 'deletecollection'],
         },
         // RBAC permissions (needed for creating ServiceAccounts and RoleBindings for proxies)
         {
