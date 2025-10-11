@@ -5,10 +5,7 @@
  * to simplify VM creation with common patterns (cloud-init, resources, volumes)
  */
 
-import {
-  VirtualMachine,
-  VirtualMachineSpecTemplateSpecDomainResourcesRequests,
-} from '../imports/kubevirt.io';
+import { ApiObject } from 'cdk8s';
 
 export interface VirtualMachineBuilderProps {
   name: string;
@@ -103,7 +100,7 @@ export function buildVirtualMachine(
   scope: any,
   id: string,
   props: VirtualMachineBuilderProps
-): VirtualMachine {
+): ApiObject {
   const {
     name,
     namespace,
@@ -194,9 +191,8 @@ export function buildVirtualMachine(
         domain: {
           resources: {
             requests: {
-              // Use the CRD-generated wrapper classes to properly serialize memory and cpu values
-              memory: VirtualMachineSpecTemplateSpecDomainResourcesRequests.fromString(memory),
-              cpu: VirtualMachineSpecTemplateSpecDomainResourcesRequests.fromString(`${cpuCores}`),
+              memory: memory,
+              cpu: `${cpuCores}`,
             },
           },
           devices: {
@@ -211,7 +207,9 @@ export function buildVirtualMachine(
     },
   };
 
-  return new VirtualMachine(scope, id, {
+  return new ApiObject(scope, id, {
+    apiVersion: 'kubevirt.io/v1',
+    kind: 'VirtualMachine',
     metadata: {
       name,
       namespace,
