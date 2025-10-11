@@ -150,6 +150,11 @@ export class NixOsVmChart extends Chart {
           interfaceType: 'masquerade',
           ports: [
             {
+              name: 'ssh',
+              protocol: 'TCP',
+              port: 22,  // SSH port
+            },
+            {
               name: 'rdp',
               protocol: 'TCP',
               port: 3389,  // RDP port
@@ -202,6 +207,12 @@ export class NixOsVmChart extends Chart {
           'kubevirt.io/vm': vmName,
         },
         ports: [
+          {
+            name: 'ssh',
+            protocol: 'TCP',
+            port: 22,
+            targetPort: k8s.IntOrString.fromNumber(22),
+          },
           {
             name: 'rdp',
             protocol: 'TCP',
