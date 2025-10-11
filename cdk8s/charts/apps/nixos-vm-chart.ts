@@ -106,6 +106,21 @@ export class NixOsVmChart extends Chart {
       true  // Install desktop environment and xrdp
     );
 
+    // Create Secret for cloud-init data (required when userData > 2048 bytes)
+    const cloudInitSecretName = `${vmName}-cloudinit`;
+    new k8s.KubeSecret(this, 'cloudinit-secret', {
+      metadata: {
+        name: cloudInitSecretName,
+        namespace: targetNamespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '5',  // Before VM creation
+        },
+      },
+      stringData: {
+        userdata: userData,
+      },
+    });
+
     // Build VirtualMachine with root disk and cloud-init disk
     const vm = buildVirtualMachine(this, 'vm', {
       name: vmName,
@@ -124,7 +139,7 @@ export class NixOsVmChart extends Chart {
         {
           name: 'cloudinitdisk',
           type: 'cloudInit',
-          cloudInitData: userData,
+          cloudInitSecretName,  // Use Secret reference instead of inline data
           bus: 'virtio',
         },
       ],

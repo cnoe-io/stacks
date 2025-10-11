@@ -45,8 +45,9 @@ export interface VolumeConfig {
   // For dataVolume or PVC volumes
   source?: string; // DataVolume or PVC name
 
-  // For cloudInit volumes
-  cloudInitData?: string;
+  // For cloudInit volumes (use Secret for data > 2048 bytes)
+  cloudInitData?: string;  // Inline cloud-init data (max 2048 bytes)
+  cloudInitSecretName?: string;  // Secret reference for larger cloud-init data
 
   // Disk bus type (virtio, sata, scsi)
   bus?: string;
@@ -144,10 +145,12 @@ export function buildVirtualMachine(
     } else if (vol.type === 'cloudInit') {
       return {
         name: vol.name,
-        cloudInitNoCloud: vol.cloudInitData
+        cloudInitNoCloud: vol.cloudInitSecretName
+          ? { userDataSecretRef: { name: vol.cloudInitSecretName } }
+          : vol.cloudInitData
           ? { userData: vol.cloudInitData }
           : cloudInit?.secretName
-          ? { secretRef: { name: cloudInit.secretName } }
+          ? { userDataSecretRef: { name: cloudInit.secretName } }
           : { userData: '' },
       };
     }
