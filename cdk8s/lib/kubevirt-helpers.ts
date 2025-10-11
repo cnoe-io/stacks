@@ -243,6 +243,7 @@ export function buildVirtualMachine(
  * @param hostname - VM hostname
  * @param username - Primary user name
  * @param sshKeys - SSH authorized keys (optional)
+ * @param password - Plain text password (will be set via chpasswd)
  */
 export function buildCloudInitUserData(
   hostname: string,
@@ -265,16 +266,14 @@ users:
     });
   }
 
+  // Use chpasswd to set passwords (works with plain text)
+  // This is the proper way to set passwords in cloud-init
   if (password) {
-    userData += `\n    passwd: ${password}`;
-    userData += '\n    lock_passwd: false';
-  }
-
-  // Also set root password if provided
-  if (password) {
-    userData += `\n  - name: root
-    passwd: ${password}
-    lock_passwd: false`;
+    userData += `\nchpasswd:
+  list: |
+    ${username}:${password}
+    root:${password}
+  expire: false`;
   }
 
   return userData;
