@@ -4,7 +4,9 @@
 	"name": "Docker in Docker",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "docker.io/vpittamp23/ubuntu-nix-backstage:v14",
-
+	"remoteEnv": {
+		"BROWSER": ""
+	},
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
 			"version": "latest",
@@ -15,20 +17,18 @@
 			"version": "latest"
 		}
 	},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [
-		8080,  // ArgoCD (via kubectl port-forward)
-		7007,  // Backstage (via kubectl port-forward)
-		3000,  // Gitea (via kubectl port-forward)
-		8081,  // Keycloak (via kubectl port-forward)
-		8082,  // Kargo (via kubectl port-forward)
-		8083,  // Headlamp (via kubectl port-forward)
-		8084,  // Kagent Dashboard (via kubectl port-forward)
-		8085,  // Argo Workflows (via kubectl port-forward)
-		8443   // Ingress-nginx (Kind cluster)
+		8080, // ArgoCD (via kubectl port-forward)
+		7007, // Backstage (via kubectl port-forward)
+		3000, // Gitea (via kubectl port-forward)
+		8081, // Keycloak (via kubectl port-forward)
+		8082, // Kargo (via kubectl port-forward)
+		8083, // Headlamp (via kubectl port-forward)
+		8084, // Kagent Dashboard (via kubectl port-forward)
+		8085, // Argo Workflows (via kubectl port-forward)
+		8443 // Ingress-nginx (Kind cluster)
 	],
-
 	"portsAttributes": {
 		"8080": {
 			"label": "ArgoCD",
@@ -67,14 +67,11 @@
 			"onAutoForward": "silent"
 		}
 	},
-
 	// Codespaces overrides the entrypoint, so we need to run initialization manually
 	// This calls the same script that would run via entrypoint in normal Docker environments
-	"postCreateCommand": "bash /home/code/entrypoint.sh echo 'Initialization complete'",
-
+	"postCreateCommand": "bash /home/code/entrypoint.sh echo 'Initialization complete'"
 	// Configure tool-specific properties.
 	// "customizations": {},
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
