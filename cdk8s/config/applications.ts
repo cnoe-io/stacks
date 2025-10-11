@@ -199,8 +199,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm-test.qcow2',
-        storageSize: '1Gi'  // Reduced for test image
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm-actual.qcow2',
+        storageSize: '40Gi'  // 21GB image + overhead for filesystem
       }
     },
     argocd: {
