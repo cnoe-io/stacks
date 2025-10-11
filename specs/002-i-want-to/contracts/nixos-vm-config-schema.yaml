@@ -1,0 +1,215 @@
+# NixOS VM Configuration Schema
+# Defines the structure for vm-minimal.nix configuration
+
+# This is a YAML representation of the Nix configuration structure
+# Actual implementation will be in Nix expression language (.nix files)
+
+schema_version: "1.0"
+description: "Minimal NixOS VM configuration for KubeVirt, based on /etc/nixos#base.nix"
+
+configuration:
+  # Base import (reuses existing configuration)
+  imports:
+    - path: ./base.nix
+      description: "Shared base config with SSH keys, users, core packages"
+      provides:
+        users:
+          - name: vpittamp
+            authorized_keys:
+              - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzhOKvFTkdSY8/WpeOxd7ZTII7I+klKhiIJxRdMfM5+ vpittamp@devcontainer"
+        packages:
+          - vim
+          - git
+          - curl
+          - jq
+          - tmux
+          - ripgrep
+          - fd
+          - htop
+        nix_settings:
+          experimental_features: ["nix-command", "flakes"]
+          trusted_users: ["root", "vpittamp", "@wheel"]
+        security:
+          sudo_wheel_needs_password: false
+
+    - path: "${modulesPath}/profiles/qemu-guest.nix"
+      description: "QEMU guest optimizations (virtio drivers, guest agent)"
+      provides:
+        kernel_modules: ["virtio_net", "virtio_pci", "virtio_blk", "virtio_scsi"]
+        services:
+          - qemu-guest-agent  # Basic support from nixpkgs profile
+
+  # VM-specific configuration
+  networking:
+    hostname:
+      type: string
+      required: true
+      default: "nixos-kubevirt-vm"
+      description: "VM hostname (can be overridden by cloud-init)"
+
+  services:
+    cloud-init:
+      enable:
+        type: boolean
+        required: true
+        default: true
+        description: "REQUIRED for KubeVirt integration (hostname, users, SSH keys, network)"
+
+    qemu-guest-agent:
+      enable:
+        type: boolean
+        required: false
+        default: true
+        description: "RECOMMENDED for VM metadata and better integration with KubeVirt"
+
+  boot:
+    loader:
+      grub:
+        enable:
+          type: boolean
+          required: true
+          default: true
+        device:
+          type: string
+          required: true
+          default: "/dev/vda"
+          description: "Virtio disk device in KubeVirt VMs"
+
+  environment:
+    systemPackages:
+      type: list
+      required: false
+      default: []
+      description: "Additional packages beyond base.nix (e.g., kubectl, docker)"
+      example:
+        - kubectl
+        - docker
+        - k9s
+
+  system:
+    stateVersion:
+      type: string
+      required: true
+      default: "24.11"
+      description: "NixOS state version (must match initial deployment)"
+
+# Validation Rules
+validation:
+  required_services:
+    - cloud-init  # Must be enabled for KubeVirt
+  recommended_services:
+    - qemu-guest-agent  # Should be enabled for VM integration
+  prohibited_services:
+    - displayManager  # No GUI in minimal VM
+    - xserver  # No X11 in minimal VM
+    - pipewire  # No audio in minimal VM
+    - pulseaudio  # No audio in minimal VM
+
+# Build Output Specification
+build:
+  format: qcow2
+  expected_size_range: "1GB - 2GB"
+  compression: false
+  output_filename_pattern: "nixos-{hostname}-{date}.qcow2"
+
+# Example Usage
+example_configuration:
+  # Minimal configuration in /etc/nixos/configurations/vm-minimal.nix
+  nix_code: |
+    { config, pkgs, modulesPath, ... }:
+    {
+      imports = [
+        ./base.nix
+        (modulesPath + "/profiles/qemu-guest.nix")
+      ];
+
+      networking.hostName = "nixos-kubevirt-vm";
+
+      services.cloud-init.enable = true;
+      services.qemu-guest-agent.enable = true;
+
+      boot.loader.grub = {
+        enable = true;
+        device = "/dev/vda";
+      };
+
+      system.stateVersion = "24.11";
+    }
+
+  # Build command
+  build_command: |
+    nix run github:nix-community/nixos-generators -- \
+      --format qcow \
+      --configuration /etc/nixos/configurations/vm-minimal.nix \
+      --out-link /home/vpittamp/stacks/nixos-images/kubevirt-vm.qcow2
+
+# Cloud-Init Integration
+cloud_init:
+  data_source: "NoCloud"
+  supported_modules:
+    - hostname: "Set VM hostname"
+    - users: "Create users and configure SSH keys"
+    - ssh_authorized_keys: "Inject SSH public keys"
+    - runcmd: "Run arbitrary commands on first boot"
+    - write_files: "Write configuration files"
+    - package_update: "Update package cache"
+    - package_upgrade: "Upgrade all packages"
+
+  example_user_data: |
+    #cloud-config
+    hostname: custom-vm-name
+    users:
+      - name: developer
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        ssh_authorized_keys:
+          - ssh-ed25519 AAAA... user@host
+    packages:
+      - kubectl
+      - docker
+    runcmd:
+      - systemctl enable docker
+      - usermod -aG docker developer
+
+# KubeVirt Integration
+kubevirt_integration:
+  disk_device: "/dev/vda"
+  network_interface: "eth0"
+  cloud_init_volume: "cloudinitdisk"
+  root_disk_volume: "rootdisk"
+
+  required_kernel_modules:
+    - virtio_net
+    - virtio_blk
+    - virtio_scsi
+    - virtio_pci
+
+  recommended_features:
+    - qemu_guest_agent: "VM metadata and resource reporting"
+    - dhcp_client: "Network auto-configuration"
+    - ssh_server: "Remote access"
+
+# Testing Checklist
+testing:
+  - name: "Image builds successfully"
+    command: "nix run github:nix-community/nixos-generators -- --format qcow --configuration /etc/nixos/configurations/vm-minimal.nix"
+    expected: "qcow2 file created with 1-2GB size"
+
+  - name: "Boot in QEMU (local test)"
+    command: "qemu-system-x86_64 -m 2048 -smp 2 -drive file=kubevirt-vm.qcow2,format=qcow2 -enable-kvm -nographic"
+    expected: "VM boots to login prompt"
+
+  - name: "SSH access works"
+    command: "ssh vpittamp@<vm-ip>"
+    expected: "SSH login successful with key from base.nix"
+
+  - name: "Cloud-init executes"
+    command: "virtctl console nixos-vm && cloud-init status"
+    expected: "cloud-init status: done"
+
+  - name: "QEMU guest agent running"
+    command: "systemctl status qemu-guest-agent"
+    expected: "active (running)"
+
+  - name: "Nix flakes work"
+    command: "nix flake show /etc/nixos"
+    expected: "Flake outputs displayed"

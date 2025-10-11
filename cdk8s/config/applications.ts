@@ -56,6 +56,146 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
     }
   },
+
+  // KubeVirt Infrastructure (Virtual Machine Platform)
+  // NOTE: KubeVirt and CDI operators are already deployed via kubectl
+  // Managed separately from CDK8s due to CRD import complexity
+  /*
+  {
+    name: 'kubevirt',
+    namespace: 'kubevirt',
+    chart: {
+      type: 'KubeVirtChart',
+      props: {
+        useEmulation: true,  // Required for Kind cluster (no KVM access)
+      }
+    },
+    argocd: {
+      syncWave: '-100',  // Deploy early with infrastructure
+      labels: {
+        'app.kubernetes.io/name': 'kubevirt',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // CDI (Containerized Data Importer) for VM Disk Images
+  {
+    name: 'cdi',
+    namespace: 'cdi',
+    chart: {
+      type: 'CdiChart'
+    },
+    argocd: {
+      syncWave: '-100',  // Deploy alongside KubeVirt
+      labels: {
+        'app.kubernetes.io/name': 'cdi',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+  */
+
+  // NixOS Image Server (HTTP server for qcow2 images)
+  {
+    name: 'nixos-image-server',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsImageServerChart',
+      props: {
+        hostPath: '/home/vpittamp/stacks/nixos-images'
+      }
+    },
+    argocd: {
+      syncWave: '-50',  // Before DataVolumes
+      labels: {
+        'app.kubernetes.io/name': 'nixos-image-server',
+        'app.kubernetes.io/component': 'image-server',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // NixOS DataVolume (Import NixOS image into PVC)
+  {
+    name: 'nixos-dev-datavolume',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsDataVolumeChart',
+      props: {
+        dataVolumeName: 'nixos-dev-datavolume',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm.qcow2',
+        storageSize: '20Gi'
+      }
+    },
+    argocd: {
+      syncWave: '0',  // After image server
+      labels: {
+        'app.kubernetes.io/name': 'nixos-dev-datavolume',
+        'app.kubernetes.io/component': 'storage',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // NixOS Virtual Machine
+  {
+    name: 'nixos-dev-vm',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsVmChart',
+      props: {
+        vmName: 'nixos-dev-vm',
+        dataVolumeName: 'nixos-dev-datavolume',
+        cpuCores: 4,  // Increased from 2 for GitOps test
+        memory: '8Gi',  // Increased from 4Gi for GitOps test
+        enableTailscale: false  // Use NodePort instead of LoadBalancer
+      }
+    },
+    argocd: {
+      syncWave: '10',  // After DataVolume
+      labels: {
+        'app.kubernetes.io/name': 'nixos-dev-vm',
+        'app.kubernetes.io/component': 'virtual-machine',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
   
   {
     name: 'bootstrap-secrets',

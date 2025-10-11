@@ -30,6 +30,11 @@ scripts/certificates/system/
 cdk8s/dist/
 cdk8s/imports/
 
+# NixOS VM images (large binary files, built from Nix configs)
+nixos-images/*.qcow2
+nixos-images/*.iso
+nixos-images/*.img
+
 # Deployment runtime-generated config
 deployment/config/
 
