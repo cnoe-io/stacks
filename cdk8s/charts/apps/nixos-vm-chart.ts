@@ -95,13 +95,16 @@ export class NixOsVmChart extends Chart {
       enableGraphics = true,
     } = props;
 
+    // Load SSH public key from environment variable (populated from 1Password)
+    // Usage: export SSH_PUBLIC_KEY=$(op read "op://Employee/k8s_ed_test/public key")
+    const sshPublicKey = process.env.SSH_PUBLIC_KEY ||
+      'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzhOKvFTkdSY8/WpeOxd7ZTII7I+klKhiIJxRdMfM5+ vpittamp@devcontainer';
+
     // Generate default cloud-init if not provided
     const userData = cloudInitUserData || buildCloudInitUserData(
       vmName,
       'vpittamp',
-      [
-        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzhOKvFTkdSY8/WpeOxd7ZTII7I+klKhiIJxRdMfM5+ vpittamp@devcontainer'
-      ],
+      [sshPublicKey],
       'nixos123',  // Default password for console access
       true  // Install desktop environment and xrdp
     );
