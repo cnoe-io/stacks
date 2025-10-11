@@ -164,14 +164,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // NixOS Image Server (HTTP server for qcow2 images)
+  // NixOS Image Server (HTTP server for qcow2 images from Docker Hub)
   {
     name: 'nixos-image-server',
     namespace: 'default',
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        hostPath: '/home/vpittamp/stacks/nixos-images'
+        image: 'vpittamp23/nixos-kubevirt-minimal:latest'
       }
     },
     argocd: {
@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm-actual.qcow2',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-minimal.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },

@@ -13,10 +13,10 @@ import * as k8s from '../../imports/k8s';
 
 export interface NixOsImageServerChartProps extends ChartProps {
   /**
-   * Host path containing qcow2 images
-   * @default "/home/vpittamp/stacks/nixos-images"
+   * Docker image containing qcow2 files
+   * @default "vpittamp23/nixos-kubevirt-minimal:latest"
    */
-  hostPath?: string;
+  image?: string;
 
   /**
    * Number of replicas
@@ -30,14 +30,14 @@ export class NixOsImageServerChart extends Chart {
     super(scope, id, props);
 
     const {
-      hostPath = '/home/vpittamp/stacks/nixos-images',
+      image = 'vpittamp23/nixos-kubevirt-minimal:latest',
       replicas = 1,
     } = props;
 
     const namespace = 'default';
     const name = 'nixos-image-server';
 
-    // Deployment with nginx serving static files
+    // Deployment using public Docker image containing nginx + qcow2
     new k8s.KubeDeployment(this, 'deployment', {
       metadata: {
         name,
@@ -68,38 +68,22 @@ export class NixOsImageServerChart extends Chart {
             containers: [
               {
                 name: 'nginx',
-                image: 'nginx:alpine',
+                image,  // Uses public Docker image with qcow2 files
                 ports: [
                   {
                     containerPort: 80,
                     name: 'http',
                   },
                 ],
-                volumeMounts: [
-                  {
-                    name: 'images',
-                    mountPath: '/usr/share/nginx/html',
-                    readOnly: true,
-                  },
-                ],
                 resources: {
                   requests: {
-                    memory: k8s.Quantity.fromString('64Mi'),
+                    memory: k8s.Quantity.fromString('128Mi'),
                     cpu: k8s.Quantity.fromString('100m'),
                   },
                   limits: {
-                    memory: k8s.Quantity.fromString('128Mi'),
+                    memory: k8s.Quantity.fromString('2Gi'),  // Image is ~1.7GB
                     cpu: k8s.Quantity.fromString('200m'),
                   },
-                },
-              },
-            ],
-            volumes: [
-              {
-                name: 'images',
-                hostPath: {
-                  path: hostPath,
-                  type: 'Directory',
                 },
               },
             ],
