@@ -230,7 +230,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         dataVolumeName: 'nixos-dev-datavolume',
         cpuCores: 4,  // Increased from 2 for GitOps test
         memory: '8Gi',  // Increased from 4Gi for GitOps test
-        enableTailscale: false  // Use NodePort instead of LoadBalancer
+        enableTailscale: true,  // Enable Tailscale LoadBalancer
+        tailscaleHostname: 'nixos-dev-vm-rdp'  // Custom Tailscale hostname
       }
     },
     argocd: {
