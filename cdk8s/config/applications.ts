@@ -811,77 +811,198 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // kagent Platform (AI Agent Infrastructure)
+  // TEMPORARILY DISABLED: kagent applications have TypeScript errors
+  // TODO: Re-enable after fixing kagent import errors
+
+  // // kagent Platform (AI Agent Infrastructure)
+  // {
+  //   name: 'kagent',
+  //   namespace: 'kagent',
+  //   chart: {
+  //     type: 'KagentChart'
+  //   },
+  //   dependencies: {
+  //     kagentCrds: {
+  //       type: 'KagentCrdsChart'
+  //     }
+  //   },
+  //   argocd: {
+  //     syncWave: '-110',  // Deploy after CRDs
+  //     labels: {
+  //       'app.kubernetes.io/component': 'platform',
+  //       'app.kubernetes.io/part-of': 'kagent',
+  //       'app.kubernetes.io/name': 'kagent'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       },
+  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for RemoteMCPServer CR until CRD is installed
+  //     }
+  //   }
+  // },
+  //
+  // // kmcp Controller (MCP Server Manager)
+  // {
+  //   name: 'kmcp',
+  //   namespace: 'kagent',
+  //   chart: {
+  //     type: 'KmcpChart'
+  //   },
+  //   dependencies: {
+  //     kagentCrds: {
+  //       type: 'KagentCrdsChart'
+  //     }
+  //   },
+  //   argocd: {
+  //     syncWave: '-110',  // Deploy alongside kagent, after CRDs
+  //     labels: {
+  //       'app.kubernetes.io/component': 'platform',
+  //       'app.kubernetes.io/part-of': 'kagent',
+  //       'app.kubernetes.io/name': 'kmcp'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       },
+  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for MCPServer CRs until CRD is installed
+  //     }
+  //   }
+  // },
+  //
+  // // kagent Secrets (LLM Provider API Keys)
+  // {
+  //   name: 'kagent-secrets',
+  //   namespace: 'kagent',
+  //   chart: {
+  //     type: 'KagentSecretsChart'
+  //   },
+  //   argocd: {
+  //     syncWave: '-70',  // After workload identity, before agents
+  //     labels: {
+  //       'app.kubernetes.io/component': 'secrets',
+  //       'app.kubernetes.io/part-of': 'kagent',
+  //       'app.kubernetes.io/name': 'kagent-secrets'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       }
+  //     }
+  //   }
+  // },
+  //
+  // // kagent Example Agents
+  // {
+  //   name: 'kagent-agents',
+  //   namespace: 'kagent',
+  //   chart: {
+  //     type: 'KagentExampleAgentsChart'
+  //   },
+  //   dependencies: {
+  //     kagentSecrets: {
+  //       type: 'KagentSecretsChart'
+  //     }
+  //   },
+  //   argocd: {
+  //     syncWave: '50',  // After platform is ready
+  //     labels: {
+  //       'app.kubernetes.io/component': 'agents',
+  //       'app.kubernetes.io/part-of': 'kagent',
+  //       'app.kubernetes.io/name': 'kagent-agents'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       },
+  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for Agent/ModelConfig/MCPServer CRs
+  //     },
+  //     // Ignore status and spec fields updated by controllers
+  //     // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
+  //     ignoreDifferences: [
+  //       { group: 'kagent.dev', kind: 'Agent', jsonPointers: ['/status', '/spec'] },
+  //       { group: 'kagent.dev', kind: 'ModelConfig', jsonPointers: ['/status'] },
+  //       { group: 'kagent.dev', kind: 'MCPServer', jsonPointers: ['/status'] }
+  //     ]
+  //   }
+  // },
+
+  // Nix Cache Namespace
   {
-    name: 'kagent',
-    namespace: 'kagent',
+    name: 'nix-cache-namespace',
+    namespace: 'nix-cache',
     chart: {
-      type: 'KagentChart'
-    },
-    dependencies: {
-      kagentCrds: {
-        type: 'KagentCrdsChart'
+      type: 'NixCacheNamespaceChart',
+      props: {
+        namespaceName: 'nix-cache'
       }
     },
     argocd: {
-      syncWave: '-110',  // Deploy after CRDs
+      syncWave: '-110',  // Deploy namespace before MinIO
       labels: {
-        'app.kubernetes.io/component': 'platform',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kagent'
+        'app.kubernetes.io/name': 'nix-cache',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'nix-cache'
       },
       syncPolicy: {
         automated: {
           prune: true,
           selfHeal: true
         },
-        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for RemoteMCPServer CR until CRD is installed
+        syncOptions: ['CreateNamespace=true']
       }
     }
   },
 
-  // kmcp Controller (MCP Server Manager)
+  // MinIO Object Storage (S3-compatible storage for Nix binary cache)
   {
-    name: 'kmcp',
-    namespace: 'kagent',
+    name: 'minio',
+    namespace: 'nix-cache',
     chart: {
-      type: 'KmcpChart'
-    },
-    dependencies: {
-      kagentCrds: {
-        type: 'KagentCrdsChart'
+      type: 'MinioChart',
+      props: {
+        storageSize: '100Gi',
+        rootUser: 'admin'
       }
     },
     argocd: {
-      syncWave: '-110',  // Deploy alongside kagent, after CRDs
+      syncWave: '-100',  // Deploy before Attic
       labels: {
-        'app.kubernetes.io/component': 'platform',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kmcp'
+        'app.kubernetes.io/name': 'minio',
+        'app.kubernetes.io/component': 'object-storage',
+        'app.kubernetes.io/part-of': 'nix-cache'
       },
       syncPolicy: {
         automated: {
           prune: true,
           selfHeal: true
         },
-        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for MCPServer CRs until CRD is installed
+        syncOptions: ['CreateNamespace=true']
       }
     }
   },
 
-  // kagent Secrets (LLM Provider API Keys)
+  // Attic Nix Binary Cache Server
   {
-    name: 'kagent-secrets',
-    namespace: 'kagent',
+    name: 'attic',
+    namespace: 'nix-cache',
     chart: {
-      type: 'KagentSecretsChart'
+      type: 'AtticChart',
+      props: {
+        minioEndpoint: 'http://minio.nix-cache.svc.cluster.local:9000',
+        bucketName: 'attic-cache'
+      }
     },
     argocd: {
-      syncWave: '-70',  // After workload identity, before agents
+      syncWave: '-90',  // Deploy after MinIO
       labels: {
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kagent-secrets'
+        'app.kubernetes.io/name': 'attic',
+        'app.kubernetes.io/component': 'nix-cache-server',
+        'app.kubernetes.io/part-of': 'nix-cache'
       },
       syncPolicy: {
         automated: {
@@ -889,42 +1010,6 @@ export const applicationConfigs: ApplicationConfig[] = [
           selfHeal: true
         }
       }
-    }
-  },
-
-  // kagent Example Agents
-  {
-    name: 'kagent-agents',
-    namespace: 'kagent',
-    chart: {
-      type: 'KagentExampleAgentsChart'
-    },
-    dependencies: {
-      kagentSecrets: {
-        type: 'KagentSecretsChart'
-      }
-    },
-    argocd: {
-      syncWave: '50',  // After platform is ready
-      labels: {
-        'app.kubernetes.io/component': 'agents',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kagent-agents'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for Agent/ModelConfig/MCPServer CRs
-      },
-      // Ignore status and spec fields updated by controllers
-      // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
-      ignoreDifferences: [
-        { group: 'kagent.dev', kind: 'Agent', jsonPointers: ['/status', '/spec'] },
-        { group: 'kagent.dev', kind: 'ModelConfig', jsonPointers: ['/status'] },
-        { group: 'kagent.dev', kind: 'MCPServer', jsonPointers: ['/status'] }
-      ]
     }
   }
 ];
