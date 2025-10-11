@@ -5,7 +5,10 @@
  * to simplify VM disk image imports from HTTP, OCI registry, or PVC sources
  */
 
-import { DataVolume } from '../imports/cdi.kubevirt.io';
+import {
+  DataVolume,
+  DataVolumeSpecStorageResourcesRequests
+} from '../imports/cdi.kubevirt.io';
 
 export interface DataVolumeBuilderProps {
   name: string;
@@ -120,7 +123,8 @@ export function buildDataVolume(
       accessModes,
       resources: {
         requests: {
-          storage: storageSize,
+          // Use the CRD-generated wrapper class to properly serialize the storage value
+          storage: DataVolumeSpecStorageResourcesRequests.fromString(storageSize),
         },
       },
       ...(storageClassName ? { storageClassName } : {}),

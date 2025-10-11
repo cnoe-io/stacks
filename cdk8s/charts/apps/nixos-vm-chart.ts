@@ -68,7 +68,8 @@ export class NixOsVmChart extends Chart {
       'vpittamp',
       [
         'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzhOKvFTkdSY8/WpeOxd7ZTII7I+klKhiIJxRdMfM5+ vpittamp@devcontainer'
-      ]
+      ],
+      'nixos123'  // Default password for console access
     );
 
     // Build VirtualMachine with root disk and cloud-init disk

@@ -7,6 +7,7 @@
 
 import {
   VirtualMachine,
+  VirtualMachineSpecTemplateSpecDomainResourcesRequests,
 } from '../imports/kubevirt.io';
 
 export interface VirtualMachineBuilderProps {
@@ -172,8 +173,9 @@ export function buildVirtualMachine(
         domain: {
           resources: {
             requests: {
-              memory,
-              cpu: `${cpuCores}`,
+              // Use the CRD-generated wrapper classes to properly serialize memory and cpu values
+              memory: VirtualMachineSpecTemplateSpecDomainResourcesRequests.fromString(memory),
+              cpu: VirtualMachineSpecTemplateSpecDomainResourcesRequests.fromString(`${cpuCores}`),
             },
           },
           devices: {
@@ -212,22 +214,37 @@ export function buildVirtualMachine(
 export function buildCloudInitUserData(
   hostname: string,
   username: string,
-  sshKeys?: string[]
+  sshKeys?: string[],
+  password?: string
 ): string {
-  const userData: any = {
-    hostname,
-    users: [
-      {
-        name: username,
-        sudo: 'ALL=(ALL) NOPASSWD:ALL',
-        ...(sshKeys && sshKeys.length > 0
-          ? { ssh_authorized_keys: sshKeys }
-          : {}),
-      },
-    ],
-  };
+  // Generate proper YAML format, not JSON
+  let userData = `#cloud-config
+hostname: ${hostname}
+users:
+  - name: ${username}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash`;
 
-  return `#cloud-config\n${JSON.stringify(userData, null, 2)}`;
+  if (sshKeys && sshKeys.length > 0) {
+    userData += '\n    ssh_authorized_keys:';
+    sshKeys.forEach(key => {
+      userData += `\n      - ${key}`;
+    });
+  }
+
+  if (password) {
+    userData += `\n    passwd: ${password}`;
+    userData += '\n    lock_passwd: false';
+  }
+
+  // Also set root password if provided
+  if (password) {
+    userData += `\n  - name: root
+    passwd: ${password}
+    lock_passwd: false`;
+  }
+
+  return userData;
 }
 
 /**
