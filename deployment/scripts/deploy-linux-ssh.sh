@@ -143,6 +143,10 @@ nodes:
     - hostPath: ${KEYS_DIR}
       containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
+    # Mount NixOS images directory for KubeVirt VMs
+    - hostPath: ${STACKS_DIR}/nixos-images
+      containerPath: ${STACKS_DIR}/nixos-images
+      readOnly: true
 
   kubeadmConfigPatches:
   - |
