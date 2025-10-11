@@ -146,11 +146,11 @@ export function buildVirtualMachine(
       return {
         name: vol.name,
         cloudInitNoCloud: vol.cloudInitSecretName
-          ? { userDataSecretRef: { name: vol.cloudInitSecretName } }
+          ? { secretRef: { name: vol.cloudInitSecretName } }
           : vol.cloudInitData
           ? { userData: vol.cloudInitData }
           : cloudInit?.secretName
-          ? { userDataSecretRef: { name: cloudInit.secretName } }
+          ? { secretRef: { name: cloudInit.secretName } }
           : { userData: '' },
       };
     }
