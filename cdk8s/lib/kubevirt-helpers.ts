@@ -7,7 +7,6 @@
 
 import {
   VirtualMachine,
-  VirtualMachineSpec,
 } from '../imports/kubevirt.io';
 
 export interface VirtualMachineBuilderProps {
@@ -159,7 +158,7 @@ export function buildVirtualMachine(
       : {}),
   }));
 
-  const spec: VirtualMachineSpec = {
+  const spec: any = {
     runStrategy,
     template: {
       metadata: {

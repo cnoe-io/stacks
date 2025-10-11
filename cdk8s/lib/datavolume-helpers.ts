@@ -5,7 +5,7 @@
  * to simplify VM disk image imports from HTTP, OCI registry, or PVC sources
  */
 
-import { DataVolume, DataVolumeSpec } from '../imports/cdi.kubevirt.io';
+import { DataVolume } from '../imports/cdi.kubevirt.io';
 
 export interface DataVolumeBuilderProps {
   name: string;
@@ -114,7 +114,7 @@ export function buildDataVolume(
       throw new Error(`Invalid DataVolume source type: ${JSON.stringify(source)}`);
   }
 
-  const spec: DataVolumeSpec = {
+  const spec: any = {
     source: sourceSpec,
     pvc: {
       accessModes,
