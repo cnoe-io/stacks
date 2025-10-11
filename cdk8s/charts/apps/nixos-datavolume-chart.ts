@@ -26,7 +26,7 @@ export interface NixOsDataVolumeChartProps extends ChartProps {
 
   /**
    * PVC storage size (should be 2x image size for overhead)
-   * @default "20Gi"
+   * @default "50Gi"
    */
   storageSize?: string;
 
@@ -44,7 +44,7 @@ export class NixOsDataVolumeChart extends Chart {
     const {
       dataVolumeName = 'nixos-dev-datavolume',
       imageUrl = 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm.qcow2',
-      storageSize = '20Gi',
+      storageSize = '50Gi',
       targetNamespace = 'default',
     } = props;
 
