@@ -25,14 +25,22 @@
 ✅ cdi-operator           # Sync wave -110
 ✅ cdi-cr                 # Sync wave -90
 ✅ nixos-image-server     # Sync wave -50
-✅ nixos-dev-datavolume   # Sync wave 0 (100MB test image imported)
-✅ nixos-dev-vm           # Sync wave 10 (VM Running, runStrategy: Always)
+✅ nixos-dev-datavolume   # Sync wave 0 (21GB production image imported - 100% complete)
+✅ nixos-dev-vm           # Sync wave 10 (VM Running, runStrategy: Always, 4 CPU/8Gi RAM)
 ```
+
+**Production Configuration (Updated 2025-10-11):**
+- **Image**: `kubevirt-vm-actual.qcow2` (21GB NixOS production system)
+- **Storage**: 40Gi PVC (21GB image + filesystem overhead)
+- **VM Resources**: 4 CPU cores, 8Gi memory
+- **Graphics**: VNC enabled (`autoattachGraphicsDevice: true`)
+- **Network**: RDP service exposed on NodePort 32263
 
 **VM Access:**
 - VirtualMachine: `nixos-dev-vm` (Running)
-- VirtualMachineInstance IP: `10.244.0.67`
-- RDP Service: `nixos-dev-vm-rdp` (LoadBalancer with Tailscale)
+- VNC Access: `virtctl vnc nixos-dev-vm -n default --proxy-only --port 5901`
+- RDP Service: `nixos-dev-vm-rdp` (NodePort 32263)
+- Console: `virtctl console nixos-dev-vm -n default`
 
 ## ⚠️ CRITICAL LESSONS LEARNED
 
@@ -71,7 +79,51 @@ error when patching: admission webhook "datavolume-validate.cdi.kubevirt.io" den
 
 **Best Practice**: Test with small images (100MB) before using production images (21GB) to iterate quickly.
 
-### 3. Symlinks Break Inside Containers
+### 3. Production Image Configuration
+
+**Image Size Considerations**:
+- Test image: `kubevirt-vm-test.qcow2` (100MB created via `truncate -s 100M`)
+- Production image: `kubevirt-vm-actual.qcow2` (21GB real NixOS system)
+
+**Storage Sizing**:
+- Formula: PVC size = Image size × 2 (for filesystem overhead and expansion)
+- 21GB image requires 40Gi PVC minimum
+- DataVolume import validates storage capacity before starting
+
+**Import Performance**:
+- Local HTTP server (nixos-image-server) enables fast imports
+- 21GB image imported in <60 seconds (Kind cluster with local mount)
+- Progress tracked via `kubectl get dv <name> -n <namespace> -w`
+
+**Configuration Updates** (from `cdk8s/config/applications.ts`):
+```typescript
+// DataVolume configuration
+{
+  name: 'nixos-dev-datavolume',
+  chart: {
+    type: 'NixOsDataVolumeChart',
+    props: {
+      imageUrl: 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm-actual.qcow2',
+      storageSize: '40Gi'  // 21GB image + overhead
+    }
+  }
+}
+
+// VM resource allocation
+{
+  name: 'nixos-dev-vm',
+  chart: {
+    type: 'NixOsVmChart',
+    props: {
+      cpuCores: 4,      // Increased for production workload
+      memory: '8Gi',    // Increased for production workload
+      enableGraphics: true  // Enables VNC access
+    }
+  }
+}
+```
+
+### 4. Symlinks Break Inside Containers
 
 **Issue**: Symlinks pointing to host-only paths (Nix store: `/nix/store/...`) don't work inside containers.
 
@@ -84,7 +136,7 @@ error when patching: admission webhook "datavolume-validate.cdi.kubevirt.io" den
 - Or use test images: `kubevirt-vm-test.qcow2` (100MB created via `truncate -s 100M`)
 - Never reference symlinks in DataVolume imageUrl configuration
 
-### 4. Chart Implementation Pattern
+### 5. Chart Implementation Pattern
 
 **Issue**: Importing KubeVirt/CDI CRDs as TypeScript types causes compilation issues due to CRD complexity.
 
@@ -107,7 +159,78 @@ new ApiObject(this, 'vm', {
 - ✅ `cdk8s/charts/infra/cdi-cr-chart.ts` - CDI CR
 - ✅ `cdk8s/charts/apps/nixos-vm-chart.ts` - VM definitions
 
-### 5. Sync Wave Architecture (VERIFIED)
+### 6. VM Boot Order Configuration (CRITICAL)
+
+**Issue**: VMs showed "Boot failed. Not a bootable disk" error even with valid qcow2 images.
+
+**Root Cause**: KubeVirt VMs require explicit `bootOrder` property on disks to specify boot device. Without it, the BIOS doesn't know which disk to boot from.
+
+**Solution**: Add `bootOrder: 1` to the root disk in VirtualMachine spec:
+```typescript
+// In cdk8s/lib/kubevirt-helpers.ts
+const disks = volumes.map((vol, index) => ({
+  name: vol.name,
+  disk: { bus: vol.bus || 'virtio' },
+  // Set boot order for the first non-cloudInit volume
+  ...(vol.type !== 'cloudInit' && index === 0 ? { bootOrder: 1 } : {}),
+}));
+```
+
+**Testing**: Verify boot order in VM spec:
+```bash
+kubectl get vm <vm-name> -n <namespace> -o yaml | grep -A 5 "bootOrder"
+```
+
+### 7. NixOS Image Building with nixos-generators
+
+**Issue**: Building NixOS VM images manually is complex and requires understanding of NixOS internals.
+
+**Solution**: Use `nixos-generators` for declarative image building:
+```bash
+# Install nixos-generators
+nix profile install github:nix-community/nixos-generators
+
+# Build qcow2 image from any NixOS configuration
+nixos-generate -f qcow -c configurations/vm-hetzner.nix --disk-size 30720
+
+# The output is a path to the qcow2 image in /nix/store
+```
+
+**Key Benefits**:
+- Single command to build images in multiple formats (qcow, raw, iso, vmware, etc.)
+- Automatically includes all NixOS modules and home-manager configurations
+- Handles proper disk partitioning and boot loader setup
+- Reproducible builds via Nix
+- No need for manual `config.system.build.qcow2` configuration
+
+**Image Formats Supported**: qcow, qcow-efi, raw, raw-efi, iso, vmware, virtualbox, kubevirt, and more
+
+**Home-Manager Integration**: To ensure home-manager is included, add the system to flake.nix:
+```nix
+# In flake.nix nixosConfigurations section
+vm-hetzner = mkSystem {
+  hostname = "nixos-kubevirt-vm";
+  system = "x86_64-linux";
+  modules = [ ./configurations/vm-hetzner.nix ];
+};
+```
+
+The `mkSystem` helper automatically includes home-manager integration for the specified user.
+
+**IMPORTANT LIMITATION**: Building large VM images (>20GB) with nixos-generators can fail due to Nix build sandbox space constraints:
+```
+qemu-img: error while writing at byte 20450508800: No space left on device
+```
+
+**Workarounds**:
+1. **Use smaller disk sizes** (15-20GB) instead of 30GB
+2. **Build on system with more disk space** or configure `TMPDIR` to use different filesystem
+3. **Use existing working images** (21GB `kubevirt-vm-actual.qcow2` works well)
+4. **Manual activation approach**: Use base image + cloud-init for home-manager activation on first boot
+
+**Recommended Approach**: Use the existing 21GB production image which includes the full NixOS system configuration. Home-manager can be activated after VM boot if needed.
+
+### 8. Sync Wave Architecture (VERIFIED)
 
 **Critical Ordering** (prevents race conditions):
 ```

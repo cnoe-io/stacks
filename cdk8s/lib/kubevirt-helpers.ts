@@ -120,11 +120,13 @@ export function buildVirtualMachine(
   } = props;
 
   // Build disks array from volumes
-  const disks = volumes.map(vol => ({
+  const disks = volumes.map((vol, index) => ({
     name: vol.name,
     disk: {
       bus: vol.bus || 'virtio',
     },
+    // Set boot order for the first non-cloudInit volume
+    ...(vol.type !== 'cloudInit' && index === 0 ? { bootOrder: 1 } : {}),
   }));
 
   // Build volumes array
