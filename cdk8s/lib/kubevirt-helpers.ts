@@ -284,7 +284,7 @@ users:
   if (installDesktop) {
     userData += `
 runcmd:
-  # Configure NixOS with XFCE desktop and xrdp
+  # Configure NixOS with XFCE desktop, xrdp, and SSH
   - |
     cat > /etc/nixos/configuration.nix <<'NIXEOF'
     { config, pkgs, ... }:
@@ -294,6 +294,15 @@ runcmd:
       # Enable networking
       networking.hostName = "${hostname}";
       networking.networkmanager.enable = true;
+
+      # Enable SSH
+      services.openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = true;
+          PermitRootLogin = "no";
+        };
+      };
 
       # Enable XFCE Desktop Environment
       services.xserver = {
@@ -312,8 +321,8 @@ runcmd:
       # Enable TigerVNC for VNC access
       services.xserver.desktopManager.xfce.enableXfwm = true;
 
-      # Open VNC port
-      networking.firewall.allowedTCPPorts = [ 3389 5900 5901 ];
+      # Open firewall ports
+      networking.firewall.allowedTCPPorts = [ 22 3389 5900 5901 ];
 
       # Enable sound
       hardware.pulseaudio.enable = true;
@@ -322,6 +331,7 @@ runcmd:
       users.users.${username} = {
         isNormalUser = true;
         extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
+        shell = pkgs.bash;
       };
 
       # Allow unfree packages
@@ -329,7 +339,7 @@ runcmd:
 
       # System packages
       environment.systemPackages = with pkgs; [
-        wget curl vim git firefox tigervnc
+        wget curl vim git firefox tigervnc home-manager
       ];
 
       system.stateVersion = "24.05";
@@ -337,7 +347,9 @@ runcmd:
     NIXEOF
   # Rebuild NixOS with new configuration
   - nixos-rebuild switch
-  # Ensure xrdp is running
+  # Ensure services are running
+  - systemctl enable sshd
+  - systemctl start sshd
   - systemctl enable xrdp
   - systemctl start xrdp
   # Set up VNC server for user
@@ -372,7 +384,27 @@ runcmd:
     SYSTEMDEOF
   - systemctl daemon-reload
   - systemctl enable vncserver@1.service
-  - systemctl start vncserver@1.service`;
+  - systemctl start vncserver@1.service
+  # Clone nixos-config repository for user
+  - su - ${username} -c "git clone https://github.com/vpittamp/nixos-config ~/nixos-config || true"
+  # Create setup script for user to apply full config later
+  - |
+    cat > /home/${username}/apply-nixos-config.sh <<'APPLYEOF'
+    #!/bin/bash
+    # Script to apply full nixos-config from GitHub
+    set -e
+
+    echo "Pulling latest nixos-config..."
+    cd ~/nixos-config && git pull
+
+    echo "Backing up current NixOS configuration..."
+    sudo cp /etc/nixos/configuration.nix /etc/nixos/configuration.nix.backup
+
+    echo "Please review ~/nixos-config and manually link/copy the desired configuration"
+    echo "Then run: sudo nixos-rebuild switch"
+    APPLYEOF
+  - chmod +x /home/${username}/apply-nixos-config.sh
+  - chown ${username}:users /home/${username}/apply-nixos-config.sh`;
   }
 
   return userData;
