@@ -152,17 +152,22 @@ export class TailscaleOperatorChart extends Chart {
       rules: [
         {
           apiGroups: ['tailscale.com'],
-          resources: ['proxygroups', 'connectors', 'dnsconfigs'],
+          resources: ['proxygroups', 'connectors', 'dnsconfigs', 'proxyclasses', 'recorders'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
         },
         {
           apiGroups: [''],
-          resources: ['secrets', 'services'],
+          resources: ['secrets', 'services', 'configmaps'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
         },
         {
           apiGroups: [''],
-          resources: ['pods'],
+          resources: ['services/status'],
+          verbs: ['update', 'patch'],
+        },
+        {
+          apiGroups: [''],
+          resources: ['pods', 'nodes'],
           verbs: ['get', 'list', 'watch'],
         },
         {
@@ -175,6 +180,18 @@ export class TailscaleOperatorChart extends Chart {
           apiGroups: ['networking.k8s.io'],
           resources: ['ingresses'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+        },
+        // EndpointSlice permissions (required for service discovery)
+        {
+          apiGroups: ['discovery.k8s.io'],
+          resources: ['endpointslices'],
+          verbs: ['get', 'list', 'watch'],
+        },
+        // CRD permissions (required for checking installed CRDs)
+        {
+          apiGroups: ['apiextensions.k8s.io'],
+          resources: ['customresourcedefinitions'],
+          verbs: ['get', 'list', 'watch'],
         },
         // API server proxy impersonation permissions (required for auth mode)
         {

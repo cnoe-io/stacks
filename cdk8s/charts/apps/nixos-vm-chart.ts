@@ -163,8 +163,8 @@ export class NixOsVmChart extends Chart {
     if (enableTailscale) {
       serviceAnnotations['tailscale.com/expose'] = 'true';
       serviceAnnotations['tailscale.com/hostname'] = hostname;
-      // Optional: Add tags for ACL management
-      serviceAnnotations['tailscale.com/tags'] = 'tag:k8s-vm,tag:rdp-server';
+      // Use tag:k8s which is already defined in the Tailscale ACL
+      serviceAnnotations['tailscale.com/tags'] = 'tag:k8s';
     }
 
     // Create Service to expose RDP port
