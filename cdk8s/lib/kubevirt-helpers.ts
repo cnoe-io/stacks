@@ -284,18 +284,18 @@ users:
   if (installDesktop) {
     userData += `
 runcmd:
-  # Configure NixOS with XFCE desktop, xrdp, and SSH
+  # Configure minimal NixOS base with desktop, remote access, and dev tools
   - |
     cat > /etc/nixos/configuration.nix <<'NIXEOF'
     { config, pkgs, ... }:
     {
       imports = [ /etc/nixos/hardware-configuration.nix ];
 
-      # Enable networking
+      # Networking
       networking.hostName = "${hostname}";
       networking.networkmanager.enable = true;
 
-      # Enable SSH
+      # SSH - CRITICAL for remote management
       services.openssh = {
         enable = true;
         settings = {
@@ -304,54 +304,64 @@ runcmd:
         };
       };
 
-      # Enable XFCE Desktop Environment
+      # XFCE Desktop Environment - minimal but functional
       services.xserver = {
         enable = true;
         displayManager.lightdm.enable = true;
         desktopManager.xfce.enable = true;
+        # Enable Xfwm for VNC compatibility
+        desktopManager.xfce.enableXfwm = true;
       };
 
-      # Enable xrdp for Remote Desktop Protocol
+      # Remote Desktop Protocol (xrdp)
       services.xrdp = {
         enable = true;
         defaultWindowManager = "xfce4-session";
         openFirewall = true;
       };
 
-      # Enable TigerVNC for VNC access
-      services.xserver.desktopManager.xfce.enableXfwm = true;
-
-      # Open firewall ports
+      # Firewall - open all remote access ports
       networking.firewall.allowedTCPPorts = [ 22 3389 5900 5901 ];
 
-      # Enable sound
+      # Audio support
       hardware.pulseaudio.enable = true;
 
-      # Define user accounts
+      # User configuration
       users.users.${username} = {
         isNormalUser = true;
         extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
         shell = pkgs.bash;
       };
 
-      # Allow unfree packages
+      # Security - allow sudo without password for wheel group
+      security.sudo.wheelNeedsPassword = false;
+
+      # Allow unfree packages (some tools require this)
       nixpkgs.config.allowUnfree = true;
 
-      # System packages
+      # Essential system packages - keep minimal
       environment.systemPackages = with pkgs; [
-        wget curl vim git firefox tigervnc home-manager
+        # Core utilities
+        wget curl vim git htop tmux
+        # Desktop apps
+        firefox
+        # Remote access
+        tigervnc
+        # NixOS management
+        home-manager nixos-rebuild
       ];
+
+      # Nix configuration
+      nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
       system.stateVersion = "24.05";
     }
     NIXEOF
-  # Rebuild NixOS with new configuration
+  # Rebuild NixOS with base configuration (fast: ~2 minutes)
   - nixos-rebuild switch
-  # Ensure services are running
-  - systemctl enable sshd
-  - systemctl start sshd
-  - systemctl enable xrdp
-  - systemctl start xrdp
+  # Ensure critical services are running
+  - systemctl enable sshd && systemctl start sshd
+  - systemctl enable xrdp && systemctl start xrdp
   # Set up VNC server for user
   - su - ${username} -c "mkdir -p ~/.vnc"
   - su - ${username} -c "echo '${password}' | vncpasswd -f > ~/.vnc/passwd"
@@ -365,7 +375,7 @@ runcmd:
     VNCEOF
   - chmod +x /home/${username}/.vnc/xstartup
   - chown ${username}:users /home/${username}/.vnc/xstartup
-  # Create VNC systemd service
+  # VNC systemd service
   - |
     cat > /etc/systemd/system/vncserver@.service <<'SYSTEMDEOF'
     [Unit]
@@ -385,26 +395,82 @@ runcmd:
   - systemctl daemon-reload
   - systemctl enable vncserver@1.service
   - systemctl start vncserver@1.service
-  # Clone nixos-config repository for user
-  - su - ${username} -c "git clone https://github.com/vpittamp/nixos-config ~/nixos-config || true"
-  # Create setup script for user to apply full config later
+  # Clone user's nixos-config repository
+  - su - ${username} -c "git clone https://github.com/vpittamp/nixos-config ~/nixos-config 2>/dev/null || echo 'nixos-config already exists or failed to clone'"
+  # Create convenience script to apply full user configuration
   - |
-    cat > /home/${username}/apply-nixos-config.sh <<'APPLYEOF'
+    cat > /home/${username}/apply-my-nixos-config.sh <<'APPLYEOF'
     #!/bin/bash
-    # Script to apply full nixos-config from GitHub
+    # One-command setup: apply your full nixos-config
     set -e
 
-    echo "Pulling latest nixos-config..."
-    cd ~/nixos-config && git pull
+    echo "=== Applying vpittamp nixos-config ==="
 
-    echo "Backing up current NixOS configuration..."
-    sudo cp /etc/nixos/configuration.nix /etc/nixos/configuration.nix.backup
+    # Update the repo
+    cd ~/nixos-config
+    git pull
 
-    echo "Please review ~/nixos-config and manually link/copy the desired configuration"
-    echo "Then run: sudo nixos-rebuild switch"
+    # Backup current system config
+    sudo cp /etc/nixos/configuration.nix /etc/nixos/configuration.nix.vm-base-backup
+
+    # Check if using flakes
+    if [ -f "flake.nix" ]; then
+      echo "Detected flake.nix - applying with flakes..."
+      # You'll need to specify your host name here
+      read -p "Enter your flake host name (e.g., nixos-dev-vm): " FLAKE_HOST
+      sudo nixos-rebuild switch --flake ".#\${FLAKE_HOST}"
+    elif [ -f "configuration.nix" ]; then
+      echo "Detected configuration.nix - applying traditional config..."
+      sudo cp configuration.nix /etc/nixos/configuration.nix
+      sudo nixos-rebuild switch
+    else
+      echo "ERROR: No configuration.nix or flake.nix found!"
+      echo "Please manually configure your system."
+      exit 1
+    fi
+
+    # Apply home-manager if configured
+    if [ -f "home.nix" ] || [ -f "home-manager/home.nix" ]; then
+      echo "Applying home-manager configuration..."
+      home-manager switch
+    fi
+
+    echo ""
+    echo "=== Configuration applied successfully! ==="
+    echo "You may need to log out and back in for all changes to take effect."
     APPLYEOF
-  - chmod +x /home/${username}/apply-nixos-config.sh
-  - chown ${username}:users /home/${username}/apply-nixos-config.sh`;
+  - chmod +x /home/${username}/apply-my-nixos-config.sh
+  - chown ${username}:users /home/${username}/apply-my-nixos-config.sh
+  # Create helpful README
+  - |
+    cat > /home/${username}/README-FIRST.txt <<'READMEEOF'
+    Welcome to your NixOS Development VM!
+    ======================================
+
+    This VM has a MINIMAL base configuration with:
+    - SSH, RDP, VNC remote access
+    - XFCE desktop
+    - Essential development tools
+    - Your nixos-config repository cloned at ~/nixos-config
+
+    To apply your FULL nixos-config:
+    ---------------------------------
+    1. SSH into this VM or open a terminal
+    2. Run: ./apply-my-nixos-config.sh
+    3. Follow the prompts
+    4. Log out and back in
+
+    Remote Access:
+    --------------
+    - SSH:  ssh -p 2222 vpittamp@100.87.204.44 (via port-forward)
+    - RDP:  100.87.204.44:33389 (via port-forward)
+    - VNC:  Port-forward 5901 then connect to localhost:5901
+
+    Default credentials: ${username} / ${password}
+
+    Your configuration repo: ~/nixos-config
+    READMEEOF
+  - chown ${username}:users /home/${username}/README-FIRST.txt`;
   }
 
   return userData;
