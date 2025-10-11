@@ -180,6 +180,8 @@ export class NixOsVmChart extends Chart {
       },
       spec: {
         type: serviceType,  // LoadBalancer if Tailscale enabled, NodePort otherwise
+        // Set loadBalancerClass to 'tailscale' when using Tailscale LoadBalancer
+        loadBalancerClass: enableTailscale ? 'tailscale' : undefined,
         selector: {
           'kubevirt.io/vm': vmName,
         },
