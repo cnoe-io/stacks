@@ -143,6 +143,50 @@ kubectl apply -f dist/<app>/manifests/
 kubectl get all -n <namespace>
 ```
 
+### Nix Binary Cache (Attic + MinIO)
+
+**Purpose**: In-cluster Nix binary cache for accelerating NixOS VM builds (20-25 min → under 3 min)
+
+```bash
+# Deploy MinIO + Attic (via cluster-update)
+source deployment/scripts/cluster-menu.sh
+cluster-update  # Deploys all packages including nix-cache
+
+# Check deployment status
+kubectl get pods -n nix-cache
+# Expected: minio-xxx (Running), attic-xxx (Running)
+
+# Initialize cache (generates admin token, creates "nixos" cache namespace)
+./deployment/scripts/nix-cache/init-attic-cache.sh
+# Save the admin token and NixOS configuration snippet displayed
+
+# Push packages from Hetzner host (requires Attic CLI and port-forward/Tailscale)
+./deployment/scripts/nix-cache/push-to-cache.sh /run/current-system
+
+# Verify cache contents
+kubectl port-forward -n nix-cache svc/attic 8080:8080 &
+curl http://localhost:8080/nixos/nix-cache-info
+# Expected: HTTP/1.1 200 OK
+```
+
+**Key Files**:
+- Charts: `cdk8s/charts/infra/nix-cache-namespace-chart.ts`, `minio-chart.ts`, `attic-chart.ts`
+- Scripts: `deployment/scripts/nix-cache/init-attic-cache.sh`, `push-to-cache.sh`
+- Docs: `specs/003-implement-attic-minio/quickstart.md` (complete deployment guide)
+
+**Architecture**:
+- **MinIO**: S3-compatible object storage (100Gi PVC, sync wave -100)
+- **Attic**: Nix binary cache server (sync wave -90, depends on MinIO)
+- **Cache Namespace**: Logical grouping ("nixos") with unique signing key for package verification
+
+**Troubleshooting**:
+- MinIO CrashLoopBackOff: Check disk space (`docker exec kind-control-plane df -h`)
+- Attic connection errors: Verify MinIO is Running (`kubectl get pods -n nix-cache -l app=minio`)
+- Cache push 401: Regenerate admin token via init-attic-cache.sh
+- VM can't reach cache: Check DNS resolution from VM (`curl http://attic.nix-cache.svc.cluster.local:8080/nixos/nix-cache-info`)
+
+For full documentation, see `specs/003-implement-attic-minio/quickstart.md`.
+
 ### kagent/kmcp (AI Agent Platform)
 
 ```bash
