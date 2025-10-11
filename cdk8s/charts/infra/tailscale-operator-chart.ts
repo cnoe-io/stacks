@@ -170,6 +170,12 @@ export class TailscaleOperatorChart extends Chart {
           resources: ['deployments', 'statefulsets'],
           verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
         },
+        // Ingress permissions (required for LoadBalancer service exposure)
+        {
+          apiGroups: ['networking.k8s.io'],
+          resources: ['ingresses'],
+          verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete'],
+        },
         // API server proxy impersonation permissions (required for auth mode)
         {
           apiGroups: [''],
