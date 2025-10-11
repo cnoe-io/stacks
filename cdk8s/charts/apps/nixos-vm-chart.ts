@@ -10,6 +10,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import { buildVirtualMachine, buildCloudInitUserData } from '../../lib/kubevirt-helpers';
+import * as k8s from '../../imports/k8s';
 
 export interface NixOsVmChartProps extends ChartProps {
   /**
@@ -47,6 +48,18 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default "default"
    */
   targetNamespace?: string;
+
+  /**
+   * Enable Tailscale exposure for RDP service
+   * @default true
+   */
+  enableTailscale?: boolean;
+
+  /**
+   * Tailscale hostname for the RDP service
+   * @default "{vmName}-rdp"
+   */
+  tailscaleHostname?: string;
 }
 
 export class NixOsVmChart extends Chart {
@@ -60,6 +73,8 @@ export class NixOsVmChart extends Chart {
       memory = '4Gi',
       cloudInitUserData,
       targetNamespace = 'default',
+      enableTailscale = true,
+      tailscaleHostname,
     } = props;
 
     // Generate default cloud-init if not provided
@@ -98,6 +113,13 @@ export class NixOsVmChart extends Chart {
           name: 'default',
           type: 'pod',
           interfaceType: 'masquerade',
+          ports: [
+            {
+              name: 'rdp',
+              protocol: 'TCP',
+              port: 3389,  // RDP port
+            },
+          ],
         },
       ],
       labels: {
@@ -109,5 +131,48 @@ export class NixOsVmChart extends Chart {
 
     // Add sync wave annotation
     vm.metadata.addAnnotation('argocd.argoproj.io/sync-wave', '10');
+
+    // Determine service type and annotations based on Tailscale configuration
+    const serviceType = enableTailscale ? 'LoadBalancer' : 'NodePort';
+    const hostname = tailscaleHostname || `${vmName}-rdp`;
+
+    const serviceAnnotations: Record<string, string> = {
+      'argocd.argoproj.io/sync-wave': '15',  // After VM creation
+    };
+
+    // Add Tailscale annotations if enabled
+    if (enableTailscale) {
+      serviceAnnotations['tailscale.com/expose'] = 'true';
+      serviceAnnotations['tailscale.com/hostname'] = hostname;
+      // Optional: Add tags for ACL management
+      serviceAnnotations['tailscale.com/tags'] = 'tag:k8s-vm,tag:rdp-server';
+    }
+
+    // Create Service to expose RDP port
+    const rdpService = new k8s.KubeService(this, 'rdp-service', {
+      metadata: {
+        name: `${vmName}-rdp`,
+        namespace: targetNamespace,
+        labels: {
+          'app.kubernetes.io/name': vmName,
+          'app.kubernetes.io/component': 'virtual-machine-service',
+        },
+        annotations: serviceAnnotations,
+      },
+      spec: {
+        type: serviceType,  // LoadBalancer if Tailscale enabled, NodePort otherwise
+        selector: {
+          'kubevirt.io/vm': vmName,
+        },
+        ports: [
+          {
+            name: 'rdp',
+            protocol: 'TCP',
+            port: 3389,
+            targetPort: k8s.IntOrString.fromNumber(3389),
+          },
+        ],
+      },
+    });
   }
 }

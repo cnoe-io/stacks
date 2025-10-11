@@ -56,6 +56,14 @@ export interface NetworkConfig {
   name: string;
   type: 'pod' | 'multus';
   interfaceType?: 'masquerade' | 'bridge';
+  // TCP/UDP ports to expose via masquerade (requires masquerade interface type)
+  ports?: PortConfig[];
+}
+
+export interface PortConfig {
+  name?: string;
+  protocol?: 'TCP' | 'UDP';
+  port: number;  // Port number in the guest VM
 }
 
 export interface CloudInitConfig {
@@ -149,15 +157,28 @@ export function buildVirtualMachine(
     ...(net.type === 'pod' ? { pod: {} } : {}),
   }));
 
-  // Build interfaces array
-  const interfaces = networks.map(net => ({
-    name: net.name,
-    ...(net.interfaceType === 'masquerade' || !net.interfaceType
-      ? { masquerade: {} }
-      : net.interfaceType === 'bridge'
-      ? { bridge: {} }
-      : {}),
-  }));
+  // Build interfaces array with port configuration
+  const interfaces = networks.map(net => {
+    const baseInterface: any = { name: net.name };
+
+    if (net.interfaceType === 'masquerade' || !net.interfaceType) {
+      // Masquerade interface with optional port forwarding
+      if (net.ports && net.ports.length > 0) {
+        baseInterface.masquerade = {};
+        baseInterface.ports = net.ports.map(p => ({
+          ...(p.name ? { name: p.name } : {}),
+          protocol: p.protocol || 'TCP',
+          port: p.port,
+        }));
+      } else {
+        baseInterface.masquerade = {};
+      }
+    } else if (net.interfaceType === 'bridge') {
+      baseInterface.bridge = {};
+    }
+
+    return baseInterface;
+  });
 
   const spec: any = {
     runStrategy,
