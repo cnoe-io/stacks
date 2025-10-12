@@ -230,8 +230,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         dataVolumeName: 'nixos-dev-datavolume',
         cpuCores: 4,  // Increased from 2 for GitOps test
         memory: '16Gi',  // Increased to 16Gi for RustDesk + KDE Plasma
-        enableTailscale: false,  // Use NodePort instead (iptables not available in Kind)
-        tailscaleHostname: 'nixos-dev-vm-rdp'  // Custom Tailscale hostname
+        enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
+        tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
       }
     },
     argocd: {
