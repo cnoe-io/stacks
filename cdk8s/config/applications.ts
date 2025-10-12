@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-gl-v4-hw-graphics.qcow2',
+        imageUrl: 'http://nginx-image-server.vm-images.svc.cluster.local/nixos.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
@@ -228,8 +228,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         vmName: 'nixos-dev-vm',
         dataVolumeName: 'nixos-dev-datavolume',
-        cpuCores: 4,  // Increased from 2 for GitOps test
-        memory: '16Gi',  // Increased to 16Gi for RustDesk + KDE Plasma
+        cpuCores: 8,  // Increased to 8 for maximum performance
+        memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
         enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
         tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
       }
