@@ -787,6 +787,36 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale Subnet Router (exposes cluster pod and service networks to Tailscale)
+  {
+    name: 'tailscale-subnet-router',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleSubnetRouterChart',
+      props: {
+        namespace: 'tailscale',
+        routes: ['10.244.0.0/16', '10.96.0.0/16'],  // Kind cluster pod and service CIDRs
+        authKeySecretName: 'tailscale-auth-key',
+        authKeySecretKey: 'authKey',
+        serviceAccountName: 'operator'
+      }
+    },
+    argocd: {
+      syncWave: '-50',  // After operator and auth key are ready
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-subnet-router',
+        'app.kubernetes.io/component': 'subnet-router',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // kagent CRDs (Install CRDs before kagent platform)
   {
     name: 'kagent-crds',
