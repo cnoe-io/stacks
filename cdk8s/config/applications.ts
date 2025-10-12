@@ -171,7 +171,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        image: 'vpittamp23/nixos-kubevirt-minimal:latest'
+        image: 'vpittamp23/nixos-kubevirt-desktop:latest'
       }
     },
     argocd: {
@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-minimal.qcow2',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-desktop.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
