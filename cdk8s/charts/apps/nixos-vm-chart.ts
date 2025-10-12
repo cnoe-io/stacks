@@ -161,6 +161,11 @@ export class NixOsVmChart extends Chart {
               protocol: 'TCP',
               port: 3389,  // RDP port
             },
+            {
+              name: 'rustdesk',
+              protocol: 'TCP',
+              port: 21116,  // RustDesk port
+            },
           ],
         },
       ],
@@ -220,6 +225,12 @@ export class NixOsVmChart extends Chart {
             protocol: 'TCP',
             port: 3389,
             targetPort: k8s.IntOrString.fromNumber(3389),
+          },
+          {
+            name: 'rustdesk',
+            protocol: 'TCP',
+            port: 21116,
+            targetPort: k8s.IntOrString.fromNumber(21116),
           },
         ],
       },
