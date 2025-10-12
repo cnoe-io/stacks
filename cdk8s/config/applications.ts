@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-desktop.qcow2',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
