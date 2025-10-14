@@ -187,7 +187,7 @@ This document breaks down the implementation of RustDesk base image integration 
 
 ---
 
-### T007 - Synthesize and Deploy RustDesk Secrets
+### T007 [X] - Synthesize and Deploy RustDesk Secrets
 **Story**: Foundational (required for US1, US2, US3)
 **Files**: `cdk8s/dist/rustdesk-secrets/manifests/`, ArgoCD
 **Description**: Synthesize RustDesk secrets manifests and deploy via ArgoCD
@@ -222,7 +222,7 @@ This document breaks down the implementation of RustDesk base image integration 
 
 ---
 
-### T008 [US1] - Update Base Image flake.nix with RustDesk Configuration
+### T008 [US1] [X] - Update Base Image flake.nix with RustDesk Configuration
 **Story**: User Story 1 (P1)
 **File**: `/etc/nixos/flake.nix` or `/etc/nixos/configuration.nix`
 **Description**: Add RustDesk module import and configuration to NixOS base image

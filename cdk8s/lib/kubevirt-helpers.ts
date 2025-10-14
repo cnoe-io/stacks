@@ -510,106 +510,44 @@ runcmd:
     fi`;
   }
 
-  // Add RustDesk headless setup if enabled
+  // RustDesk password injection (service is pre-configured in base image)
+  // See /etc/nixos/configurations/vm-hetzner.nix for RustDesk service setup
   if (enableRustDesk) {
     userData += `
-  # RustDesk remote desktop setup (NixOS declarative approach)
+  # Configure RustDesk permanent password from Kubernetes secret
   - |
-    # Create NixOS configuration with RustDesk system service
-    cat > /etc/nixos/configuration.nix <<'NIXEOF'
-    { config, pkgs, ... }:
-    {
-      imports = [ ];
+    # Fetch RustDesk password from Kubernetes secret (synced from Azure Key Vault via External Secrets)
+    RUSTDESK_PASSWORD=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | \\
+      xargs -I {} curl -s -H "Authorization: Bearer {}" \\
+      -H "Content-Type: application/json" \\
+      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \\
+      https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/secrets/rustdesk-password | \\
+      grep -oP '"password":\\s*"\\K[^"]+' | base64 -d || echo "")
 
-      # Networking
-      networking.hostName = "${hostname}";
-      networking.networkmanager.enable = false;  # Use systemd-networkd in VMs
-      networking.useDHCP = true;
-
-      # SSH - CRITICAL for remote management
-      services.openssh = {
-        enable = true;
-        settings = {
-          PasswordAuthentication = true;
-          PermitRootLogin = "yes";
-        };
-      };
-
-      # User configuration
-      users.users.${username} = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ];
-        shell = pkgs.bash;
-      };
-      users.users.root.initialPassword = "${password || 'nixos123'}";
-
-      # Security - allow sudo without password for wheel group
-      security.sudo.wheelNeedsPassword = false;
-
-      # RustDesk system service (headless mode)
-      systemd.services.rustdesk = {
-        description = "RustDesk Remote Desktop Service (Headless Mode)";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
-
-        serviceConfig = {
-          Type = "simple";
-          User = "root";
-          Environment = [
-            "LIBGL_ALWAYS_SOFTWARE=1"
-            "MESA_GL_VERSION_OVERRIDE=3.3"
-            "GALLIUM_DRIVER=llvmpipe"
-          ];
-          ExecStart = "\${pkgs.rustdesk-flutter}/bin/rustdesk --service";
-          Restart = "on-failure";
-          RestartSec = "5s";
-        };
-      };
-
-      # Firewall configuration for RustDesk
-      networking.firewall = {
-        enable = true;
-        allowedTCPPorts = [ 22 21116 ];
-        allowedUDPPorts = [ 21116 ];
-      };
-
-      # System packages
-      environment.systemPackages = with pkgs; [
-        wget curl vim git htop
-        rustdesk-flutter
-      ];
-
-      # Nix configuration
-      nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-      system.stateVersion = "24.05";
-    }
-    NIXEOF
-  # Rebuild NixOS with RustDesk configuration
-  - nixos-rebuild switch
-  # Configure RustDesk settings
-  - mkdir -p /root/.config/rustdesk
-  - |
-    cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESKEOF'
-    [options]
-    direct-server = "Y"
-    direct-access-port = "21116"
-    allow-linux-headless = "Y"
-    verification-method = "use-permanent-password"
-    enable-keyboard = true
-    enable-clipboard = true
-    enable-file-transfer = true
-    enable-audio = true
-    RUSTDESKEOF
-  # Set RustDesk permanent password
-  - rustdesk --password ${password || 'nixos123'}
-  # Enable headless mode
-  - rustdesk --option allow-linux-headless Y
-  # Get RustDesk ID for connection
-  - echo "RustDesk ID: $(rustdesk --get-id)" | tee /root/rustdesk-info.txt
-  # Restart RustDesk service to apply configuration
-  - systemctl restart rustdesk.service`;
+    if [ -n "$RUSTDESK_PASSWORD" ] && [ "$RUSTDESK_PASSWORD" != "" ]; then
+      echo "Setting RustDesk permanent password from Azure Key Vault..."
+      # Update RustDesk config with permanent password
+      mkdir -p /root/.config/rustdesk
+      if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
+        # Append permanent password to existing config
+        grep -q "permanent-password" /root/.config/rustdesk/RustDesk2.toml || \\
+          echo "permanent-password = \\"$RUSTDESK_PASSWORD\\"" >> /root/.config/rustdesk/RustDesk2.toml
+      else
+        # Create minimal config with permanent password
+        cat > /root/.config/rustdesk/RustDesk2.toml <<RUSTDESK_CONFIG_EOF
+[options]
+permanent-password = "$RUSTDESK_PASSWORD"
+allow-linux-headless = "Y"
+direct-server = "Y"
+direct-access-port = "21116"
+RUSTDESK_CONFIG_EOF
+      fi
+      # Restart RustDesk service to apply password
+      systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
+      echo "✓ RustDesk password configured from Azure Key Vault"
+    else
+      echo "⚠ WARNING: No RustDesk password found in secret, using default"
+    fi`;
   }
 
   return userData;
