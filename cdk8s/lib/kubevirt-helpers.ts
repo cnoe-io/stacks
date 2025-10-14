@@ -304,19 +304,17 @@ runcmd:
         };
       };
 
-      # XFCE Desktop Environment - minimal but functional
-      services.xserver = {
+      # KDE Plasma 6 Desktop Environment
+      services.desktopManager.plasma6.enable = true;
+      services.displayManager.sddm = {
         enable = true;
-        displayManager.lightdm.enable = true;
-        desktopManager.xfce.enable = true;
-        # Enable Xfwm for VNC compatibility
-        desktopManager.xfce.enableXfwm = true;
+        wayland.enable = true;
       };
 
       # Remote Desktop Protocol (xrdp)
       services.xrdp = {
         enable = true;
-        defaultWindowManager = "xfce4-session";
+        defaultWindowManager = "startplasma-x11";
         openFirewall = true;
       };
 
@@ -371,7 +369,7 @@ runcmd:
     #!/bin/sh
     unset SESSION_MANAGER
     unset DBUS_SESSION_BUS_ADDRESS
-    exec startxfce4
+    exec startplasma-x11
     VNCEOF
   - chmod +x /home/${username}/.vnc/xstartup
   - chown ${username}:users /home/${username}/.vnc/xstartup
@@ -447,9 +445,9 @@ runcmd:
     Welcome to your NixOS Development VM!
     ======================================
 
-    This VM has a MINIMAL base configuration with:
+    This VM has a base configuration with:
     - SSH, RDP, VNC remote access
-    - XFCE desktop
+    - KDE Plasma 6 desktop environment
     - Essential development tools
     - Your nixos-config repository cloned at ~/nixos-config
 

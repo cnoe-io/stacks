@@ -99,13 +99,13 @@ export class NixOsVmChart extends Chart {
     const sshPublicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAq4r867qHnS9YUMbu+X7i40sfWZmkdymioHFmtewegC k8s_ed_test';
 
     // Generate default cloud-init if not provided
-    // For minimal base image: only create user + SSH, no desktop install
+    // Desktop is pre-installed in the image, so skip desktop installation
     const userData = cloudInitUserData || buildCloudInitUserData(
       vmName,
       'vpittamp',
       [sshPublicKey],
       'nixos123',  // Default password for console access
-      false  // Do NOT install desktop via cloud-init (minimal base image)
+      false  // Skip desktop installation (already in base image)
     );
 
     // Create Secret for cloud-init data (required when userData > 2048 bytes)
@@ -160,6 +160,11 @@ export class NixOsVmChart extends Chart {
               name: 'rdp',
               protocol: 'TCP',
               port: 3389,  // RDP port
+            },
+            {
+              name: 'rustdesk',
+              protocol: 'TCP',
+              port: 21116,  // RustDesk port
             },
           ],
         },
@@ -220,6 +225,12 @@ export class NixOsVmChart extends Chart {
             protocol: 'TCP',
             port: 3389,
             targetPort: k8s.IntOrString.fromNumber(3389),
+          },
+          {
+            name: 'rustdesk',
+            protocol: 'TCP',
+            port: 21116,
+            targetPort: k8s.IntOrString.fromNumber(21116),
           },
         ],
       },

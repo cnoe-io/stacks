@@ -253,6 +253,132 @@ kubectl describe mcpserver -n kagent <server-name>         # MCP server status
   - kagent secrets: https://argocd.cnoe.localtest.me:8443/applications/kagent-secrets
   - kagent agents: https://argocd.cnoe.localtest.me:8443/applications/kagent-agents
 
+### Tailscale Operator (Remote Cluster Access)
+
+**Purpose**: Provides secure remote kubectl access to the cluster from any Tailscale-connected device via HTTPS with automatic Let's Encrypt certificates.
+
+```bash
+# Deployment (via cluster-update)
+source deployment/scripts/cluster-menu.sh
+cluster-update  # Deploys tailscale-operator package
+
+# Check operator status
+kubectl get pods -n tailscale -l app=tailscale-operator
+# Expected: tailscale-operator-xxx Running
+
+# Check operator hostname (unique suffix may be appended)
+kubectl logs -n tailscale deployment/tailscale-operator | grep -i hostname
+# Example output: kind-operator-13.tail286401.ts.net [100.104.62.112]
+
+# Generate remote kubeconfig (from cluster host)
+./deployment/scripts/tailscale/generate-kubeconfig.sh
+# Outputs: remote-kubeconfig.yaml
+
+# Copy to remote machine (Mac, laptop, etc.)
+scp remote-kubeconfig.yaml user@remote-machine:~/
+
+# Test from remote machine
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes
+# First connection may take 30-60s for Let's Encrypt certificate provisioning
+# Subsequent commands: <2s response time
+```
+
+**Key Features**:
+- **APISERVER_PROXY mode**: In-process API proxy (no ProxyGroup needed)
+- **Automatic HTTPS**: Let's Encrypt certificates via Tailscale HTTPS
+- **MagicDNS**: Automatic DNS resolution (`kind-operator.tail286401.ts.net` → Tailscale IP)
+- **Security**: TLS validation, client certificate authentication
+- **Performance**: <2s kubectl response time, <500ms port-forward latency
+
+**Architecture**:
+```
+kubectl (remote) → Tailscale Network → Operator (100.x.x.x:443) → Kubernetes API (cluster IP)
+      ↓                                      ↓                            ↓
+  Let's Encrypt TLS                    In-process proxy              Cluster CA TLS
+```
+
+**Chart Configuration**:
+- File: `cdk8s/charts/infra/tailscale-operator-chart.ts`
+- Environment variable: `APISERVER_PROXY=true`
+- Hostname pattern: `${clusterName}-operator` (unique suffix may be appended by Tailscale)
+- Security: `readOnlyRootFilesystem: false`, `allowPrivilegeEscalation: false` (no runAsNonRoot - operator requires root)
+- Resources: CPU (500m/100m), Memory (256Mi/128Mi)
+- ProxyGroup: Only created in production with `enableHA=true` (prevents dual-mode conflicts)
+
+**Scripts**:
+- `deployment/scripts/tailscale/generate-kubeconfig.sh`: Generate remote kubeconfig
+- `deployment/scripts/tailscale/export-cluster-ca.sh`: Export cluster CA (alternative to Tailscale HTTPS)
+- `deployment/scripts/tailscale/test-port-forward.sh`: Test port-forwarding (ArgoCD, Gitea, MinIO)
+- `deployment/scripts/tailscale/verify-dns-resolution.sh`: Verify DNS resolution (external + internal)
+
+**Documentation**:
+- **Primary**: `docs/tailscale-cluster-access.md` (750+ lines, comprehensive guide)
+- **Quickstart**: `specs/005-remote-kubernetes-cluster/quickstart.md` (test results, benchmarks)
+- **Feature Spec**: `specs/005-remote-kubernetes-cluster/spec.md` (requirements, design)
+
+**Common Tasks**:
+
+```bash
+# Generate kubeconfig with custom cluster/tailnet
+./deployment/scripts/tailscale/generate-kubeconfig.sh my-cluster tail123456
+
+# Port-forward ArgoCD from remote machine
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 &
+# Access: https://localhost:8080
+
+# Port-forward multiple services
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 &
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n nix-cache svc/minio 8082:9000 &
+
+# Export cluster CA (for environments without Tailscale HTTPS)
+./deployment/scripts/tailscale/export-cluster-ca.sh cluster-ca.crt
+
+# Verify DNS resolution
+./deployment/scripts/tailscale/verify-dns-resolution.sh ~/remote-kubeconfig.yaml
+```
+
+**Troubleshooting**:
+```bash
+# Operator not starting: Check secrets
+kubectl get secret -n tailscale tailscale-operator-oauth
+# Should have client-id and client-secret keys from Azure Key Vault
+
+# Certificate provisioning slow: Increase timeout on first connection
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes --request-timeout=60s
+
+# Connection refused: Verify APISERVER_PROXY enabled
+kubectl get deployment -n tailscale tailscale-operator \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="APISERVER_PROXY")].value}'
+# Should show: true
+
+# Check operator logs
+kubectl logs -n tailscale deployment/tailscale-operator --tail=50 | grep -i "proxy\|error"
+```
+
+**Security Best Practices**:
+- Use Tailscale HTTPS (Let's Encrypt) for production (automatic renewal)
+- Distribute cluster CA only for environments without Tailscale HTTPS
+- Avoid `--insecure-skip-tls-verify` except for temporary testing (<10 minutes)
+- Use dedicated ServiceAccounts with limited RBAC for CI/CD access
+- Tag CI/CD devices with `tag:ci` and use Tailscale ACLs for isolation
+
+**CI/CD Integration**:
+For GitHub Actions, GitLab CI, or Jenkins pipelines, use cluster CA distribution approach:
+1. Export cluster CA: `./deployment/scripts/tailscale/export-cluster-ca.sh`
+2. Embed CA in kubeconfig: Add `certificate-authority-data` field
+3. Store kubeconfig in CI secrets
+4. Use Tailscale OAuth client (GitHub Actions) or auth keys (GitLab CI/Jenkins)
+
+See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete examples.
+
+**Performance Benchmarks** (from quickstart.md):
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| First connection | <60s | ~15s | ✅ PASS |
+| Subsequent commands | <2s | 0.469s | ✅ PASS |
+| Authentication | Works | vpittamp@github | ✅ PASS |
+| TLS validation | Valid | Let's Encrypt | ✅ PASS |
+
 ## Architecture
 
 ### Code Organization

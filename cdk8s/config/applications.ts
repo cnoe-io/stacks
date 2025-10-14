@@ -171,7 +171,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        image: 'vpittamp23/nixos-kubevirt-minimal:latest'
+        image: 'vpittamp23/nixos-kubevirt-desktop:v1.0.0-x11'
       }
     },
     argocd: {
@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-minimal.qcow2',
+        imageUrl: 'http://nginx-image-server.vm-images.svc.cluster.local/nixos.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
@@ -228,10 +228,10 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         vmName: 'nixos-dev-vm',
         dataVolumeName: 'nixos-dev-datavolume',
-        cpuCores: 4,  // Increased from 2 for GitOps test
-        memory: '8Gi',  // Increased from 4Gi for GitOps test
-        enableTailscale: false,  // Use NodePort instead (iptables not available in Kind)
-        tailscaleHostname: 'nixos-dev-vm-rdp'  // Custom Tailscale hostname
+        cpuCores: 8,  // Increased to 8 for maximum performance
+        memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
+        enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
+        tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
       }
     },
     argocd: {
@@ -783,6 +783,36 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '-60',
       syncPolicy: {
         automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Tailscale Subnet Router (exposes cluster pod and service networks to Tailscale)
+  {
+    name: 'tailscale-subnet-router',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleSubnetRouterChart',
+      props: {
+        namespace: 'tailscale',
+        routes: ['10.244.0.0/16', '10.96.0.0/16'],  // Kind cluster pod and service CIDRs
+        authKeySecretName: 'tailscale-auth-key',
+        authKeySecretKey: 'authKey',
+        serviceAccountName: 'operator'
+      }
+    },
+    argocd: {
+      syncWave: '-50',  // After operator and auth key are ready
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-subnet-router',
+        'app.kubernetes.io/component': 'subnet-router',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
       }
     }
   },

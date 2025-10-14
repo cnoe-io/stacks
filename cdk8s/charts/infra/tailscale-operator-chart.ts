@@ -264,6 +264,21 @@ export class TailscaleOperatorChart extends Chart {
               {
                 name: 'operator',
                 image: operatorImage,
+                securityContext: {
+                  // Note: runAsNonRoot removed - Tailscale operator image requires root
+                  readOnlyRootFilesystem: false,
+                  allowPrivilegeEscalation: false,
+                },
+                resources: {
+                  limits: {
+                    cpu: k8s.Quantity.fromString('500m'),
+                    memory: k8s.Quantity.fromString('256Mi'),
+                  },
+                  requests: {
+                    cpu: k8s.Quantity.fromString('100m'),
+                    memory: k8s.Quantity.fromString('128Mi'),
+                  },
+                },
                 env: [
                   {
                     name: 'OPERATOR_INITIAL_TAGS',
@@ -326,8 +341,9 @@ export class TailscaleOperatorChart extends Chart {
       },
     });
 
-    // User Story 3: ProxyGroup for HA (only if enabled)
-    if (props.enableHA || ['staging', 'production'].includes(props.environmentName)) {
+    // ProxyGroup for HA production environments only
+    // Note: In dev environments, use in-process proxy (APISERVER_PROXY=true) to avoid conflicts
+    if (props.enableHA && props.environmentName === 'production') {
       new ProxyGroup(this, 'api-server-proxy', {
         metadata: {
           name: `${props.clusterName}-api-server`,

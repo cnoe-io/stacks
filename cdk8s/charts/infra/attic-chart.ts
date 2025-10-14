@@ -28,8 +28,7 @@ export class AtticChart extends Chart {
     // T021-T026: ConfigMap with server.toml configuration
     const serverToml = `# Attic Server Configuration
 # Listen address for HTTP API
-[listen]
-address = "[::]:8080"
+listen = "[::]:8080"
 
 # Database configuration (SQLite)
 [database]
@@ -41,6 +40,11 @@ type = "s3"
 region = "us-east-1"
 bucket = "${bucketName}"
 endpoint = "${minioEndpoint}"
+
+# JWT Configuration for authentication
+# Using a simple HMAC secret for testing (insecure - should use proper RSA keys in production)
+[jwt.signing]
+token-hs256-secret-base64 = "dGVzdC1zZWNyZXQtZm9yLWF0dGljLWJpbmFyeS1jYWNoZS1zZXJ2ZXI="
 
 # Chunking configuration for content-addressed storage
 [chunking]
