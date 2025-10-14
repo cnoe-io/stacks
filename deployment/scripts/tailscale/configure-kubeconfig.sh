@@ -148,6 +148,16 @@ fi
 
 # Replace original with merged
 mv "$LOCAL_KUBECONFIG.new" "$LOCAL_KUBECONFIG"
+
+# Update cluster server URL to ensure we're using the latest operator endpoint
+# (kubectl config view --flatten doesn't update existing cluster entries)
+CLUSTER_NAME=$(kubectl --kubeconfig="$REMOTE_KUBECONFIG" config view -o jsonpath='{.clusters[0].name}')
+if [ -n "$CLUSTER_NAME" ] && kubectl --kubeconfig="$LOCAL_KUBECONFIG" config get-clusters | grep -q "^${CLUSTER_NAME}$"; then
+    log_step "Updating cluster server URL to latest operator endpoint..."
+    kubectl --kubeconfig="$LOCAL_KUBECONFIG" config set-cluster "$CLUSTER_NAME" --server="$SERVER_URL" > /dev/null
+    log_info "✓ Updated $CLUSTER_NAME to: $SERVER_URL"
+fi
+
 log_info "✓ Kubeconfig merged successfully: $LOCAL_KUBECONFIG"
 
 echo ""
