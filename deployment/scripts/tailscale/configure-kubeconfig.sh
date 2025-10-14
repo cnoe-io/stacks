@@ -76,6 +76,36 @@ fi
 
 log_info "✓ Found remote kubeconfig: $REMOTE_KUBECONFIG"
 
+# Validate remote kubeconfig format
+if ! kubectl --kubeconfig="$REMOTE_KUBECONFIG" config view &> /dev/null; then
+    log_error "Remote kubeconfig is not valid"
+    exit 1
+fi
+
+# Extract server URL and validate operator endpoint is reachable
+log_step "Validating operator endpoint connectivity..."
+SERVER_URL=$(kubectl --kubeconfig="$REMOTE_KUBECONFIG" config view -o jsonpath='{.clusters[0].cluster.server}')
+if [ -z "$SERVER_URL" ]; then
+    log_error "Could not extract server URL from kubeconfig"
+    exit 1
+fi
+
+log_info "Testing connection to: $SERVER_URL"
+log_warn "Note: First connection may take up to 60 seconds for TLS certificate provisioning"
+
+# Test connectivity with extended timeout for first connection
+if timeout 90 curl -k --connect-timeout 60 --max-time 90 -s "${SERVER_URL}/version" > /dev/null 2>&1; then
+    log_info "✓ Operator endpoint is reachable"
+else
+    log_error "Operator endpoint is not reachable: $SERVER_URL"
+    log_warn "Troubleshooting steps:"
+    echo "  1. Verify Tailscale connectivity: ping $(echo $SERVER_URL | sed -E 's|https?://([^:]+).*|\1|')"
+    echo "  2. Check operator pod status: kubectl get pods -n tailscale"
+    echo "  3. Check operator logs: kubectl logs -n tailscale deployment/tailscale-operator"
+    echo "  4. Wait a few minutes for Let's Encrypt certificate provisioning"
+    exit 1
+fi
+
 # Check if local kubeconfig directory exists
 if [ ! -d "$HOME/.kube" ]; then
     log_warn "Creating ~/.kube directory..."
