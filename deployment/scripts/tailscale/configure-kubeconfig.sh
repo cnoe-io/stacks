@@ -94,15 +94,19 @@ log_info "Testing connection to: $SERVER_URL"
 log_warn "Note: First connection may take up to 60 seconds for TLS certificate provisioning"
 
 # Test connectivity with extended timeout for first connection
-if timeout 90 curl -k --connect-timeout 60 --max-time 90 -s "${SERVER_URL}/version" > /dev/null 2>&1; then
+# Note: macOS doesn't have 'timeout' command, so we use curl's built-in timeouts
+if curl -k --connect-timeout 60 --max-time 90 -s "${SERVER_URL}/version" > /dev/null 2>&1; then
     log_info "✓ Operator endpoint is reachable"
 else
     log_error "Operator endpoint is not reachable: $SERVER_URL"
     log_warn "Troubleshooting steps:"
-    echo "  1. Verify Tailscale connectivity: ping $(echo $SERVER_URL | sed -E 's|https?://([^:]+).*|\1|')"
-    echo "  2. Check operator pod status: kubectl get pods -n tailscale"
-    echo "  3. Check operator logs: kubectl logs -n tailscale deployment/tailscale-operator"
-    echo "  4. Wait a few minutes for Let's Encrypt certificate provisioning"
+    echo "  1. Verify Tailscale connectivity: ping -c 3 $(echo $SERVER_URL | sed -E 's|https?://([^:]+).*|\1|')"
+    echo "  2. Check operator pod status on cluster host:"
+    echo "     ssh cluster-host 'kubectl get pods -n tailscale'"
+    echo "  3. Check operator logs on cluster host:"
+    echo "     ssh cluster-host 'kubectl logs -n tailscale deployment/tailscale-operator --tail=50'"
+    echo "  4. Wait a few minutes for Let's Encrypt certificate provisioning (first connection)"
+    echo "  5. Try manually: curl -k --connect-timeout 60 --max-time 90 ${SERVER_URL}/version"
     exit 1
 fi
 
