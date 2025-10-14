@@ -219,6 +219,33 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale VM Secrets (Auth key for VM Tailscale authentication)
+  {
+    name: 'tailscale-vm-secrets',
+    namespace: 'default',
+    chart: {
+      type: 'TailscaleVmSecretsChart',
+      props: {
+        namespace: 'default',
+        syncWave: '5'  // Before VM creation
+      }
+    },
+    argocd: {
+      syncWave: '5',  // Before VM
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-vm-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // NixOS Virtual Machine
   {
     name: 'nixos-dev-vm',

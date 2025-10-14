@@ -479,15 +479,30 @@ runcmd:
   // Add Tailscale auto-authentication if enabled
   if (enableTailscale) {
     userData += `
-  # Tailscale authentication
+  # Tailscale authentication with auth key from Azure Key Vault
   - |
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
-    # Authenticate using auth key from Kubernetes secret
-    # Note: The auth key should be injected via Secret/ConfigMap in production
-    # For now, use OAuth flow: tailscale up
-    # TODO: Pass auth key via environment variable or secret mount
-    tailscale up --ssh --advertise-tags=tag:vm || echo "Tailscale auth requires manual OAuth"`;
+    # Fetch auth key from Kubernetes secret (synced from Azure Key Vault via External Secrets)
+    # Note: This requires network access to the Kubernetes API from within the VM
+    # The VM pod has access to the Kubernetes service account by default
+    AUTH_KEY=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | \\
+      xargs -I {} curl -s -H "Authorization: Bearer {}" \\
+      -H "Content-Type: application/json" \\
+      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \\
+      https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/secrets/tailscale-vm-auth-key | \\
+      grep -oP '"authkey":\\s*"\\K[^"]+' | base64 -d || echo "")
+
+    if [ -n "$AUTH_KEY" ] && [ "$AUTH_KEY" != "" ]; then
+      echo "Authenticating Tailscale with auth key from Azure Key Vault..."
+      tailscale up --authkey="$AUTH_KEY" --ssh --advertise-tags=tag:vm && \\
+        echo "✓ Tailscale authenticated successfully" || \\
+        echo "✗ Tailscale authentication failed, falling back to OAuth"
+    else
+      echo "No auth key found in secret, attempting OAuth (one-time setup)..."
+      tailscale up --ssh --advertise-tags=tag:vm || \\
+        echo "Tailscale OAuth required - visit the URL shown above"
+    fi`;
   }
 
   // Add RustDesk autostart if enabled
