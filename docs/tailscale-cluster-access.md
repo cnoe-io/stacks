@@ -414,11 +414,323 @@ clusters:
 
 ## Port Forwarding Usage
 
-[Port forwarding documentation will be added during Phase 4 implementation]
+kubectl port-forward allows you to access individual pod or service ports from your local machine, tunneling through the Tailscale connection to the cluster.
+
+### Basic Port-Forward Syntax
+
+```bash
+# Forward to a pod
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward pod/<pod-name> <local-port>:<remote-port>
+
+# Forward to a service (recommended - handles pod restarts)
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n <namespace> svc/<service-name> <local-port>:<remote-port>
+
+# Forward multiple ports
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n <namespace> svc/<service-name> <port1>:<port1> <port2>:<port2>
+
+# Run in background
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n <namespace> svc/<service-name> <local-port>:<remote-port> &
+```
+
+### Common Services to Forward
+
+#### ArgoCD (HTTPS)
+
+```bash
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 &
+# Access at: https://localhost:8080
+```
+
+#### Gitea (HTTP)
+
+```bash
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 &
+# Access at: http://localhost:8081
+```
+
+#### MinIO (S3-compatible storage)
+
+```bash
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n nix-cache svc/minio 8082:9000 &
+# Access at: http://localhost:8082
+# Console: http://localhost:8082/console
+```
+
+#### Postgres Database
+
+```bash
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n postgres svc/postgresql 5432:5432 &
+# Connect: psql -h localhost -p 5432 -U <username>
+```
+
+#### Redis
+
+```bash
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n redis svc/redis 6379:6379 &
+# Connect: redis-cli -h localhost -p 6379
+```
+
+### Automated Testing Script
+
+Use the provided test script to validate port-forwarding:
+
+```bash
+cd /path/to/stacks
+./deployment/scripts/tailscale/test-port-forward.sh ~/remote-kubeconfig.yaml
+```
+
+This script:
+- Tests port-forwards to ArgoCD, Gitea, and MinIO
+- Validates connectivity with curl
+- Measures latency (should be <500ms added overhead)
+- Provides cleanup instructions
+
+### Multiple Simultaneous Port-Forwards
+
+You can run multiple port-forwards simultaneously:
+
+```bash
+# Start multiple forwards in background
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 > /tmp/pf-argocd.log 2>&1 &
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 > /tmp/pf-gitea.log 2>&1 &
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n postgres svc/postgresql 5432:5432 > /tmp/pf-postgres.log 2>&1 &
+
+# List background jobs
+jobs
+
+# Bring specific job to foreground
+fg %1
+
+# Kill specific background job
+kill %2
+```
+
+### Port-Forward Stability
+
+Port-forwards are generally stable but may need to be restarted if:
+- The target pod is restarted or rescheduled
+- Network connectivity is interrupted
+- The kubectl process is terminated
+
+**Best Practices**:
+1. **Use services instead of pods**: Services handle pod restarts automatically
+2. **Log output to files**: Redirect stdout/stderr when running in background
+3. **Use process managers**: Consider using `systemd` or `supervisor` for critical forwards
+4. **Monitor connectivity**: Check logs periodically for disconnections
+
+### Debugging Port-Forward Issues
+
+#### Port Already in Use
+
+```bash
+# Error: bind: address already in use
+# Solution: Choose a different local port or kill the existing process
+lsof -ti:8080 | xargs kill -9
+```
+
+#### Connection Refused
+
+```bash
+# Error: unable to do port forwarding: socat not found
+# Solution: Install socat (usually available in base images)
+
+# Error: unable to listen on port: Listeners failed to create with the following errors
+# Solution: Check if service exists and is accessible
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get svc -n <namespace>
+```
+
+#### Frequent Disconnections
+
+```bash
+# Check kubectl logs
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -v=6 -n <namespace> svc/<service> <port>
+
+# Verify Tailscale connectivity
+ping kind-operator-13.tail286401.ts.net
+```
+
+### Performance Considerations
+
+Port-forward adds minimal latency over direct Tailscale access:
+- **Expected overhead**: <100ms for small requests
+- **Large file transfers**: May see higher latency due to kubectl proxying
+- **Concurrent connections**: Multiple port-forwards don't significantly impact performance
+
+**Latency Breakdown**:
+1. Local machine → Tailscale operator: ~10-50ms (Tailscale network)
+2. Operator → Kubernetes API server: <1ms (in-cluster)
+3. API server → Target pod: <1ms (in-cluster)
+4. kubectl overhead: ~10-50ms (serialization/proxying)
+
+**Total typical latency**: 20-100ms added to service response time
 
 ## Web UI Access
 
-[Web UI access documentation will be added during Phase 5 implementation]
+Access cluster web UIs (ArgoCD, Gitea, Backstage) directly from your browser on any Tailscale-connected device. This works because ingress-nginx is exposed via the kind host network, which is accessible over Tailscale.
+
+### Architecture
+
+```
+Browser → Tailscale Network → Kind Host (Hetzner) → ingress-nginx → Service → Pod
+                                    ↓
+                            Port 8443 (HTTPS)
+                            Port 80 (HTTP redirect)
+```
+
+**Key Points**:
+- `*.cnoe.localtest.me` resolves to `127.0.0.1` externally (public DNS)
+- Kind cluster binds ingress-nginx to host ports (80, 443, 8443)
+- Tailscale provides access to the kind host's network interfaces
+- DNS resolution happens locally, then traffic routes over Tailscale
+
+### DNS Resolution Requirements
+
+**External (from Mac/remote)**: `*.cnoe.localtest.me` → `127.0.0.1`
+- This is the public localtest.me behavior
+- NOT accessible directly (127.0.0.1 is localhost)
+- BUT kind host is accessible via Tailscale, so we access via kind host's Tailscale IP
+
+**Wait, how does this work?**
+
+Actually, for web UI access from a remote Tailscale machine, you have two options:
+
+#### Option 1: Port-Forward (Recommended for Remote Access)
+
+Since `*.cnoe.localtest.me` resolves to 127.0.0.1 (which is localhost on YOUR machine, not the cluster), the easiest approach for remote access is port-forwarding:
+
+```bash
+# Forward ArgoCD
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 &
+
+# Forward Gitea
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 &
+
+# Access in browser
+open https://localhost:8080  # ArgoCD
+open http://localhost:8081   # Gitea
+```
+
+**Advantages**:
+- Works from any remote machine
+- No DNS configuration needed
+- Encrypted through kubectl proxy
+- Simple troubleshooting
+
+#### Option 2: Direct Ingress Access (For Machines on Same Network as Kind Host)
+
+If you're accessing from a machine that can resolve the kind host's IP directly (e.g., via VPN or local network), and you've configured ingress-nginx properly:
+
+**Note**: This requires the kind cluster to use **path-based routing** or custom DNS that resolves to the kind host's IP.
+
+For the current setup with domain-based routing (`*.cnoe.localtest.me`), port-forwarding (Option 1) is the recommended approach for remote access.
+
+### Available Services
+
+#### ArgoCD
+
+```bash
+# Via port-forward (recommended)
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 &
+# Access: https://localhost:8080
+
+# Get admin password
+kubectl --kubeconfig=~/remote-kubeconfig.yaml -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d
+```
+
+#### Gitea
+
+```bash
+# Via port-forward
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 &
+# Access: http://localhost:8081
+
+# Get credentials
+# Username: giteaAdmin
+# Password from idpbuilder: idpbuilder get secrets -p gitea
+```
+
+#### Backstage (if deployed)
+
+```bash
+# Via port-forward
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n backstage svc/backstage 7007:7007 &
+# Access: http://localhost:7007
+```
+
+#### Headlamp (Kubernetes Dashboard)
+
+```bash
+# Via port-forward
+kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n headlamp svc/headlamp 4466:4466 &
+# Access: http://localhost:4466
+```
+
+### DNS Verification Script
+
+Use the provided script to verify DNS resolution from both external and internal perspectives:
+
+```bash
+./deployment/scripts/tailscale/verify-dns-resolution.sh ~/remote-kubeconfig.yaml
+```
+
+This tests:
+- External DNS: Tailscale hostname resolution
+- External DNS: Ingress domain resolution
+- Internal DNS: Kubernetes service DNS (from pod perspective)
+
+### Web UI Troubleshooting
+
+#### Cannot Access UI After Port-Forward
+
+**Symptoms**: Port-forward starts successfully but browser shows connection refused
+
+**Solutions**:
+```bash
+# Check if service is running
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get pods -n <namespace>
+
+# Check service endpoints
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get endpoints -n <namespace>
+
+# Verify port-forward is active
+jobs  # Should show running kubectl process
+```
+
+#### 502 Bad Gateway
+
+**Cause**: Service exists but pod is not ready
+
+**Solutions**:
+```bash
+# Check pod status
+kubectl --kubeconfig=~/remote-kubeconfig.yaml get pods -n <namespace>
+
+# Check pod logs
+kubectl --kubeconfig=~/remote-kubeconfig.yaml logs -n <namespace> <pod-name>
+```
+
+#### Certificate Warnings
+
+**Cause**: Self-signed certificates used by ingress-nginx
+
+**Solutions**:
+- **Accept the risk** (temporary): Click "Advanced" → "Proceed to localhost" in browser
+- **Trust the CA** (permanent): Export and trust the cluster CA certificate (see Cluster CA Distribution section)
+- **Use port-forward**: Certificates are handled by kubectl, less browser warnings
+
+### Performance Expectations
+
+Web UI performance over Tailscale port-forward:
+- **Initial page load**: <3 seconds
+- **Subsequent navigation**: <1 second
+- **API calls**: 50-200ms latency
+- **Large asset downloads**: May see higher latency due to kubectl proxying
+
+**Performance Tips**:
+1. Keep port-forwards running persistently rather than starting/stopping
+2. Use HTTP/2 if supported by the service (reduces round trips)
+3. For heavy data transfers, consider direct ingress access or VPN alternatives
 
 ## Certificate Lifecycle
 
@@ -454,4 +766,312 @@ Set up monitoring alerts if certificate renewal fails (check Tailscale operator 
 
 ## CI/CD Integration
 
-[CI/CD integration patterns will be added during Phase 6 - Cluster CA Distribution]
+### Overview
+
+CI/CD pipelines (GitHub Actions, GitLab CI, Jenkins) require special configuration for remote cluster access since they typically don't have Tailscale installed or can't provision Let's Encrypt certificates interactively.
+
+**Recommended Approach**: Use **cluster CA distribution** for CI/CD environments.
+
+### GitHub Actions Example
+
+#### Prerequisites
+
+1. Export cluster CA certificate (from cluster host):
+   ```bash
+   ./deployment/scripts/tailscale/export-cluster-ca.sh cluster-ca.crt
+   ```
+
+2. Generate remote kubeconfig (same as user setup):
+   ```bash
+   ./deployment/scripts/tailscale/generate-kubeconfig.sh
+   ```
+
+3. Embed CA certificate in kubeconfig:
+   ```bash
+   # Get base64-encoded CA
+   CA_DATA=$(cat cluster-ca.crt | base64 -w 0)
+
+   # Update kubeconfig clusters section
+   # Add this field to the cluster:
+   #   certificate-authority-data: <CA_DATA>
+   ```
+
+4. Store as GitHub secret:
+   ```bash
+   # Go to: Settings → Secrets and variables → Actions
+   # Create secret: KUBECONFIG_TAILSCALE
+   # Paste the entire kubeconfig content
+   ```
+
+#### Workflow Example
+
+```yaml
+name: Deploy to Cluster
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_TAILSCALE }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify connectivity
+        run: |
+          kubectl get nodes
+          kubectl get pods -A
+
+      - name: Deploy application
+        run: |
+          kubectl apply -f manifests/
+          kubectl rollout status deployment/my-app -n my-namespace
+```
+
+#### Required GitHub Secrets
+
+| Secret Name | Description | How to Obtain |
+|-------------|-------------|---------------|
+| `KUBECONFIG_TAILSCALE` | Full kubeconfig with embedded CA | Generated via generate-kubeconfig.sh, manually add certificate-authority-data |
+| `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale OAuth client ID | [Tailscale Admin Console](https://login.tailscale.com/admin/settings/oauth) → OAuth clients |
+| `TAILSCALE_OAUTH_SECRET` | Tailscale OAuth client secret | Same as above |
+
+**Tailscale OAuth Setup**:
+1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/oauth)
+2. Click "Generate OAuth client"
+3. Set tags: `tag:ci` (create tag if needed in ACL)
+4. Copy client ID and secret
+5. Add ACL rule to allow `tag:ci` to access operator device:
+   ```json
+   "tagOwners": {
+     "tag:ci": ["autogroup:admin"],
+   },
+   "acls": [
+     {"action": "accept", "src": ["tag:ci"], "dst": ["tag:k8s-operator:*"]},
+   ]
+   ```
+
+### GitLab CI Example
+
+```yaml
+deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  before_script:
+    # Install Tailscale
+    - curl -fsSL https://tailscale.com/install.sh | sh
+    - tailscale up --authkey=$TAILSCALE_AUTHKEY --hostname=gitlab-ci-$CI_PIPELINE_ID
+
+    # Configure kubectl
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_TAILSCALE" > ~/.kube/config
+    - chmod 600 ~/.kube/config
+
+  script:
+    - kubectl get nodes
+    - kubectl apply -f manifests/
+    - kubectl rollout status deployment/my-app -n my-namespace
+
+  only:
+    - main
+```
+
+**GitLab CI Variables** (Settings → CI/CD → Variables):
+- `KUBECONFIG_TAILSCALE`: Full kubeconfig with embedded CA
+- `TAILSCALE_AUTHKEY`: Pre-authentication key (reusable, expires after 90 days)
+
+**Tailscale Auth Key Setup**:
+1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
+2. Click "Generate auth key"
+3. Check "Reusable" and "Ephemeral" (cleanup after CI run)
+4. Set tags: `tag:ci`
+5. Copy key and add to GitLab variables
+
+### Jenkins Pipeline Example
+
+```groovy
+pipeline {
+    agent any
+
+    environment {
+        KUBECONFIG = credentials('kubeconfig-tailscale')
+        TAILSCALE_AUTHKEY = credentials('tailscale-authkey')
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                sh '''
+                    # Install Tailscale
+                    curl -fsSL https://tailscale.com/install.sh | sh
+                    tailscale up --authkey=$TAILSCALE_AUTHKEY --hostname=jenkins-${BUILD_ID}
+
+                    # Verify kubectl
+                    kubectl version --client
+                '''
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh 'kubectl get nodes'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    kubectl apply -f manifests/
+                    kubectl rollout status deployment/my-app -n my-namespace
+                '''
+            }
+        }
+    }
+}
+```
+
+**Jenkins Credentials**:
+- `kubeconfig-tailscale`: Secret file with kubeconfig content
+- `tailscale-authkey`: Secret text with Tailscale auth key
+
+### CI/CD Security Considerations
+
+1. **Kubeconfig Storage**:
+   - Use CI platform secret management (GitHub Secrets, GitLab CI Variables, Jenkins Credentials)
+   - NEVER commit kubeconfig to source control
+   - Rotate credentials regularly (client certificates, auth keys)
+
+2. **Tailscale Auth Keys**:
+   - Use **ephemeral** keys for CI (automatically cleanup devices)
+   - Use **reusable** keys to avoid regenerating for every run
+   - Set expiration (90 days recommended)
+   - Tag with `tag:ci` for ACL isolation
+
+3. **RBAC Limitations**:
+   - Create a dedicated ServiceAccount for CI with limited permissions
+   - Avoid using cluster-admin certificates in CI
+   - Example limited RBAC:
+     ```yaml
+     apiVersion: v1
+     kind: ServiceAccount
+     metadata:
+       name: ci-deployer
+       namespace: my-namespace
+     ---
+     apiVersion: rbac.authorization.k8s.io/v1
+     kind: Role
+     metadata:
+       name: ci-deployer
+       namespace: my-namespace
+     rules:
+     - apiGroups: ["apps"]
+       resources: ["deployments"]
+       verbs: ["get", "list", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["pods", "pods/log"]
+       verbs: ["get", "list"]
+     ---
+     apiVersion: rbac.authorization.k8s.io/v1
+     kind: RoleBinding
+     metadata:
+       name: ci-deployer
+       namespace: my-namespace
+     subjects:
+     - kind: ServiceAccount
+       name: ci-deployer
+       namespace: my-namespace
+     roleRef:
+       kind: Role
+       name: ci-deployer
+       apiGroup: rbac.authorization.k8s.io
+     ```
+
+4. **Network Isolation**:
+   - Use Tailscale ACLs to restrict CI devices:
+     ```json
+     "acls": [
+       {
+         "action": "accept",
+         "src": ["tag:ci"],
+         "dst": ["tag:k8s-operator:443"]  // Only API access
+       }
+     ]
+     ```
+
+### Alternative: Direct API Access (Without Tailscale in CI)
+
+For CI environments where installing Tailscale is not feasible, use a bastion/jump host:
+
+```yaml
+# GitHub Actions example with SSH jump host
+- name: Deploy via Jump Host
+  run: |
+    # Setup SSH key
+    mkdir -p ~/.ssh
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+    chmod 600 ~/.ssh/id_rsa
+
+    # Deploy via SSH on jump host (which has Tailscale)
+    ssh -o StrictHostKeyChecking=no jump-host.example.com << 'ENDSSH'
+      export KUBECONFIG=~/remote-kubeconfig.yaml
+      kubectl apply -f /tmp/manifests/
+      kubectl rollout status deployment/my-app
+    ENDSSH
+```
+
+### Troubleshooting CI/CD Access
+
+#### Tailscale Connection Fails in CI
+
+**Symptoms**: `tailscale up` hangs or fails with "no network path"
+
+**Solutions**:
+```bash
+# Check Tailscale service status
+tailscale status
+
+# Verify auth key is valid
+# Regenerate in admin console if expired
+
+# Check CI runner network connectivity
+ping login.tailscale.com
+```
+
+#### Certificate Validation Fails
+
+**Symptoms**: `x509: certificate signed by unknown authority`
+
+**Solution**: Verify cluster CA is embedded in kubeconfig:
+```bash
+# Extract and verify certificate-authority-data
+kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d | openssl x509 -text -noout
+```
+
+#### Unauthorized in CI but Works Locally
+
+**Symptoms**: CI shows `Unauthorized` but same kubeconfig works locally
+
+**Solution**: Check client certificate expiration:
+```bash
+kubectl config view --raw -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -enddate
+```
+
+If expired, regenerate kubeconfig with fresh certificates.

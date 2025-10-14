@@ -83,9 +83,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Document port-forward usage patterns in `docs/tailscale-cluster-access.md` - basic syntax (`kubectl port-forward pod/name local:remote`), service forwarding, multiple simultaneous forwards, background processes
-- [ ] T026 [US2] Create port-forward testing script in `deployment/scripts/tailscale/test-port-forward.sh` - test ArgoCD (8080:443), Gitea (8081:3000), MinIO (8082:9000), include curl validation commands
-- [ ] T027 [US2] Make port-forward test script executable: `chmod +x deployment/scripts/tailscale/test-port-forward.sh`
+- [X] T025 [US2] Document port-forward usage patterns in `docs/tailscale-cluster-access.md` - basic syntax (`kubectl port-forward pod/name local:remote`), service forwarding, multiple simultaneous forwards, background processes
+- [X] T026 [US2] Create port-forward testing script in `deployment/scripts/tailscale/test-port-forward.sh` - test ArgoCD (8080:443), Gitea (8081:3000), MinIO (8082:9000), include curl validation commands
+- [X] T027 [US2] Make port-forward test script executable: `chmod +x deployment/scripts/tailscale/test-port-forward.sh`
 - [ ] T028 [US2] Test port-forward to ArgoCD from Mac: `kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443` (run in background)
 - [ ] T029 [US2] Verify ArgoCD accessible at localhost: Open `http://localhost:8080` in browser on Mac (should load ArgoCD login page within 5 seconds)
 - [ ] T030 [US2] Test port-forward to Gitea from Mac: `kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000`
@@ -108,8 +108,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] Document DNS resolution requirements in `docs/tailscale-cluster-access.md` - explain that `*.cnoe.localtest.me` resolves to 127.0.0.1 externally but requires ingress-nginx access from Tailscale network
-- [ ] T038 [US3] Document ingress access pattern in `docs/tailscale-cluster-access.md` - services must have ingress rules, ingress-nginx must be accessible via Tailscale (already exposed via kind host network), browsers access via domain-based routing (https://service.cnoe.localtest.me:8443)
+- [X] T037 [US3] Document DNS resolution requirements in `docs/tailscale-cluster-access.md` - explain that `*.cnoe.localtest.me` resolves to 127.0.0.1 externally but requires ingress-nginx access from Tailscale network
+- [X] T038 [US3] Document ingress access pattern in `docs/tailscale-cluster-access.md` - services must have ingress rules, ingress-nginx must be accessible via Tailscale (already exposed via kind host network), browsers access via domain-based routing (https://service.cnoe.localtest.me:8443)
 - [ ] T039 [US3] Verify ingress-nginx accessibility from Mac: `curl -k https://argocd.cnoe.localtest.me:8443` from Mac terminal (should receive 200 OK or redirect)
 - [ ] T040 [US3] Test ArgoCD web UI access from Mac browser: Navigate to `https://argocd.cnoe.localtest.me:8443` (should load login page within 3 seconds)
 - [ ] T041 [US3] Test Gitea web UI access from Mac browser: Navigate to `https://gitea.cnoe.localtest.me:8443`
@@ -117,10 +117,10 @@
 - [ ] T043 [US3] Verify TLS certificate handling: Check browser certificate warnings for `*.cnoe.localtest.me` (expected: self-signed cluster CA warnings, document trust store addition if needed)
 - [ ] T044 [US3] Test multi-service access: Open ArgoCD, Gitea, and Backstage in separate tabs, verify all load within 3 seconds and remain responsive
 - [ ] T045 [US3] Test authentication persistence: Log into ArgoCD, refresh page, navigate between pages, verify session remains active
-- [ ] T046 [US3] Document web UI access procedure in `docs/tailscale-cluster-access.md` - list all available services with URLs, note certificate warnings, include login credentials retrieval (`idpbuilder get secrets`)
-- [ ] T047 [US3] Create DNS verification script in `deployment/scripts/tailscale/verify-dns-resolution.sh` - test external resolution (from Mac: `dig argocd.cnoe.localtest.me`), test internal resolution (from pod: `nslookup kubernetes.default.svc`), include troubleshooting steps
-- [ ] T048 [US3] Make DNS verification script executable: `chmod +x deployment/scripts/tailscale/verify-dns-resolution.sh`
-- [ ] T049 [US3] Add web UI troubleshooting section to `docs/tailscale-cluster-access.md` - DNS resolution failures, certificate errors, 502 Bad Gateway (service not running), Tailscale connectivity issues
+- [X] T046 [US3] Document web UI access procedure in `docs/tailscale-cluster-access.md` - list all available services with URLs, note certificate warnings, include login credentials retrieval (`idpbuilder get secrets`)
+- [X] T047 [US3] Create DNS verification script in `deployment/scripts/tailscale/verify-dns-resolution.sh` - test external resolution (from Mac: `dig argocd.cnoe.localtest.me`), test internal resolution (from pod: `nslookup kubernetes.default.svc`), include troubleshooting steps
+- [X] T048 [US3] Make DNS verification script executable: `chmod +x deployment/scripts/tailscale/verify-dns-resolution.sh`
+- [X] T049 [US3] Add web UI troubleshooting section to `docs/tailscale-cluster-access.md` - DNS resolution failures, certificate errors, 502 Bad Gateway (service not running), Tailscale connectivity issues
 
 **Checkpoint**: All user stories should now be independently functional - kubectl, port-forward, and web UI access all work from Mac
 
@@ -130,11 +130,11 @@
 
 **Purpose**: Document alternative certificate strategy for environments without Tailscale HTTPS
 
-- [ ] T050 [P] Create cluster CA export script in `deployment/scripts/tailscale/export-cluster-ca.sh` - extract CA from kind cluster (`docker exec localdev-control-plane cat /etc/kubernetes/pki/ca.crt`), include OS-specific trust store installation instructions (macOS, Linux, kubectl-only)
-- [ ] T051 [P] Make CA export script executable: `chmod +x deployment/scripts/tailscale/export-cluster-ca.sh`
-- [ ] T052 [P] Document cluster CA distribution workflow in `docs/tailscale-cluster-access.md` - when to use (no Tailscale HTTPS, CI/CD pipelines, air-gapped), export procedure, trust store installation (macOS: `security add-trusted-cert`, Linux: `update-ca-certificates`, kubectl: `--certificate-authority` flag)
-- [ ] T053 [P] Add kubeconfig example with cluster CA in `docs/tailscale-cluster-access.md` - show `certificate-authority` field pointing to exported CA file, note file path management requirements
-- [ ] T054 [P] Document CI/CD integration pattern in `docs/tailscale-cluster-access.md` - GitHub Actions example mounting CA from secret, GitLab CI example, note air-gap compatibility
+- [X] T050 [P] Create cluster CA export script in `deployment/scripts/tailscale/export-cluster-ca.sh` - extract CA from kind cluster (`docker exec localdev-control-plane cat /etc/kubernetes/pki/ca.crt`), include OS-specific trust store installation instructions (macOS, Linux, kubectl-only)
+- [X] T051 [P] Make CA export script executable: `chmod +x deployment/scripts/tailscale/export-cluster-ca.sh`
+- [X] T052 [P] Document cluster CA distribution workflow in `docs/tailscale-cluster-access.md` - when to use (no Tailscale HTTPS, CI/CD pipelines, air-gapped), export procedure, trust store installation (macOS: `security add-trusted-cert`, Linux: `update-ca-certificates`, kubectl: `--certificate-authority` flag)
+- [X] T053 [P] Add kubeconfig example with cluster CA in `docs/tailscale-cluster-access.md` - show `certificate-authority` field pointing to exported CA file, note file path management requirements
+- [X] T054 [P] Document CI/CD integration pattern in `docs/tailscale-cluster-access.md` - GitHub Actions example mounting CA from secret, GitLab CI example, note air-gap compatibility
 
 ---
 
@@ -142,15 +142,15 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T055 [P] Create comprehensive quickstart guide in `specs/005-remote-kubernetes-cluster/quickstart.md` - prerequisites (Tailscale account, kubectl installed), configuration steps, validation procedures, all three user story test scenarios
-- [ ] T056 [P] Add troubleshooting matrix to `docs/tailscale-cluster-access.md` - common error messages (x509 certificate validation, TLS handshake timeout, EOF, unauthorized, ProxyGroup conflicts), causes, resolutions
-- [ ] T057 [P] Document certificate lifecycle in `docs/tailscale-cluster-access.md` - Let's Encrypt 90-day validity, automatic renewal, monitoring for renewal failures, certificate expiration warnings
-- [ ] T058 [P] Add performance benchmarking section to `specs/005-remote-kubernetes-cluster/quickstart.md` - kubectl response times (<2s), port-forward latency (<500ms), web UI load times (<3s), record actual measurements
+- [X] T055 [P] Create comprehensive quickstart guide in `specs/005-remote-kubernetes-cluster/quickstart.md` - prerequisites (Tailscale account, kubectl installed), configuration steps, validation procedures, all three user story test scenarios
+- [X] T056 [P] Add troubleshooting matrix to `docs/tailscale-cluster-access.md` - common error messages (x509 certificate validation, TLS handshake timeout, EOF, unauthorized, ProxyGroup conflicts), causes, resolutions
+- [X] T057 [P] Document certificate lifecycle in `docs/tailscale-cluster-access.md` - Let's Encrypt 90-day validity, automatic renewal, monitoring for renewal failures, certificate expiration warnings
+- [X] T058 [P] Add performance benchmarking section to `specs/005-remote-kubernetes-cluster/quickstart.md` - kubectl response times (<2s), port-forward latency (<500ms), web UI load times (<3s), record actual measurements
 - [ ] T059 [P] Document multi-cluster patterns in `docs/tailscale-cluster-access.md` - unique operator hostnames per cluster (cluster1-operator, cluster2-operator), kubectl context switching, avoiding DNS conflicts
 - [ ] T060 [P] Add security best practices to `docs/tailscale-cluster-access.md` - least-privilege RBAC (avoid system:masters for all users), Tailscale ACL policies, audit logging recommendations, network policies for operator pod
 - [ ] T061 [P] Create RBAC impersonation examples in `docs/tailscale-cluster-access.md` - mapping Tailscale groups to Kubernetes groups (`group:admins` → `system:masters`), least-privilege mappings (`group:developers` → custom ClusterRole), impersonationGrants configuration in TailscaleOperatorChart
 - [ ] T062 [P] Document production readiness considerations in `docs/tailscale-cluster-access.md` - HA operator deployment (multi-replica), monitoring (operator pod health, certificate expiration), backup access methods (SSH port forwarding), disaster recovery (certificate regeneration)
-- [ ] T063 Update CLAUDE.md with Tailscale operator patterns in `CLAUDE.md` - add kubectl access via Tailscale section under Common Commands, document generate-kubeconfig.sh usage, add troubleshooting tips
+- [X] T063 Update CLAUDE.md with Tailscale operator patterns in `CLAUDE.md` - add kubectl access via Tailscale section under Common Commands, document generate-kubeconfig.sh usage, add troubleshooting tips
 - [ ] T064 Validate all three user stories end-to-end from Mac (tmux pane %31): kubectl access (US1), port-forward (US2), web UI access (US3) - ensure all acceptance criteria met
 - [ ] T065 Run quickstart.md validation from clean Mac environment (no prior kubeconfig) to verify documentation completeness
 
