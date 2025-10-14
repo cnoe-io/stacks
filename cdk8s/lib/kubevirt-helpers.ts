@@ -476,6 +476,11 @@ runcmd:
   - chown ${username}:users /home/${username}/README-FIRST.txt`;
   }
 
+  // Add runcmd section header if not already present (installDesktop adds it)
+  if (!installDesktop && (enableTailscale || enableRustDesk)) {
+    userData += `\nruncmd:`;
+  }
+
   // Add Tailscale auto-authentication if enabled
   if (enableTailscale) {
     userData += `
