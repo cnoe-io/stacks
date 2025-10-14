@@ -246,6 +246,33 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // RustDesk VM Secrets (Password for RustDesk remote desktop authentication)
+  {
+    name: 'rustdesk-secrets',
+    namespace: 'default',
+    chart: {
+      type: 'RustDeskSecretsChart',
+      props: {
+        namespace: 'default',
+        syncWave: '-70'  // Before VM creation (early in deployment)
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // Before VM deployment (wave 0)
+      labels: {
+        'app.kubernetes.io/name': 'rustdesk-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // NixOS Virtual Machine
   {
     name: 'nixos-dev-vm',
