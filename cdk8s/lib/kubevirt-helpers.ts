@@ -510,55 +510,46 @@ runcmd:
     fi`;
   }
 
-  // Add RustDesk autostart if enabled
+  // Add RustDesk headless setup if enabled
   if (enableRustDesk) {
     userData += `
-  # RustDesk remote desktop setup
-  - mkdir -p /home/${username}/.config/rustdesk
+  # RustDesk remote desktop setup (headless mode)
+  - mkdir -p /root/.config/rustdesk
   - |
-    cat > /home/${username}/.config/rustdesk/RustDesk2.toml <<'RUSTDESKEOF'
+    # Enable headless mode (avoids GL errors, works without X11)
+    sudo rustdesk --option allow-linux-headless Y
+    # Set permanent password for unattended access
+    sudo rustdesk --password ${password || 'nixos123'}
+    # Get RustDesk ID for connection
+    echo "RustDesk ID: $(sudo rustdesk --get-id)" | tee /root/rustdesk-info.txt
+    # Configure direct connection mode
+    cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESKEOF'
     [options]
     direct-server = "Y"
     direct-access-port = "21116"
+    allow-linux-headless = "Y"
+    verification-method = "use-permanent-password"
     RUSTDESKEOF
-  - chown -R ${username}:users /home/${username}/.config/rustdesk
-  # Create RustDesk autostart desktop entry
-  - mkdir -p /home/${username}/.config/autostart
+  # Create systemd service for RustDesk (runs as root for headless access)
   - |
-    cat > /home/${username}/.config/autostart/rustdesk.desktop <<'AUTOSTARTEOF'
-    [Desktop Entry]
-    Type=Application
-    Name=RustDesk
-    Exec=env LIBGL_ALWAYS_SOFTWARE=1 /run/current-system/sw/bin/rustdesk --service
-    Hidden=false
-    NoDisplay=false
-    X-GNOME-Autostart-enabled=true
-    Comment=RustDesk Remote Desktop (Software Rendering)
-    AUTOSTARTEOF
-  - chown -R ${username}:users /home/${username}/.config/autostart
-  - chmod 644 /home/${username}/.config/autostart/rustdesk.desktop
-  # Create systemd user service for RustDesk (runs on boot)
-  - mkdir -p /home/${username}/.config/systemd/user
-  - |
-    cat > /home/${username}/.config/systemd/user/rustdesk.service <<'SERVICEEOF'
+    cat > /etc/systemd/system/rustdesk.service <<'SERVICEEOF'
     [Unit]
-    Description=RustDesk Remote Desktop Service
-    After=graphical-session.target
+    Description=RustDesk Remote Desktop Service (Headless Mode)
+    After=network.target
 
     [Service]
     Type=simple
     Environment="LIBGL_ALWAYS_SOFTWARE=1"
-    Environment="DISPLAY=:0"
     ExecStart=/run/current-system/sw/bin/rustdesk --service
     Restart=on-failure
     RestartSec=5
 
     [Install]
-    WantedBy=default.target
+    WantedBy=multi-user.target
     SERVICEEOF
-  - chown -R ${username}:users /home/${username}/.config/systemd
-  # Enable and start RustDesk service after first login
-  - echo "systemctl --user enable --now rustdesk.service" >> /home/${username}/.bashrc`;
+  - systemctl daemon-reload
+  - systemctl enable rustdesk.service
+  - systemctl start rustdesk.service`;
   }
 
   return userData;
