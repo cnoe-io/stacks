@@ -247,13 +247,18 @@ export function buildVirtualMachine(
  * @param username - Primary user name
  * @param sshKeys - SSH authorized keys (optional)
  * @param password - Plain text password (will be set via chpasswd)
+ * @param installDesktop - Install desktop environment (for base images without desktop)
+ * @param enableTailscale - Enable Tailscale with auto-authentication
+ * @param enableRustDesk - Enable RustDesk remote desktop
  */
 export function buildCloudInitUserData(
   hostname: string,
   username: string,
   sshKeys?: string[],
   password?: string,
-  installDesktop: boolean = false
+  installDesktop: boolean = false,
+  enableTailscale: boolean = false,
+  enableRustDesk: boolean = false
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -469,6 +474,71 @@ runcmd:
     Your configuration repo: ~/nixos-config
     READMEEOF
   - chown ${username}:users /home/${username}/README-FIRST.txt`;
+  }
+
+  // Add Tailscale auto-authentication if enabled
+  if (enableTailscale) {
+    userData += `
+  # Tailscale authentication
+  - |
+    # Wait for tailscaled to be ready
+    timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
+    # Authenticate using auth key from Kubernetes secret
+    # Note: The auth key should be injected via Secret/ConfigMap in production
+    # For now, use OAuth flow: tailscale up
+    # TODO: Pass auth key via environment variable or secret mount
+    tailscale up --ssh --advertise-tags=tag:vm || echo "Tailscale auth requires manual OAuth"`;
+  }
+
+  // Add RustDesk autostart if enabled
+  if (enableRustDesk) {
+    userData += `
+  # RustDesk remote desktop setup
+  - mkdir -p /home/${username}/.config/rustdesk
+  - |
+    cat > /home/${username}/.config/rustdesk/RustDesk2.toml <<'RUSTDESKEOF'
+    [options]
+    direct-server = "Y"
+    direct-access-port = "21116"
+    RUSTDESKEOF
+  - chown -R ${username}:users /home/${username}/.config/rustdesk
+  # Create RustDesk autostart desktop entry
+  - mkdir -p /home/${username}/.config/autostart
+  - |
+    cat > /home/${username}/.config/autostart/rustdesk.desktop <<'AUTOSTARTEOF'
+    [Desktop Entry]
+    Type=Application
+    Name=RustDesk
+    Exec=env LIBGL_ALWAYS_SOFTWARE=1 /run/current-system/sw/bin/rustdesk --service
+    Hidden=false
+    NoDisplay=false
+    X-GNOME-Autostart-enabled=true
+    Comment=RustDesk Remote Desktop (Software Rendering)
+    AUTOSTARTEOF
+  - chown -R ${username}:users /home/${username}/.config/autostart
+  - chmod 644 /home/${username}/.config/autostart/rustdesk.desktop
+  # Create systemd user service for RustDesk (runs on boot)
+  - mkdir -p /home/${username}/.config/systemd/user
+  - |
+    cat > /home/${username}/.config/systemd/user/rustdesk.service <<'SERVICEEOF'
+    [Unit]
+    Description=RustDesk Remote Desktop Service
+    After=graphical-session.target
+
+    [Service]
+    Type=simple
+    Environment="LIBGL_ALWAYS_SOFTWARE=1"
+    Environment="DISPLAY=:0"
+    ExecStart=/run/current-system/sw/bin/rustdesk --service
+    Restart=on-failure
+    RestartSec=5
+
+    [Install]
+    WantedBy=default.target
+    SERVICEEOF
+  - chown -R ${username}:users /home/${username}/.config/systemd
+  # Enable and start RustDesk service after first login
+  - echo "systemctl --user enable --now rustdesk.service" >> /home/${username}/.bashrc`;
   }
 
   return userData;

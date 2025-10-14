@@ -105,7 +105,9 @@ export class NixOsVmChart extends Chart {
       'vpittamp',
       [sshPublicKey],
       'nixos123',  // Default password for console access
-      false  // Skip desktop installation (already in base image)
+      false,  // Skip desktop installation (already in base image)
+      true,   // Enable Tailscale auto-authentication
+      true    // Enable RustDesk autostart
     );
 
     // Create Secret for cloud-init data (required when userData > 2048 bytes)
