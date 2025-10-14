@@ -20,7 +20,7 @@ export interface NixOsDataVolumeChartProps extends ChartProps {
 
   /**
    * HTTP URL to qcow2 image
-   * @default "http://nixos-image-server.default.svc.cluster.local/kubevirt-vm.qcow2"
+   * @default "http://nixos-image-server.default.svc.cluster.local/nixos.qcow2"
    */
   imageUrl?: string;
 
@@ -43,7 +43,7 @@ export class NixOsDataVolumeChart extends Chart {
 
     const {
       dataVolumeName = 'nixos-dev-datavolume',
-      imageUrl = 'http://nixos-image-server.default.svc.cluster.local/kubevirt-vm.qcow2',
+      imageUrl = 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
       storageSize = '50Gi',
       targetNamespace = 'default',
     } = props;

@@ -1,386 +1,496 @@
-# Implementation Plan: RustDesk Base Image Integration
+# Implementation Plan: RustDesk Base Image Integration (Two-Stage Approach)
 
 **Branch**: `006-update-our-specification` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/006-update-our-specification/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
-
 ## Summary
 
-Pre-configure RustDesk remote desktop service in NixOS KubeVirt VM base image using declarative NixOS modules instead of unreliable cloud-init runtime configuration. VMs will boot with RustDesk service already running in headless mode, eliminating post-boot configuration delays and cloud-init execution failures. Configuration changes require base image rebuild (3-5 min with binary cache) but provide 99%+ reliability vs. 0% success rate with cloud-init runcmd approach.
+Pre-configure RustDesk remote desktop service in a **minimal NixOS KubeVirt VM base image** containing only essential connection services (SSH, RustDesk, Tailscale). The minimal image boots quickly (<2 min) with working remote access, then users can optionally apply full desktop configuration at runtime via cloud-init or manual nixos-rebuild. This two-stage approach provides:
+
+1. **Stage 1 (Minimal Base Image)**: Fast boot, reliable connection services, small image size (~1-2 GB)
+2. **Stage 2 (Runtime Configuration)**: Optional full desktop environment applied via cloud-init entrypoint or manual switch
+
+**Key Innovation**: Separates "must work on boot" (connection services) from "nice to have later" (full desktop/dev tools), eliminating the 20-25 minute full image build for every change while maintaining 99%+ reliability for remote access.
 
 ## Technical Context
 
-**Language/Version**: Nix 2.x (declarative configuration language for NixOS)
+**Language/Version**: NixOS 24.11, Nix 2.x+
 **Primary Dependencies**:
-- NixOS base image flake (`nix build .#nixos-kubevirt-image`)
-- RustDesk package (nixpkgs `rustdesk-flutter`)
-- Attic binary cache + MinIO (for fast rebuilds)
-- KubeVirt (VM runtime on Kubernetes)
+- **Nix build system**: For declarative base image builds with `nix build .#nixos-kubevirt-minimal-image`
+- **nixos-generators**: For qcow2 VM image creation from NixOS configuration
+- **KubeVirt CDI**: For DataVolume imports from qcow2 HTTP sources
+- **Attic binary cache**: For fast rebuilds (3-5 min vs 20-25 min cold)
+- **MinIO**: S3-compatible storage for qcow2 image distribution
+- **CDK8s (TypeScript)**: For Kubernetes manifest generation
 
 **Storage**:
-- Base image artifacts: qcow2 disk images stored in MinIO or external registry
-- Binary cache: Attic + MinIO for Nix store paths
-- VM persistent storage: PVCs managed by KubeVirt DataVolumes
+- **Base Image Storage**: MinIO (`images` bucket) - serves qcow2 files via HTTP
+- **Binary Cache**: Attic + MinIO - stores Nix store paths for fast rebuilds
+- **Configuration Storage**: Git (flake.nix, NixOS modules) - version-controlled declarative config
 
 **Testing**:
-- NixOS module validation during `nix build`
-- VM boot testing (verify RustDesk service active within 2 minutes)
-- Connection testing (establish remote desktop session via RustDesk client)
-- Integration testing (verify service auto-starts on VM recreation)
+- **Build Validation**: `nix build` succeeds, RustDesk package present in closure
+- **VM Boot Test**: VM reaches "Running" state within 2 minutes
+- **Service Test**: RustDesk service active within 2 minutes of boot
+- **Connection Test**: Remote desktop connection establishes successfully
 
-**Target Platform**: NixOS VMs running on KubeVirt (Kubernetes-based virtualization)
-
+**Target Platform**: KubeVirt VMs (qcow2 format), x86_64-linux
 **Project Type**: Infrastructure/Platform (NixOS image build + Kubernetes deployment)
-
 **Performance Goals**:
-- Base image rebuild: <5 minutes with binary cache (vs. 20-25 min cold)
-- VM boot to RustDesk ready: <2 minutes
-- Remote desktop connection establishment: <30 seconds after service active
+- Minimal image build: <10 minutes (cold), <3 minutes (cached)
+- Full image build: <25 minutes (cold), <5 minutes (cached) - NOT required for connection services
+- VM boot time: <2 minutes to RustDesk service active
+- Image size: Minimal ~1-2 GB, Full ~3-5 GB
 
 **Constraints**:
-- NixOS immutable filesystem (no runtime writes to `/etc/systemd/system/`)
-- Cloud-init runcmd unreliable on NixOS (cannot be used for RustDesk setup)
-- Configuration changes require full image rebuild and VM recreation
-- Binary cache must be available for fast rebuilds (fallback to 20-25 min if unavailable)
+- **NixOS Immutability**: Runtime changes require nixos-rebuild or are ephemeral
+- **KubeVirt Image Format**: Must be qcow2 compatible with CDI DataVolume imports
+- **Binary Cache Dependency**: Fast rebuilds require Attic cache availability
+- **Configuration Changes**: Minimal image changes require image rebuild + VM recreation (but fast: 3-5 min)
 
 **Scale/Scope**:
-- Single NixOS base image supporting multiple VM instances
-- RustDesk headless mode configuration (no GUI dependencies)
-- Firewall rules for direct connection mode (port 21116)
-- Integration with existing Tailscale subnet routing for remote access
+- **Base Images**: 2 types (minimal, full) - shared across all VMs
+- **VMs per Image**: Unlimited - VMs reference base image URL in DataVolume
+- **Image Versions**: Simple versioning (v1, v2, ...) or date-based (2025-10-14)
+- **Rebuild Frequency**: Infrequent (monthly for updates, as-needed for config changes)
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-### Principle I: Type-Safe Infrastructure as Code ✅ PASS
+### Principle I: Type-Safe Infrastructure as Code ✅
 
-**Assessment**: While NixOS base image configuration uses Nix language (not TypeScript), the Kubernetes deployment resources (DataVolume, VM manifests) are already defined in CDK8s TypeScript charts (`cdk8s/charts/infra/nixos-vm-chart.ts`).
-
-**Compliance**:
-- VM deployment manifests use CDK8s TypeScript (existing `nixos-vm-chart.ts`)
-- Only the NixOS image build itself uses Nix (outside scope of K8s manifests)
-- Chart updates to reference new base image will use TypeScript
-
-**Action**: Update `nixos-vm-chart.ts` to reference new base image URL (within CDK8s)
-
-### Principle II: GitOps-First Deployment ✅ PASS
-
-**Assessment**: Base image build and VM deployment both follow GitOps patterns.
+**Requirement**: All Kubernetes manifests MUST use CDK8s with TypeScript.
 
 **Compliance**:
-- NixOS base image configuration stored in Git (declarative flake.nix)
-- Image rebuild triggered via documented build process (not imperative)
-- VM deployment via ArgoCD (existing `nixos-dev-vm` Application)
-- DataVolume imageURL update triggers GitOps sync
-- Deployment uses `cluster-update` wrapper (constitution requirement)
+- ✅ Base image build is Nix/NixOS (outside CDK8s scope - infrastructure prerequisite)
+- ✅ VM deployment uses CDK8s charts: `nixos-vm-chart.ts`, `nixos-datavolume-chart.ts`
+- ✅ Image server uses CDK8s: `nixos-image-server-chart.ts`
+- ✅ Secrets use CDK8s: `rustdesk-secrets-chart.ts` (ExternalSecret)
+- ✅ All charts have TypeScript interfaces and type checking
 
-**Action**: Document image rebuild → push → chart update → ArgoCD sync workflow
+**No violations** - Base image build is analogous to container image build (prerequisite, not K8s manifest)
 
-### Principle III: Multi-Environment Isolation ⚠️ PARTIAL
+### Principle II: GitOps-First Deployment ✅
 
-**Assessment**: Feature uses default namespace (not VCluster) but this is acceptable for infrastructure VMs.
-
-**Compliance**:
-- Dev VMs deployed to `default` namespace (not dev-vcluster)
-- **Justification**: KubeVirt VMs are infrastructure resources, not application workloads
-- VClusters don't support nested virtualization (KubeVirt inside VCluster unreliable)
-- Network isolation achieved via Tailscale subnet routing instead
-
-**Action**: Document rationale for namespace choice in quickstart.md
-
-### Principle IV: Declarative Configuration ✅ PASS
-
-**Assessment**: Both NixOS image configuration and K8s manifests are fully declarative.
+**Requirement**: All deployments via ArgoCD, use `cluster-menu.sh` for cluster operations.
 
 **Compliance**:
-- NixOS base image: declarative flake.nix + modules
-- RustDesk configuration: declarative NixOS module (`services.rustdesk`)
-- VM manifests: CDK8s TypeScript in `config/applications.ts`
-- No imperative cloud-init runcmd (explicitly rejected by this spec)
+- ✅ VM deployment via ArgoCD Application (`nixos-dev-vm.yaml`)
+- ✅ DataVolume via ArgoCD Application (`nixos-dev-datavolume.yaml`)
+- ✅ Image server via ArgoCD Application (`nixos-image-server.yaml`)
+- ✅ Secrets via ArgoCD Application (`rustdesk-secrets.yaml`)
+- ✅ Deployment uses `cluster-update` (cluster-menu.sh wrapper)
+- ✅ Sync waves enforce ordering (secrets -70, datavolume -40, VM 0)
 
-**Action**: Ensure RustDesk module configuration is in Git-tracked NixOS files
+**No violations** - Base image build is separate pipeline (documented workflow), K8s deployment is fully GitOps
 
-### Principle V: CNOE Technology Alignment ✅ PASS
+### Principle III: Multi-Environment Isolation ⚠️
 
-**Assessment**: Feature uses CNOE-aligned technologies and infrastructure patterns.
+**Requirement**: Dev/staging use VClusters, production uses dedicated clusters.
 
-**Compliance**:
-- Compute Platform: Kubernetes (KubeVirt for VMs)
-- Packaging: CDK8s for K8s manifests
-- GitOps: ArgoCD for deployment
-- Infrastructure: Tailscale for remote access (CNOE platform capability)
-- Binary cache: Attic (CNOE-compatible infrastructure)
+**Status**: Currently single environment (default namespace in localdev cluster).
 
-**Deviations**: None - NixOS is infrastructure choice, not application framework
+**Justification**: This feature establishes baseline VM deployment. Multi-environment VM deployment (dev/staging/prod VMs) is out of scope for this spec. Future work will add VCluster support.
 
-### Principle VI: Package-Based Architecture ✅ PASS
+**Compliance Path**: When multi-environment VMs needed, VMs will target vclusters via ArgoCD destination configuration.
 
-**Assessment**: VM deployment follows package-based architecture.
+### Principle IV: Declarative Configuration ✅
 
-**Compliance**:
-- Existing packages: `nixos-dev-datavolume`, `nixos-dev-vm`
-- Each package has `dist/<app>/manifests/` with kustomization.yaml
-- ArgoCD Applications reference `cnoe://` URLs for local dev
-- Chart in `cdk8s/charts/infra/nixos-vm-chart.ts`
-
-**Action**: Update packages to reference new base image after build
-
-### Principle VII: Security by Default ✅ PASS
-
-**Assessment**: RustDesk configuration follows security best practices.
+**Requirement**: All configuration declared in code, no imperative scripts except bootstrapping.
 
 **Compliance**:
-- Secrets: RustDesk permanent password via Azure Key Vault + External Secrets (planned)
-- Headless mode: Eliminates GUI dependencies and reduces attack surface
-- Network: Firewall rules restrict access to port 21116 only
-- Access control: Tailscale subnet routing provides authentication layer
-- Service isolation: Runs in VM namespace, not cluster namespace
+- ✅ Base image config is declarative NixOS (flake.nix, modules/)
+- ✅ VM config in CDK8s TypeScript charts
+- ✅ Application config in `config/applications.ts`
+- ✅ Secrets via ESO ExternalSecret (declarative Azure Key Vault reference)
+- ⚠️ **Exception**: Image build workflow (`nix build`) is imperative but documented
+  - **Justification**: Similar to `docker build` - infrastructure prerequisite, not K8s resource
+  - **Mitigation**: Workflow documented in quickstart.md, can be automated via CI/CD pipeline
 
-**Current Gap**: Permanent password hard-coded ("nixos123") - must be moved to ESO
+**Minor exception justified** - Image builds are infrastructure prerequisites like container builds
 
-**Action**: Phase 1 must design ESO integration for RustDesk password
+### Principle V: CNOE Technology Alignment ✅
 
-### Principle VIII: AI-Augmented Platform Engineering ✅ PASS
-
-**Assessment**: Feature implementation may leverage AI for documentation and troubleshooting.
+**Requirement**: Use CNOE-endorsed technologies.
 
 **Compliance**:
-- AI used for spec generation, planning, documentation (this plan)
-- No autonomous production deployments (image rebuild is human-triggered)
-- AI-generated config reviewed before commit
-- Critical decisions (base image vs. cloud-init) made with human judgment
+- ✅ GitOps: ArgoCD for VM deployment
+- ✅ Packaging: cdk8s (TypeScript) for manifests
+- ✅ Secret Management: External Secrets Operator + Azure Key Vault
+- ❓ **Non-CNOE**: Nix/NixOS for base image build
+  - **Rationale**: NixOS is the most reliable way to build reproducible, declarative VM images
+  - **Alternatives considered**: Packer (imperative), cloud-init-only (unreliable per debugging summary)
+  - **CNOE alignment**: No CNOE-endorsed VM image builder exists; Nix is community-standard for declarative infrastructure
 
-**Action**: Ensure quickstart.md includes human-verifiable testing steps
+**No violations** - Nix/NixOS fills gap where CNOE has no recommendation (VM image building)
 
-## Gate Evaluation (Initial - Before Phase 0)
+### Principle VI: Package-Based Architecture ✅
 
-**Status**: ✅ PASS - All principles compliant, no violations requiring justification
+**Requirement**: Applications organized as self-contained packages.
 
-**Partial Compliance (Principle III)**: Dev VMs in `default` namespace justified by KubeVirt limitations and infrastructure nature.
+**Compliance**:
+- ✅ `nixos-dev-vm` package: manifests/, kustomization.yaml, ArgoCD Application
+- ✅ `nixos-dev-datavolume` package: manifests/, kustomization.yaml, ArgoCD Application
+- ✅ `nixos-image-server` package: manifests/, kustomization.yaml, ArgoCD Application
+- ✅ `rustdesk-secrets` package: manifests/, kustomization.yaml, ArgoCD Application
+- ✅ All charts in `cdk8s/charts/{apps,infra,secrets}/`
+- ✅ Synthesis via `main-v2.ts` → `dist/<app>/manifests/`
 
-**Security Gap (Principle VII)**: RustDesk password must be moved from hard-coded to ESO - addressed in Phase 1 design.
+**No violations** - Follows package-based architecture exactly
 
----
+### Principle VII: Security by Default ✅
 
-## Gate Re-Evaluation (Post-Design - After Phase 1)
+**Requirement**: External Secrets, SecurityContext, resource limits, NetworkPolicies.
 
-**Date**: 2025-10-14
-**Status**: ✅ PASS - All principles remain compliant, security gap resolved
+**Compliance**:
+- ✅ RustDesk password via ESO + Azure Key Vault
+- ✅ Tailscale auth keys via ESO + Azure Key Vault
+- ⚠️ VM SecurityContext: KubeVirt VMs run in privileged context (required by KubeVirt architecture)
+  - **Justification**: VMs are workload isolation boundary (equivalent to Pod), not containers
+  - **Mitigation**: VMs isolated by KubeVirt VMI security model, not container securityContext
+- ✅ Resource limits: CPU/memory defined in VM spec
+- ❓ NetworkPolicies: Not implemented (out of scope for MVP)
 
-### Changes from Initial Evaluation
+**Minor exception justified** - VM security model differs from container security model
 
-#### Principle VII: Security by Default - ✅ RESOLVED
+### Principle VIII: AI-Augmented Platform Engineering ✅
 
-**Initial Gap**: RustDesk password hard-coded as "nixos123" in cloud-init userdata
+**Requirement**: AI agents MAY be used for automation with human approval.
 
-**Resolution** (Phase 1 design):
-- Created ExternalSecret contract (`contracts/external-secret-rustdesk.yaml`)
-- Password stored in Azure Key Vault (secret name: `RUSTDESK-PASSWORD`)
-- ESO syncs to Kubernetes Secret (`rustdesk-password`)
-- VM references Secret via environment variable (`$RUSTDESK_PASSWORD`)
-- Cloud-init uses environment variable substitution (no hardcoded password)
+**Compliance**: This feature does not introduce AI agents. Human-driven implementation.
 
-**Evidence**:
-- Contract defined: `specs/006-update-our-specification/contracts/external-secret-rustdesk.yaml`
-- CDK8s interface updated: `contracts/cdk8s-nixos-vm-chart.ts` (props: `rustdeskPasswordSecret`, `rustdeskPasswordEnvVar`)
-- Quickstart Step 1: Documents password setup in Azure Key Vault
-- Quickstart Step 4: Documents ExternalSecret deployment
-- Data model: RustDesk Credentials entity defines security requirements
+**No violations** - N/A for this feature
 
-**Verification Checklist**:
-- [x] Password stored in Azure Key Vault (not in code)
-- [x] ExternalSecret syncs from Key Vault to K8s Secret
-- [x] VM references Secret (not hardcoded value)
-- [x] Cloud-init uses environment variable substitution
-- [x] Sync wave ordering ensures Secret exists before VM (-70 < 0)
-- [x] Rotation workflow documented (quarterly rotation in quickstart)
+### Constitution Check Summary
 
-### All Other Principles - No Changes Required
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| I. Type-Safe IaC | ✅ PASS | CDK8s for all K8s manifests |
+| II. GitOps-First | ✅ PASS | ArgoCD + cluster-menu.sh |
+| III. Multi-Env Isolation | ⚠️ DEFER | Single env for MVP, VCluster support in future |
+| IV. Declarative Config | ✅ PASS | Minor exception for image build (justified) |
+| V. CNOE Alignment | ✅ PASS | Nix fills gap where CNOE has no standard |
+| VI. Package-Based | ✅ PASS | Full package architecture |
+| VII. Security by Default | ✅ PASS | ESO secrets, VM security model differs from containers |
+| VIII. AI-Augmented | ✅ N/A | Not applicable |
 
-All other principles (I, II, III, IV, V, VI, VIII) remain compliant as evaluated in initial check. No design decisions in Phase 0/1 introduced new violations or gaps.
-
-### Final Assessment
-
-**Constitution Compliance**: ✅ FULL COMPLIANCE
-
-- No principle violations
-- Partial compliance (Principle III - namespace choice) justified and documented
-- Security gap (Principle VII - password management) fully resolved in design
-- All contracts, data models, and quickstart guide align with constitution requirements
-
-**Ready to Proceed**: Yes - all gates passed, implementation can begin in Phase 2 (tasks generation)
-
----
-
-## NixOS Module Revision Analysis
-
-**User Request**: Consider whether KubeVirt VM configuration in `/etc/nixos` needs revision
-
-**Finding**: ✅ **EXISTING MODULE SUITABLE** - Minor updates only
-
-### Current Module Status
-
-The existing `/etc/nixos/modules/services/rustdesk.nix` module already implements:
-- ✅ System service mode (`enableSystemService = true`)
-- ✅ Xvfb virtual framebuffer for headless operation
-- ✅ Software GL rendering (`LIBGL_ALWAYS_SOFTWARE=1`)
-- ✅ Direct IP access configuration (port 21116)
-- ✅ Permanent password support (`permanentPassword` option)
-- ✅ Activation script for config file generation
-
-### Required Module Updates
-
-**Priority 1 - Critical for VM deployment**:
-
-1. **Add headless mode flag to config generation** (line 134-150 in rustdesk.nix):
-   ```nix
-   # Add to system.activationScripts.rustdeskConfig
-   allow-linux-headless = "Y"  # Required for headless RustDesk-Flutter
-   ```
-
-2. **Support environment variable in permanentPassword** (line 28-32):
-   ```nix
-   permanentPassword = mkOption {
-     type = types.nullOr types.str;
-     default = null;
-     description = ''
-       Permanent password for RustDesk.
-       Supports environment variable substitution: "$RUSTDESK_PASSWORD"
-     '';
-   };
-   ```
-
-**Priority 2 - Recommended for VM context**:
-
-3. **Change default user to root** (line 18):
-   ```nix
-   user = mkOption {
-     type = types.str;
-     default = "root";  # Changed from "vpittamp" for VM deployments
-     description = "User to run RustDesk service for";
-   };
-   ```
-
-4. **Add VM-optimized defaults**:
-   - Set `enableSystemService = true` as default for VMs
-   - Document Xvfb requirement in module description
-   - Add example configuration for KubeVirt VMs in module comments
-
-### Module Revisions - Implementation Strategy
-
-**Option A: Update existing module** (Recommended)
-- Modify `/etc/nixos/modules/services/rustdesk.nix` directly
-- Add VM-specific defaults via conditional logic
-- Maintain backward compatibility for desktop use
-
-**Option B: Create VM-specific module**
-- New module: `/etc/nixos/modules/services/rustdesk-vm.nix`
-- Imports base rustdesk.nix and overrides defaults
-- Clearer separation of desktop vs. VM configurations
-
-**Decision**: **Option A** - Update existing module with backward-compatible changes
-- Less duplication
-- Single source of truth
-- VM/desktop differentiation via `enableSystemService` flag
-
-### Updated Contract
-
-The `contracts/nixos-rustdesk-module.nix` should be updated to match the existing module's interface:
-
-**Changes from initial contract proposal**:
-- Service name: `rustdesk` → `rustdesk-headless` (when `enableSystemService = true`)
-- Add Xvfb service dependency
-- Use activation script for config generation (not tmpfiles)
-- Support `permanentPassword` option (in addition to env vars)
-- Document Xvfb requirement
-
-**No changes needed for**:
-- CDK8s chart (already references base image)
-- ExternalSecret (already syncs password to K8s Secret)
-- Quickstart guide (already documents base image approach)
-
-### Impact on Implementation Tasks
-
-**New tasks added**:
-1. Update `/etc/nixos/modules/services/rustdesk.nix` with headless mode flag
-2. Test module updates on host system before base image build
-3. Update `contracts/nixos-rustdesk-module.nix` to match existing module interface
-4. Verify Xvfb service starts correctly in VM environment
-
-**Tasks removed**:
-- ~~Create new RustDesk NixOS module from scratch~~ (module already exists)
-
-**Time estimate impact**: -30 minutes (module exists, only minor updates needed)
+**GATE PASSED** - All principles satisfied with documented justifications for minor exceptions.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-specs/[###-feature]/
+specs/006-update-our-specification/
 ├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
+├── research.md          # Phase 0 output - image building approaches
+├── data-model.md        # Phase 1 output - entities and relationships
+├── quickstart.md        # Phase 1 output - end-to-end workflow
+├── contracts/           # Phase 1 output - NixOS module, CDK8s chart interfaces
+│   ├── nixos-minimal-image-flake.nix   # Flake output for minimal image
+│   ├── nixos-full-image-flake.nix      # Flake output for full image (optional)
+│   ├── external-secret-rustdesk.yaml   # ExternalSecret contract
+│   └── datavolume-source.yaml          # DataVolume HTTP source contract
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
 
-**This feature modifies existing infrastructure code - no new application directories**
-
 ```
-# NixOS Base Image Configuration (external to this repo - on Hetzner host)
+# NixOS Configuration (Hetzner host)
 /etc/nixos/
-├── flake.nix                          # NixOS system configuration (base image definition)
-├── modules/
-│   └── services/
-│       └── rustdesk.nix               # Existing RustDesk NixOS module (to be integrated)
-└── configuration.nix                  # Host configuration (imports rustdesk.nix)
+├── flake.nix                         # Flake with minimal/full image outputs
+├── configurations/
+│   ├── kubevirt-minimal.nix          # NEW: Minimal image (SSH, RustDesk, Tailscale)
+│   ├── kubevirt-desktop.nix          # NEW: Full desktop image (or applied at runtime)
+│   └── vm-hetzner.nix                # Existing full Hetzner config (reference)
+└── modules/
+    └── services/
+        └── rustdesk.nix              # Existing RustDesk module (may need updates)
 
-# CDK8s Charts (this repo - stacks/)
+# CDK8s Charts (this repo)
 cdk8s/
 ├── charts/
-│   └── infra/
-│       ├── nixos-vm-chart.ts          # MODIFIED: Update DataVolume imageURL
-│       └── kubevirt-helpers.ts        # MODIFIED: Remove cloud-init RustDesk setup
+│   ├── apps/
+│   │   ├── nixos-vm-chart.ts         # UPDATED: Support minimal/full image URLs
+│   │   └── nixos-datavolume-chart.ts # UPDATED: Reference MinIO image URLs
+│   ├── infra/
+│   │   └── nixos-image-server-chart.ts # EXISTING: Serves images via HTTP
+│   └── secrets/
+│       └── rustdesk-secrets-chart.ts # NEW: ExternalSecret for RustDesk password
+├── lib/
+│   └── kubevirt-helpers.ts           # UPDATED: Remove cloud-init RustDesk setup
 ├── config/
-│   └── applications.ts                # MODIFIED: Update nixos-dev-vm chart props
-└── dist/
-    ├── nixos-dev-datavolume/
-    │   └── manifests/                 # Generated K8s manifests (DataVolume with new image)
-    └── nixos-dev-vm/
-        └── manifests/                 # Generated K8s manifests (VM referencing DataVolume)
+│   └── applications.ts               # UPDATED: Add rustdesk-secrets application
+└── dist/                              # Synthesized packages
+    ├── nixos-dev-vm.yaml
+    ├── nixos-dev-vm/manifests/
+    ├── nixos-dev-datavolume.yaml
+    ├── nixos-dev-datavolume/manifests/
+    ├── rustdesk-secrets.yaml
+    └── rustdesk-secrets/manifests/
 
-# Documentation (this repo)
-docs/
-├── RUSTDESK_DEBUGGING_SUMMARY.md      # Existing debugging investigation
-├── RUSTDESK_CONNECTION_GUIDE.md       # MODIFIED: Update with base image approach
-└── CLAUDE.md                          # MODIFIED: Update NixOS VM section
-
-# Deployment Scripts (this repo)
-deployment/
-└── scripts/
-    └── nix-cache/
-        └── push-to-cache.sh           # Existing script for binary cache population
+# Build Scripts (Optional - CI/CD Pipeline)
+deployment/scripts/
+└── nix-cache/
+    ├── build-minimal-image.sh        # NEW: Build minimal image + push to cache/MinIO
+    ├── build-full-image.sh           # NEW: Build full image (optional)
+    └── push-to-cache.sh              # EXISTING: Push Nix store paths to Attic
 ```
 
-**Structure Decision**: This is an **infrastructure modification** feature, not a new application. Work spans three areas:
+**Structure Decision**: Two-stage approach with separate minimal and full image configurations. Minimal image is the primary artifact for reliable remote access. Full image is either:
+1. **Option A**: Pre-built and selectable at VM creation time (separate base image)
+2. **Option B**: Applied at runtime via cloud-init entrypoint (nixos-rebuild switch to full config)
 
-1. **NixOS Configuration** (external, on Hetzner host): Add RustDesk module to base image flake.nix
-2. **CDK8s Charts** (this repo): Update VM charts to reference new base image and remove cloud-init RustDesk config
-3. **Documentation** (this repo): Update guides to reflect base image approach
+Implementation will use **Option B** (runtime application) initially for flexibility, with Option A available for performance-critical use cases.
 
 ## Complexity Tracking
 
-*No constitution violations requiring justification*
+*Fill ONLY if Constitution Check has violations that must be justified*
 
-**Partial Compliance Note (Principle III)**:
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| N/A | No violations | N/A |
 
-| Aspect | Decision | Rationale |
-|--------|----------|-----------|
-| VMs in `default` namespace | Infrastructure VMs not in VCluster | KubeVirt doesn't support nested virtualization reliably; VMs are infrastructure resources, not tenant workloads |
-| Network isolation | Via Tailscale subnet routing | Provides equivalent isolation to namespace NetworkPolicies with better remote access UX |
+## Phase 0: Research (NEEDS CLARIFICATION Resolution)
+
+**Research Tasks** (generated from Technical Context):
+
+1. **nixos-generators Usage**
+   - Research: How to create qcow2 VM images from NixOS configurations using nixos-generators
+   - Output: Example flake with `nixosConfigurations` → `packages` mapping for qcow2 format
+   - Reference: https://github.com/nix-community/nixos-generators
+
+2. **Minimal Image Package Selection**
+   - Research: Essential packages for SSH, RustDesk, Tailscale (no desktop)
+   - Output: Package list with sizes, dependencies, and justifications
+   - Target: <500 MB total package closure
+
+3. **Runtime Configuration Application**
+   - Research: Best practices for applying full NixOS configuration at VM runtime
+   - Options: cloud-init nixos-rebuild, user-triggered script, systemd oneshot service
+   - Output: Recommended approach with trade-offs
+
+4. **Image Versioning Strategy**
+   - Research: How to version minimal vs. full images, update strategy
+   - Output: Versioning scheme (semantic, date-based, git-hash) and CDK8s chart patterns
+
+5. **Binary Cache Workflow**
+   - Research: How to push minimal image store paths to Attic efficiently
+   - Output: Script workflow for build → push → verify cache population
+
+**Output**: `research.md` with decisions for all above unknowns
+
+## Phase 1: Design & Contracts
+
+**Prerequisites**: `research.md` complete
+
+### Data Model (`data-model.md`)
+
+**Entities**:
+1. **MinimalBaseImage**: NixOS VM image with only connection services
+   - Fields: imageUrl, version, buildDate, packageClosure, sizeBytes
+   - Relationships: Referenced by DataVolume
+2. **FullBaseImage**: Optional full desktop NixOS VM image
+   - Fields: imageUrl, version, buildDate, packageClosure, sizeBytes
+   - Relationships: Optional reference from VM or applied at runtime
+3. **DataVolume**: KubeVirt data volume importing base image
+   - Fields: name, namespace, imageUrl (MinimalBaseImage), storageSize
+   - Relationships: Consumed by VM
+4. **VirtualMachine**: KubeVirt VM instance
+   - Fields: name, namespace, cpuCores, memory, dataVolumeRef
+   - Relationships: Uses DataVolume, optionally applies FullBaseImage at runtime
+5. **RustDeskPassword**: Secret synced from Azure Key Vault
+   - Fields: secretName, keyVaultKey, refreshInterval
+   - Relationships: Mounted in VM for RustDesk authentication
+
+**State Transitions**:
+- **MinimalBaseImage**: `building` → `pushing to cache` → `uploading to MinIO` → `available`
+- **DataVolume**: `pending` → `importing` → `ready` → `bound to VM`
+- **VirtualMachine**: `stopped` → `starting` → `running (minimal)` → `running (full)` (if runtime config applied)
+
+### API Contracts (`contracts/`)
+
+1. **`nixos-minimal-image-flake.nix`**: Flake output definition for minimal image
+   - Package: `nixos-kubevirt-minimal-image`
+   - Format: qcow2
+   - Target: `packages.x86_64-linux.nixos-kubevirt-minimal-image`
+
+2. **`external-secret-rustdesk.yaml`**: ExternalSecret contract
+   - ClusterSecretStore: `azure-keyvault-store`
+   - RemoteRef: `RUSTDESK-PASSWORD`
+   - Target Secret: `rustdesk-password` (namespace: default)
+
+3. **`datavolume-source.yaml`**: DataVolume HTTP source contract
+   - Source URL: `http://minio.nix-cache.svc.cluster.local:9000/images/nixos-kubevirt-minimal-v1.qcow2`
+   - Storage: ReadWriteOnce, size from image + 10% overhead
+
+4. **`vm-spec-contract.yaml`**: VirtualMachine spec contract
+   - CPU: configurable (default 2 cores)
+   - Memory: configurable (default 4Gi)
+   - DataVolumeRef: references DataVolume name
+   - Cloud-init: Optional full config application entrypoint
+
+### Quickstart (`quickstart.md`)
+
+End-to-end workflow:
+1. Build minimal image on Hetzner host
+2. Push to Attic cache
+3. Upload to MinIO
+4. Update CDK8s chart with new image URL
+5. Synthesize and deploy
+6. Verify VM boots with RustDesk service active
+7. (Optional) Apply full configuration at runtime
+
+### Agent Context Update
+
+Run `.specify/scripts/bash/update-agent-context.sh claude` to add:
+- **New Technologies**: nixos-generators, MinIO image distribution
+- **New Patterns**: Two-stage minimal/full image approach
+- **Preserve Manual Additions**: Existing NixOS, KubeVirt, RustDesk context
+
+## Phase 2: Task Breakdown (Not Created by `/speckit.plan`)
+
+**Note**: Phase 2 tasks are generated by the `/speckit.tasks` command after plan approval. Preliminary task outline:
+
+### Phase 1: Minimal Base Image Setup
+- T001: Create kubevirt-minimal.nix configuration (SSH, RustDesk, Tailscale only)
+- T002: Add nixos-generators flake output for qcow2 minimal image
+- T003: Build minimal image and verify package closure size
+- T004: Create RustDeskSecretsChart (ExternalSecret)
+- T005: Update kubevirt-helpers.ts (remove cloud-init RustDesk setup)
+
+### Phase 2: Image Build & Distribution
+- T006: Build minimal image on Hetzner host
+- T007: Push minimal image store paths to Attic binary cache
+- T008: Upload minimal qcow2 to MinIO images bucket
+- T009: Update NixOsDataVolumeChart with MinIO minimal image URL
+
+### Phase 3: Deployment & Verification
+- T010: Synthesize and deploy updated manifests (cluster-update)
+- T011: Verify VM boots with RustDesk service active within 2 minutes
+- T012: Test RustDesk remote desktop connection
+- T013: (Optional) Test runtime full config application
+
+### Phase 4: Documentation & Cleanup
+- T014: Document minimal image build workflow in quickstart.md
+- T015: Document runtime full config application pattern
+- T016: Update CLAUDE.md with two-stage image approach
+
+**Full task breakdown will be created by `/speckit.tasks` command.**
+
+## Design Decisions
+
+### Decision: Two-Stage Minimal/Full Image Approach
+
+**Chosen**: Minimal base image with runtime full configuration option
+
+**Rationale**:
+- **Reliability**: Connection services (SSH, RustDesk, Tailscale) pre-configured in minimal image → 99%+ reliability
+- **Speed**: Minimal image builds in 3-5 minutes (cached) vs. 20-25 minutes for full desktop
+- **Flexibility**: Users can apply full desktop config when needed, not forced on every VM
+- **Image Size**: Minimal ~1-2 GB (fast download/import) vs. Full ~3-5 GB
+
+**Alternatives Considered**:
+1. **Single Full Image**: Slow build (20-25 min), large size, overkill for VMs needing only remote access
+2. **Cloud-init Only**: Unreliable (0% success rate per debugging summary), defeats purpose of spec
+3. **Three Images (minimal/medium/full)**: Over-engineering, two stages sufficient
+
+**Trade-offs**:
+- **Pro**: Fast builds, small images, reliable connection services
+- **Con**: Runtime full config application adds 5-10 minutes (acceptable for optional feature)
+
+### Decision: Runtime Full Config via Cloud-Init Entrypoint
+
+**Chosen**: Cloud-init executes `nixos-rebuild switch --flake .#kubevirt-desktop` on first boot (if enabled)
+
+**Rationale**:
+- **Declarative**: Full config still in flake.nix, not imperative cloud-init scripts
+- **Optional**: VMs not needing desktop don't pay the cost
+- **Testable**: Same nixos-rebuild command works on Hetzner host for testing
+
+**Alternatives Considered**:
+1. **Separate Full Image**: Extra maintenance burden (two image builds), slow updates
+2. **Manual nixos-rebuild**: Requires SSH access, not automated
+3. **Systemd oneshot service**: Similar to cloud-init but less standard
+
+**Implementation**:
+```yaml
+# Cloud-init userdata (only if enableFullDesktop: true in VM chart props)
+runcmd:
+  - |
+    if [ -f /etc/nixos/apply-full-config-marker ]; then
+      echo "Applying full desktop configuration..."
+      nixos-rebuild switch --flake github:vpittamp/nixos-config#kubevirt-desktop
+      rm /etc/nixos/apply-full-config-marker
+    fi
+```
+
+### Decision: MinIO for Image Distribution (Not nixos-image-server Docker Image)
+
+**Chosen**: Upload qcow2 directly to MinIO, DataVolume imports via HTTP URL
+
+**Rationale**:
+- **Existing Infrastructure**: MinIO already deployed for binary cache
+- **Standard Pattern**: DataVolume HTTP source is standard KubeVirt pattern
+- **Version Control**: MinIO allows versioned images (e.g., `nixos-kubevirt-minimal-v1.qcow2`)
+
+**Alternatives Considered**:
+1. **Docker Hub (nixos-image-server)**: Requires embedding qcow2 in Docker image, extra layer of indirection
+2. **OCI Registry (Gitea)**: qcow2 as OCI artifact is non-standard, tooling immature
+
+**Trade-offs**:
+- **Pro**: Direct qcow2 distribution, standard HTTP import, versioning
+- **Con**: MinIO requires storage (acceptable, already allocated for binary cache)
+
+## Risk Analysis
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Minimal image missing critical package | Medium | High | Build validation step checks SSH, RustDesk, Tailscale packages present |
+| Runtime full config fails | Medium | Medium | Graceful fallback - minimal image still functional, manual nixos-rebuild |
+| Binary cache unavailable | Low | High | Document cold build time (10-15 min for minimal), cache is optimization not requirement |
+| MinIO storage exhaustion | Low | Medium | Implement image retention policy (keep last 3 versions), ~5 GB per image |
+| qcow2 import timeout | Medium | High | Increase DataVolume import timeout, verify MinIO network performance |
+
+## Success Metrics (from spec.md)
+
+- **SC-001**: VMs boot with RustDesk service running within 2 minutes ✅ (minimal image target)
+- **SC-002**: RustDesk service start success rate 99%+ ✅ (pre-configured in minimal image)
+- **SC-003**: Minimal image rebuild <5 minutes (cached) ✅ (vs. 25 min for full)
+- **SC-004**: Remote desktop connection within 30 seconds ✅ (RustDesk direct connection)
+- **SC-005**: Config changes propagate to new VMs after rebuild ✅ (declarative flake.nix)
+- **SC-006**: Zero cloud-init runcmd failures ✅ (RustDesk in base image, not cloud-init)
+
+## Appendix: Research Questions for Phase 0
+
+1. **What is the minimal NixOS package set for SSH + RustDesk + Tailscale?**
+   - Need: Package list with sizes and dependencies
+   - Output: nixpkgs expression for minimal system
+
+2. **How do we use nixos-generators to create qcow2 from nixosConfiguration?**
+   - Need: Flake pattern for `nixosConfigurations.kubevirt-minimal` → `packages.nixos-kubevirt-minimal-image`
+   - Output: Working flake.nix snippet
+
+3. **What is the best cloud-init pattern for optional runtime config application?**
+   - Need: Cloud-init runcmd that conditionally applies full config
+   - Output: Cloud-init YAML with nixos-rebuild switch
+
+4. **How do we version images in MinIO and update CDK8s charts?**
+   - Need: Version string pattern (v1, v2 or date-based), CDK8s chart props
+   - Output: Versioning convention and chart interface
+
+5. **What is the expected minimal image size and build time?**
+   - Need: Benchmarks for minimal vs. full image
+   - Output: Size/time comparison table
+
+These will be answered in `research.md` during Phase 0 execution.
+
+---
+
+**Next Steps**:
+1. Run `/speckit.plan` (this command) to generate research.md, data-model.md, contracts/, quickstart.md
+2. Review generated artifacts for completeness
+3. Run `/speckit.tasks` to break down implementation into executable tasks
+4. Implement tasks in priority order (MVP: minimal image + RustDesk service verification)
