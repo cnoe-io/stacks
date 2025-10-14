@@ -164,18 +164,30 @@ kubectl --kubeconfig=~/remote-kubeconfig.yaml auth whoami
 
 ### Step 4: (Optional) Set as Default Kubeconfig
 
-To avoid specifying `--kubeconfig` on every command:
+To avoid specifying `--kubeconfig` on every command, you have three options:
+
+#### Option 1: Environment Variable (Easy Switching)
 
 ```bash
 # Temporary (current terminal session)
 export KUBECONFIG=~/remote-kubeconfig.yaml
 
 # Persistent (add to ~/.bashrc or ~/.zshrc)
-echo 'export KUBECONFIG=~/remote-kubeconfig.yaml' >> ~/.bashrc
-source ~/.bashrc
+echo 'export KUBECONFIG=~/remote-kubeconfig.yaml' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-Or merge with existing kubeconfig:
+#### Option 2: Merge Contexts (Recommended - Multiple Clusters)
+
+Use the automated script:
+
+```bash
+# On your remote machine (Mac/laptop)
+cd ~/stacks
+./deployment/scripts/tailscale/configure-kubeconfig.sh ~/remote-kubeconfig.yaml
+```
+
+Or manually:
 
 ```bash
 # Backup existing kubeconfig
@@ -187,6 +199,22 @@ mv ~/.kube/config.new ~/.kube/config
 
 # Switch to Tailscale context
 kubectl config use-context kind-tailscale
+```
+
+This option:
+- Preserves all existing cluster contexts
+- Adds the Tailscale remote cluster as a new context
+- Allows easy switching: `kubectl config use-context <name>`
+- Works automatically with Headlamp Desktop (context dropdown)
+
+#### Option 3: Replace Default (Simplest)
+
+```bash
+# Backup existing kubeconfig
+cp ~/.kube/config ~/.kube/config.backup
+
+# Replace with remote kubeconfig
+cp ~/remote-kubeconfig.yaml ~/.kube/config
 ```
 
 ## Troubleshooting
