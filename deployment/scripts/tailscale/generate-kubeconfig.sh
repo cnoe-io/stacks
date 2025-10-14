@@ -52,7 +52,22 @@ if ! kubectl cluster-info &> /dev/null; then
 fi
 
 log_info "Generating remote kubeconfig for cluster: ${CLUSTER_NAME}"
-log_info "Tailscale operator endpoint: https://${CLUSTER_NAME}-operator.${TAILNET_NAME}.ts.net:443"
+
+# Detect actual Tailscale operator hostname from logs
+log_info "Detecting Tailscale operator hostname..."
+OPERATOR_HOSTNAME=$(kubectl logs -n tailscale deployment/tailscale-operator --since=24h 2>/dev/null | \
+    grep -o 'u=[a-z0-9-]*\.tail[0-9]*\.ts\.net' | \
+    tail -1 | \
+    sed 's/u=//')
+
+if [ -z "$OPERATOR_HOSTNAME" ]; then
+    log_warn "Could not detect operator hostname from logs, using default: ${CLUSTER_NAME}-operator.${TAILNET_NAME}.ts.net"
+    OPERATOR_HOSTNAME="${CLUSTER_NAME}-operator.${TAILNET_NAME}.ts.net"
+else
+    log_info "✓ Detected operator hostname: $OPERATOR_HOSTNAME"
+fi
+
+log_info "Tailscale operator endpoint: https://${OPERATOR_HOSTNAME}:443"
 
 # Extract client certificate
 log_info "Extracting client certificate..."
@@ -83,7 +98,7 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: https://${CLUSTER_NAME}-operator.${TAILNET_NAME}.ts.net:443
+    server: https://${OPERATOR_HOSTNAME}:443
   name: ${CLUSTER_NAME}-tailscale
 contexts:
 - context:
@@ -130,7 +145,7 @@ echo ""
 echo "• Connection timeout:"
 echo "  - Verify Tailscale operator pod is running: kubectl get pods -n tailscale"
 echo "  - Check operator logs: kubectl logs -n tailscale deployment/tailscale-operator"
-echo "  - Confirm Tailscale connectivity from remote machine: ping ${CLUSTER_NAME}-operator.${TAILNET_NAME}.ts.net"
+echo "  - Confirm Tailscale connectivity from remote machine: ping ${OPERATOR_HOSTNAME}"
 echo ""
 echo "• Unauthorized errors:"
 echo "  - Verify client certificates are valid: openssl x509 -in <(echo \$CLIENT_CERT | base64 -d) -text -noout"
