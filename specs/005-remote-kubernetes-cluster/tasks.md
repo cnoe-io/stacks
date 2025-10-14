@@ -61,15 +61,15 @@
 - [X] T013 [US1] Document kubeconfig setup procedure in `docs/tailscale-cluster-access.md` - run generate-kubeconfig.sh, copy to Mac, configure kubectl context, include troubleshooting for certificate provisioning timeout
 - [X] T014 [US1] Add certificate architecture diagram to `docs/tailscale-cluster-access.md` - show kubectl → Tailscale proxy TLS (Let's Encrypt) → API server TLS (cluster CA) flow
 - [X] T015 [US1] Document `--insecure-skip-tls-verify` as temporary troubleshooting workaround in `docs/tailscale-cluster-access.md` - include security warnings, time limits (10 minutes max), proper solutions (Tailscale HTTPS or cluster CA distribution)
-- [ ] T016 [US1] Synthesize Tailscale operator package: `cd cdk8s && npx ts-node main-v2.ts` (generates `dist/tailscale/manifests/`)
-- [ ] T017 [US1] Deploy Tailscale operator via cluster-menu.sh: `source deployment/scripts/cluster-menu.sh && cluster-update` (deploys all packages including tailscale)
-- [ ] T018 [US1] Verify operator pod running: `kubectl get pods -n tailscale -l app=tailscale-operator` (should show Running status)
-- [ ] T019 [US1] Check operator logs for API proxy startup: `kubectl logs -n tailscale deployment/tailscale-operator --tail=50` (should show "API server proxy listening on :443")
-- [ ] T020 [US1] Generate kubeconfig on Mac: run `./deployment/scripts/tailscale/generate-kubeconfig.sh` on cluster host, copy output to `~/remote-kubeconfig.yaml` on Mac
-- [ ] T021 [US1] Test kubectl connectivity from Mac (tmux pane %31): `kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes --request-timeout=60s` (first connection may take 30 seconds for certificate provisioning)
-- [ ] T022 [US1] Verify subsequent kubectl commands respond quickly: `kubectl --kubeconfig=~/remote-kubeconfig.yaml get pods -A` (should complete in <2 seconds)
-- [ ] T023 [US1] Test authentication and RBAC: `kubectl --kubeconfig=~/remote-kubeconfig.yaml auth whoami` (should show Tailscale identity and cluster-admin privileges)
-- [ ] T024 [US1] Document acceptance criteria validation in `specs/005-remote-kubernetes-cluster/quickstart.md` - record response times, TLS validation status, multi-device testing results
+- [X] T016 [US1] Synthesize Tailscale operator package: `cd cdk8s && npx ts-node main-v2.ts` (generates `dist/tailscale/manifests/`)
+- [X] T017 [US1] Deploy Tailscale operator via cluster-menu.sh: `source deployment/scripts/cluster-menu.sh && cluster-update` (deploys all packages including tailscale)
+- [X] T018 [US1] Verify operator pod running: `kubectl get pods -n tailscale -l app=tailscale-operator` (should show Running status)
+- [X] T019 [US1] Check operator logs for API proxy startup: `kubectl logs -n tailscale deployment/tailscale-operator --tail=50` (should show "API server proxy listening on :443")
+- [X] T020 [US1] Generate kubeconfig on Mac: run `./deployment/scripts/tailscale/generate-kubeconfig.sh` on cluster host, copy output to `~/remote-kubeconfig.yaml` on Mac
+- [X] T021 [US1] Test kubectl connectivity from Mac (tmux pane %31): `kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes --request-timeout=60s` (first connection may take 30 seconds for certificate provisioning)
+- [X] T022 [US1] Verify subsequent kubectl commands respond quickly: `kubectl --kubeconfig=~/remote-kubeconfig.yaml get pods -A` (should complete in <2 seconds)
+- [X] T023 [US1] Test authentication and RBAC: `kubectl --kubeconfig=~/remote-kubeconfig.yaml auth whoami` (should show Tailscale identity and cluster-admin privileges)
+- [X] T024 [US1] Document acceptance criteria validation in `specs/005-remote-kubernetes-cluster/quickstart.md` - record response times, TLS validation status, multi-device testing results
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - kubectl access works from Mac with valid certificates
 

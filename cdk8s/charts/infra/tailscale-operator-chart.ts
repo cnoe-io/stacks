@@ -265,7 +265,7 @@ export class TailscaleOperatorChart extends Chart {
                 name: 'operator',
                 image: operatorImage,
                 securityContext: {
-                  runAsNonRoot: true,
+                  // Note: runAsNonRoot removed - Tailscale operator image requires root
                   readOnlyRootFilesystem: false,
                   allowPrivilegeEscalation: false,
                 },
