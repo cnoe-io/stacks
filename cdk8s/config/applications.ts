@@ -171,7 +171,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        image: 'vpittamp23/nixos-kubevirt-desktop:v1.1.0-tailscale'
+        image: 'vpittamp23/nixos-kubevirt-desktop:v1.2.0-tailscale'
       }
     },
     argocd: {
