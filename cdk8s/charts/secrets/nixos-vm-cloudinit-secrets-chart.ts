@@ -123,12 +123,12 @@ runcmd:${enableTailscale ? `
     else
       # Create minimal config with permanent password
       cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESK_CONFIG_EOF'
-[options]
-permanent-password = "{{ .rustdesk_password }}"
-allow-linux-headless = "Y"
-direct-server = "Y"
-direct-access-port = "21116"
-RUSTDESK_CONFIG_EOF
+    [options]
+    permanent-password = "{{ .rustdesk_password }}"
+    allow-linux-headless = "Y"
+    direct-server = "Y"
+    direct-access-port = "21116"
+    RUSTDESK_CONFIG_EOF
     fi
     # Restart RustDesk service to apply password
     systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
