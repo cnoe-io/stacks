@@ -61,6 +61,13 @@ export interface NixOsVmCloudInitSecretsChartProps extends ChartProps {
   enableRustDesk?: boolean;
 
   /**
+   * PATH to set for runcmd scripts in NixOS
+   * @default "/run/current-system/sw/bin:/run/wrappers/bin:$PATH"
+   * @remarks NixOS system binaries are in /run/current-system/sw/bin
+   */
+  nixosSystemPath?: string;
+
+  /**
    * ArgoCD sync wave for secret creation
    * @default "5"
    */
@@ -79,6 +86,7 @@ export class NixOsVmCloudInitSecretsChart extends Chart {
       consolePassword = 'nixos123',
       enableTailscale = true,
       enableRustDesk = true,
+      nixosSystemPath = '/run/current-system/sw/bin:/run/wrappers/bin:$PATH',
       syncWave = '5',
     } = props;
 
@@ -104,17 +112,17 @@ runcmd:${enableTailscale ? `
   # Tailscale authentication with auth key from Azure Key Vault
   - |
     # Set PATH for NixOS (system binaries are in /run/current-system/sw/bin)
-    export PATH="/run/current-system/sw/bin:/run/wrappers/bin:$PATH"
+    export PATH="${nixosSystemPath}"
     # Wait for tailscaled to be ready
-    timeout 30 sh -c 'until /run/current-system/sw/bin/tailscale status 2>&1 | grep -q "Logged out\\\\|100\\\\."; do sleep 1; done'
+    timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\\\|100\\\\."; do sleep 1; done'
     echo "Authenticating Tailscale with auth key from Azure Key Vault..."
-    /run/current-system/sw/bin/tailscale up --authkey="{{ .tailscale_auth_key }}" --ssh --advertise-tags=tag:vm && \\
+    tailscale up --authkey="{{ .tailscale_auth_key }}" --ssh --advertise-tags=tag:vm && \\
       echo "✓ Tailscale authenticated successfully" || \\
       echo "✗ Tailscale authentication failed"` : ''}${enableRustDesk ? `
   # Configure RustDesk permanent password from Azure Key Vault
   - |
     # Set PATH for NixOS
-    export PATH="/run/current-system/sw/bin:/run/wrappers/bin:$PATH"
+    export PATH="${nixosSystemPath}"
     echo "Setting RustDesk permanent password from Azure Key Vault..."
     mkdir -p /root/.config/rustdesk
     if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
