@@ -247,6 +247,8 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // RustDesk VM Secrets (Password for RustDesk remote desktop authentication)
+  // DEPRECATED: Use nixos-vm-cloudinit-secrets instead for production
+  // This chart is kept for backward compatibility with inline cloud-init approach
   {
     name: 'rustdesk-secrets',
     namespace: 'default',
@@ -273,6 +275,39 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // NixOS VM Cloud-Init Secrets (Production approach: generates cloud-init with secrets from Azure Key Vault)
+  {
+    name: 'nixos-vm-cloudinit-secrets',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsVmCloudInitSecretsChart',
+      props: {
+        namespace: 'default',
+        vmName: 'nixos-dev-vm',
+        username: 'vpittamp',
+        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAq4r867qHnS9YUMbu+X7i40sfWZmkdymioHFmtewegC k8s_ed_test'],
+        consolePassword: 'nixos123',
+        enableTailscale: true,
+        enableRustDesk: true,
+        syncWave: '5'  // Before VM creation (wave 10)
+      }
+    },
+    argocd: {
+      syncWave: '5',  // After workload identity, before VM
+      labels: {
+        'app.kubernetes.io/name': 'nixos-vm-cloudinit-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // NixOS Virtual Machine
   {
     name: 'nixos-dev-vm',
@@ -285,7 +320,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         cpuCores: 8,  // Increased to 8 for maximum performance
         memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
         enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
-        tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
+        tailscaleHostname: 'nixos-dev-vm',  // Tailscale hostname (without -rdp suffix)
+        useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init
       }
     },
     argocd: {
