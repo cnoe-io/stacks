@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-desktop.qcow2',
         storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
@@ -317,8 +317,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         vmName: 'nixos-dev-vm',
         dataVolumeName: 'nixos-dev-datavolume',
-        cpuCores: 8,  // Increased to 8 for maximum performance
-        memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
+        cpuCores: 4,  // Balanced for TCG emulation (4 cores recommended)
+        memory: '12Gi',  // Balanced for full desktop (12Gi recommended for smooth experience)
         enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
         tailscaleHostname: 'nixos-dev-vm',  // Tailscale hostname (without -rdp suffix)
         useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init
