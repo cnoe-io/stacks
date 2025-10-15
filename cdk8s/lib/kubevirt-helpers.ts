@@ -250,6 +250,8 @@ export function buildVirtualMachine(
  * @param installDesktop - Install desktop environment (for base images without desktop)
  * @param enableTailscale - Enable Tailscale with auto-authentication
  * @param enableRustDesk - Enable RustDesk remote desktop
+ * @param tailscaleAuthKey - Tailscale auth key (if available, injected directly)
+ * @param rustdeskPassword - RustDesk permanent password (if available, injected directly)
  */
 export function buildCloudInitUserData(
   hostname: string,
@@ -258,7 +260,9 @@ export function buildCloudInitUserData(
   password?: string,
   installDesktop: boolean = false,
   enableTailscale: boolean = false,
-  enableRustDesk: boolean = false
+  enableRustDesk: boolean = false,
+  tailscaleAuthKey?: string,
+  rustdeskPassword?: string
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -483,71 +487,72 @@ runcmd:
 
   // Add Tailscale auto-authentication if enabled
   if (enableTailscale) {
-    userData += `
-  # Tailscale authentication with auth key from Azure Key Vault
+    if (tailscaleAuthKey) {
+      // Direct injection - auth key provided at synthesis time
+      userData += `
+  # Tailscale authentication with directly injected auth key
   - |
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
-    # Fetch auth key from Kubernetes secret (synced from Azure Key Vault via External Secrets)
-    # Note: This requires network access to the Kubernetes API from within the VM
-    # The VM pod has access to the Kubernetes service account by default
-    AUTH_KEY=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | \\
-      xargs -I {} curl -s -H "Authorization: Bearer {}" \\
-      -H "Content-Type: application/json" \\
-      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \\
-      https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/secrets/tailscale-vm-auth-key | \\
-      grep -oP '"authkey":\\s*"\\K[^"]+' | base64 -d || echo "")
-
-    if [ -n "$AUTH_KEY" ] && [ "$AUTH_KEY" != "" ]; then
-      echo "Authenticating Tailscale with auth key from Azure Key Vault..."
-      tailscale up --authkey="$AUTH_KEY" --ssh --advertise-tags=tag:vm && \\
-        echo "✓ Tailscale authenticated successfully" || \\
-        echo "✗ Tailscale authentication failed, falling back to OAuth"
-    else
-      echo "No auth key found in secret, attempting OAuth (one-time setup)..."
-      tailscale up --ssh --advertise-tags=tag:vm || \\
-        echo "Tailscale OAuth required - visit the URL shown above"
-    fi`;
+    echo "Authenticating Tailscale with injected auth key..."
+    tailscale up --authkey="${tailscaleAuthKey}" --ssh --advertise-tags=tag:vm && \\
+      echo "✓ Tailscale authenticated successfully" || \\
+      echo "✗ Tailscale authentication failed"`;
+    } else {
+      // OAuth fallback - no auth key provided
+      userData += `
+  # Tailscale OAuth authentication (manual one-time setup required)
+  - |
+    # Wait for tailscaled to be ready
+    timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
+    echo "No auth key provided - attempting OAuth (one-time setup)..."
+    tailscale up --ssh --advertise-tags=tag:vm || \\
+      echo "Tailscale OAuth required - visit the URL shown above"`;
+    }
   }
 
   // RustDesk password injection (service is pre-configured in base image)
-  // See /etc/nixos/configurations/vm-hetzner.nix for RustDesk service setup
+  // See /etc/nixos/configurations/kubevirt-minimal.nix for RustDesk service setup
   if (enableRustDesk) {
-    userData += `
-  # Configure RustDesk permanent password from Kubernetes secret
+    if (rustdeskPassword) {
+      // Direct injection - password provided at synthesis time
+      userData += `
+  # Configure RustDesk permanent password (directly injected)
   - |
-    # Fetch RustDesk password from Kubernetes secret (synced from Azure Key Vault via External Secrets)
-    RUSTDESK_PASSWORD=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | \\
-      xargs -I {} curl -s -H "Authorization: Bearer {}" \\
-      -H "Content-Type: application/json" \\
-      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \\
-      https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/secrets/rustdesk-password | \\
-      grep -oP '"password":\\s*"\\K[^"]+' | base64 -d || echo "")
-
-    if [ -n "$RUSTDESK_PASSWORD" ] && [ "$RUSTDESK_PASSWORD" != "" ]; then
-      echo "Setting RustDesk permanent password from Azure Key Vault..."
-      # Update RustDesk config with permanent password
-      mkdir -p /root/.config/rustdesk
-      if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
-        # Append permanent password to existing config
-        grep -q "permanent-password" /root/.config/rustdesk/RustDesk2.toml || \\
-          echo "permanent-password = \\"$RUSTDESK_PASSWORD\\"" >> /root/.config/rustdesk/RustDesk2.toml
+    echo "Setting RustDesk permanent password..."
+    mkdir -p /root/.config/rustdesk
+    if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
+      # Update existing config
+      if grep -q "permanent-password" /root/.config/rustdesk/RustDesk2.toml; then
+        sed -i 's/^permanent-password = .*/permanent-password = "${rustdeskPassword}"/' /root/.config/rustdesk/RustDesk2.toml
       else
-        # Create minimal config with permanent password
-        cat > /root/.config/rustdesk/RustDesk2.toml <<RUSTDESK_CONFIG_EOF
+        echo 'permanent-password = "${rustdeskPassword}"' >> /root/.config/rustdesk/RustDesk2.toml
+      fi
+    else
+      # Create minimal config with permanent password
+      cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESK_CONFIG_EOF'
 [options]
-permanent-password = "$RUSTDESK_PASSWORD"
+permanent-password = "${rustdeskPassword}"
 allow-linux-headless = "Y"
 direct-server = "Y"
 direct-access-port = "21116"
 RUSTDESK_CONFIG_EOF
-      fi
-      # Restart RustDesk service to apply password
-      systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
-      echo "✓ RustDesk password configured from Azure Key Vault"
-    else
-      echo "⚠ WARNING: No RustDesk password found in secret, using default"
-    fi`;
+    fi
+    # Restart RustDesk service to apply password
+    systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
+    echo "✓ RustDesk password configured successfully"
+    # Save RustDesk connection info for user
+    echo "RustDesk Password: ${rustdeskPassword}" > /root/rustdesk-info.txt
+    chmod 600 /root/rustdesk-info.txt`;
+    } else {
+      // No password provided - warn user
+      userData += `
+  # RustDesk password not provided - using service defaults
+  - |
+    echo "⚠ WARNING: No RustDesk password provided"
+    echo "RustDesk will use the default configuration from the base image"
+    echo "Check /root/.config/rustdesk/RustDesk2.toml for current settings"`;
+    }
   }
 
   return userData;

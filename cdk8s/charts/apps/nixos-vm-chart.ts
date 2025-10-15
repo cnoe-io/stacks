@@ -76,6 +76,18 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default true
    */
   enableGraphics?: boolean;
+
+  /**
+   * Tailscale auth key (if known at synthesis time)
+   * If not provided, will expect it in tailscale-vm-auth-key secret
+   */
+  tailscaleAuthKey?: string;
+
+  /**
+   * RustDesk permanent password (if known at synthesis time)
+   * If not provided, will expect it in rustdesk-password secret
+   */
+  rustdeskPassword?: string;
 }
 
 export class NixOsVmChart extends Chart {
@@ -93,6 +105,8 @@ export class NixOsVmChart extends Chart {
       tailscaleHostname,
       runStrategy = 'Always',
       enableGraphics = true,
+      tailscaleAuthKey,
+      rustdeskPassword,
     } = props;
 
     // SSH public key - hard-coded from 1Password k8s_ed_test
@@ -107,7 +121,9 @@ export class NixOsVmChart extends Chart {
       'nixos123',  // Default password for console access
       false,  // Skip desktop installation (already in base image)
       true,   // Enable Tailscale auto-authentication
-      true    // Enable RustDesk autostart
+      true,   // Enable RustDesk autostart
+      tailscaleAuthKey,  // Tailscale auth key (if provided)
+      rustdeskPassword   // RustDesk password (if provided)
     );
 
     // Create Secret for cloud-init data (required when userData > 2048 bytes)
