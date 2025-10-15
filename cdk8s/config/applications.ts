@@ -228,7 +228,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         dataVolumeName: 'nixos-optimized-datavolume',
         imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-optimized.qcow2',
-        storageSize: '30Gi'  // Optimized image: 20GB raw + overhead (no home-manager, minimal packages)
+        storageSize: '100Gi'  // Increased for home-manager packages (base: 20GB + home-manager: ~40GB + overhead)
       }
     },
     argocd: {
