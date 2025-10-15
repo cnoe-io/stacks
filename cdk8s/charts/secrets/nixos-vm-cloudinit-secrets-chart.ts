@@ -127,10 +127,32 @@ runcmd:${enableTailscale ? `
     tailscale up --authkey="{{ .tailscale_auth_key }}" --ssh && \\
       echo "✓ Tailscale authenticated successfully" || \\
       echo "✗ Tailscale authentication failed"` : ''}${enableRustDesk ? `
-  # Configure RustDesk permanent password from Azure Key Vault
+  # Configure RustDesk headless mode with systemd service
   - |
     # Set PATH for NixOS
     export PATH="${nixosSystemPath}"
+    echo "Creating RustDesk systemd service..."
+
+    # Create systemd service file
+    cat > /etc/systemd/system/rustdesk.service <<'RUSTDESK_SERVICE_EOF'
+[Unit]
+Description=RustDesk Remote Desktop (Headless Mode)
+After=network.target
+Documentation=https://rustdesk.com/docs/
+
+[Service]
+Type=simple
+ExecStart=/run/current-system/sw/bin/rustdesk --service
+Restart=on-failure
+RestartSec=5
+Environment="LIBGL_ALWAYS_SOFTWARE=1"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+RUSTDESK_SERVICE_EOF
+
     echo "Setting RustDesk permanent password from Azure Key Vault..."
     mkdir -p /root/.config/rustdesk
     if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
@@ -143,16 +165,28 @@ runcmd:${enableTailscale ? `
     else
       # Create minimal config with permanent password
       cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESK_CONFIG_EOF'
-    [options]
-    permanent-password = "{{ .rustdesk_password }}"
-    allow-linux-headless = "Y"
-    direct-server = "Y"
-    direct-access-port = "21116"
-    RUSTDESK_CONFIG_EOF
+[options]
+permanent-password = "{{ .rustdesk_password }}"
+allow-linux-headless = "Y"
+direct-server = "Y"
+direct-access-port = "21116"
+RUSTDESK_CONFIG_EOF
     fi
-    # Restart RustDesk service to apply password
-    systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
-    echo "✓ RustDesk password configured from Azure Key Vault"
+
+    # Enable and start RustDesk service
+    echo "Enabling and starting RustDesk service..."
+    systemctl daemon-reload
+    systemctl enable rustdesk
+    systemctl start rustdesk
+
+    # Verify service started successfully
+    if systemctl is-active --quiet rustdesk; then
+      echo "✓ RustDesk service started successfully"
+    else
+      echo "✗ RustDesk service failed to start"
+      systemctl status rustdesk --no-pager
+    fi
+
     # Save RustDesk connection info for user
     echo "RustDesk Password: {{ .rustdesk_password }}" > /root/rustdesk-info.txt
     chmod 600 /root/rustdesk-info.txt` : ''}
