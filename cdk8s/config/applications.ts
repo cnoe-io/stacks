@@ -219,6 +219,34 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // NixOS Optimized DataVolume (Import optimized NixOS image - 13.5GB, no home-manager)
+  {
+    name: 'nixos-optimized-datavolume',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsDataVolumeChart',
+      props: {
+        dataVolumeName: 'nixos-optimized-datavolume',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-optimized.qcow2',
+        storageSize: '30Gi'  // Optimized image: 20GB raw + overhead (no home-manager, minimal packages)
+      }
+    },
+    argocd: {
+      syncWave: '0',  // After image server
+      labels: {
+        'app.kubernetes.io/name': 'nixos-optimized-datavolume',
+        'app.kubernetes.io/component': 'storage',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // Tailscale VM Secrets (Auth key for VM Tailscale authentication)
   {
     name: 'tailscale-vm-secrets',
@@ -328,6 +356,38 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '10',  // After DataVolume
       labels: {
         'app.kubernetes.io/name': 'nixos-dev-vm',
+        'app.kubernetes.io/component': 'virtual-machine',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // NixOS Optimized Virtual Machine (13.5GB image, no home-manager, minimal packages)
+  {
+    name: 'nixos-optimized-vm',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsVmChart',
+      props: {
+        vmName: 'nixos-optimized-vm',
+        dataVolumeName: 'nixos-optimized-datavolume',
+        cpuCores: 2,  // Lower resources for optimized image
+        memory: '8Gi',  // Less memory needed without full desktop suite
+        enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
+        tailscaleHostname: 'nixos-optimized-vm',  // Tailscale hostname (without -rdp suffix)
+        useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init
+      }
+    },
+    argocd: {
+      syncWave: '10',  // After DataVolume
+      labels: {
+        'app.kubernetes.io/name': 'nixos-optimized-vm',
         'app.kubernetes.io/component': 'virtual-machine',
         'app.kubernetes.io/part-of': 'kubevirt'
       },
