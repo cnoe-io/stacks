@@ -370,12 +370,6 @@ rag-stack:
       enabled: true   # Default is false, we need true
 
     # Jarvis node scheduling
-    nodeSelector:
-      applications: jarvis
-    tolerations:
-      - key: "applications/jarvis"
-        operator: "Equal"
-        effect: "NoSchedule"
 
     # Performance overrides only for compute nodes
     queryNode:
