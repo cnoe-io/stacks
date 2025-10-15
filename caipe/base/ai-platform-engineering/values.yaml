@@ -353,7 +353,7 @@ rag-stack:
       annotations:
         cert-manager.io/cluster-issuer: "letsencrypt"
       hosts:
-        - host: rag-webui.dev.outshift.io
+        - host: rag-webui.cnoe.localtest.me
           paths:
             - path: /
               pathType: Prefix
