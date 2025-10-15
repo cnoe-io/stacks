@@ -100,7 +100,7 @@ hostname: ${vmName}
 users:
   - name: ${username}
     sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /bin/bash
+    shell: /run/current-system/sw/bin/bash
     ssh_authorized_keys:
 ${sshKeysYaml}
 chpasswd:
