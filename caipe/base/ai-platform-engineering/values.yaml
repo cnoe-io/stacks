@@ -361,12 +361,6 @@ rag-stack:
         - hosts:
             - rag-webui.dev.outshift.io
           secretName: rag-webui-tls
-    nodeSelector:
-      applications: jarvis
-    tolerations:
-      - key: "applications/jarvis"
-        operator: "Equal"
-        effect: "NoSchedule"
 
   milvus:
     # Only override what differs from chart defaults
