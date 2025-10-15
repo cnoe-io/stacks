@@ -336,6 +336,39 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // NixOS Optimized VM Cloud-Init Secrets
+  {
+    name: 'nixos-optimized-vm-cloudinit-secrets',
+    namespace: 'default',
+    chart: {
+      type: 'NixOsVmCloudInitSecretsChart',
+      props: {
+        namespace: 'default',
+        vmName: 'nixos-optimized-vm',
+        username: 'vpittamp',
+        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHmXFP33EvyB3vZQktX+FvxdzfUVclE6bk0dd3nMAq84 hetzner-nixos'],
+        consolePassword: 'nixos123',
+        enableTailscale: true,
+        enableRustDesk: true,
+        syncWave: '5'  // Before VM creation (wave 10)
+      }
+    },
+    argocd: {
+      syncWave: '5',  // After workload identity, before VM
+      labels: {
+        'app.kubernetes.io/name': 'nixos-optimized-vm-cloudinit-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kubevirt'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // NixOS Virtual Machine
   {
     name: 'nixos-dev-vm',
