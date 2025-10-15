@@ -65,7 +65,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KubeVirtOperatorChart',
       props: {
-        version: 'v1.3.1'
+        version: 'v1.6.2'
       }
     },
     argocd: {
