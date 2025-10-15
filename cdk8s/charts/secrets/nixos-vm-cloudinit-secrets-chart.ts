@@ -68,6 +68,13 @@ export interface NixOsVmCloudInitSecretsChartProps extends ChartProps {
   nixosSystemPath?: string;
 
   /**
+   * Shell path for user accounts in NixOS
+   * @default "/run/current-system/sw/bin/bash"
+   * @remarks In NixOS, bash is not at /bin/bash but at /run/current-system/sw/bin/bash
+   */
+  nixosShellPath?: string;
+
+  /**
    * ArgoCD sync wave for secret creation
    * @default "5"
    */
@@ -87,6 +94,7 @@ export class NixOsVmCloudInitSecretsChart extends Chart {
       enableTailscale = true,
       enableRustDesk = true,
       nixosSystemPath = '/run/current-system/sw/bin:/run/wrappers/bin:$PATH',
+      nixosShellPath = '/run/current-system/sw/bin/bash',
       syncWave = '5',
     } = props;
 
@@ -100,7 +108,7 @@ hostname: ${vmName}
 users:
   - name: ${username}
     sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /run/current-system/sw/bin/bash
+    shell: ${nixosShellPath}
     ssh_authorized_keys:
 ${sshKeysYaml}
 chpasswd:
@@ -116,7 +124,7 @@ runcmd:${enableTailscale ? `
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\\\|100\\\\."; do sleep 1; done'
     echo "Authenticating Tailscale with auth key from Azure Key Vault..."
-    tailscale up --authkey="{{ .tailscale_auth_key }}" --ssh --advertise-tags=tag:vm && \\
+    tailscale up --authkey="{{ .tailscale_auth_key }}" --ssh && \\
       echo "✓ Tailscale authenticated successfully" || \\
       echo "✗ Tailscale authentication failed"` : ''}${enableRustDesk ? `
   # Configure RustDesk permanent password from Azure Key Vault
