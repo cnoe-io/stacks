@@ -372,8 +372,3 @@ rag-stack:
     # Jarvis node scheduling
 
     # Performance overrides only for compute nodes
-    queryNode:
-      resources:
-        limits:
-          cpu: 4000m
-          memory: 8Gi
