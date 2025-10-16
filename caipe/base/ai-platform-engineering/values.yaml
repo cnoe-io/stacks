@@ -409,6 +409,7 @@ rag-stack:
   rag-webui:
     ingress:
       enabled: true
+      className: "nginx"
       hosts:
         - host: rag-webui.cnoe.localtest.me
           paths:
