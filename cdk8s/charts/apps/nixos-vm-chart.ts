@@ -118,8 +118,8 @@ export class NixOsVmChart extends Chart {
       useExternalSecretsCloudInit = false,
     } = props;
 
-    // SSH public key - using Hetzner host key for reliable access
-    const sshPublicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHmXFP33EvyB3vZQktX+FvxdzfUVclE6bk0dd3nMAq84 hetzner-nixos';
+    // SSH public key - from 1Password (Git Signing Key)
+    const sshPublicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPmr7VOVazmcseVIUsqiXIcPBwzownP4ejkOuNg+o7';
 
     // Cloud-init Secret name (will be created either inline or via ExternalSecret)
     const cloudInitSecretName = `${vmName}-cloudinit`;
