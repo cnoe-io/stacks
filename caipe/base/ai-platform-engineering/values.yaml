@@ -409,9 +409,6 @@ rag-stack:
   rag-webui:
     ingress:
       enabled: true
-      className: "nginx-internal"
-      annotations:
-        cert-manager.io/cluster-issuer: "letsencrypt"
       hosts:
         - host: rag-webui.cnoe.localtest.me
           paths:
