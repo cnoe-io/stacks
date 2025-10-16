@@ -410,8 +410,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         vmName: 'nixos-optimized-vm',
         dataVolumeName: 'nixos-optimized-datavolume',
-        cpuCores: 2,  // Lower resources for optimized image
-        memory: '8Gi',  // Less memory needed without full desktop suite
+        cpuCores: 8,  // Increased to 8 for near-native desktop performance
+        memory: '16Gi',  // Increased for KDE Plasma desktop + multiple RustDesk instances
         enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
         tailscaleHostname: 'nixos-optimized-vm',  // Tailscale hostname (without -rdp suffix)
         useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init

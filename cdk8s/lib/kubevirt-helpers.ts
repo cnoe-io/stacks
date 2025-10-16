@@ -198,14 +198,36 @@ export function buildVirtualMachine(
       },
       spec: {
         domain: {
+          cpu: {
+            cores: cpuCores,
+            sockets: 1,
+            threads: 1,
+            model: 'host-model',  // Host model provides ~90% of passthrough performance with better compatibility
+            dedicatedCpuPlacement: false,  // Don't require dedicated CPUs (for Kind compatibility)
+          },
           resources: {
             requests: {
               memory,
               cpu: `${cpuCores}`,
             },
+            // Request same as limits for guaranteed QoS (better performance)
+            limits: {
+              memory,
+              cpu: `${cpuCores}`,
+            },
           },
           devices: {
-            disks,
+            disks: disks.map((disk: any, index: number) => ({
+              ...disk,
+              disk: {
+                ...disk.disk,
+                // Keep virtio bus for I/O thread support (better for our use case)
+                // virtio-blk with I/O threads >> virtio-scsi without I/O threads
+                bus: disk.disk.bus,
+              },
+              // Assign dedicated I/O thread to each virtio disk for parallelism
+              ...(disk.disk.bus === 'virtio' ? { dedicatedIOThread: true } : {}),
+            })),
             interfaces: interfaces.length > 0 ? interfaces : undefined,
             ...(enableGraphics ? {
               autoattachGraphicsDevice: true,
@@ -215,6 +237,19 @@ export function buildVirtualMachine(
                 name: 'tablet'
               }]
             } : {}),
+          },
+          // Machine type q35 supports PCIe (better than i440fx)
+          machine: {
+            type: 'q35',
+          },
+          // Enable I/O threads for disk parallelism
+          ioThreadsPolicy: 'auto',
+          features: {
+            // ACPI for proper power management
+            acpi: { enabled: true },
+            // APIC for better interrupt handling (multi-core performance)
+            apic: { enabled: true },
+            // Hyperv enlightenments disabled (Linux guest doesn't benefit)
           },
         },
         networks: networkSpecs.length > 0 ? networkSpecs : undefined,
