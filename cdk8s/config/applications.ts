@@ -346,7 +346,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         namespace: 'default',
         vmName: 'nixos-optimized-vm',
         username: 'vpittamp',
-        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHmXFP33EvyB3vZQktX+FvxdzfUVclE6bk0dd3nMAq84 hetzner-nixos'],
+        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPmr7VOVazmcseVIUsqiXIcPBwzownP4ejkOuNg+o7'],  // 1Password Git Signing Key
         consolePassword: 'nixos123',
         enableTailscale: true,
         enableRustDesk: true,
