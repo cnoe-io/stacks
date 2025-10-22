@@ -214,6 +214,7 @@ if [[ "$OS" == "linux" ]]; then
     cleanup_conflicting_packages
 
     # Install basic tools
+    install_package "git" "git"
     install_package "vim" "vim"
     install_package "jq" "jq"
     install_package "software-properties-common" "software-properties-common"
@@ -283,7 +284,7 @@ elif [[ "$OS" == "mac" ]]; then
     fi
 
     # Install tools via Homebrew
-    brew install docker kind kubectl vault gh k9s
+    brew install git docker kind kubectl vault gh k9s
 fi
 
 # Install IDPBuilder
@@ -312,6 +313,39 @@ else
 fi
 
 print_success "System prerequisites installed!"
+
+# =============================================================================
+# GIT AND GITHUB CLI SETUP
+# =============================================================================
+
+print_status "Setting up Git and GitHub CLI..."
+
+# Check if git is configured
+if ! git config --global user.name >/dev/null 2>&1 || ! git config --global user.email >/dev/null 2>&1; then
+    print_warning "Git is not configured yet. You'll need to set up your git identity:"
+    echo "   Run these commands to configure git:"
+    echo "      git config --global user.name \"Your Name\""
+    echo "      git config --global user.email \"your.email@example.com\""
+    echo ""
+else
+    print_success "Git is already configured"
+    echo "   Name: $(git config --global user.name)"
+    echo "   Email: $(git config --global user.email)"
+    echo ""
+fi
+
+# Check GitHub CLI authentication
+if command -v gh &> /dev/null; then
+    if gh auth status >/dev/null 2>&1; then
+        print_success "GitHub CLI is already authenticated"
+    else
+        print_warning "GitHub CLI is installed but not authenticated"
+        echo "   To authenticate with GitHub, run:"
+        echo "      gh auth login"
+        echo "   This will guide you through the authentication process"
+        echo ""
+    fi
+fi
 
 # =============================================================================
 # PART 2: i3 DESKTOP ENVIRONMENT SETUP
@@ -453,7 +487,7 @@ sudo apt autoclean
 
 # Verify critical tools are installed
 print_status "Verifying installation..."
-for tool in docker kubectl vault gh k9s idpbuilder kind; do
+for tool in git docker kubectl vault gh k9s idpbuilder kind; do
     if command -v "$tool" &> /dev/null; then
         print_success "$tool is installed"
     else
@@ -520,4 +554,14 @@ echo "   This forwards your local port 5903 to the remote VNC server's port 5901
 echo "   Then connect your VNC client to localhost:5903."
 echo ""
 echo "   (Make sure to set up the SSH tunnel as shown above before connecting!)"
+echo ""
+echo "🔧 Git and GitHub CLI Setup:"
+echo "   If git is not configured, run:"
+echo "      git config --global user.name \"Your Name\""
+echo "      git config --global user.email \"your.email@example.com\""
+echo ""
+echo "   To authenticate GitHub CLI, run:"
+echo "      gh auth login"
+echo "   This enables you to clone repositories, create issues, and manage GitHub resources from the command line."
+echo ""
 echo "======================================================================"
