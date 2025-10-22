@@ -1,4 +1,4 @@
-# Override values for idpbuilder local deployment
+# Override values for idpbuilder local deployment - Base configuration
 # Global configuration shared across all subcharts
 global:
   slim:
@@ -286,7 +286,11 @@ agent-komodor:
     tag: "latest"
   mcp:
     image:
+      repository: "ghcr.io/cnoe-io/mcp-komodor"
       tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-komodor-secret"
     externalSecrets:
@@ -373,7 +377,11 @@ agent-splunk:
     tag: "latest"
   mcp:
     image:
+      repository: "ghcr.io/cnoe-io/mcp-splunk"
       tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-splunk-secret"
     externalSecrets:
@@ -395,11 +403,23 @@ agent-webex:
     tag: "latest"
   mcp:
     image:
+      repository: "ghcr.io/cnoe-io/mcp-webex"
       tag: "latest"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
   agentSecrets:
     secretName: "agent-webex-secret"
     externalSecrets:
       data:
+      - secretKey: WEBEX_BOT_TOKEN
+        remoteRef:
+          key: secret/ai-platform-engineering/webex-secret
+          property: WEBEX_BOT_TOKEN
+      - secretKey: WEBEX_WEBHOOK_SECRET
+        remoteRef:
+          key: secret/ai-platform-engineering/webex-secret
+          property: WEBEX_WEBHOOK_SECRET
       - secretKey: WEBEX_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/webex-secret
@@ -417,7 +437,7 @@ rag-stack:
               pathType: Prefix
       tls:
         - hosts:
-            - rag-webui.dev.outshift.io
+            - rag-webui.cnoe.localtest.me
           secretName: rag-webui-tls
 
   milvus:
