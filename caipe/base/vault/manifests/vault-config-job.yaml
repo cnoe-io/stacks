@@ -156,8 +156,6 @@ spec:
           # Webex agent secrets
           echo "Creating webex-secret..."
           vault kv put secret/ai-platform-engineering/webex-secret \
-            WEBEX_BOT_TOKEN="" \
-            WEBEX_WEBHOOK_SECRET="" \
             WEBEX_TOKEN="" >/dev/null
 
           # KB RAG agent secrets

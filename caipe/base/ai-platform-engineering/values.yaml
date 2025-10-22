@@ -112,7 +112,7 @@ supervisor-agent:
   nameOverride: "supervisor-agent"
   image:
     repository: "ghcr.io/cnoe-io/ai-platform-engineering"
-    tag: "latest"
+    tag: "0.1.19"
   env:
     EXTERNAL_URL: "https://cnoe.localtest.me:8443/ai-platform-engineering"
     RAG_AGENT_PORT: 8099
@@ -120,12 +120,12 @@ agent-argocd:
   nameOverride: "agent-argocd"
   image:
     repository: "ghcr.io/cnoe-io/agent-argocd"
-    tag: "latest"
+    tag: "0.1.19"
     pullPolicy: "Always"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-argocd"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -151,12 +151,9 @@ agent-aws:
   image:
     repository: "ghcr.io/cnoe-io/agent-aws"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
-    mode: "stdio" # Options: stdio, http
-    # image: # HOT FIX: will be modified in the helm chart itself in the future
-    #   repository: "public.ecr.aws/awslabs-mcp/awslabs/eks-mcp-server"
-    #   tag: "sha-e18497bbc401f08334ea8b966db1f235b647bfed"
+    mode: "stdio" # AWS currently does not support HTTP mode
   agentSecrets:
     secretName: "agent-aws-secret"
     externalSecrets:
@@ -179,11 +176,11 @@ agent-backstage:
   image:
     repository: "ghcr.io/cnoe-io/agent-backstage"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-backstage"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -205,11 +202,11 @@ agent-confluence:
   image:
     repository: "ghcr.io/cnoe-io/agent-confluence"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-confluence"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -235,7 +232,7 @@ agent-github:
   image:
     repository: "ghcr.io/cnoe-io/agent-github"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     useRemoteMcpServer: true
   agentSecrets:
@@ -252,11 +249,11 @@ agent-jira:
   image:
     repository: "ghcr.io/cnoe-io/agent-jira"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-jira"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -283,11 +280,11 @@ agent-komodor:
   image:
     repository: "ghcr.io/cnoe-io/agent-komodor"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-komodor"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -309,11 +306,11 @@ agent-pagerduty:
   image:
     repository: "ghcr.io/cnoe-io/agent-pagerduty"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-pagerduty"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -335,11 +332,11 @@ agent-slack:
   image:
     repository: "ghcr.io/cnoe-io/agent-slack"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-slack"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -374,11 +371,11 @@ agent-splunk:
   image:
     repository: "ghcr.io/cnoe-io/agent-splunk"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-splunk"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -400,11 +397,11 @@ agent-webex:
   image:
     repository: "ghcr.io/cnoe-io/agent-webex"
     pullPolicy: "Always"
-    tag: "latest"
+    tag: "0.1.19"
   mcp:
     image:
       repository: "ghcr.io/cnoe-io/mcp-webex"
-      tag: "latest"
+      tag: "0.1.19"
       pullPolicy: "Always"
     mode: "http" # Options: stdio, http
     port: 8000
@@ -412,14 +409,6 @@ agent-webex:
     secretName: "agent-webex-secret"
     externalSecrets:
       data:
-      - secretKey: WEBEX_BOT_TOKEN
-        remoteRef:
-          key: secret/ai-platform-engineering/webex-secret
-          property: WEBEX_BOT_TOKEN
-      - secretKey: WEBEX_WEBHOOK_SECRET
-        remoteRef:
-          key: secret/ai-platform-engineering/webex-secret
-          property: WEBEX_WEBHOOK_SECRET
       - secretKey: WEBEX_TOKEN
         remoteRef:
           key: secret/ai-platform-engineering/webex-secret

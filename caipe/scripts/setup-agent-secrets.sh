@@ -17,6 +17,7 @@ done
 # Parse command line arguments
 OVERRIDE_ALL=false
 ENV_FILE=""
+auto_populated_vars=()
 while [[ $# -gt 0 ]]; do
     case $1 in
         --override-all)
@@ -67,13 +68,13 @@ load_env_file() {
                         # Export the variable if it's not already set or if we have a value
                         if [[ -n "$var_value" ]]; then
                             export "$var_name"="$var_value"
-                            log "  ✓ Loaded $var_name from env file"
+                            # log "  ✓ Loaded $var_name from env file"
                         fi
                     fi
                 fi
             done < "$env_file"
         else
-            log "⚠️  Environment file not found: $env_file"
+            # log "⚠️  Environment file not found: $env_file"
             exit 1
         fi
     fi
@@ -88,7 +89,7 @@ export VAULT_TOKEN
 
 # Start port forward
 log "🔗 Starting Vault port forward..."
-kubectl port-forward -n vault svc/vault 8200:8200 &
+kubectl port-forward -n vault svc/vault 8200:8200 > /dev/null 2>&1 &
 VAULT_PID=$!
 sleep 3
 
@@ -100,7 +101,7 @@ prompt_with_env() {
 
   # If we have an env file and the variable has a value, auto-populate
   if [[ -n "$ENV_FILE" && -n "$env_value" ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')]   ✓ Using existing value detected for $prompt in env file. Auto-populating..." >&2
+    auto_populated_vars+=("$var_name")
     result="$env_value"
   elif [[ -n "$env_value" ]]; then
     if [[ "$is_secret" == "true" ]]; then
@@ -149,7 +150,7 @@ fetch_vault_secret() {
   local value
 
   # Try to fetch the secret, suppress errors if it doesn't exist
-  value=$(vault kv get -field="$field_name" "$vault_path" 2>/dev/null || echo "")
+  value=$(vault kv get -field="$field_name" "$vault_path" >/dev/null || echo "")
   printf '%s' "$value"
 }
 
@@ -178,87 +179,87 @@ log "🔍 Checking active agents..."
 active_agents=()
 
 # Check for GitHub agent (look for GitHub-related deployments or configs)
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-github 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-github >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i github >/dev/null 2>&1; then
     active_agents+=("github")
-    log "✅ GitHub agent detected"
+    # log "✅ GitHub agent detected"
 fi
 
 # Check for GitLab agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-gitlab 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-gitlab >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i gitlab >/dev/null 2>&1; then
     active_agents+=("gitlab")
-    log "✅ GitLab agent detected"
+    # log "✅ GitLab agent detected"
 fi
 
 # Check for Jira agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-jira 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-jira >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i jira >/dev/null 2>&1; then
     active_agents+=("jira")
-    log "✅ Jira agent detected"
+    # log "✅ Jira agent detected"
 fi
 
 # Check for Slack agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-slack 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-slack >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i slack >/dev/null 2>&1; then
     active_agents+=("slack")
-    log "✅ Slack agent detected"
+    # log "✅ Slack agent detected"
 fi
 
 # Check for AWS agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-aws 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-aws >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i aws >/dev/null 2>&1; then
     active_agents+=("aws")
-    log "✅ AWS agent detected"
+    # log "✅ AWS agent detected"
 fi
 
 # Check for ArgoCD agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-argocd 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-argocd >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i argocd >/dev/null 2>&1; then
     active_agents+=("argocd")
-    log "✅ ArgoCD agent detected"
+    # log "✅ ArgoCD agent detected"
 fi
 
 # Check for Backstage agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-backstage 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-backstage >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i backstage >/dev/null 2>&1; then
     active_agents+=("backstage")
-    log "✅ Backstage agent detected"
+    # log "✅ Backstage agent detected"
 fi
 
 # Check for PagerDuty agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-pagerduty 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-pagerduty >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i pagerduty >/dev/null 2>&1; then
     active_agents+=("pagerduty")
-    log "✅ PagerDuty agent detected"
+    # log "✅ PagerDuty agent detected"
 fi
 
 # Check for Confluence agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-confluence 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-confluence >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i confluence >/dev/null 2>&1; then
     active_agents+=("confluence")
-    log "✅ Confluence agent detected"
+    # log "✅ Confluence agent detected"
 fi
 
 # Check for Splunk agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-splunk 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-splunk >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i splunk >/dev/null 2>&1; then
     active_agents+=("splunk")
-    log "✅ Splunk agent detected"
+    # log "✅ Splunk agent detected"
 fi
 
 # Check for Webex agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-webex 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-webex >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i webex >/dev/null 2>&1; then
     active_agents+=("webex")
-    log "✅ Webex agent detected"
+    # log "✅ Webex agent detected"
 fi
 
 # Check for Komodor agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-komodor 2>/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-komodor >/dev/null || \
    kubectl get configmap -n ai-platform-engineering | grep -i komodor >/dev/null 2>&1; then
     active_agents+=("komodor")
-    log "✅ Komodor agent detected"
+    # log "✅ Komodor agent detected"
 fi
 
 # If no agents detected, ask user to select
@@ -667,22 +668,7 @@ done
 
 log "✅ Agent secrets successfully stored in Vault"
 echo ""
-log "🔍 You can verify individual agent secrets at:"
-for agent in "${active_agents[@]}"; do
-    case $agent in
-        "github") log "  🐙 GitHub: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fgithub-secret" ;;
-        "jira") log "  🎫 Jira: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fjira-secret" ;;
-        "slack") log "  💬 Slack: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fslack-secret" ;;
-        "aws") log "  ☁️  AWS: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Faws-secret" ;;
-        "argocd") log "  🚀 ArgoCD: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fargocd-secret" ;;
-        "backstage") log "  🎭 Backstage: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fbackstage-secret" ;;
-        "pagerduty") log "  📟 PagerDuty: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fpagerduty-secret" ;;
-        "confluence") log "  📚 Confluence: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fconfluence-secret" ;;
-        "splunk") log "  🔍 Splunk: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fsplunk-secret" ;;
-        "webex") log "  📹 Webex: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fwebex-secret" ;;
-        "komodor") log "  🔧 Komodor: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fkomodor-secret" ;;
-    esac
-done
+log "🔍 You can verify individual agent secrets at the Vault UI: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/list/ai-platform-engineering/"
 
 # Create Kubernetes secret for agents
 log "🔄 Creating Kubernetes secret for agents..."
@@ -714,29 +700,19 @@ kubectl create secret generic agent-secrets -n ai-platform-engineering \
     --from-literal=WEBEX_TOKEN="$WEBEX_TOKEN" \
     --from-literal=KOMODOR_TOKEN="$KOMODOR_TOKEN" \
     --from-literal=KOMODOR_API_URL="$KOMODOR_API_URL" \
-    --dry-run=client -o yaml | kubectl apply -f -
+    --dry-run=client -o yaml | kubectl apply -f - > /dev/null
 
 log "✅ Kubernetes secret created/updated"
 
 # Summary
 echo ""
+if [[ ${#auto_populated_vars[@]} -gt 0 ]]; then
+    log "✓ Auto-populated variables from env file: $(IFS=,; echo "${auto_populated_vars[*]}")"
+    echo ""
+fi
 log "📊 Configuration Summary:"
-for agent in "${active_agents[@]}"; do
-    case $agent in
-        "github") log "  🐙 GitHub: Personal Access Token configured" ;;
-        "jira") log "  🎫 Jira: Atlassian Token and API URL configured" ;;
-        "slack") log "  💬 Slack: Bot Token, App Token, and additional tokens configured" ;;
-        "aws") log "  ☁️  AWS: Access Keys and Region configured" ;;
-        "argocd") log "  🚀 ArgoCD: Token and API URL configured" ;;
-        "backstage") log "  🎭 Backstage: API Token and URL configured" ;;
-        "pagerduty") log "  📟 PagerDuty: API Key and URL configured" ;;
-        "confluence") log "  📚 Confluence: API URL and Atlassian credentials configured" ;;
-        "splunk") log "  🔍 Splunk: Token and API URL configured" ;;
-        "webex") log "  📹 Webex: Token configured" ;;
-        "komodor") log "  🔧 Komodor: Token and API URL configured" ;;
-    esac
-done
+log "  Configured agents: $(IFS=,; echo "${active_agents[*]}")"
 
 # Cleanup
-kill $VAULT_PID 2>/dev/null
+kill $VAULT_PID >/dev/null
 log "🎉 Agent secrets setup complete!"
