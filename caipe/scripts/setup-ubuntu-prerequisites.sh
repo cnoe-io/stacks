@@ -2,6 +2,10 @@
 # Complete CAIPE + i3 VNC Setup Script
 # Combines i3 desktop environment with IDPBuilder platform setup
 # Run with: bash setup-ubuntu-prerequisites.sh
+#
+# This script runs in non-interactive mode to avoid package configuration prompts.
+# It preconfigures keyboard layout (US English), timezone (America/New_York), 
+# locale (en_US.UTF-8), and display manager (lightdm) to prevent interactive dialogs during installation.
 
 set -e
 
@@ -44,32 +48,32 @@ install_package() {
 
     print_status "Installing $description..."
 
-    # First attempt
-    if sudo apt install -y "$package_name"; then
+    # First attempt with non-interactive flags
+    if DEBIAN_FRONTEND=noninteractive sudo apt install -y -q "$package_name"; then
         print_success "$description installed successfully"
         return 0
     fi
 
     # If first attempt fails, try to fix dependencies
     print_warning "Failed to install $description, attempting to fix dependencies..."
-    sudo apt --fix-broken install -y || true
-    sudo apt autoremove -y || true
-    sudo apt update || true
+    DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
+    DEBIAN_FRONTEND=noninteractive sudo apt autoremove -y -q || true
+    sudo apt update -q || true
 
-    # Second attempt
-    if sudo apt install -y "$package_name"; then
+    # Second attempt with non-interactive flags
+    if DEBIAN_FRONTEND=noninteractive sudo apt install -y -q "$package_name"; then
         print_success "$description installed successfully on second attempt"
         return 0
     fi
 
     # If still failing, try to remove conflicting packages and retry
     print_warning "Still failing, attempting to remove conflicting packages..."
-    sudo apt remove -y amazon-q 2>/dev/null || true
-    sudo apt autoremove -y || true
-    sudo apt --fix-broken install -y || true
+    DEBIAN_FRONTEND=noninteractive sudo apt remove -y -q amazon-q 2>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive sudo apt autoremove -y -q || true
+    DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
 
-    # Third attempt
-    if sudo apt install -y "$package_name"; then
+    # Third attempt with non-interactive flags
+    if DEBIAN_FRONTEND=noninteractive sudo apt install -y -q "$package_name"; then
         print_success "$description installed successfully after cleanup"
         return 0
     fi
@@ -121,12 +125,12 @@ cleanup_conflicting_packages() {
 
         # First, try to fix broken dependencies
         print_status "Fixing broken dependencies..."
-        sudo apt --fix-broken install -y || true
+        DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
 
         # Try normal removal first
         print_status "Attempting normal removal of Amazon packages..."
         print_status "Removing only amazon-q package (other Amazon packages are snaps)..."
-        sudo apt remove --purge -y amazon-q || true
+        DEBIAN_FRONTEND=noninteractive sudo apt remove --purge -y -q amazon-q || true
 
         # Force remove if normal removal failed
         print_status "Force removing Amazon packages..."
@@ -134,28 +138,28 @@ cleanup_conflicting_packages() {
 
         # Alternative: Install the missing dependency to resolve the conflict
         print_status "Installing missing WebKit dependency to resolve conflict..."
-        sudo apt install -y libwebkit2gtk-4.1-0 || true
+        DEBIAN_FRONTEND=noninteractive sudo apt install -y -q libwebkit2gtk-4.1-0 || true
 
         # Clean up any remaining broken dependencies
         print_status "Final cleanup of broken dependencies..."
-        sudo apt --fix-broken install -y || true
-        sudo apt autoremove -y || true
-        sudo apt autoclean || true
+        DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
+        DEBIAN_FRONTEND=noninteractive sudo apt autoremove -y -q || true
+        DEBIAN_FRONTEND=noninteractive sudo apt autoclean || true
 
         # Update package lists
-        sudo apt update || true
+        sudo apt update -q || true
 
         # Verify the fix worked
-        if sudo apt install -y curl >/dev/null 2>&1; then
+        if DEBIAN_FRONTEND=noninteractive sudo apt install -y -q curl >/dev/null 2>&1; then
             print_success "Package cleanup completed successfully"
         else
             print_warning "Package cleanup completed with warnings - some issues may persist"
         fi
     else
         print_status "No conflicting Amazon packages found, performing standard cleanup..."
-        sudo apt --fix-broken install -y || true
-        sudo apt autoremove -y || true
-        sudo apt update || true
+        DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
+        DEBIAN_FRONTEND=noninteractive sudo apt autoremove -y -q || true
+        sudo apt update -q || true
         print_success "Standard cleanup completed"
     fi
 }
@@ -183,6 +187,43 @@ print_status "Detected OS: $OS"
 # =============================================================================
 
 if [[ "$OS" == "linux" ]]; then
+    print_status "Configuring non-interactive installation mode..."
+    
+    # Set non-interactive mode to prevent prompts during package installation
+    export DEBIAN_FRONTEND=noninteractive
+    export NEEDRESTART_MODE=a
+    export NEEDRESTART_SUSPEND=1
+    
+    # Prevent automatic service restarts during package installation
+    echo '$nrconf{restart} = "a";' | sudo tee /etc/needrestart/conf.d/50local.conf >/dev/null 2>&1 || true
+    
+    # Preconfigure keyboard to avoid interactive prompt
+    print_status "Preconfiguring keyboard layout (US English)..."
+    echo 'keyboard-configuration keyboard-configuration/layoutcode string us' | sudo debconf-set-selections
+    echo 'keyboard-configuration keyboard-configuration/modelcode string pc105' | sudo debconf-set-selections
+    echo 'keyboard-configuration keyboard-configuration/variant select USA' | sudo debconf-set-selections
+    echo 'keyboard-configuration keyboard-configuration/layout select English (US)' | sudo debconf-set-selections
+    echo 'keyboard-configuration keyboard-configuration/store_defaults_in_debconf_db boolean true' | sudo debconf-set-selections
+    
+    # Preconfigure other common interactive prompts
+    echo 'tzdata tzdata/Areas select America' | sudo debconf-set-selections
+    echo 'tzdata tzdata/Zones/America select New_York' | sudo debconf-set-selections
+    echo 'locales locales/locales_to_be_generated multiselect en_US.UTF-8 UTF-8' | sudo debconf-set-selections
+    echo 'locales locales/default_environment_locale select en_US.UTF-8' | sudo debconf-set-selections
+    
+    # Preconfigure display manager (lightdm for i3 setup)
+    echo 'lightdm shared/default-x-display-manager select lightdm' | sudo debconf-set-selections
+    echo 'gdm3 shared/default-x-display-manager select lightdm' | sudo debconf-set-selections
+    
+    # Preconfigure other common interactive packages
+    echo 'wireshark-common wireshark-common/install-setuid boolean false' | sudo debconf-set-selections
+    echo 'console-setup console-setup/charmap47 select UTF-8' | sudo debconf-set-selections
+    echo 'console-setup console-setup/codeset47 select # Latin1 and Latin5 - western Europe and Turkic languages' | sudo debconf-set-selections
+    echo 'console-setup console-setup/codesetcode string Lat15' | sudo debconf-set-selections
+    echo 'console-setup console-setup/fontface47 select Fixed' | sudo debconf-set-selections
+    echo 'console-setup console-setup/fontsize-text47 select 16' | sudo debconf-set-selections
+    echo 'console-setup console-setup/fontsize-fb47 select 16' | sudo debconf-set-selections
+    
     print_status "Performing pre-flight dependency check..."
 
     # Clean up duplicate repositories first
@@ -195,7 +236,7 @@ if [[ "$OS" == "linux" ]]; then
     sudo rm -f /etc/apt/sources.list.d/archive_uri-https_download_docker_com_linux_ubuntu-*.list
 
     # Check for broken dependencies
-    if ! sudo apt install -y curl >/dev/null 2>&1; then
+    if ! DEBIAN_FRONTEND=noninteractive sudo apt install -y -q curl >/dev/null 2>&1; then
         print_warning "Detected broken dependencies, attempting to fix..."
         cleanup_conflicting_packages
     else
@@ -223,7 +264,7 @@ if [[ "$OS" == "linux" ]]; then
 
     # Install Docker
     print_status "Installing Docker..."
-    sudo apt install -y ca-certificates curl
+    DEBIAN_FRONTEND=noninteractive sudo apt install -y -q ca-certificates curl
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -233,7 +274,7 @@ if [[ "$OS" == "linux" ]]; then
       $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    sudo apt update
+    sudo apt update -q
     install_package "docker-ce" "Docker CE"
     install_package "docker-ce-cli" "Docker CLI"
     install_package "containerd.io" "containerd"
@@ -259,7 +300,7 @@ if [[ "$OS" == "linux" ]]; then
     # Use modern keyring method instead of deprecated apt-key
     curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor --yes -o /etc/apt/keyrings/hashicorp-archive-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    sudo apt update
+    sudo apt update -q
     install_package "vault" "HashiCorp Vault"
 
     # Install GitHub CLI
@@ -267,13 +308,13 @@ if [[ "$OS" == "linux" ]]; then
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
     sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-    sudo apt update
+    sudo apt update -q
     install_package "gh" "GitHub CLI"
 
     # Install K9s
     print_status "Installing K9s..."
     run_command "Downloading K9s" "wget https://github.com/derailed/k9s/releases/download/v0.50.12/k9s_linux_amd64.deb"
-    run_command "Installing K9s" "sudo dpkg -i k9s_linux_amd64.deb || sudo apt --fix-broken install -y"
+    run_command "Installing K9s" "sudo dpkg -i k9s_linux_amd64.deb || DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q"
     rm -f k9s_linux_amd64.deb
 
 elif [[ "$OS" == "mac" ]]; then
@@ -479,11 +520,11 @@ print_status "Verifying system setup..."
 print_status "Performing final cleanup and verification..."
 
 # Fix any remaining broken dependencies
-sudo apt --fix-broken install -y || true
+DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install -y -q || true
 
 # Clean up package cache
-sudo apt autoremove -y
-sudo apt autoclean
+DEBIAN_FRONTEND=noninteractive sudo apt autoremove -y -q
+DEBIAN_FRONTEND=noninteractive sudo apt autoclean
 
 # Verify critical tools are installed
 print_status "Verifying installation..."
