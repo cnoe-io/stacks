@@ -290,6 +290,19 @@ if [[ "$OS" == "linux" ]]; then
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     chmod +x kubectl
     sudo mv kubectl /usr/local/bin/
+    
+    # Create .kube directory with proper permissions
+    print_status "Setting up kubectl configuration directory..."
+    mkdir -p ~/.kube
+    chmod 755 ~/.kube
+    # Ensure the user owns the .kube directory
+    chown $USER:$USER ~/.kube 2>/dev/null || true
+    
+    # Create other common directories that might be needed
+    print_status "Setting up additional user directories..."
+    mkdir -p ~/.local/bin ~/.cache ~/.config
+    chmod 755 ~/.local/bin ~/.cache ~/.config
+    chown $USER:$USER ~/.local ~/.cache ~/.config 2>/dev/null || true
 
     # Install Vault
     print_status "Installing Vault..."
@@ -658,5 +671,14 @@ echo ""
 echo "   If you need to restart VNC server:"
 echo "      vncserver -kill :1"
 echo "      vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
+echo ""
+echo "🔧 KUBECONFIG Permission Issues:"
+echo "   If you get 'permission denied' when writing KUBECONFIG:"
+echo "      mkdir -p ~/.kube"
+echo "      chmod 755 ~/.kube"
+echo "      chown \$USER:\$USER ~/.kube"
+echo "   Or if the config file exists but is not writable:"
+echo "      chmod 644 ~/.kube/config"
+echo "      chown \$USER:\$USER ~/.kube/config"
 echo ""
 echo "======================================================================"
