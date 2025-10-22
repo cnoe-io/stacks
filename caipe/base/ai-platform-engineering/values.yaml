@@ -440,6 +440,22 @@ rag-stack:
             - rag-webui.cnoe.localtest.me
           secretName: rag-webui-tls
 
+  # Neo4j storage class override for KIND compatibility
+  neo4j:
+    volumes:
+      data:
+        mode: "dynamic"
+        dynamic:
+          storageClassName: standard  # Override from gp2 to standard for KIND
+
+  # Neo4j Ontology storage class override for KIND compatibility
+  neo4j-ontology:
+    volumes:
+      data:
+        mode: "dynamic"
+        dynamic:
+          storageClassName: standard  # Override from gp2 to standard for KIND
+
   milvus:
     # Only override what differs from chart defaults
     pulsarv3:
