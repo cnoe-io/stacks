@@ -416,6 +416,25 @@ if [[ "$OS" == "linux" ]]; then
     install_package "parcellite" "Parcellite clipboard manager"
     install_package "firefox" "Firefox browser"
     install_package "tigervnc-standalone-server" "TigerVNC server"
+    install_package "openbox" "Openbox window manager (fallback)"
+    
+    # Verify i3 installation immediately after package installation
+    print_status "Verifying i3 packages installation..."
+    if ! command -v i3 &> /dev/null; then
+        print_warning "i3 not found after installation, trying alternative packages..."
+        install_package "i3-wm" "i3-wm window manager (alternative)"
+        # Force refresh PATH
+        export PATH="/usr/bin:/usr/local/bin:$PATH"
+        hash -r 2>/dev/null || true
+    fi
+    
+    # Final verification with detailed output
+    if command -v i3 &> /dev/null; then
+        print_success "i3 is available: $(which i3)"
+        print_status "i3 version: $(i3 --version 2>/dev/null || echo 'version check failed')"
+    else
+        print_warning "i3 still not found, VNC will use fallback window manager"
+    fi
 
     # Create i3 config
     print_status "Creating i3 configuration..."
@@ -484,6 +503,29 @@ bar {
     status_command i3status
 }
 EOF
+
+    # Verify i3 installation before creating VNC startup script
+    print_status "Verifying i3 installation..."
+    if ! command -v i3 &> /dev/null; then
+        print_warning "i3 not found in PATH, attempting to reinstall..."
+        install_package "i3" "i3 window manager (retry)"
+        
+        # If still not found, check common installation locations
+        if ! command -v i3 &> /dev/null; then
+            print_warning "i3 still not found, checking installation paths..."
+            if [ -f "/usr/bin/i3" ]; then
+                print_success "Found i3 at /usr/bin/i3"
+            elif [ -f "/usr/local/bin/i3" ]; then
+                print_success "Found i3 at /usr/local/bin/i3"
+            else
+                print_error "i3 installation verification failed"
+                print_status "Installing i3-wm as alternative..."
+                install_package "i3-wm" "i3-wm window manager"
+            fi
+        fi
+    else
+        print_success "i3 is properly installed and accessible"
+    fi
 
     # Create VNC startup script
     print_status "Setting up VNC..."
@@ -604,5 +646,17 @@ echo ""
 echo "   To authenticate GitHub CLI, run:"
 echo "      gh auth login"
 echo "   This enables you to clone repositories, create issues, and manage GitHub resources from the command line."
+echo ""
+echo "🐛 VNC Troubleshooting:"
+echo "   If VNC fails with 'i3: not found' error:"
+echo "      1. Verify i3 installation: which i3"
+echo "      2. Check if i3-wm is available: which i3-wm"
+echo "      3. Test VNC startup manually: bash ~/.vnc/xstartup"
+echo "      4. Use fallback window manager: tigervncserver -xstartup /usr/bin/xterm"
+echo "      5. Check VNC logs: cat ~/.vnc/*.log"
+echo ""
+echo "   If you need to restart VNC server:"
+echo "      vncserver -kill :1"
+echo "      vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
 echo ""
 echo "======================================================================"
