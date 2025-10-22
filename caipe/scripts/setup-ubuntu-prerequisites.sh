@@ -411,6 +411,30 @@ if [[ "$OS" == "linux" ]]; then
     # Remove GNOME (if present)
     sudo apt remove --purge ubuntu-desktop gnome-shell gnome-session gdm3 -y 2>/dev/null || true
     sudo apt autoremove --purge -y
+    
+    # Remove Firefox snap and configure Mozilla PPA for better i3 compatibility
+    print_status "Removing Firefox snap packages for i3 compatibility..."
+    if snap list | grep -q firefox; then
+        print_status "Found Firefox snap, removing..."
+        sudo snap remove firefox 2>/dev/null || true
+        print_success "Firefox snap removed"
+    else
+        print_status "No Firefox snap found, continuing..."
+    fi
+    
+    # Add Mozilla PPA repository for newer Firefox versions
+    print_status "Adding Mozilla PPA repository..."
+    sudo add-apt-repository -y ppa:mozillateam/ppa
+    sudo apt update -q
+    
+    # Set apt priority over snap to prevent future snap reinstalls
+    print_status "Configuring apt priority to prevent snap Firefox reinstall..."
+    cat << 'EOF' | sudo tee /etc/apt/preferences.d/mozilla-firefox > /dev/null
+Package: *
+Pin: release o=LP-PPA-mozillateam
+Pin-Priority: 1001
+EOF
+    print_success "Mozilla PPA configured with priority over snap"
 
     # Install i3 and VNC packages
     # Install required dependencies for webkit first
@@ -427,7 +451,31 @@ if [[ "$OS" == "linux" ]]; then
     install_package "terminator" "Terminator terminal"
     install_package "xclip" "xclip clipboard utility"
     install_package "parcellite" "Parcellite clipboard manager"
-    install_package "firefox" "Firefox browser"
+    # Install Firefox from Mozilla PPA with downgrade allowance
+    print_status "Installing Firefox from Mozilla PPA..."
+    if DEBIAN_FRONTEND=noninteractive sudo apt install -y -q --allow-downgrades firefox; then
+        print_success "Firefox installed successfully from Mozilla PPA"
+    else
+        print_warning "Failed to install Firefox from PPA, trying standard installation..."
+        install_package "firefox" "Firefox browser (fallback)"
+    fi
+    
+    # Configure AppArmor for Firefox to prevent security policy violations
+    print_status "Configuring AppArmor for Firefox compatibility..."
+    if command -v aa-status &> /dev/null; then
+        if aa-status | grep -q "firefox"; then
+            print_status "Setting Firefox AppArmor profile to complain mode..."
+            sudo aa-complain snap.firefox.firefox 2>/dev/null || true
+            sudo aa-complain /usr/bin/firefox 2>/dev/null || true
+            print_success "AppArmor configured for Firefox"
+        else
+            print_status "No Firefox AppArmor profile found, skipping..."
+        fi
+    else
+        print_status "AppArmor not installed, installing..."
+        install_package "apparmor-utils" "AppArmor utilities"
+    fi
+    
     install_package "tigervnc-standalone-server" "TigerVNC server"
     install_package "openbox" "Openbox window manager (fallback)"
     
@@ -466,7 +514,7 @@ bindsym $mod+t exec terminator
 bindsym $mod+Shift+q kill
 bindsym $mod+d exec rofi -show run
 bindsym $mod+space exec rofi -show drun
-bindsym $mod+f exec firefox
+bindsym $mod+f exec "bash -c 'if [ -x ~/.local/bin/firefox-i3 ]; then ~/.local/bin/firefox-i3; else firefox --no-sandbox; fi'"
 
 # Navigation
 bindsym $mod+Left focus left
@@ -511,6 +559,11 @@ bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
 
+# Firefox-specific window management for i3 compatibility
+for_window [class="firefox"] floating disable
+for_window [class="Firefox"] floating disable
+for_window [class="Firefox-esr"] floating disable
+
 # Status bar
 bar {
     status_command i3status
@@ -550,12 +603,108 @@ xhost +local: &
 xsetroot -solid grey &
 parcellite &
 terminator -g 80x24+10+10 &
-firefox &
+# Use optimized Firefox startup script if available, fallback to regular Firefox
+if [ -x ~/.local/bin/firefox-i3 ]; then
+    ~/.local/bin/firefox-i3 &
+else
+    firefox --no-sandbox &
+fi
 exec i3
 EOF
     chmod +x ~/.vnc/xstartup
 
     print_success "i3 desktop environment configured!"
+fi
+
+# =============================================================================
+# FIREFOX TROUBLESHOOTING UTILITIES
+# =============================================================================
+
+# Function to clean up Firefox cache and temporary files
+cleanup_firefox_cache() {
+    print_status "Cleaning up Firefox cache and temporary files..."
+    
+    # Kill any hanging Firefox processes
+    pkill -f firefox 2>/dev/null || true
+    
+    # Clean up Firefox cache directories
+    if [ -d "$HOME/.cache/mozilla/firefox/" ]; then
+        print_status "Removing Firefox cache directory..."
+        rm -rf "$HOME/.cache/mozilla/firefox/" || true
+    fi
+    
+    # Clean up temporary Firefox files
+    print_status "Removing temporary Firefox files..."
+    rm -rf /tmp/firefox* 2>/dev/null || true
+    rm -rf /tmp/rust_mozprofile* 2>/dev/null || true
+    
+    print_success "Firefox cache cleanup completed"
+}
+
+# Create Firefox startup script with i3-optimized settings
+create_firefox_startup_script() {
+    print_status "Creating Firefox startup script for i3 compatibility..."
+    
+    mkdir -p ~/.local/bin
+    cat > ~/.local/bin/firefox-i3 << 'EOF'
+#!/bin/bash
+# Firefox startup script optimized for i3 window manager
+# This script addresses common Firefox/i3 compatibility issues
+
+# Clean up any hanging Firefox processes
+pkill -f firefox 2>/dev/null || true
+
+# Clear cache if Firefox previously crashed
+if [ -f ~/.mozilla/firefox/*/sessionstore-backups/recovery.jsonlz4 ]; then
+    echo "Detected Firefox crash recovery files, cleaning up..."
+    rm -rf ~/.cache/mozilla/firefox/ 2>/dev/null || true
+fi
+
+# Start Firefox with i3-optimized flags
+exec firefox \
+    --no-sandbox \
+    --disable-gpu-sandbox \
+    --disable-seccomp-filter-sandbox \
+    --disable-namespace-sandbox \
+    --disable-setuid-sandbox \
+    "$@"
+EOF
+    chmod +x ~/.local/bin/firefox-i3
+    
+    # Create a desktop entry for the optimized Firefox
+    mkdir -p ~/.local/share/applications
+    cat > ~/.local/share/applications/firefox-i3.desktop << 'EOF'
+[Desktop Entry]
+Name=Firefox (i3 Optimized)
+Comment=Firefox Web Browser optimized for i3 window manager
+GenericName=Web Browser
+X-GNOME-FullName=Firefox Web Browser (i3 Optimized)
+Exec=/home/%u/.local/bin/firefox-i3 %u
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Icon=firefox
+Categories=GNOME;GTK;Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
+StartupNotify=true
+Actions=NewWindow;NewPrivateWindow;
+
+[Desktop Action NewWindow]
+Name=Open a New Window
+Exec=/home/%u/.local/bin/firefox-i3 -new-window
+
+[Desktop Action NewPrivateWindow]
+Name=Open a New Private Window
+Exec=/home/%u/.local/bin/firefox-i3 -private-window
+EOF
+    
+    print_success "Firefox i3 startup script created at ~/.local/bin/firefox-i3"
+}
+
+if [[ "$OS" == "linux" ]]; then
+    # Run Firefox optimizations
+    cleanup_firefox_cache
+    create_firefox_startup_script
 fi
 
 # =============================================================================
@@ -671,6 +820,24 @@ echo ""
 echo "   If you need to restart VNC server:"
 echo "      vncserver -kill :1"
 echo "      vncserver :1 -geometry 2560x1400 -depth 24 -localhost yes"
+echo ""
+echo "🔧 Firefox/i3 Troubleshooting:"
+echo "   If Firefox freezes or crashes in i3:"
+echo "      1. Kill hanging Firefox processes: pkill -f firefox"
+echo "      2. Clear Firefox cache: rm -rf ~/.cache/mozilla/firefox/"
+echo "      3. Clear temporary files: rm -rf /tmp/firefox*"
+echo "      4. Use optimized Firefox launcher: ~/.local/bin/firefox-i3"
+echo "      5. Check AppArmor status: sudo aa-status | grep firefox"
+echo ""
+echo "   If Firefox snap causes issues:"
+echo "      1. Remove Firefox snap: sudo snap remove firefox"
+echo "      2. Add Mozilla PPA: sudo add-apt-repository -y ppa:mozillateam/ppa"
+echo "      3. Set apt priority: echo 'Package: * Pin: release o=LP-PPA-mozillateam Pin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox"
+echo "      4. Install Firefox: sudo apt install -y --allow-downgrades firefox"
+echo "      5. Configure AppArmor: sudo aa-complain /usr/bin/firefox"
+echo ""
+echo "   Firefox optimized launcher available at: ~/.local/bin/firefox-i3"
+echo "   This launcher includes --no-sandbox and other i3-compatible flags"
 echo ""
 echo "🔧 KUBECONFIG Permission Issues:"
 echo "   If you get 'permission denied' when writing KUBECONFIG:"
