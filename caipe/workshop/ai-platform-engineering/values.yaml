@@ -1,0 +1,597 @@
+# Global configuration shared across all subcharts
+global:
+
+  enabledSubAgents:
+    argocd: true
+    backstage: true
+    confluence: false
+    github: true
+    jira: false
+    pagerduty: false
+    slack: false
+    aws: false
+    weather: true
+    splunk: false
+
+  slim:
+    enabled: false
+    endpoint: "http://ai-platform-engineering-slim:46357"
+    transport: "slim"
+
+  externalSecrets:
+    enabled: true
+    secretStoreRef:
+      name: "vault-secret-store"
+      kind: ClusterSecretStore
+
+  agentSecrets:
+    create: true
+
+  llmSecrets:
+    create: false # do not create llm secret in subcharts (use global or existing llm secret)
+    secretName: "llm-secret"
+    externalSecrets:
+      data:
+      - secretKey: LLM_PROVIDER
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: LLM_PROVIDER
+
+      # Azure OpenAI configuration
+      - secretKey: AZURE_OPENAI_API_KEY
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AZURE_OPENAI_API_KEY
+      - secretKey: AZURE_OPENAI_ENDPOINT
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AZURE_OPENAI_ENDPOINT
+      - secretKey: AZURE_OPENAI_API_VERSION
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AZURE_OPENAI_API_VERSION
+      - secretKey: AZURE_OPENAI_DEPLOYMENT
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AZURE_OPENAI_DEPLOYMENT
+      # OpenAI configuration
+      - secretKey: OPENAI_API_KEY
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: OPENAI_API_KEY
+      - secretKey: OPENAI_ENDPOINT
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: OPENAI_ENDPOINT
+      - secretKey: OPENAI_MODEL_NAME
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: OPENAI_MODEL_NAME
+      # AWS Bedrock configuration
+      - secretKey: AWS_ACCESS_KEY_ID
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AWS_ACCESS_KEY_ID
+      - secretKey: AWS_SECRET_ACCESS_KEY
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AWS_SECRET_ACCESS_KEY
+      - secretKey: AWS_REGION
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AWS_REGION
+      - secretKey: AWS_BEDROCK_MODEL_ID
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AWS_BEDROCK_MODEL_ID
+      - secretKey: AWS_BEDROCK_PROVIDER
+        optional: true
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/global
+          property: AWS_BEDROCK_PROVIDER
+
+# AI Platform Engineer Multi-Agent
+supervisor-agent:
+  nameOverride: "supervisor-agent"
+  image:
+    repository: "ghcr.io/cnoe-io/prebuild/ai-platform-engineering"
+    tag: "supervisor-hot-fix-2"
+    pullPolicy: "Always"
+    args: ["platform-engineer"]
+  env:
+    EXTERNAL_URL: "https://cnoe.localtest.me:8443/ai-platform-engineering"  # Agent url for the client
+    SKIP_AGENT_CONNECTIVITY_CHECK: "false"
+    AGENT_CONNECTIVITY_ENABLE_BACKGROUND: "true"
+  multiAgentConfig:
+    protocol: "a2a"
+    port: "8000"
+
+# Agent configurations using aliases from Chart.yaml
+agent-argocd:
+  nameOverride: "agent-argocd"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-argocd"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-argocd"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+  agentSecrets:
+    secretName: "agent-argocd-secret"
+    externalSecrets:
+      data:
+      - secretKey: ARGOCD_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/argocd-secret
+          property: ARGOCD_TOKEN
+      - secretKey: ARGOCD_API_URL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/argocd-secret
+          property: ARGOCD_API_URL
+      - secretKey: ARGOCD_VERIFY_SSL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/argocd-secret
+          property: ARGOCD_VERIFY_SSL
+
+agent-backstage:
+  nameOverride: "agent-backstage"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-backstage"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-backstage"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+  agentSecrets:
+    secretName: "agent-backstage-secret"
+    externalSecrets:
+      data:
+      - secretKey: BACKSTAGE_API_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/backstage-secret
+          property: BACKSTAGE_API_TOKEN
+      - secretKey: BACKSTAGE_URL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/backstage-secret
+          property: BACKSTAGE_URL
+
+agent-confluence:
+  nameOverride: "agent-confluence"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-confluence"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-confluence"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+  agentSecrets:
+    secretName: "agent-confluence-secret"
+    externalSecrets:
+      data:
+      - secretKey: ATLASSIAN_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_TOKEN
+      - secretKey: ATLASSIAN_EMAIL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_EMAIL
+      - secretKey: ATLASSIAN_API_URL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_API_URL
+      - secretKey: ATLASSIAN_VERIFY_SSL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_VERIFY_SSL
+
+agent-github:
+  nameOverride: "agent-github"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-github"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    useRemoteMcpServer: true
+  agentSecrets:
+    secretName: "agent-github-secret"
+    externalSecrets:
+      data:
+      - secretKey: GITHUB_PERSONAL_ACCESS_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/github-secret
+          property: GITHUB_PERSONAL_ACCESS_TOKEN
+
+agent-jira:
+  nameOverride: "agent-jira"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-jira"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-jira"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+  agentSecrets:
+    secretName: "agent-jira-secret"
+    externalSecrets:
+      data:
+      - secretKey: ATLASSIAN_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_TOKEN
+      - secretKey: ATLASSIAN_EMAIL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_EMAIL
+      - secretKey: ATLASSIAN_API_URL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_API_URL
+      - secretKey: ATLASSIAN_VERIFY_SSL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/jira-secret
+          property: ATLASSIAN_VERIFY_SSL
+
+agent-pagerduty:
+  nameOverride: "agent-pagerduty"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-pagerduty"
+    pullPolicy: "Always"
+    tag: "0.1.15"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-pagerduty"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+  agentSecrets:
+    secretName: "agent-pagerduty-secret"
+    externalSecrets:
+      data:
+      - secretKey: PAGERDUTY_API_KEY
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/pagerduty-secret
+          property: PAGERDUTY_API_KEY
+      - secretKey: PAGERDUTY_API_URL
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/pagerduty-secret
+          property: PAGERDUTY_API_URL
+
+agent-slack:
+  nameOverride: "agent-slack"
+  image:
+    repository: "ghcr.io/cnoe-io/agent-slack"
+    pullPolicy: "Always"
+  mcp:
+    image:
+      repository: "ghcr.io/cnoe-io/mcp-slack"
+      tag: "0.1.15"
+      pullPolicy: "Always"
+    mode: "http" # Options: stdio, http
+    port: 8000
+    pullPolicy: "Always"
+  agentSecrets:
+    secretName: "agent-slack-secret"
+    externalSecrets:
+      data:
+      - secretKey: SLACK_BOT_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/slack-secret
+          property: SLACK_BOT_TOKEN
+      - secretKey: SLACK_APP_TOKEN
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/slack-secret
+          property: SLACK_APP_TOKEN
+      - secretKey: SLACK_SIGNING_SECRET
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/slack-secret
+          property: SLACK_SIGNING_SECRET
+      - secretKey: SLACK_CLIENT_SECRET
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/slack-secret
+          property: SLACK_CLIENT_SECRET
+      - secretKey: SLACK_TEAM_ID
+        remoteRef:
+          conversionStrategy: Default
+          decodingStrategy: None
+          key: ai-platform-engineering/slack-secret
+          property: SLACK_TEAM_ID
+
+# Backstage plugin agent forge
+backstage-plugin-agent-forge:
+  enabled: false
+  nameOverride: "backstage-plugin-agent-forge"
+  image:
+    repository: "ghcr.io/cnoe-io/backstage-plugin-agent-forge"
+    tag: "latest"
+    pullPolicy: "Always"
+  service:
+    ports:
+      - name: http
+        port: 3000
+        protocol: TCP
+      - name: backend
+        port: 7007
+        protocol: TCP
+
+graphrag:
+  enabled: false
+  neo4jNameOverride: "graphrag-neo4j" # This needs to match the value in neo4j.fullnameOverride
+
+# neo4j is used by graphrag to store the graph data. If graphrag.enabled is false, neo4j is not deployed.
+neo4j:
+  fullnameOverride: "graphrag-neo4j"
+  config:
+    server.directories.plugins: "/var/lib/neo4j/labs"
+    dbms.security.procedures.unrestricted: "apoc.*"
+    dbms.security.procedures.allowlist: "apoc.*"
+    server.config.strict_validation.enabled: "false"
+  apoc_config:
+    apoc.trigger.enabled: "true"
+    apoc.import.file.enabled: "true"
+  disableLookups: true
+  services:
+    neo4j:
+      enabled: false
+  neo4j:
+    name: graphrag-neo4j
+    password: "dummy_password" # This dummy password needs to match the value in graphrag.neo4j.auth.password
+    resources:
+      cpu: "1"
+      memory: "2Gi"
+
+  volumes:
+    data:
+      mode: "dynamic"
+      dynamic:
+        storageClassName: local-path # Use local-path storage class for kind cluster
+
+# KB-RAG Stack - Complete stack including web, server, agent, Redis, and Milvus
+kb-rag-stack:
+  enabled: false
+
+  # KB-RAG Web configuration
+  kb-rag-web:
+    enabled: true
+    image:
+      repository: "ghcr.io/cnoe-io/kb-rag-web"
+      tag: "latest"
+      pullPolicy: "Always"
+
+    service:
+      type: ClusterIP
+      port: 80
+
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: kb-rag-web.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # KB-RAG Server configuration
+  kb-rag-server:
+    enabled: true
+    image:
+      repository: "ghcr.io/cnoe-io/kb-rag-server"
+      tag: "latest"
+      pullPolicy: "Always"
+
+    service:
+      type: ClusterIP
+      port: 9446
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        ephemeral-storage: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+        ephemeral-storage: 1Gi
+
+  # Agent configuration (standard agent chart)
+  kb-rag-agent:
+    enabled: true
+    nameOverride: "kb-rag-agent"
+    image:
+      repository: "ghcr.io/cnoe-io/kb-rag-agent-a2a"
+      tag: "latest"
+      pullPolicy: "Always"
+
+    service:
+      type: ClusterIP
+      port: 8000
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        ephemeral-storage: 256Mi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+        ephemeral-storage: 1Gi
+
+    agentSecrets:
+      secretName: "kb-rag-agent-secret"
+      externalSecrets:
+        data:
+        - secretKey: MILVUS_SECRET
+          remoteRef:
+            conversionStrategy: Default
+            decodingStrategy: None
+            key: ai-platform-engineering/milvus-secret
+            property: MILVUS_SECRET
+
+  # KB-RAG Redis configuration
+  kb-rag-redis:
+    enabled: true
+    image:
+      repository: "redis"
+      tag: "7.2-alpine"
+      pullPolicy: "Always"
+
+    service:
+      type: ClusterIP
+      port: 6379
+
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClass: ""
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    # Redis configuration
+    redis:
+      maxmemory: "256mb"
+      maxmemoryPolicy: "allkeys-lru"
+      save: "60 1"
+      appendonly: "yes"
+
+# Minimal Milvus cluster configuration using Zilliz Helm chart defaults
+milvus:
+  # Only override what differs from chart defaults
+  pulsarv3:
+    enabled: false  # Default is true, we need false
+  woodpecker:
+    enabled: true   # Default is false, we need true
+
+  # Performance overrides only for compute nodes
+  queryNode:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  dataNode:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  # MinIO storage overrides for kind cluster - drastically reduce from 500Gi default
+  minio:
+    persistence:
+      size: 2Gi  # Down from 500Gi default
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m

@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: graphrag-neo4j-ingress
+  namespace: ai-platform-engineering
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: "nginx"
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /neo4j(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: graphrag-neo4j
+                port:
+                  number: 7474
+          - path: /nexigraph(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-platform-engineering-graphrag-nexigraph-server
+                port:
+                  number: 8095
+    - host: cnoe.localtest.me
+      http:
+        paths:
+          - path: /neo4j(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: graphrag-neo4j
+                port:
+                  number: 7474
+          - path: /nexigraph(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-platform-engineering-graphrag-nexigraph-server
+                port:
+                  number: 8095
+
+
