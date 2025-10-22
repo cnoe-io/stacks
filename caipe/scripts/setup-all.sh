@@ -49,6 +49,7 @@ fi
 echo "🧩 Running setup-llm-credentials.sh..."
 bash "$script_dir/setup-llm-credentials.sh" "${llm_args[@]}"
 
+echo ""
 echo "🧩 Running setup-agent-secrets.sh..."
 bash "$script_dir/setup-agent-secrets.sh" "${agent_args[@]}"
 

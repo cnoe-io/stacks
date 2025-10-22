@@ -64,7 +64,7 @@ load_env_file() {
                         # Export the variable if it's not already set or if we have a value
                         if [[ -n "$var_value" ]]; then
                             export "$var_name"="$var_value"
-                            log "  ✓ Loaded $var_name from env file"
+                            # log "  ✓ Loaded $var_name from env file"
                         fi
                     fi
                 fi
@@ -85,7 +85,7 @@ export VAULT_TOKEN
 
 # Start port forward in background
 log "🔗 Starting Vault port forward..."
-kubectl port-forward -n vault svc/vault 8200:8200 &
+kubectl port-forward -n vault svc/vault 8200:8200 > /dev/null 2>&1 &
 VAULT_PID=$!
 sleep 3
 
@@ -255,7 +255,7 @@ vault kv put secret/ai-platform-engineering/global \
     GCP_MODEL_NAME="$GCP_MODEL_NAME" >/dev/null
 
 log "✅ LLM credentials successfully stored in Vault"
-log "🔍 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fglobal"
+# log "🔍 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fglobal"
 
 # Cleanup
 kill $VAULT_PID 2>/dev/null
