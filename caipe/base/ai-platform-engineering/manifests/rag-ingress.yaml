@@ -9,23 +9,13 @@ metadata:
 spec:
   ingressClassName: "nginx"
   rules:
-    - host: kb-rag.cnoe.localtest.me
+    - host: rag-webui.cnoe.localtest.me
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: ai-platform-engineering-kb-rag-web
-                port:
-                  number: 80
-    - host: localhost
-      http:
-        paths:
-          - path: /kb-rag(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: ai-platform-engineering-kb-rag-web
+                name: rag-webui
                 port:
                   number: 80
