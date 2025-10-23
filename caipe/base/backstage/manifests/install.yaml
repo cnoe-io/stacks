@@ -450,19 +450,6 @@ spec:
       restartPolicy: OnFailure
   backoffLimit: 60  # Allow retries for up to 30 minutes
 ---
-apiVersion: generators.external-secrets.io/v1alpha1
-kind: Password
-metadata:
-  name: backstage
-  namespace: backstage
-spec:
-  length: 36
-  digits: 5
-  symbols: 5
-  symbolCharacters: "/-+"
-  noUpper: false
-  allowRepeat: true
----
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
