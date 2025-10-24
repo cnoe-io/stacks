@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 OVERRIDE_ALL=false
@@ -46,17 +50,16 @@ if [[ "$OVERRIDE_ALL" == "true" ]]; then
   agent_args+=(--override-all)
 fi
 
-echo "🧩 Running setup-llm-credentials.sh..."
+log "[1/4] Running setup-llm-credentials.sh..."
 bash "$script_dir/setup-llm-credentials.sh" "${llm_args[@]}"
 
-echo ""
-echo "🧩 Running setup-agent-secrets.sh..."
+log "[2/4] Running setup-agent-secrets.sh..."
 bash "$script_dir/setup-agent-secrets.sh" "${agent_args[@]}"
 
-echo "⏳ Waiting 2 seconds before refreshing secrets..."
+log "[3/4] Waiting 2 seconds before refreshing secrets..."
 sleep 2
 
-echo "🔄 Running refresh-secrets.sh..."
+log "[4/4] Running refresh-secrets.sh..."
 bash "$script_dir/refresh-secrets.sh"
 
-echo "✅ All done."
+log "✅ All scripts completed successfully"
