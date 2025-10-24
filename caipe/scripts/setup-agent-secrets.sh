@@ -50,7 +50,7 @@ load_env_file() {
     local env_file="$1"
     if [[ -n "$env_file" ]]; then
         if [[ -f "$env_file" ]]; then
-            log "📄 Loading environment variables from: $env_file"
+            log "  - 📄 Loading environment variables from: $env_file"
             # Read the file line by line and export variables
             while IFS= read -r line || [[ -n "$line" ]]; do
                 # Skip empty lines and comments
@@ -88,7 +88,7 @@ export VAULT_ADDR="http://localhost:8200"
 export VAULT_TOKEN
 
 # Start port forward
-log "🔗 Starting Vault port forward..."
+log "[Step 1/5] Starting Vault port forward..."
 kubectl port-forward -n vault svc/vault 8200:8200 > /dev/null 2>&1 &
 VAULT_PID=$!
 sleep 3
@@ -148,9 +148,19 @@ prompt_with_env() {
 fetch_vault_secret() {
   local vault_path="$1" field_name="$2"
   local value
+  local error_output
 
-  # Try to fetch the secret, suppress errors if it doesn't exist
-  value=$(vault kv get -field="$field_name" "$vault_path" >/dev/null || echo "")
+  # Try to fetch the secret, log actual errors (not just missing secrets)
+  error_output=$(vault kv get -field="$field_name" "$vault_path" 2>&1)
+  if [ $? -eq 0 ]; then
+    value="$error_output"
+  else
+    # Log error if it's not just a "not found" error
+    if ! echo "$error_output" | grep -qi "no value found\|not found"; then
+      echo "Error fetching secret from $vault_path field $field_name: $error_output" >&2
+    fi
+    value=""
+  fi
   printf '%s' "$value"
 }
 
@@ -175,96 +185,78 @@ confirm_override() {
 }
 
 # Check which agents are active
-log "🔍 Checking active agents..."
+log "[Step 2/5] Checking for active agents using kubectl command..."
 active_agents=()
 
 # Check for GitHub agent (look for GitHub-related deployments or configs)
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-github >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-github >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i github >/dev/null 2>&1; then
     active_agents+=("github")
-    # log "✅ GitHub agent detected"
-fi
-
-# Check for GitLab agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-gitlab >/dev/null || \
-   kubectl get configmap -n ai-platform-engineering | grep -i gitlab >/dev/null 2>&1; then
-    active_agents+=("gitlab")
-    # log "✅ GitLab agent detected"
 fi
 
 # Check for Jira agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-jira >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-jira >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i jira >/dev/null 2>&1; then
     active_agents+=("jira")
-    # log "✅ Jira agent detected"
 fi
 
 # Check for Slack agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-slack >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-slack >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i slack >/dev/null 2>&1; then
     active_agents+=("slack")
-    # log "✅ Slack agent detected"
 fi
 
 # Check for AWS agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-aws >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-aws >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i aws >/dev/null 2>&1; then
     active_agents+=("aws")
-    # log "✅ AWS agent detected"
 fi
 
 # Check for ArgoCD agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-argocd >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-argocd >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i argocd >/dev/null 2>&1; then
     active_agents+=("argocd")
-    # log "✅ ArgoCD agent detected"
 fi
 
 # Check for Backstage agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-backstage >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-backstage >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i backstage >/dev/null 2>&1; then
     active_agents+=("backstage")
-    # log "✅ Backstage agent detected"
 fi
 
 # Check for PagerDuty agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-pagerduty >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-pagerduty >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i pagerduty >/dev/null 2>&1; then
     active_agents+=("pagerduty")
-    # log "✅ PagerDuty agent detected"
 fi
 
 # Check for Confluence agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-confluence >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-confluence >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i confluence >/dev/null 2>&1; then
     active_agents+=("confluence")
-    # log "✅ Confluence agent detected"
 fi
 
 # Check for Splunk agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-splunk >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-splunk >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i splunk >/dev/null 2>&1; then
     active_agents+=("splunk")
-    # log "✅ Splunk agent detected"
 fi
 
 # Check for Webex agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-webex >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-webex >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i webex >/dev/null 2>&1; then
     active_agents+=("webex")
-    # log "✅ Webex agent detected"
 fi
 
 # Check for Komodor agent
-if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-komodor >/dev/null || \
+if kubectl get deployment -n ai-platform-engineering ai-platform-engineering-agent-komodor >/dev/null 2>&1 || \
    kubectl get configmap -n ai-platform-engineering | grep -i komodor >/dev/null 2>&1; then
     active_agents+=("komodor")
-    # log "✅ Komodor agent detected"
 fi
 
 # If no agents detected, ask user to select
 if [[ ${#active_agents[@]} -eq 0 ]]; then
-    log "🤔 No active agents detected. Please select which agents to configure:"
+    log "❌ No active agents detected using kubectl commands. Please select which agents to configure:"
     echo ""
     echo "Available agents:"
     echo "1) GitHub"
@@ -299,11 +291,12 @@ if [[ ${#active_agents[@]} -eq 0 ]]; then
             12) active_agents=("github" "jira" "slack" "aws" "argocd" "backstage" "pagerduty" "confluence" "splunk" "webex" "komodor") ;;
         esac
     done
+else
+    log "  List of detected active agents: ${active_agents[*]}"
 fi
 
-log "📝 Configuring secrets for agents: ${active_agents[*]}"
-echo ""
-log "🔒 Note: Sensitive credentials will not be displayed on screen"
+log "[Step 3/5] Configuring secrets for active agents found in Step 2"
+log "  - Note: Sensitive credentials will not be displayed on screen"
 
 # Initialize all fields as empty
 GITHUB_PERSONAL_ACCESS_TOKEN=""
@@ -341,21 +334,18 @@ load_env_file "$ENV_FILE"
 for agent in "${active_agents[@]}"; do
     case $agent in
         "github")
-            echo ""
-            log "🐙 Configuring GitHub agent secrets..."
+            log "  - Configuring GitHub agent secrets..."
             GITHUB_PERSONAL_ACCESS_TOKEN="$(prompt_with_env 'GitHub Personal Access Token' 'GITHUB_PERSONAL_ACCESS_TOKEN' 'true')"
             ;;
         "jira")
-            echo ""
-            log "🎫 Configuring Jira agent secrets..."
+            log "  - Configuring Jira agent secrets..."
             ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
             ATLASSIAN_API_URL=$(prompt_with_env "Atlassian API URL (e.g., https://company.atlassian.net)" "ATLASSIAN_API_URL" "false")
             ATLASSIAN_EMAIL=$(prompt_with_env "Atlassian Email" "ATLASSIAN_EMAIL" "false")
             ATLASSIAN_VERIFY_SSL=$(prompt_with_env "Verify SSL (true/false)" "ATLASSIAN_VERIFY_SSL" "false" "true")
             ;;
         "slack")
-            echo ""
-            log "💬 Configuring Slack agent secrets..."
+            log "  - Configuring Slack agent secrets..."
             SLACK_BOT_TOKEN=$(prompt_with_env "Slack Bot Token (xoxb-...)" "SLACK_BOT_TOKEN" "true")
             SLACK_TOKEN=$(prompt_with_env "Slack Token" "SLACK_TOKEN" "true")
             SLACK_APP_TOKEN=$(prompt_with_env "Slack App Token (xapp-...)" "SLACK_APP_TOKEN" "true")
@@ -364,15 +354,13 @@ for agent in "${active_agents[@]}"; do
             SLACK_TEAM_ID=$(prompt_with_env "Slack Team ID" "SLACK_TEAM_ID" "false")
             ;;
         "aws")
-            echo ""
-            log "☁️  Configuring AWS agent secrets..."
+            log "  - Configuring AWS agent secrets..."
             AWS_ACCESS_KEY_ID=$(prompt_with_env "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "false")
             AWS_SECRET_ACCESS_KEY=$(prompt_with_env "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "true")
             AWS_REGION=$(prompt_with_env "AWS Region" "AWS_REGION" "false" "us-east-1")
             ;;
         "argocd")
-            echo ""
-            log "🚀 Configuring ArgoCD agent secrets..."
+            log "  - Configuring ArgoCD agent secrets..."
 
             # Try to fetch existing secrets from Vault first
             existing_token=$(fetch_vault_secret "secret/ai-platform-engineering/argocd-secret" "ARGOCD_TOKEN")
@@ -386,18 +374,18 @@ for agent in "${active_agents[@]}"; do
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
                 # Check if we have env file value and should use it
                 if [[ -n "$ENV_FILE" && -n "${ARGOCD_TOKEN:-}" ]]; then
-                    log "  Using ArgoCD Token from env file (override-all mode)"
+                    log "    └─> Using ArgoCD Token from env file (override-all mode)"
                     # Value already loaded from env file
                 else
                     if confirm_override "ArgoCD Token"; then
                         should_prompt_token=true
                     else
-                        log "  Keeping existing ArgoCD Token from Vault"
+                        log "    └─> Keeping existing ArgoCD Token from Vault"
                         ARGOCD_TOKEN="$existing_token"
                     fi
                 fi
             else
-                log "  Using existing ArgoCD Token from Vault"
+                log "    └─> Using existing ArgoCD Token from Vault"
                 ARGOCD_TOKEN="$existing_token"
             fi
 
@@ -413,18 +401,18 @@ for agent in "${active_agents[@]}"; do
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
                 # Check if we have env file value and should use it
                 if [[ -n "$ENV_FILE" && -n "${ARGOCD_API_URL:-}" ]]; then
-                    log "  Using ArgoCD API URL from env file (override-all mode)"
+                    log "    └─> Using ArgoCD API URL from env file (override-all mode)"
                     # Value already loaded from env file
                 else
                     if confirm_override "ArgoCD API URL"; then
                         should_prompt_url=true
                     else
-                        log "  Keeping existing ArgoCD API URL from Vault"
+                        log "    └─> Keeping existing ArgoCD API URL from Vault"
                         ARGOCD_API_URL="$existing_api_url"
                     fi
                 fi
             else
-                log "  Using existing ArgoCD API URL from Vault"
+                log "    └─> Using existing ArgoCD API URL from Vault"
                 ARGOCD_API_URL="$existing_api_url"
             fi
 
@@ -441,18 +429,18 @@ for agent in "${active_agents[@]}"; do
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
                 # Check if we have env file value and should use it
                 if [[ -n "$ENV_FILE" && -n "${ARGOCD_VERIFY_SSL:-}" ]]; then
-                    log "  Using ArgoCD Verify SSL setting from env file (override-all mode)"
+                    log "    └─> Using ArgoCD Verify SSL setting from env file (override-all mode)"
                     # Value already loaded from env file
                 else
                     if confirm_override "ArgoCD Verify SSL setting"; then
                         should_prompt_ssl=true
                     else
-                        log "  Keeping existing ArgoCD Verify SSL setting from Vault"
+                        log "    └─> Keeping existing ArgoCD Verify SSL setting from Vault"
                         ARGOCD_VERIFY_SSL="$existing_verify_ssl"
                     fi
                 fi
             else
-                log "  Using existing ArgoCD Verify SSL setting from Vault"
+                log "    └─> Using existing ArgoCD Verify SSL setting from Vault"
                 ARGOCD_VERIFY_SSL="$existing_verify_ssl"
             fi
 
@@ -463,8 +451,7 @@ for agent in "${active_agents[@]}"; do
             fi
             ;;
         "backstage")
-            echo ""
-            log "🎭 Configuring Backstage agent secrets..."
+            log "  - Configuring Backstage agent secrets..."
 
             # Try to fetch existing secrets from Vault first
             existing_api_token=$(fetch_vault_secret "secret/ai-platform-engineering/backstage-secret" "BACKSTAGE_API_TOKEN")
@@ -477,18 +464,18 @@ for agent in "${active_agents[@]}"; do
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
                 # Check if we have env file value and should use it
                 if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_API_TOKEN:-}" ]]; then
-                    log "  Using Backstage API Token from env file (override-all mode)"
+                    log "    └─> Using Backstage API Token from env file (override-all mode)"
                     # Value already loaded from env file
                 else
                     if confirm_override "Backstage API Token"; then
                         should_prompt_token=true
                     else
-                        log "  Keeping existing Backstage API Token from Vault"
+                        log "    └─> Keeping existing Backstage API Token from Vault"
                         BACKSTAGE_API_TOKEN="$existing_api_token"
                     fi
                 fi
             else
-                log "  Using existing Backstage API Token from Vault"
+                log "    └─> Using existing Backstage API Token from Vault"
                 BACKSTAGE_API_TOKEN="$existing_api_token"
             fi
 
@@ -504,18 +491,18 @@ for agent in "${active_agents[@]}"; do
             elif [[ "$OVERRIDE_ALL" == "true" ]]; then
                 # Check if we have env file value and should use it
                 if [[ -n "$ENV_FILE" && -n "${BACKSTAGE_URL:-}" ]]; then
-                    log "  Using Backstage URL from env file (override-all mode)"
+                    log "    └─> Using Backstage URL from env file (override-all mode)"
                     # Value already loaded from env file
                 else
                     if confirm_override "Backstage URL"; then
                         should_prompt_url=true
                     else
-                        log "  Keeping existing Backstage URL from Vault"
+                        log "    └─> Keeping existing Backstage URL from Vault"
                         BACKSTAGE_URL="$existing_url"
                     fi
                 fi
             else
-                log "  Using existing Backstage URL from Vault"
+                log "    └─> Using existing Backstage URL from Vault"
                 BACKSTAGE_URL="$existing_url"
             fi
 
@@ -526,14 +513,12 @@ for agent in "${active_agents[@]}"; do
             fi
             ;;
         "pagerduty")
-            echo ""
-            log "📟 Configuring PagerDuty agent secrets..."
+            log "  - Configuring PagerDuty agent secrets..."
             PAGERDUTY_API_KEY=$(prompt_with_env "PagerDuty API Key" "PAGERDUTY_API_KEY" "true")
             PAGERDUTY_API_URL=$(prompt_with_env "PagerDuty API URL" "PAGERDUTY_API_URL" "false" "https://api.pagerduty.com")
             ;;
         "confluence")
-            echo ""
-            log "📚 Configuring Confluence agent secrets..."
+            log "  - Configuring Confluence agent secrets..."
             CONFLUENCE_API_URL=$(prompt_with_env "Confluence API URL (e.g., https://company.atlassian.net/wiki)" "CONFLUENCE_API_URL" "false")
             if [[ -z "$ATLASSIAN_TOKEN" ]]; then
                 ATLASSIAN_TOKEN=$(prompt_with_env "Atlassian API Token" "ATLASSIAN_TOKEN" "true")
@@ -542,19 +527,16 @@ for agent in "${active_agents[@]}"; do
             fi
             ;;
         "splunk")
-            echo ""
-            log "🔍 Configuring Splunk agent secrets..."
+            log "  - Configuring Splunk agent secrets..."
             SPLUNK_TOKEN=$(prompt_with_env "Splunk Token" "SPLUNK_TOKEN" "true")
             SPLUNK_API_URL=$(prompt_with_env "Splunk API URL (e.g., https://splunk.company.com)" "SPLUNK_API_URL" "false")
             ;;
         "webex")
-            echo ""
-            log "📹 Configuring Webex agent secrets..."
+            log "  - Configuring Webex agent secrets..."
             WEBEX_TOKEN=$(prompt_with_env "Webex Token" "WEBEX_TOKEN" "true")
             ;;
         "komodor")
-            echo ""
-            log "🔧 Configuring Komodor agent secrets..."
+            log "  - Configuring Komodor agent secrets..."
             KOMODOR_TOKEN=$(prompt_with_env "Komodor Token" "KOMODOR_TOKEN" "true")
             KOMODOR_API_URL=$(prompt_with_env "Komodor API URL" "KOMODOR_API_URL" "false" "https://api.komodor.com")
             ;;
@@ -562,7 +544,7 @@ for agent in "${active_agents[@]}"; do
 done
 
 # Store all secrets in Vault
-log "💾 Storing agent secrets in Vault..."
+log "[Step 4/5] Storing agent secrets in Vault..."
 
 # Store secrets individually for each active agent
 for agent in "${active_agents[@]}"; do
@@ -571,7 +553,7 @@ for agent in "${active_agents[@]}"; do
             if [[ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]]; then
                 vault kv put secret/ai-platform-engineering/github-secret \
                     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" >/dev/null
-                log "✅ GitHub secrets stored"
+                log "  - ✅ GitHub secrets stored"
             fi
             ;;
         "jira")
@@ -581,7 +563,7 @@ for agent in "${active_agents[@]}"; do
                     ATLASSIAN_API_URL="$ATLASSIAN_API_URL" \
                     ATLASSIAN_EMAIL="$ATLASSIAN_EMAIL" \
                     ATLASSIAN_VERIFY_SSL="$ATLASSIAN_VERIFY_SSL" >/dev/null
-                log "✅ Jira secrets stored"
+                log "  - ✅ Jira secrets stored"
             fi
             ;;
         "slack")
@@ -593,7 +575,7 @@ for agent in "${active_agents[@]}"; do
                     SLACK_SIGNING_SECRET="$SLACK_SIGNING_SECRET" \
                     SLACK_CLIENT_SECRET="$SLACK_CLIENT_SECRET" \
                     SLACK_TEAM_ID="$SLACK_TEAM_ID" >/dev/null
-                log "✅ Slack secrets stored"
+                log "  - ✅ Slack secrets stored"
             fi
             ;;
         "aws")
@@ -602,7 +584,7 @@ for agent in "${active_agents[@]}"; do
                     AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
                     AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
                     AWS_REGION="$AWS_REGION" >/dev/null
-                log "✅ AWS secrets stored"
+                log "  - ✅ AWS secrets stored"
             fi
             ;;
         "argocd")
@@ -611,7 +593,7 @@ for agent in "${active_agents[@]}"; do
                     ARGOCD_TOKEN="$ARGOCD_TOKEN" \
                     ARGOCD_API_URL="$ARGOCD_API_URL" \
                     ARGOCD_VERIFY_SSL="$ARGOCD_VERIFY_SSL" >/dev/null
-                log "✅ ArgoCD secrets stored"
+                log "  - ✅ ArgoCD secrets stored"
             fi
             ;;
         "backstage")
@@ -619,7 +601,7 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/backstage-secret \
                     BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
                     BACKSTAGE_URL="$BACKSTAGE_URL" >/dev/null
-                log "✅ Backstage secrets stored"
+                log "  - ✅ Backstage secrets stored"
             fi
             ;;
         "pagerduty")
@@ -627,7 +609,7 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/pagerduty-secret \
                     PAGERDUTY_API_KEY="$PAGERDUTY_API_KEY" \
                     PAGERDUTY_API_URL="$PAGERDUTY_API_URL" >/dev/null
-                log "✅ PagerDuty secrets stored"
+                log "  - ✅ PagerDuty secrets stored"
             fi
             ;;
         "confluence")
@@ -637,7 +619,7 @@ for agent in "${active_agents[@]}"; do
                     ATLASSIAN_TOKEN="$ATLASSIAN_TOKEN" \
                     ATLASSIAN_EMAIL="$ATLASSIAN_EMAIL" \
                     ATLASSIAN_VERIFY_SSL="$ATLASSIAN_VERIFY_SSL" >/dev/null
-                log "✅ Confluence secrets stored"
+                log "  - ✅ Confluence secrets stored"
             fi
             ;;
         "splunk")
@@ -645,14 +627,14 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/splunk-secret \
                     SPLUNK_TOKEN="$SPLUNK_TOKEN" \
                     SPLUNK_API_URL="$SPLUNK_API_URL" >/dev/null
-                log "✅ Splunk secrets stored"
+                log "  - ✅ Splunk secrets stored"
             fi
             ;;
         "webex")
             if [[ -n "$WEBEX_TOKEN" ]]; then
                 vault kv put secret/ai-platform-engineering/webex-secret \
                     WEBEX_TOKEN="$WEBEX_TOKEN" >/dev/null
-                log "✅ Webex secrets stored"
+                log "  - ✅ Webex secrets stored"
             fi
             ;;
         "komodor")
@@ -660,59 +642,19 @@ for agent in "${active_agents[@]}"; do
                 vault kv put secret/ai-platform-engineering/komodor-secret \
                     KOMODOR_TOKEN="$KOMODOR_TOKEN" \
                     KOMODOR_API_URL="$KOMODOR_API_URL" >/dev/null
-                log "✅ Komodor secrets stored"
+                log "  - ✅ Komodor secrets stored"
             fi
             ;;
     esac
 done
 
-log "✅ Agent secrets successfully stored in Vault"
-echo ""
-log "🔍 You can verify individual agent secrets at the Vault UI: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/list/ai-platform-engineering/"
-
-# Create Kubernetes secret for agents
-log "🔄 Creating Kubernetes secret for agents..."
-kubectl create secret generic agent-secrets -n ai-platform-engineering \
-    --from-literal=GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
-    --from-literal=ATLASSIAN_TOKEN="$ATLASSIAN_TOKEN" \
-    --from-literal=ATLASSIAN_API_URL="$ATLASSIAN_API_URL" \
-    --from-literal=ATLASSIAN_EMAIL="$ATLASSIAN_EMAIL" \
-    --from-literal=ATLASSIAN_VERIFY_SSL="$ATLASSIAN_VERIFY_SSL" \
-    --from-literal=SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
-    --from-literal=SLACK_TOKEN="$SLACK_TOKEN" \
-    --from-literal=SLACK_APP_TOKEN="$SLACK_APP_TOKEN" \
-    --from-literal=SLACK_SIGNING_SECRET="$SLACK_SIGNING_SECRET" \
-    --from-literal=SLACK_CLIENT_SECRET="$SLACK_CLIENT_SECRET" \
-    --from-literal=SLACK_TEAM_ID="$SLACK_TEAM_ID" \
-    --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-    --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    --from-literal=AWS_REGION="$AWS_REGION" \
-    --from-literal=ARGOCD_TOKEN="$ARGOCD_TOKEN" \
-    --from-literal=ARGOCD_API_URL="$ARGOCD_API_URL" \
-    --from-literal=ARGOCD_VERIFY_SSL="$ARGOCD_VERIFY_SSL" \
-    --from-literal=BACKSTAGE_API_TOKEN="$BACKSTAGE_API_TOKEN" \
-    --from-literal=BACKSTAGE_URL="$BACKSTAGE_URL" \
-    --from-literal=PAGERDUTY_API_KEY="$PAGERDUTY_API_KEY" \
-    --from-literal=PAGERDUTY_API_URL="$PAGERDUTY_API_URL" \
-    --from-literal=CONFLUENCE_API_URL="$CONFLUENCE_API_URL" \
-    --from-literal=SPLUNK_TOKEN="$SPLUNK_TOKEN" \
-    --from-literal=SPLUNK_API_URL="$SPLUNK_API_URL" \
-    --from-literal=WEBEX_TOKEN="$WEBEX_TOKEN" \
-    --from-literal=KOMODOR_TOKEN="$KOMODOR_TOKEN" \
-    --from-literal=KOMODOR_API_URL="$KOMODOR_API_URL" \
-    --dry-run=client -o yaml | kubectl apply -f - > /dev/null
-
-log "✅ Kubernetes secret created/updated"
-
 # Summary
-echo ""
 if [[ ${#auto_populated_vars[@]} -gt 0 ]]; then
-    log "✓ Auto-populated variables from env file: $(IFS=,; echo "${auto_populated_vars[*]}")"
-    echo ""
+    log "  ✓ Auto-populated variables from env file: $(IFS=,; echo "${auto_populated_vars[*]}")"
 fi
-log "📊 Configuration Summary:"
-log "  Configured agents: $(IFS=,; echo "${active_agents[*]}")"
+log "  - Configured agents: $(IFS=,; echo "${active_agents[*]}")"
+log "  - 🔗 You can verify individual agent secrets at the Vault UI: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/list/ai-platform-engineering/"
 
 # Cleanup
 kill $VAULT_PID >/dev/null
-log "🎉 Agent secrets setup complete!"
+log "[Step 5/5] Cleanup completed"

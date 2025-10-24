@@ -46,7 +46,7 @@ load_env_file() {
     local env_file="$1"
     if [[ -n "$env_file" ]]; then
         if [[ -f "$env_file" ]]; then
-            log "📄 Loading environment variables from: $env_file"
+            log "  - Loading environment variables from: $env_file"
             # Read the file line by line and export variables
             while IFS= read -r line || [[ -n "$line" ]]; do
                 # Skip empty lines and comments
@@ -84,7 +84,7 @@ export VAULT_ADDR="http://localhost:8200"
 export VAULT_TOKEN
 
 # Start port forward in background
-log "🔗 Starting Vault port forward..."
+log "[Step 1/4] Starting Vault port forward..."
 kubectl port-forward -n vault svc/vault 8200:8200 > /dev/null 2>&1 &
 VAULT_PID=$!
 sleep 3
@@ -112,12 +112,14 @@ if [[ -n "$ENV_FILE" ]]; then
     load_env_file "$ENV_FILE"
 fi
 
+log "[Step 2/4] Setting up LLM credentials..."
 # see if LLM_PROVIDER is set in the env file
 if [[ -n "${LLM_PROVIDER:-}" ]]; then
     LLM_PROVIDER="$LLM_PROVIDER"
-    log "📝 Using provider from env file: $LLM_PROVIDER"
+    log "  - Using provider from env file: $LLM_PROVIDER"
 else
     # Prompt for LLM provider
+    log "  - No provider found in env file, prompting for LLM provider..."
     echo ""
     echo "Supported LLM Providers:"
     echo "1) azure-openai"
@@ -137,11 +139,10 @@ else
         *) log "❌ Invalid choice"; kill $VAULT_PID 2>/dev/null; exit 1 ;;
     esac
 
-    log "📝 Selected provider: $LLM_PROVIDER"
+    log "  - 📝 Selected LLM provider: $LLM_PROVIDER"
 fi
 
-echo ""
-log "🔒 Note: Sensitive credentials will not be displayed on screen"
+log "  - Note: Sensitive credentials will not be displayed on screen"
 
 # Load environment file if specified (after initialization)
 load_env_file "$ENV_FILE"
@@ -199,20 +200,17 @@ prompt_with_env() {
 # Collect credentials based on provider
 case $LLM_PROVIDER in
     "azure-openai")
-        echo ""
         AZURE_OPENAI_API_KEY="$(prompt_with_env 'Azure OpenAI API Key' 'AZURE_OPENAI_API_KEY' 'true')"
         AZURE_OPENAI_ENDPOINT="$(prompt_with_env 'Azure OpenAI Endpoint' 'AZURE_OPENAI_ENDPOINT' 'false')"
         AZURE_OPENAI_API_VERSION="$(prompt_with_env 'Azure OpenAI API Version' 'AZURE_OPENAI_API_VERSION' 'false')"
         AZURE_OPENAI_DEPLOYMENT="$(prompt_with_env 'Azure OpenAI Deployment Name' 'AZURE_OPENAI_DEPLOYMENT' 'false')"
         ;;
     "openai")
-        echo ""
         OPENAI_API_KEY="$(prompt_with_env 'OpenAI API Key' 'OPENAI_API_KEY' 'true')"
         OPENAI_ENDPOINT="$(prompt_with_env 'OpenAI Endpoint' 'OPENAI_ENDPOINT' 'false')"
         OPENAI_MODEL_NAME="$(prompt_with_env 'OpenAI Model Name' 'OPENAI_MODEL_NAME' 'false')"
         ;;
     "aws-bedrock")
-        echo ""
         AWS_ACCESS_KEY_ID="$(prompt_with_env 'AWS Access Key ID' 'AWS_ACCESS_KEY_ID' 'false')"
         AWS_SECRET_ACCESS_KEY="$(prompt_with_env 'AWS Secret Access Key' 'AWS_SECRET_ACCESS_KEY' 'true')"
         AWS_REGION="$(prompt_with_env 'AWS Region' 'AWS_REGION' 'false')"
@@ -220,12 +218,10 @@ case $LLM_PROVIDER in
         AWS_BEDROCK_PROVIDER="$(prompt_with_env 'AWS Bedrock Provider' 'AWS_BEDROCK_PROVIDER' 'false')"
         ;;
     "google-gemini")
-        echo ""
         GOOGLE_API_KEY="$(prompt_with_env 'Google API Key' 'GOOGLE_API_KEY' 'true')"
         GOOGLE_MODEL_NAME="$(prompt_with_env 'Google Model Name' 'GOOGLE_MODEL_NAME' 'false')"
         ;;
     "gcp-vertex")
-        echo ""
         GCP_PROJECT_ID="$(prompt_with_env 'GCP Project ID' 'GCP_PROJECT_ID' 'false')"
         GCP_LOCATION="$(prompt_with_env 'GCP Location' 'GCP_LOCATION' 'false')"
         GCP_MODEL_NAME="$(prompt_with_env 'GCP Model Name' 'GCP_MODEL_NAME' 'false')"
@@ -233,7 +229,7 @@ case $LLM_PROVIDER in
 esac
 
 # Store credentials in Vault
-log "💾 Storing credentials in Vault..."
+log "[Step 3/4] Storing credentials in Vault..."
 vault kv put secret/ai-platform-engineering/global \
     LLM_PROVIDER="$LLM_PROVIDER" \
     AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" \
@@ -254,9 +250,9 @@ vault kv put secret/ai-platform-engineering/global \
     GCP_LOCATION="$GCP_LOCATION" \
     GCP_MODEL_NAME="$GCP_MODEL_NAME" >/dev/null
 
-log "✅ LLM credentials successfully stored in Vault"
-# log "🔍 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fglobal"
+log "  - ✅ LLM credentials successfully stored in Vault"
+log "  - 🔗 You can verify at: https://vault.cnoe.localtest.me:8443/ui/vault/secrets/secret/kv/ai-platform-engineering%2Fglobal"
 
 # Cleanup
 kill $VAULT_PID 2>/dev/null
-log "🎉 Setup complete!"
+log "[Step 4/4] Cleanup completed"
