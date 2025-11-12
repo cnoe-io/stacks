@@ -1,0 +1,81 @@
+# WayVNC Configuration Contract
+# Purpose: Define the expected WayVNC service configuration in NixOS VM
+# Feature: 007-number-7-short (NixOS Wayland/Sway VM Migration)
+
+---
+# WayVNC Server Configuration (from /etc/nixos/modules/desktop/wayvnc.nix)
+wayvnc:
+  enabled: true
+  port: 5900
+  address: "0.0.0.0"        # Required for Tailscale LoadBalancer access
+  authentication:
+    enabled: true
+    method: "PAM"           # Uses NixOS PAM authentication
+    fallback: false
+  tls:
+    enabled: false          # Not needed for Tailscale-encrypted network
+  service:
+    type: "user"            # Runs as systemd user service (not system service)
+    user: "vpittamp"
+    autostart: true         # Started by greetd after Sway initialization
+
+# Wayland Environment Variables (required for headless operation)
+environment_variables:
+  WLR_BACKENDS: "headless"
+  WLR_HEADLESS_OUTPUTS: "3"
+  WLR_LIBINPUT_NO_DEVICES: "1"
+  WLR_RENDERER: "pixman"
+  WLR_NO_HARDWARE_CURSORS: "1"
+  XDG_SESSION_TYPE: "wayland"
+  XDG_CURRENT_DESKTOP: "sway"
+  QT_QPA_PLATFORM: "wayland"
+  GDK_BACKEND: "wayland"
+  GSK_RENDERER: "cairo"
+
+# Firewall Configuration (from hetzner-sway.nix)
+firewall:
+  tcp_ports:
+    - 22      # SSH
+    - 5900    # VNC (WayVNC)
+    - 8080    # Web services (optional)
+  tailscale_interface_ports:
+    - 5900    # VNC via Tailscale
+    - 5901    # VNC HEADLESS-2 (reserved, not used with single WayVNC instance)
+    - 5902    # VNC HEADLESS-3 (reserved, not used with single WayVNC instance)
+
+# Expected Process Tree (after VM boot)
+process_tree:
+  - name: "systemd"
+    - name: "greetd"
+      - name: "sway"        # Wayland compositor
+        - name: "wayvnc"    # VNC server
+        - name: "sway-ipc-daemon"
+        - name: "ghostty"   # Terminal emulator (user applications)
+        - name: "firefox"   # Web browser (user applications)
+
+# VNC Client Connection Test
+connection_test:
+  hostname: "nixos-dev-vm-vnc.tail286401.ts.net"
+  port: 5900
+  protocol: "VNC"
+  authentication: "PAM (user password)"
+  expected_credentials:
+    username: "vpittamp"
+    password: "<synced from Azure Key Vault>"
+  test_command: "open vnc://nixos-dev-vm-vnc.tail286401.ts.net:5900"
+  expected_result: "Sway desktop visible, keyboard/mouse input responsive"
+
+# Performance Expectations
+performance:
+  connection_latency: "<5 seconds"
+  input_latency: "<100ms"
+  frame_rate: "30-60 FPS (software rendering)"
+  bandwidth: "~5-10 Mbps (1920x1080, medium compression)"
+
+# Success Criteria (from spec.md)
+success_criteria:
+  - "WayVNC service active and accepting connections within 60 seconds of Sway initialization"
+  - "VNC client can establish connection within 5 seconds"
+  - "VNC session latency < 100ms for keyboard/mouse input"
+  - "Sway desktop renders correctly with all three virtual outputs accessible"
+  - "M1 MacBook device can successfully connect via Tailscale"
