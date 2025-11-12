@@ -32,6 +32,7 @@
 ## Validation Notes
 
 **Validation performed**: 2025-11-12
+**Last updated**: 2025-11-12 (added M1 device testing requirement)
 
 ### Content Quality Review
 - ✅ Specification focuses on WHAT users need (build image, deploy VM, access via VNC) without specifying HOW to implement
@@ -75,3 +76,5 @@
 **Status**: ✅ READY FOR PLANNING
 
 The specification is complete, unambiguous, and ready for the `/speckit.plan` phase. All requirements are testable, success criteria are measurable, and the scope is clearly defined. No clarifications needed.
+
+**Update 2025-11-12**: Added explicit M1 MacBook device testing requirement to User Story 3, Success Criteria (SC-009), and Assumptions. This ensures the solution is validated on the actual device used for remote access. All checklist items remain satisfied.
