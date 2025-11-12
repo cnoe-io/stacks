@@ -48,7 +48,7 @@ Platform operators and developers need to access the Wayland/Sway desktop enviro
 
 **Why this priority**: Remote access validation proves the complete solution works end-to-end. This is the ultimate success criteria but depends on P1 and P2 being complete.
 
-**Independent Test**: Can be fully tested by connecting a VNC client to the WayVNC server port (5900) via Tailscale hostname, entering credentials, and verifying the Sway desktop renders correctly.
+**Independent Test**: Can be fully tested by connecting a VNC client from M1 MacBook to the WayVNC server port (5900) via Tailscale hostname, entering credentials, and verifying the Sway desktop renders correctly with responsive interaction.
 
 **Acceptance Scenarios**:
 
@@ -57,6 +57,7 @@ Platform operators and developers need to access the Wayland/Sway desktop enviro
 3. **Given** an active VNC session, **When** interacting with the Sway desktop (keyboard, mouse), **Then** inputs are registered and the desktop responds correctly
 4. **Given** multiple headless outputs configured (WLR_HEADLESS_OUTPUTS=3), **When** using Sway workspace shortcuts, **Then** workspaces can be navigated across virtual monitors
 5. **Given** an active VNC session, **When** launching applications (terminal, browser), **Then** applications render correctly using software rendering (pixman)
+6. **Given** M1 MacBook device with VNC client installed and connected to Tailscale network, **When** connecting to the VM's Tailscale hostname on port 5900, **Then** the connection succeeds and the Sway desktop is accessible with full keyboard/mouse functionality
 
 ---
 
@@ -130,8 +131,9 @@ Platform operators need to fully replace the existing X11/RustDesk VM configurat
 - **SC-006**: VNC client can establish connection to VM within 5 seconds of connection attempt via Tailscale hostname
 - **SC-007**: VNC session latency is acceptable for interactive use (under 100ms response time for keyboard/mouse input on local network)
 - **SC-008**: Sway desktop environment renders correctly in VNC viewer with all three virtual outputs accessible
-- **SC-009**: All RustDesk and X11 references are completely removed from codebase with zero deprecated configuration remaining
-- **SC-010**: Documentation is updated with WayVNC connection instructions, achieving 100% accuracy for connection steps
+- **SC-009**: M1 MacBook device can successfully connect to VM via Tailscale and establish responsive VNC session with full keyboard/mouse functionality
+- **SC-010**: All RustDesk and X11 references are completely removed from codebase with zero deprecated configuration remaining
+- **SC-011**: Documentation is updated with WayVNC connection instructions, achieving 100% accuracy for connection steps
 
 ## Assumptions *(mandatory)*
 
@@ -141,7 +143,8 @@ Platform operators need to fully replace the existing X11/RustDesk VM configurat
 - Tailscale operator is already deployed and functional in the cluster with valid OAuth credentials
 - Azure Key Vault integration via External Secrets Operator is working for secret distribution
 - The cluster has internet connectivity for downloading NixOS packages and pushing images to registries
-- VNC client software is available on the operator's workstation for testing remote access
+- M1 MacBook device is available for testing with VNC client software installed and connected to Tailscale network
+- The M1 device has network connectivity to the Tailscale network where the VM will be accessible
 - The existing Nix binary cache (Attic + MinIO) is functional for accelerating builds
 
 ## Dependencies *(include if feature has external dependencies)*
