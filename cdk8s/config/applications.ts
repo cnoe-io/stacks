@@ -199,7 +199,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://minio.nix-cache.svc.cluster.local:9000/nixos-images/hetzner-sway-v2.qcow2',
+        imageUrl: 'http://temp-image-server.default.svc.cluster.local/hetzner-sway.qcow2',
         storageSize: '50Gi'  // 50Gi virtual size, 2.1GB compressed - WITH WAYVNC
       }
     },
