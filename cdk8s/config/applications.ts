@@ -191,7 +191,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // NixOS DataVolume (Import NixOS image into PVC)
+  // NixOS DataVolume (Import NixOS Sway image into PVC) - Feature 007
   {
     name: 'nixos-dev-datavolume',
     namespace: 'default',
@@ -199,8 +199,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-desktop.qcow2',
-        storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
+        imageUrl: 'http://minio.nix-cache.svc.cluster.local:9000/nixos-images/hetzner-sway-v1.qcow2',
+        storageSize: '50Gi'  // 50Gi virtual size, ~2.1GB actual compressed image
       }
     },
     argocd: {

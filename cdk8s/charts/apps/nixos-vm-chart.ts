@@ -56,8 +56,8 @@ export interface NixOsVmChartProps extends ChartProps {
   enableTailscale?: boolean;
 
   /**
-   * Tailscale hostname for the RDP service
-   * @default "{vmName}-rdp"
+   * Tailscale hostname for the VNC service
+   * @default "{vmName}-vnc"
    */
   tailscaleHostname?: string;
 
@@ -84,10 +84,10 @@ export interface NixOsVmChartProps extends ChartProps {
   tailscaleAuthKey?: string;
 
   /**
-   * RustDesk permanent password (if known at synthesis time)
-   * If not provided, will expect it in rustdesk-password secret
+   * WayVNC password (if known at synthesis time)
+   * If not provided, will expect it in wayvnc-password secret
    */
-  rustdeskPassword?: string;
+  wayvncPassword?: string;
 
   /**
    * Use ExternalSecret for cloud-init generation (production approach)
@@ -114,7 +114,7 @@ export class NixOsVmChart extends Chart {
       runStrategy = 'Always',
       enableGraphics = true,
       tailscaleAuthKey,
-      rustdeskPassword,
+      wayvncPassword,
       useExternalSecretsCloudInit = false,
     } = props;
 
@@ -136,9 +136,7 @@ export class NixOsVmChart extends Chart {
         'nixos123',  // Default password for console access
         false,  // Skip desktop installation (already in base image)
         true,   // Enable Tailscale auto-authentication
-        true,   // Enable RustDesk autostart
-        tailscaleAuthKey,  // Tailscale auth key (if provided)
-        rustdeskPassword   // RustDesk password (if provided)
+        tailscaleAuthKey  // Tailscale auth key (if provided)
       );
 
       // Create Secret for cloud-init data (required when userData > 2048 bytes)
@@ -190,14 +188,9 @@ export class NixOsVmChart extends Chart {
               port: 22,  // SSH port
             },
             {
-              name: 'rdp',
+              name: 'vnc',
               protocol: 'TCP',
-              port: 3389,  // RDP port
-            },
-            {
-              name: 'rustdesk',
-              protocol: 'TCP',
-              port: 21116,  // RustDesk port
+              port: 5900,  // VNC port for WayVNC
             },
           ],
         },
@@ -214,7 +207,7 @@ export class NixOsVmChart extends Chart {
 
     // Determine service type and annotations based on Tailscale configuration
     const serviceType = enableTailscale ? 'LoadBalancer' : 'NodePort';
-    const hostname = tailscaleHostname || `${vmName}-rdp`;
+    const hostname = tailscaleHostname || `${vmName}-vnc`;
 
     const serviceAnnotations: Record<string, string> = {
       'argocd.argoproj.io/sync-wave': '15',  // After VM creation
@@ -228,10 +221,10 @@ export class NixOsVmChart extends Chart {
       serviceAnnotations['tailscale.com/tags'] = 'tag:k8s';
     }
 
-    // Create Service to expose RDP port
-    const rdpService = new k8s.KubeService(this, 'rdp-service', {
+    // Create Service to expose VNC port
+    const vncService = new k8s.KubeService(this, 'vnc-service', {
       metadata: {
-        name: `${vmName}-rdp`,
+        name: `${vmName}-vnc`,
         namespace: targetNamespace,
         labels: {
           'app.kubernetes.io/name': vmName,
@@ -254,16 +247,10 @@ export class NixOsVmChart extends Chart {
             targetPort: k8s.IntOrString.fromNumber(22),
           },
           {
-            name: 'rdp',
+            name: 'vnc',
             protocol: 'TCP',
-            port: 3389,
-            targetPort: k8s.IntOrString.fromNumber(3389),
-          },
-          {
-            name: 'rustdesk',
-            protocol: 'TCP',
-            port: 21116,
-            targetPort: k8s.IntOrString.fromNumber(21116),
+            port: 5900,
+            targetPort: k8s.IntOrString.fromNumber(5900),
           },
         ],
       },

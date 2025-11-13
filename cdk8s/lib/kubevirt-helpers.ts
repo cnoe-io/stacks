@@ -284,9 +284,7 @@ export function buildVirtualMachine(
  * @param password - Plain text password (will be set via chpasswd)
  * @param installDesktop - Install desktop environment (for base images without desktop)
  * @param enableTailscale - Enable Tailscale with auto-authentication
- * @param enableRustDesk - Enable RustDesk remote desktop
  * @param tailscaleAuthKey - Tailscale auth key (if available, injected directly)
- * @param rustdeskPassword - RustDesk permanent password (if available, injected directly)
  */
 export function buildCloudInitUserData(
   hostname: string,
@@ -295,9 +293,7 @@ export function buildCloudInitUserData(
   password?: string,
   installDesktop: boolean = false,
   enableTailscale: boolean = false,
-  enableRustDesk: boolean = false,
-  tailscaleAuthKey?: string,
-  rustdeskPassword?: string
+  tailscaleAuthKey?: string
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -516,7 +512,7 @@ runcmd:
   }
 
   // Add runcmd section header if not already present (installDesktop adds it)
-  if (!installDesktop && (enableTailscale || enableRustDesk)) {
+  if (!installDesktop && enableTailscale) {
     userData += `\nruncmd:`;
   }
 
@@ -543,50 +539,6 @@ runcmd:
     echo "No auth key provided - attempting OAuth (one-time setup)..."
     tailscale up --ssh --advertise-tags=tag:vm || \\
       echo "Tailscale OAuth required - visit the URL shown above"`;
-    }
-  }
-
-  // RustDesk password injection (service is pre-configured in base image)
-  // See /etc/nixos/configurations/kubevirt-minimal.nix for RustDesk service setup
-  if (enableRustDesk) {
-    if (rustdeskPassword) {
-      // Direct injection - password provided at synthesis time
-      userData += `
-  # Configure RustDesk permanent password (directly injected)
-  - |
-    echo "Setting RustDesk permanent password..."
-    mkdir -p /root/.config/rustdesk
-    if [ -f /root/.config/rustdesk/RustDesk2.toml ]; then
-      # Update existing config
-      if grep -q "permanent-password" /root/.config/rustdesk/RustDesk2.toml; then
-        sed -i 's/^permanent-password = .*/permanent-password = "${rustdeskPassword}"/' /root/.config/rustdesk/RustDesk2.toml
-      else
-        echo 'permanent-password = "${rustdeskPassword}"' >> /root/.config/rustdesk/RustDesk2.toml
-      fi
-    else
-      # Create minimal config with permanent password
-      cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESK_CONFIG_EOF'
-[options]
-permanent-password = "${rustdeskPassword}"
-allow-linux-headless = "Y"
-direct-server = "Y"
-direct-access-port = "21116"
-RUSTDESK_CONFIG_EOF
-    fi
-    # Restart RustDesk service to apply password
-    systemctl restart rustdesk 2>/dev/null || systemctl restart rustdesk-headless 2>/dev/null || true
-    echo "✓ RustDesk password configured successfully"
-    # Save RustDesk connection info for user
-    echo "RustDesk Password: ${rustdeskPassword}" > /root/rustdesk-info.txt
-    chmod 600 /root/rustdesk-info.txt`;
-    } else {
-      // No password provided - warn user
-      userData += `
-  # RustDesk password not provided - using service defaults
-  - |
-    echo "⚠ WARNING: No RustDesk password provided"
-    echo "RustDesk will use the default configuration from the base image"
-    echo "Check /root/.config/rustdesk/RustDesk2.toml for current settings"`;
     }
   }
 
