@@ -747,51 +747,53 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale Operator - Remote Kubernetes Cluster Access
-  {
-    name: 'tailscale-operator',
-    namespace: 'tailscale',
-    chart: {
-      type: 'TailscaleOperatorChart',
-      props: {
-        environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
-        clusterName: process.env.CLUSTER_NAME || 'kind',
-        oauthSecretName: 'tailscale-oauth',
-        enableHA: true,  // Enable ProxyGroup for API server access
-        proxyReplicas: 2,
-        impersonationGrants: [
-          {
-            tailscaleGroup: 'group:admins',
-            kubernetesGroups: ['system:masters'],
-            description: 'Full cluster admin access for Tailscale admin group'
-          },
-          {
-            tailscaleGroup: 'group:developers',
-            kubernetesGroups: ['developers'],
-            description: 'Developer namespace access via Kubernetes RBAC'
-          }
-        ]
-      }
-    },
-    dependencies: {
-      tailscaleCrds: {
-        type: 'TailscaleCrdsChart'
-      }
-    },
-    argocd: {
-      syncWave: '-90',  // Deploy after CRDs
-      labels: {
-        'app.kubernetes.io/name': 'tailscale-operator',
-        'app.kubernetes.io/component': 'network-proxy'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
-      }
-    }
-  },
+  // TEMPORARILY DISABLED: Missing ProxyGroup CRD import (tailscale.com)
+  // TODO: Fix import for ProxyGroup CRD in imports/tailscale.com.ts
+  // {
+  //   name: 'tailscale-operator',
+  //   namespace: 'tailscale',
+  //   chart: {
+  //     type: 'TailscaleOperatorChart',
+  //     props: {
+  //       environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
+  //       clusterName: process.env.CLUSTER_NAME || 'kind',
+  //       oauthSecretName: 'tailscale-oauth',
+  //       enableHA: true,  // Enable ProxyGroup for API server access
+  //       proxyReplicas: 2,
+  //       impersonationGrants: [
+  //         {
+  //           tailscaleGroup: 'group:admins',
+  //           kubernetesGroups: ['system:masters'],
+  //           description: 'Full cluster admin access for Tailscale admin group'
+  //         },
+  //         {
+  //           tailscaleGroup: 'group:developers',
+  //           kubernetesGroups: ['developers'],
+  //           description: 'Developer namespace access via Kubernetes RBAC'
+  //         }
+  //       ]
+  //     }
+  //   },
+  //   dependencies: {
+  //     tailscaleCrds: {
+  //       type: 'TailscaleCrdsChart'
+  //     }
+  //   },
+  //   argocd: {
+  //     syncWave: '-90',  // Deploy after CRDs
+  //     labels: {
+  //       'app.kubernetes.io/name': 'tailscale-operator',
+  //       'app.kubernetes.io/component': 'network-proxy'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       },
+  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
+  //     }
+  //   }
+  // },
 
   // Tailscale API Proxy (sidecar approach)
   {
@@ -844,15 +846,102 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Gateway API CRDs (Required prerequisite for kgateway)
+  {
+    name: 'gateway-api-crds',
+    namespace: 'default',
+    chart: {
+      type: 'GatewayApiCrdsChart',
+      props: {
+        version: 'v1.4.0'
+      }
+    },
+    argocd: {
+      syncWave: '-130',  // Deploy CRDs very early, before kgateway
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'gateway-api-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
+
+  // kgateway CRDs (Install CRDs before kgateway platform)
+  {
+    name: 'kgateway-crds',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KgatewayCrdsChart',
+      props: {
+        version: 'v2.1.1'
+      }
+    },
+    argocd: {
+      syncWave: '-125',  // Deploy after Gateway API CRDs, before kgateway
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // kgateway with agentgateway enabled (MCP Server Gateway)
+  {
+    name: 'kgateway',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KgatewayChart',
+      props: {
+        version: 'v2.1.1',
+        enableAgentGateway: true,
+        enableAiExtension: true,
+        replicas: 1
+      }
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy after kgateway CRDs
+      labels: {
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // kagent CRDs (Install CRDs before kagent platform)
   {
     name: 'kagent-crds',
     namespace: 'kagent',
     chart: {
-      type: 'KagentCrdsChart'
+      type: 'KagentCrdsChart',
+      props: {
+        version: '0.7.4'
+      }
     },
     argocd: {
-      syncWave: '-120',  // Deploy CRDs very early, before kagent
+      syncWave: '-115',  // Deploy after kgateway, before kagent
       labels: {
         'app.kubernetes.io/component': 'crds',
         'app.kubernetes.io/part-of': 'kagent',
@@ -868,125 +957,65 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // TEMPORARILY DISABLED: kagent applications have TypeScript errors
-  // TODO: Re-enable after fixing kagent import errors
+  // kagent AI Agent Framework
+  {
+    name: 'kagent',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentChart',
+      props: {
+        version: '0.7.4',
+        defaultProvider: 'openAI',
+        enableKmcp: true,
+        replicas: 1
+      }
+    },
+    argocd: {
+      syncWave: '-110',  // Deploy after kagent CRDs
+      labels: {
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
 
-  // // kagent Platform (AI Agent Infrastructure)
-  // {
-  //   name: 'kagent',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentChart'
-  //   },
-  //   dependencies: {
-  //     kagentCrds: {
-  //       type: 'KagentCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-110',  // Deploy after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/component': 'platform',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for RemoteMCPServer CR until CRD is installed
-  //     }
-  //   }
-  // },
-  //
-  // // kmcp Controller (MCP Server Manager)
-  // {
-  //   name: 'kmcp',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KmcpChart'
-  //   },
-  //   dependencies: {
-  //     kagentCrds: {
-  //       type: 'KagentCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-110',  // Deploy alongside kagent, after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/component': 'platform',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kmcp'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for MCPServer CRs until CRD is installed
-  //     }
-  //   }
-  // },
-  //
-  // // kagent Secrets (LLM Provider API Keys)
-  // {
-  //   name: 'kagent-secrets',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentSecretsChart'
-  //   },
-  //   argocd: {
-  //     syncWave: '-70',  // After workload identity, before agents
-  //     labels: {
-  //       'app.kubernetes.io/component': 'secrets',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent-secrets'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       }
-  //     }
-  //   }
-  // },
-  //
-  // // kagent Example Agents
-  // {
-  //   name: 'kagent-agents',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentExampleAgentsChart'
-  //   },
-  //   dependencies: {
-  //     kagentSecrets: {
-  //       type: 'KagentSecretsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '50',  // After platform is ready
-  //     labels: {
-  //       'app.kubernetes.io/component': 'agents',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent-agents'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for Agent/ModelConfig/MCPServer CRs
-  //     },
-  //     // Ignore status and spec fields updated by controllers
-  //     // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
-  //     ignoreDifferences: [
-  //       { group: 'kagent.dev', kind: 'Agent', jsonPointers: ['/status', '/spec'] },
-  //       { group: 'kagent.dev', kind: 'ModelConfig', jsonPointers: ['/status'] },
-  //       { group: 'kagent.dev', kind: 'MCPServer', jsonPointers: ['/status'] }
-  //     ]
-  //   }
-  // },
+  // kagent LLM Provider Secrets (External Secrets from Azure Key Vault)
+  {
+    name: 'kagent-secrets',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentSecretsChart',
+      props: {
+        namespace: 'kagent',
+        secretName: 'kagent-llm-providers',
+        clusterSecretStoreName: 'azure-keyvault-store',
+        refreshInterval: '1h'
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // Deploy after kagent namespace exists, before agents
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-secrets'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=false']  // Namespace created by kagent-crds
+      }
+    }
+  },
 
   // Nix Cache Namespace
   {
