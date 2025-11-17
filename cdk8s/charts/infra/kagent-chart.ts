@@ -191,12 +191,15 @@ export class KagentChart extends Chart {
           },
         },
 
-        // Security context
-        securityContext: {
-          runAsNonRoot: true,
-          runAsUser: 1000,
-          fsGroup: 1000,
-        },
+        // Security context - NOTE: Do not override global securityContext
+        // The kagent Helm chart v0.7.4 has a bug where it applies fsGroup
+        // to container-level securityContext instead of pod-level.
+        // Let the chart use its defaults.
+        // securityContext: {
+        //   runAsNonRoot: true,
+        //   runAsUser: 1000,
+        //   fsGroup: 1000,
+        // },
 
         // RBAC configuration
         rbac: {
