@@ -80,15 +80,14 @@ export class KgatewayChart extends Chart {
       releaseName: 'kgateway',
       values: {
         // Enable agentgateway for MCP server gateway functionality
-        agentGateway: {
+        // Note: Uses lowercase 'agentgateway' per Helm chart schema
+        agentgateway: {
           enabled: enableAgentGateway,
         },
 
-        // Enable AI extension features
-        gateway: {
-          aiExtension: {
-            enabled: enableAiExtension,
-          },
+        // Enable Inference Extension (requires agentgateway.enabled=true)
+        inferenceExtension: {
+          enabled: enableAiExtension,
         },
 
         // Control plane configuration
