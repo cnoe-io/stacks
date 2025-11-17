@@ -1,3 +1,6 @@
+# Environment files
+.env
+
 idpbuilder.tar.gz
 cdk8s/.tsbuild/.tsbuildinfo
 .gitignore
