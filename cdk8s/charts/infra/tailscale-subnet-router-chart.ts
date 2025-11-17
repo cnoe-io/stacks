@@ -57,7 +57,53 @@ export class TailscaleSubnetRouterChart extends Chart {
     const routes = props.routes || ['10.244.0.0/16', '10.96.0.0/16'];
     const authKeySecretName = props.authKeySecretName || 'tailscale-auth-key';
     const authKeySecretKey = props.authKeySecretKey || 'authKey';
-    const serviceAccountName = props.serviceAccountName || 'operator';
+    const serviceAccountName = props.serviceAccountName || 'tailscale-subnet-router';
+
+    // Create ServiceAccount for subnet router
+    new k8s.KubeServiceAccount(this, 'service-account', {
+      metadata: {
+        name: serviceAccountName,
+        namespace,
+        labels: {
+          app: 'tailscale-subnet-router',
+        },
+      },
+    });
+
+    // Create Role for managing state secret
+    new k8s.KubeRole(this, 'role', {
+      metadata: {
+        name: 'tailscale-subnet-router',
+        namespace,
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'create', 'update', 'patch'],
+        },
+      ],
+    });
+
+    // Create RoleBinding
+    new k8s.KubeRoleBinding(this, 'role-binding', {
+      metadata: {
+        name: 'tailscale-subnet-router',
+        namespace,
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'Role',
+        name: 'tailscale-subnet-router',
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: serviceAccountName,
+          namespace,
+        },
+      ],
+    });
 
     // Create the subnet router pod
     new k8s.KubePod(this, 'subnet-router', {
