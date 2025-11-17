@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentgateway-config
+  namespace: agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  config.yaml: |
+    adminAddr:
+      SocketAddr: "0.0.0.0:15000"
+    binds:
+    - port: 3000
+      listeners:
+      - routes:
+        - policies:
+            cors:
+              allowOrigins:
+                - "*"
+              allowHeaders:
+                - mcp-protocol-version
+                - content-type
+                - cache-control
+          backends:
+          - mcp:
+              targets:
+              - name: everything
+                stdio:
+                  cmd: npx
+                  args: ["@modelcontextprotocol/server-everything"]
+

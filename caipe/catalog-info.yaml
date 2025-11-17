@@ -1,0 +1,131 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: caipe-platform
+  description: Cloud AI Platform Engineering - Complete AI-powered platform engineering solution
+  labels:
+    platform: caipe
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe/catalog-info.yaml
+spec:
+  owner: platform-team
+  domain: platform-engineering
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ai-platform-engineering
+  description: AI Platform Engineering - Main CAIPE stack
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: ai-platform-engineering
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: github-agent
+  description: GitHub Agent - Repository management
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: github-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: jira-agent
+  description: Jira Agent - Issue tracking integration
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: jira-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: slack-agent
+  description: Slack Agent - Team communication
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: slack-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: aws-agent
+  description: AWS Agent - Cloud resource management
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: aws-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: argocd-agent
+  description: ArgoCD Agent - GitOps deployment
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: argocd-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: backstage-agent
+  description: Backstage Agent - Developer portal integration
+  labels:
+    platform: caipe
+    environment: production
+  annotations:
+    backstage.io/managed-by-location: url:https://github.com/sriaradhyula/stacks/tree/main/caipe
+    argocd/app-name: backstage-agent
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: caipe-platform

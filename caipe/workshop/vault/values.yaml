@@ -1,0 +1,19 @@
+# This values file configures the official Vault Helm chart.
+
+# Vault UI/API does not support domain subpathing - must use subdomain approach
+# Using vault.cnoe.localtest.me instead of cnoe.localtest.me/vault
+server:
+  extraEnvironmentVars:
+    VAULT_ADDR: 'https://vault.cnoe.localtest.me:8443'
+  
+  # Configure readiness probe to use HTTP endpoint instead of vault status command
+  # Setting 'path' triggers httpGet mode in Helm template instead of exec vault status
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+    port: 8200
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 2
+    successThreshold: 1

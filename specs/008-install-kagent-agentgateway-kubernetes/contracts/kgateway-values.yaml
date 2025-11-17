@@ -1,0 +1,46 @@
+# kgateway Helm Values Contract
+# Chart: oci://cr.kgateway.dev/kgateway-dev/charts/kgateway
+# Version: v2.2.0
+
+# Required for MCP gateway functionality
+agentGateway:
+  enabled: true
+
+# Required for AI extension features
+gateway:
+  aiExtension:
+    enabled: true
+
+# Optional: Resource configuration
+gloo:
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+
+# Optional: Gateway proxy configuration
+gatewayProxies:
+  gatewayProxy:
+    service:
+      type: ClusterIP  # Use LoadBalancer for external access
+    podTemplate:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+
+# Optional: Global settings
+global:
+  image:
+    pullPolicy: IfNotPresent
+  # Uncomment for private registry
+  # imagePullSecrets:
+  #   - name: regcred

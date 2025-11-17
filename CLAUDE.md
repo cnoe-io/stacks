@@ -187,6 +187,122 @@ curl http://localhost:8080/nixos/nix-cache-info
 
 For full documentation, see `specs/003-implement-attic-minio/quickstart.md`.
 
+### NixOS VMs with RustDesk Remote Desktop
+
+**Purpose**: Deploy NixOS VMs via KubeVirt with automatic RustDesk headless mode configuration for remote desktop access.
+
+**Key Achievement**: Cloud-init-based RustDesk configuration that works within NixOS immutable filesystem constraints by using `/root/.config` and systemd system services.
+
+```bash
+# Deploy NixOS VM with RustDesk enabled (via cluster-update)
+source deployment/scripts/cluster-menu.sh
+cluster-update  # Deploys nixos-dev-vm package with enableRustDesk: true
+
+# Check VM status
+kubectl get vm,vmi -n default
+# Expected: nixos-dev-vm VM Running, VMI Running
+
+# Get RustDesk credentials via SSH
+kubectl port-forward -n default svc/nixos-dev-vm-rdp 2222:22 &
+ssh -p 2222 nixos@localhost 'cat /root/rustdesk-info.txt'
+# Expected: RustDesk ID: 123456789
+
+# Verify RustDesk service running
+kubectl port-forward -n default svc/nixos-dev-vm-rdp 2222:22 &
+ssh -p 2222 nixos@localhost 'sudo systemctl status rustdesk'
+# Expected: active (running)
+
+# Connect via Tailscale subnet router (recommended)
+# 1. Ensure Tailscale subnet routes (10.244.0.0/16) are approved in Tailscale admin
+# 2. Get VM pod IP: kubectl get vmi nixos-dev-vm -o jsonpath='{.status.interfaces[0].ipAddress}'
+# 3. Connect RustDesk client to: <VM_POD_IP>:21116
+
+# Alternative: Port-forward for testing
+kubectl port-forward -n default svc/nixos-dev-vm-rdp 21116:21116 &
+# Connect RustDesk client to: localhost:21116
+```
+
+**Key Files**:
+- Chart: `cdk8s/lib/kubevirt-helpers.ts` (generateCloudInitUserData function with RustDesk setup)
+- VM Configuration: `cdk8s/charts/infra/nixos-vm-chart.ts`
+- Documentation: `docs/RUSTDESK_CONNECTION_GUIDE.md`, `specs/004-deploy-nixos-vms/rustdesk-headless-spec.md`
+
+**Architecture** (NixOS Immutability Constraints):
+- **Challenge**: NixOS immutable filesystem prevents traditional runtime configuration
+- **Solution**: Cloud-init + system service approach
+  - Configuration written to `/root/.config/rustdesk/` (writable at runtime)
+  - Systemd system service (multi-user.target) running as root
+  - Headless mode enabled via `rustdesk --option allow-linux-headless Y`
+  - Direct connection mode on port 21116 (no relay server)
+- **Benefits**: Fast deployment (no image rebuild), GitOps-friendly (cloud-init in version control)
+
+**RustDesk Configuration**:
+- **Headless Mode**: Enabled (`allow-linux-headless = "Y"` in RustDesk2.toml)
+- **Direct Connection**: Port 21116 exposed in VM network and Service
+- **Authentication**: Permanent password (configured via chart props or Azure Key Vault)
+- **Service**: `/etc/systemd/system/rustdesk.service` (auto-start, auto-restart on failure)
+- **GL Fallback**: `LIBGL_ALWAYS_SOFTWARE=1` for software rendering
+
+**Access Methods**:
+1. **Tailscale Subnet Router** (Recommended): Direct access to VM pod IP from any Tailscale-connected device
+2. **Port-Forward**: For testing from cluster host (`kubectl port-forward`)
+3. **NodePort**: Accessible from Kind node IP (cluster host only)
+
+**Troubleshooting**:
+```bash
+# RustDesk service not running: Check logs
+kubectl exec -n default <vm-pod-name> -- journalctl -u rustdesk --tail=50
+
+# Cloud-init RustDesk setup failed: Check cloud-init output
+kubectl exec -n default <vm-pod-name> -- cat /var/log/cloud-init-output.log | grep -A 20 rustdesk
+
+# Cannot connect via Tailscale: Verify subnet routes approved
+kubectl exec -n tailscale tailscale-subnet-router -- tailscale status
+
+# RustDesk ID not found: Check configuration directory
+kubectl exec -n default <vm-pod-name> -- ls -la /root/.config/rustdesk/
+
+# GL errors (shouldn't occur with headless mode): Check service environment
+kubectl exec -n default <vm-pod-name> -- systemctl show rustdesk | grep -i environment
+```
+
+**CDK8s Configuration** (in `config/applications.ts`):
+```typescript
+{
+  name: 'nixos-dev-vm',
+  namespace: 'default',
+  chart: {
+    type: 'NixOsVmChart',
+    props: {
+      vmName: 'nixos-dev-vm',
+      enableRustDesk: true,  // Enable RustDesk headless mode
+      enableTailscale: true,  // Enable Tailscale auth via Azure Key Vault
+      cpuCores: 2,
+      memory: '4Gi',
+      storageSize: '50Gi'
+    }
+  }
+}
+```
+
+**Implementation Status**:
+- ✅ RustDesk headless mode enabled (commit f92daf5)
+- ✅ Systemd system service running as root
+- ✅ Configuration in `/root/.config/rustdesk/`
+- ✅ Direct connection mode on port 21116
+- ✅ Tailscale subnet router access tested
+- ✅ GL errors resolved (headless mode avoids GL)
+- ⚠️ Password currently hard-coded ("nixos123") - Azure Key Vault integration planned
+- ⚠️ RustDesk ID regenerates on VM recreation (no persistent storage)
+
+**Security Considerations**:
+- RustDesk runs as root (required for headless mode functionality)
+- Permanent password should be sourced from Azure Key Vault (not implemented yet)
+- Tailscale network provides access control (only Tailscale-connected devices can reach VM)
+- End-to-end encryption enabled by default in RustDesk protocol
+
+For full documentation, see `docs/RUSTDESK_CONNECTION_GUIDE.md` and `specs/004-deploy-nixos-vms/rustdesk-headless-spec.md`.
+
 ### kagent/kmcp (AI Agent Platform)
 
 ```bash
