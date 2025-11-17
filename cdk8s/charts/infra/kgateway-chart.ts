@@ -17,7 +17,12 @@
 
 import { Chart, ChartProps, Helm } from 'cdk8s';
 import { Construct } from 'constructs';
-import { KubeNamespace } from '../../imports/k8s';
+import { KubeNamespace, KubeIngress } from '../../imports/k8s';
+import {
+  Gateway,
+  GatewayClass,
+  GatewaySpecListenersAllowedRoutesNamespacesFrom
+} from '../../imports/gateway.networking.k8s.io';
 
 export interface KgatewayChartProps extends ChartProps {
   /**
@@ -136,5 +141,81 @@ export class KgatewayChart extends Chart {
         },
       },
     });
+
+    // Create agentgateway GatewayClass if enabled
+    if (enableAgentGateway) {
+      new GatewayClass(this, 'agentgateway-class', {
+        metadata: {
+          name: 'agentgateway',
+        },
+        spec: {
+          controllerName: 'kgateway.dev/agentgateway',
+        },
+      });
+
+      // Create agentgateway Gateway proxy
+      new Gateway(this, 'agentgateway-gateway', {
+        metadata: {
+          name: 'agentgateway',
+          namespace: namespace,
+          labels: {
+            app: 'agentgateway',
+          },
+        },
+        spec: {
+          gatewayClassName: 'agentgateway',
+          listeners: [
+            {
+              protocol: 'HTTP',
+              port: 8080,
+              name: 'http',
+              allowedRoutes: {
+                namespaces: {
+                  from: GatewaySpecListenersAllowedRoutesNamespacesFrom.ALL,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      // Create Ingress for agentgateway access
+      const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
+      const agentgatewayHost = `agentgateway.${baseHost}`;
+
+      new KubeIngress(this, 'agentgateway-ingress', {
+        metadata: {
+          name: 'agentgateway',
+          namespace: namespace,
+          annotations: {
+            'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          },
+        },
+        spec: {
+          ingressClassName: 'nginx',
+          rules: [
+            {
+              host: agentgatewayHost,
+              http: {
+                paths: [
+                  {
+                    path: '/',
+                    pathType: 'Prefix',
+                    backend: {
+                      service: {
+                        name: 'agentgateway',
+                        port: {
+                          number: 8080,
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      });
+    }
   }
 }
