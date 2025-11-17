@@ -17,7 +17,7 @@
 
 import { Chart, ChartProps, Helm } from 'cdk8s';
 import { Construct } from 'constructs';
-import { KubeNamespace, KubeIngress } from '../../imports/k8s';
+import { KubeNamespace, KubeIngress, KubeService, IntOrString } from '../../imports/k8s';
 import {
   Gateway,
   GatewayClass,
@@ -206,6 +206,68 @@ export class KgatewayChart extends Chart {
                         name: 'agentgateway',
                         port: {
                           number: 8080,
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      // Create Service for agentgateway admin UI (port 15000)
+      const agentgatewayAdminHost = `agentgateway-admin.${baseHost}`;
+
+      new KubeService(this, 'agentgateway-admin-service', {
+        metadata: {
+          name: 'agentgateway-admin',
+          namespace: namespace,
+          labels: {
+            app: 'agentgateway-admin',
+          },
+        },
+        spec: {
+          type: 'ClusterIP',
+          selector: {
+            'gateway.networking.k8s.io/gateway-name': 'agentgateway',
+          },
+          ports: [
+            {
+              name: 'admin',
+              port: 15000,
+              targetPort: IntOrString.fromNumber(15000),
+              protocol: 'TCP',
+            },
+          ],
+        },
+      });
+
+      // Create Ingress for agentgateway admin UI
+      new KubeIngress(this, 'agentgateway-admin-ingress', {
+        metadata: {
+          name: 'agentgateway-admin',
+          namespace: namespace,
+          annotations: {
+            'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          },
+        },
+        spec: {
+          ingressClassName: 'nginx',
+          rules: [
+            {
+              host: agentgatewayAdminHost,
+              http: {
+                paths: [
+                  {
+                    path: '/',
+                    pathType: 'Prefix',
+                    backend: {
+                      service: {
+                        name: 'agentgateway-admin',
+                        port: {
+                          number: 15000,
                         },
                       },
                     },
