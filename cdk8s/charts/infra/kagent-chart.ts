@@ -17,6 +17,7 @@
 
 import { Chart, ChartProps, Helm } from 'cdk8s';
 import { Construct } from 'constructs';
+import { KubeIngress } from '../../imports/k8s';
 
 export interface KagentChartProps extends ChartProps {
   /**
@@ -220,6 +221,41 @@ export class KagentChart extends Chart {
             pullPolicy: 'IfNotPresent',
           },
         },
+      },
+    });
+
+    // Create Ingress for kagent UI (not supported by Helm chart values)
+    new KubeIngress(this, 'kagent-ui-ingress', {
+      metadata: {
+        name: 'kagent-ui',
+        namespace: namespace,
+        annotations: {
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+        },
+      },
+      spec: {
+        ingressClassName: 'nginx',
+        rules: [
+          {
+            host: kagentHost,
+            http: {
+              paths: [
+                {
+                  path: '/',
+                  pathType: 'Prefix',
+                  backend: {
+                    service: {
+                      name: 'kagent-ui',
+                      port: {
+                        number: 8080,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
       },
     });
   }
