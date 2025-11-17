@@ -65,7 +65,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KubeVirtOperatorChart',
       props: {
-        version: 'v1.6.2'
+        version: 'v1.3.1'
       }
     },
     argocd: {
@@ -171,7 +171,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        image: 'vpittamp23/nixos-kubevirt-desktop:v1.2.0-tailscale'
+        image: 'vpittamp23/nixos-kubevirt-desktop:v1.0.0-x11'
       }
     },
     argocd: {
@@ -191,7 +191,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // NixOS DataVolume (Import NixOS Sway image into PVC) - Feature 007
+  // NixOS DataVolume (Import NixOS image into PVC)
   {
     name: 'nixos-dev-datavolume',
     namespace: 'default',
@@ -199,42 +199,14 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'NixOsDataVolumeChart',
       props: {
         dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://temp-image-server.default.svc.cluster.local/hetzner-sway.qcow2',
-        storageSize: '50Gi'  // 50Gi virtual size, 2.1GB compressed - WITH WAYVNC
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
+        storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
       }
     },
     argocd: {
       syncWave: '0',  // After image server
       labels: {
         'app.kubernetes.io/name': 'nixos-dev-datavolume',
-        'app.kubernetes.io/component': 'storage',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
-  // NixOS Optimized DataVolume (Import optimized NixOS image - 13.5GB, no home-manager)
-  {
-    name: 'nixos-optimized-datavolume',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsDataVolumeChart',
-      props: {
-        dataVolumeName: 'nixos-optimized-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos-kubevirt-optimized.qcow2',
-        storageSize: '100Gi'  // Increased for home-manager packages (base: 20GB + home-manager: ~40GB + overhead)
-      }
-    },
-    argocd: {
-      syncWave: '0',  // After image server
-      labels: {
-        'app.kubernetes.io/name': 'nixos-optimized-datavolume',
         'app.kubernetes.io/component': 'storage',
         'app.kubernetes.io/part-of': 'kubevirt'
       },
@@ -274,101 +246,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // RustDesk VM Secrets (Password for RustDesk remote desktop authentication)
-  // DEPRECATED: Use nixos-vm-cloudinit-secrets instead for production
-  // This chart is kept for backward compatibility with inline cloud-init approach
-  {
-    name: 'rustdesk-secrets',
-    namespace: 'default',
-    chart: {
-      type: 'RustDeskSecretsChart',
-      props: {
-        namespace: 'default',
-        syncWave: '-70'  // Before VM creation (early in deployment)
-      }
-    },
-    argocd: {
-      syncWave: '-70',  // Before VM deployment (wave 0)
-      labels: {
-        'app.kubernetes.io/name': 'rustdesk-secrets',
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
-  // NixOS VM Cloud-Init Secrets (Production approach: generates cloud-init with secrets from Azure Key Vault)
-  {
-    name: 'nixos-vm-cloudinit-secrets',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsVmCloudInitSecretsChart',
-      props: {
-        namespace: 'default',
-        vmName: 'nixos-dev-vm',
-        username: 'vpittamp',
-        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHmXFP33EvyB3vZQktX+FvxdzfUVclE6bk0dd3nMAq84 hetzner-nixos'],
-        consolePassword: 'nixos123',
-        enableTailscale: true,
-        enableRustDesk: true,
-        syncWave: '5'  // Before VM creation (wave 10)
-      }
-    },
-    argocd: {
-      syncWave: '5',  // After workload identity, before VM
-      labels: {
-        'app.kubernetes.io/name': 'nixos-vm-cloudinit-secrets',
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
-  // NixOS Optimized VM Cloud-Init Secrets
-  {
-    name: 'nixos-optimized-vm-cloudinit-secrets',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsVmCloudInitSecretsChart',
-      props: {
-        namespace: 'default',
-        vmName: 'nixos-optimized-vm',
-        username: 'vpittamp',
-        sshKeys: ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPmr7VOVazmcseVIUsqiXIcPBwzownP4ejkOuNg+o7'],  // 1Password Git Signing Key
-        consolePassword: 'nixos123',
-        enableTailscale: true,
-        enableRustDesk: true,
-        syncWave: '5'  // Before VM creation (wave 10)
-      }
-    },
-    argocd: {
-      syncWave: '5',  // After workload identity, before VM
-      labels: {
-        'app.kubernetes.io/name': 'nixos-optimized-vm-cloudinit-secrets',
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
   // NixOS Virtual Machine
   {
     name: 'nixos-dev-vm',
@@ -378,49 +255,16 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         vmName: 'nixos-dev-vm',
         dataVolumeName: 'nixos-dev-datavolume',
-        cpuCores: 4,  // Balanced for TCG emulation (4 cores recommended)
-        memory: '12Gi',  // Balanced for full desktop (12Gi recommended for smooth experience)
+        cpuCores: 8,  // Increased to 8 for maximum performance
+        memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
         enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
-        tailscaleHostname: 'nixos-dev-vm',  // Tailscale hostname (without -rdp suffix)
-        useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init
+        tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
       }
     },
     argocd: {
       syncWave: '10',  // After DataVolume
       labels: {
         'app.kubernetes.io/name': 'nixos-dev-vm',
-        'app.kubernetes.io/component': 'virtual-machine',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
-  // NixOS Optimized Virtual Machine (13.5GB image, no home-manager, minimal packages)
-  {
-    name: 'nixos-optimized-vm',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsVmChart',
-      props: {
-        vmName: 'nixos-optimized-vm',
-        dataVolumeName: 'nixos-optimized-datavolume',
-        cpuCores: 8,  // Increased to 8 for near-native desktop performance
-        memory: '16Gi',  // Increased for KDE Plasma desktop + multiple RustDesk instances
-        enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
-        tailscaleHostname: 'nixos-optimized-vm',  // Tailscale hostname (without -rdp suffix)
-        useExternalSecretsCloudInit: true  // Use production-ready ExternalSecret for cloud-init
-      }
-    },
-    argocd: {
-      syncWave: '10',  // After DataVolume
-      labels: {
-        'app.kubernetes.io/name': 'nixos-optimized-vm',
         'app.kubernetes.io/component': 'virtual-machine',
         'app.kubernetes.io/part-of': 'kubevirt'
       },
@@ -903,51 +747,53 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale Operator - Remote Kubernetes Cluster Access
-  {
-    name: 'tailscale-operator',
-    namespace: 'tailscale',
-    chart: {
-      type: 'TailscaleOperatorChart',
-      props: {
-        environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
-        clusterName: process.env.CLUSTER_NAME || 'kind',
-        oauthSecretName: 'tailscale-oauth',
-        enableHA: true,  // Enable ProxyGroup for API server access
-        proxyReplicas: 2,
-        impersonationGrants: [
-          {
-            tailscaleGroup: 'group:admins',
-            kubernetesGroups: ['system:masters'],
-            description: 'Full cluster admin access for Tailscale admin group'
-          },
-          {
-            tailscaleGroup: 'group:developers',
-            kubernetesGroups: ['developers'],
-            description: 'Developer namespace access via Kubernetes RBAC'
-          }
-        ]
-      }
-    },
-    dependencies: {
-      tailscaleCrds: {
-        type: 'TailscaleCrdsChart'
-      }
-    },
-    argocd: {
-      syncWave: '-90',  // Deploy after CRDs
-      labels: {
-        'app.kubernetes.io/name': 'tailscale-operator',
-        'app.kubernetes.io/component': 'network-proxy'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
-      }
-    }
-  },
+  // TEMPORARILY DISABLED: Missing ProxyGroup CRD import (tailscale.com)
+  // TODO: Fix import for ProxyGroup CRD in imports/tailscale.com.ts
+  // {
+  //   name: 'tailscale-operator',
+  //   namespace: 'tailscale',
+  //   chart: {
+  //     type: 'TailscaleOperatorChart',
+  //     props: {
+  //       environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
+  //       clusterName: process.env.CLUSTER_NAME || 'kind',
+  //       oauthSecretName: 'tailscale-oauth',
+  //       enableHA: true,  // Enable ProxyGroup for API server access
+  //       proxyReplicas: 2,
+  //       impersonationGrants: [
+  //         {
+  //           tailscaleGroup: 'group:admins',
+  //           kubernetesGroups: ['system:masters'],
+  //           description: 'Full cluster admin access for Tailscale admin group'
+  //         },
+  //         {
+  //           tailscaleGroup: 'group:developers',
+  //           kubernetesGroups: ['developers'],
+  //           description: 'Developer namespace access via Kubernetes RBAC'
+  //         }
+  //       ]
+  //     }
+  //   },
+  //   dependencies: {
+  //     tailscaleCrds: {
+  //       type: 'TailscaleCrdsChart'
+  //     }
+  //   },
+  //   argocd: {
+  //     syncWave: '-90',  // Deploy after CRDs
+  //     labels: {
+  //       'app.kubernetes.io/name': 'tailscale-operator',
+  //       'app.kubernetes.io/component': 'network-proxy'
+  //     },
+  //     syncPolicy: {
+  //       automated: {
+  //         prune: true,
+  //         selfHeal: true
+  //       },
+  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
+  //     }
+  //   }
+  // },
 
   // Tailscale API Proxy (sidecar approach)
   {
@@ -1000,23 +846,53 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
+  // Gateway API CRDs (Required prerequisite for kgateway)
   {
-    name: 'argocd-tailscale-serve',
-    namespace: 'tailscale',
+    name: 'gateway-api-crds',
+    namespace: 'default',
     chart: {
-      type: 'ArgoCdTailscaleServeChart'
+      type: 'GatewayApiCrdsChart',
+      props: {
+        version: 'v1.4.0'
+      }
     },
     argocd: {
-      syncWave: '-40',  // after operator/auth-key/subnet-router are up
+      syncWave: '-130',  // Deploy CRDs very early, before kgateway
       labels: {
-        'app.kubernetes.io/name': 'argocd-tailscale-serve',
-        'app.kubernetes.io/component': 'network',
-        'app.kubernetes.io/part-of': 'tailscale'
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'gateway-api-crds'
       },
       syncPolicy: {
         automated: {
-          prune: true,
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
+
+  // kgateway CRDs (Install CRDs before kgateway platform)
+  {
+    name: 'kgateway-crds',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KgatewayCrdsChart',
+      props: {
+        version: 'v2.1.1'
+      }
+    },
+    argocd: {
+      syncWave: '-125',  // Deploy after Gateway API CRDs, before kgateway
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
           selfHeal: true
         },
         syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
@@ -1024,46 +900,31 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Tailscale exposure for all ingress hosts via ingress-nginx
+  // kgateway with agentgateway enabled (MCP Server Gateway)
   {
-    name: 'ingress-tailscale-publish',
-    namespace: 'ingress-nginx',
+    name: 'kgateway',
+    namespace: 'kgateway-system',
     chart: {
-      type: 'IngressTailscalePublishChart'
+      type: 'KgatewayChart',
+      props: {
+        version: 'v2.1.1',
+        enableAgentGateway: true,
+        enableAiExtension: true,
+        replicas: 1
+      }
     },
     argocd: {
-      syncWave: '-35',
+      syncWave: '-120',  // Deploy after kgateway CRDs
       labels: {
-        'app.kubernetes.io/name': 'ingress-tailscale-publish',
-        'app.kubernetes.io/component': 'network',
-        'app.kubernetes.io/part-of': 'tailscale'
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway'
       },
       syncPolicy: {
         automated: {
           prune: true,
           selfHeal: true
         },
-        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
-      }
-    }
-  },
-
-  // Tailnet host aliases to match ingress hosts so SNI/Host route correctly
-  {
-    name: 'tailnet-ingress-alias',
-    namespace: 'ingress-nginx',
-    chart: {
-      type: 'TailnetIngressAliasChart'
-    },
-    argocd: {
-      syncWave: '-34',
-      labels: {
-        'app.kubernetes.io/name': 'tailnet-ingress-alias',
-        'app.kubernetes.io/component': 'network',
-        'app.kubernetes.io/part-of': 'tailscale'
-      },
-      syncPolicy: {
-        automated: { prune: true, selfHeal: true },
         syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
       }
     }
@@ -1074,10 +935,13 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'kagent-crds',
     namespace: 'kagent',
     chart: {
-      type: 'KagentCrdsChart'
+      type: 'KagentCrdsChart',
+      props: {
+        version: '0.7.4'
+      }
     },
     argocd: {
-      syncWave: '-120',  // Deploy CRDs very early, before kagent
+      syncWave: '-115',  // Deploy after kgateway, before kagent
       labels: {
         'app.kubernetes.io/component': 'crds',
         'app.kubernetes.io/part-of': 'kagent',
@@ -1093,125 +957,65 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // TEMPORARILY DISABLED: kagent applications have TypeScript errors
-  // TODO: Re-enable after fixing kagent import errors
+  // kagent AI Agent Framework
+  {
+    name: 'kagent',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentChart',
+      props: {
+        version: '0.7.4',
+        defaultProvider: 'openAI',
+        enableKmcp: true,
+        replicas: 1
+      }
+    },
+    argocd: {
+      syncWave: '-110',  // Deploy after kagent CRDs
+      labels: {
+        'app.kubernetes.io/component': 'platform',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
 
-  // // kagent Platform (AI Agent Infrastructure)
-  // {
-  //   name: 'kagent',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentChart'
-  //   },
-  //   dependencies: {
-  //     kagentCrds: {
-  //       type: 'KagentCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-110',  // Deploy after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/component': 'platform',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for RemoteMCPServer CR until CRD is installed
-  //     }
-  //   }
-  // },
-  //
-  // // kmcp Controller (MCP Server Manager)
-  // {
-  //   name: 'kmcp',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KmcpChart'
-  //   },
-  //   dependencies: {
-  //     kagentCrds: {
-  //       type: 'KagentCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-110',  // Deploy alongside kagent, after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/component': 'platform',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kmcp'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for MCPServer CRs until CRD is installed
-  //     }
-  //   }
-  // },
-  //
-  // // kagent Secrets (LLM Provider API Keys)
-  // {
-  //   name: 'kagent-secrets',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentSecretsChart'
-  //   },
-  //   argocd: {
-  //     syncWave: '-70',  // After workload identity, before agents
-  //     labels: {
-  //       'app.kubernetes.io/component': 'secrets',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent-secrets'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       }
-  //     }
-  //   }
-  // },
-  //
-  // // kagent Example Agents
-  // {
-  //   name: 'kagent-agents',
-  //   namespace: 'kagent',
-  //   chart: {
-  //     type: 'KagentExampleAgentsChart'
-  //   },
-  //   dependencies: {
-  //     kagentSecrets: {
-  //       type: 'KagentSecretsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '50',  // After platform is ready
-  //     labels: {
-  //       'app.kubernetes.io/component': 'agents',
-  //       'app.kubernetes.io/part-of': 'kagent',
-  //       'app.kubernetes.io/name': 'kagent-agents'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for Agent/ModelConfig/MCPServer CRs
-  //     },
-  //     // Ignore status and spec fields updated by controllers
-  //     // The kagent controller adds default values to Agent specs (a2aConfig, modelConfig, systemMessage, tools)
-  //     ignoreDifferences: [
-  //       { group: 'kagent.dev', kind: 'Agent', jsonPointers: ['/status', '/spec'] },
-  //       { group: 'kagent.dev', kind: 'ModelConfig', jsonPointers: ['/status'] },
-  //       { group: 'kagent.dev', kind: 'MCPServer', jsonPointers: ['/status'] }
-  //     ]
-  //   }
-  // },
+  // kagent LLM Provider Secrets (External Secrets from Azure Key Vault)
+  {
+    name: 'kagent-secrets',
+    namespace: 'kagent',
+    chart: {
+      type: 'KagentSecretsChart',
+      props: {
+        namespace: 'kagent',
+        secretName: 'kagent-llm-providers',
+        clusterSecretStoreName: 'azure-keyvault-store',
+        refreshInterval: '1h'
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // Deploy after kagent namespace exists, before agents
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-secrets'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=false']  // Namespace created by kagent-crds
+      }
+    }
+  },
 
   // Nix Cache Namespace
   {

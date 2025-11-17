@@ -1,0 +1,159 @@
+# ArgoCD Application Contract Template
+# Used by CDK8s charts to generate Application resources
+
+# Template for Helm-based applications (kgateway, kagent)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "{{ .name }}"
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: "{{ .name }}"
+    app.kubernetes.io/part-of: kagent-agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .syncWave }}"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Helm chart source (for OCI registry)
+  source:
+    repoURL: "{{ .helmRepo }}"
+    chart: "{{ .chartName }}"
+    targetRevision: "{{ .chartVersion }}"
+    helm:
+      values: |
+        {{ .helmValues | nindent 8 }}
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "{{ .namespace }}"
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+
+---
+# Template for manifest-based applications (secrets, agents)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "{{ .name }}"
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: "{{ .name }}"
+    app.kubernetes.io/part-of: kagent-agentgateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .syncWave }}"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Local manifest source (cnoe:// URL for IdpBuilder)
+  source:
+    repoURL: "cnoe://{{ .name }}/manifests"
+    targetRevision: HEAD
+    path: "."
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "{{ .namespace }}"
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# Example: kgateway Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-120"
+spec:
+  project: default
+  source:
+    repoURL: cr.kgateway.dev/kgateway-dev/charts/kgateway
+    chart: kgateway
+    targetRevision: v2.2.0
+    helm:
+      values: |
+        agentGateway:
+          enabled: true
+        gateway:
+          aiExtension:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kgateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# Example: kagent Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kagent
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-110"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/kagent-dev/kagent/helm/kagent
+    chart: kagent
+    targetRevision: v0.7.4
+    helm:
+      values: |
+        namespace: kagent
+        providers:
+          default: openAI
+          openAI:
+            enabled: true
+            apiKeySecretRef: kagent-llm-providers
+            apiKeySecretKey: OPENAI_API_KEY
+        kmcp:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kagent
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,137 @@
+# kagent Helm Values Contract
+# Chart: oci://ghcr.io/kagent-dev/kagent/helm/kagent
+# Version: v0.7.4
+
+# Namespace for kagent components
+namespace: kagent
+
+# Controller configuration
+controller:
+  replicas: 1
+  logLevel: info
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# UI/Dashboard configuration
+ui:
+  enabled: true
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - host: kagent.cnoe.localtest.me
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: kagent-tls
+        hosts:
+          - kagent.cnoe.localtest.me
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# LLM Provider configuration (using secret references)
+providers:
+  default: openAI
+
+  openAI:
+    enabled: true
+    model: "gpt-4"
+    apiKeySecretRef: kagent-llm-providers
+    apiKeySecretKey: OPENAI_API_KEY
+
+  anthropic:
+    enabled: true
+    model: "claude-3-5-sonnet-20241022"
+    apiKeySecretRef: kagent-llm-providers
+    apiKeySecretKey: ANTHROPIC_API_KEY
+
+  gemini:
+    enabled: true
+    model: "gemini-2.0-flash-exp"
+    apiKeySecretRef: kagent-llm-providers
+    apiKeySecretKey: GEMINI_API_KEY
+
+  # Optional: Local Ollama (no API key required)
+  ollama:
+    enabled: false
+    baseUrl: "http://ollama.ollama.svc.cluster.local:11434"
+    model: "llama3"
+
+# KMCP configuration (bundled in v0.7+)
+kmcp:
+  enabled: true  # Default since v0.7
+  controller:
+    replicas: 1
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+
+# Database configuration
+database:
+  type: sqlite  # Use "postgresql" for production HA
+  sqlite:
+    path: "/data/kagent.db"
+  persistence:
+    enabled: true
+    storageClass: ""  # Use default storage class
+    size: "1Gi"
+    accessModes:
+      - ReadWriteOnce
+
+# Optional: PostgreSQL configuration (for HA)
+# database:
+#   type: postgresql
+#   postgresql:
+#     host: "postgresql.kagent.svc.cluster.local"
+#     port: 5432
+#     database: "kagent"
+#     username: "kagent"
+#     passwordSecretRef: kagent-postgresql
+#     passwordSecretKey: password
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# RBAC configuration
+rbac:
+  create: true
+  clusterRole: true  # Required for cluster-wide resource access
+
+# Service account
+serviceAccount:
+  create: true
+  name: kagent
+  annotations: {}
+
+# Global settings
+global:
+  image:
+    pullPolicy: IfNotPresent
+  # Uncomment for private registry
+  # imagePullSecrets:
+  #   - name: regcred
