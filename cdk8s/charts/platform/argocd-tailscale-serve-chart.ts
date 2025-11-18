@@ -74,7 +74,7 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \
 
 # expose ArgoCD via tailscale serve (tailscale handles HTTPS cert)
 tailscale --socket=/run/tailscale/tailscaled.sock \
-  serve --bg https / https://argocd-server.argocd.svc.cluster.local:443
+  serve --bg https://argocd-server.argocd.svc.cluster.local:443
 
 echo "tailscale serve running for ArgoCD at $TS_HOSTNAME"
 exec tail -f /dev/null
