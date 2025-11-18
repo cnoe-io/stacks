@@ -5,15 +5,15 @@ import * as k8s from '../../imports/k8s';
 interface HostSpec { name: string; hostname: string; }
 
 const HOSTS: HostSpec[] = [
-  { name: 'cnoe', hostname: 'cnoe.tail286401.ts.net' },
-  { name: 'argocd', hostname: 'argocd.tail286401.ts.net' },
-  { name: 'kargo', hostname: 'kargo.tail286401.ts.net' },
-  { name: 'kargo-webhooks', hostname: 'kargo-webhooks.tail286401.ts.net' },
-  { name: 'gitea', hostname: 'gitea.tail286401.ts.net' },
-  { name: 'headlamp', hostname: 'headlamp.tail286401.ts.net' },
-  { name: 'keycloak', hostname: 'keycloak.tail286401.ts.net' },
-  { name: 'kagent', hostname: 'kagent.tail286401.ts.net' },
-  { name: 'agentgateway', hostname: 'agentgateway.tail286401.ts.net' },
+  { name: 'cnoe', hostname: 'cnoe' },
+  { name: 'argocd', hostname: 'argocd' },
+  { name: 'kargo', hostname: 'kargo' },
+  { name: 'kargo-webhooks', hostname: 'kargo-webhooks' },
+  { name: 'gitea', hostname: 'gitea' },
+  { name: 'headlamp', hostname: 'headlamp' },
+  { name: 'keycloak', hostname: 'keycloak' },
+  { name: 'kagent', hostname: 'kagent' },
+  { name: 'agentgateway', hostname: 'agentgateway' },
 ];
 
 export class IngressTailscalePublishChart extends Chart {
