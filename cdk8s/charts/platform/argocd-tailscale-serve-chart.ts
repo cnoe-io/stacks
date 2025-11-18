@@ -79,7 +79,7 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \
 
 # expose ArgoCD via tailscale serve (tailscale handles HTTPS cert)
 tailscale --socket=/run/tailscale/tailscaled.sock \
-  serve --bg https://127.0.0.1:\${PORT_FWD}
+  serve --bg https+insecure://127.0.0.1:\${PORT_FWD}
 
 echo "tailscale serve running for ArgoCD at $TS_HOSTNAME"
 exec tail -f /dev/null
