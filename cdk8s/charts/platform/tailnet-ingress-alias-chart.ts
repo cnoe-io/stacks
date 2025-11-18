@@ -55,6 +55,18 @@ const ALIASES: AliasRule[] = [
     host: 'keycloak.tail286401.ts.net',
     paths: [{ path: '/keycloak', service: 'keycloak', port: 'http', pathType: 'ImplementationSpecific' }],
   },
+  {
+    namespace: 'kagent',
+    name: 'kagent-tailnet-alias',
+    host: 'kagent.tail286401.ts.net',
+    paths: [{ path: '/', service: 'kagent-ui', port: 8080, pathType: 'Prefix' }],
+  },
+  {
+    namespace: 'kgateway-system',
+    name: 'agentgateway-tailnet-alias',
+    host: 'agentgateway.tail286401.ts.net',
+    paths: [{ path: '/', service: 'kgateway', port: 9977, pathType: 'Prefix' }],
+  },
 ];
 
 export class TailnetIngressAliasChart extends Chart {
