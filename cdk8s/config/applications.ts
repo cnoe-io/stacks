@@ -1000,6 +1000,30 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
+  {
+    name: 'argocd-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'ArgoCdTailscaleServeChart'
+    },
+    argocd: {
+      syncWave: '-40',  // after operator/auth-key/subnet-router are up
+      labels: {
+        'app.kubernetes.io/name': 'argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // kagent CRDs (Install CRDs before kagent platform)
   {
     name: 'kagent-crds',
