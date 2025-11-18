@@ -12,6 +12,8 @@ const HOSTS: HostSpec[] = [
   { name: 'gitea', hostname: 'gitea.tail286401.ts.net' },
   { name: 'headlamp', hostname: 'headlamp.tail286401.ts.net' },
   { name: 'keycloak', hostname: 'keycloak.tail286401.ts.net' },
+  { name: 'kagent', hostname: 'kagent.tail286401.ts.net' },
+  { name: 'agentgateway', hostname: 'agentgateway.tail286401.ts.net' },
 ];
 
 export class IngressTailscalePublishChart extends Chart {
