@@ -1048,6 +1048,27 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailnet host aliases to match ingress hosts so SNI/Host route correctly
+  {
+    name: 'tailnet-ingress-alias',
+    namespace: 'ingress-nginx',
+    chart: {
+      type: 'TailnetIngressAliasChart'
+    },
+    argocd: {
+      syncWave: '-34',
+      labels: {
+        'app.kubernetes.io/name': 'tailnet-ingress-alias',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // kagent CRDs (Install CRDs before kagent platform)
   {
     name: 'kagent-crds',
