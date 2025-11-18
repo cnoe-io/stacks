@@ -846,6 +846,63 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
+  {
+    name: 'argocd-tailscale-serve',
+    namespace: 'tailscale',
+    chart: { type: 'ArgoCdTailscaleServeChart' },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale exposure for all ingress hosts via ingress-nginx
+  {
+    name: 'ingress-tailscale-publish',
+    namespace: 'ingress-nginx',
+    chart: { type: 'IngressTailscalePublishChart' },
+    argocd: {
+      syncWave: '-35',
+      labels: {
+        'app.kubernetes.io/name': 'ingress-tailscale-publish',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailnet host aliases to match ingress hosts so SNI/Host route correctly
+  {
+    name: 'tailnet-ingress-alias',
+    namespace: 'ingress-nginx',
+    chart: { type: 'TailnetIngressAliasChart' },
+    argocd: {
+      syncWave: '-34',
+      labels: {
+        'app.kubernetes.io/name': 'tailnet-ingress-alias',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // Gateway API CRDs (Required prerequisite for kgateway)
   {
     name: 'gateway-api-crds',
@@ -930,34 +987,122 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // kagent CRDs (Install CRDs before kagent platform)
+  // Tailnet host aliases to match ingress hosts so SNI/Host route correctly
   {
-    name: 'kagent-crds',
-    namespace: 'kagent',
+    name: 'tailnet-ingress-alias',
+    namespace: 'ingress-nginx',
     chart: {
-      type: 'KagentCrdsChart',
-      props: {
-        version: '0.7.4'
-      }
+      type: 'TailnetIngressAliasChart'
     },
     argocd: {
-      syncWave: '-115',  // Deploy after kgateway, before kagent
+      syncWave: '-34',
       labels: {
-        'app.kubernetes.io/component': 'crds',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kagent-crds'
+        'app.kubernetes.io/name': 'tailnet-ingress-alias',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
       },
       syncPolicy: {
-        automated: {
-          prune: false,  // Never auto-delete CRDs
-          selfHeal: true
-        },
+        automated: { prune: true, selfHeal: true },
         syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
       }
     }
   },
 
-  // kagent AI Agent Framework
+  // Gateway API CRDs (prereq for kgateway)
+  {
+    name: 'gateway-api-crds',
+    namespace: 'gateway-system',
+    chart: {
+      type: 'GatewayApiCrdsChart',
+      props: { version: 'v1.4.0' }
+    },
+    argocd: {
+      syncWave: '-130',
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'gateway-api-crds'
+      },
+      syncPolicy: {
+        automated: { prune: false, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // kgateway CRDs
+  {
+    name: 'kgateway-crds',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KgatewayCrdsChart',
+      props: { version: 'v2.1.1' }
+    },
+    argocd: {
+      syncWave: '-125',
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'kgateway',
+        'app.kubernetes.io/name': 'kgateway-crds'
+      },
+      syncPolicy: {
+        automated: { prune: false, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // kgateway with agentGateway enabled
+  {
+    name: 'kgateway',
+    namespace: 'kgateway-system',
+    chart: {
+      type: 'KgatewayChart',
+      props: {
+        version: 'v2.1.1',
+        agentGateway: {
+          enabled: true,
+          serviceType: 'ClusterIP'
+        }
+      }
+    },
+    dependencies: {
+      kgatewayCrds: { type: 'KgatewayCrdsChart' },
+      gatewayApiCrds: { type: 'GatewayApiCrdsChart' }
+    },
+    argocd: {
+      syncWave: '-120',
+      labels: {
+        'app.kubernetes.io/name': 'kgateway',
+        'app.kubernetes.io/component': 'gateway',
+        'app.kubernetes.io/part-of': 'kgateway'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // kagent CRDs
+  {
+    name: 'kagent-crds',
+    namespace: 'kagent',
+    chart: { type: 'KagentCrdsChart' },
+    argocd: {
+      syncWave: '-115',
+      labels: {
+        'app.kubernetes.io/part-of': 'kagent',
+        'app.kubernetes.io/name': 'kagent-crds'
+      },
+      syncPolicy: {
+        automated: { prune: false, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // kagent platform (Helm)
   {
     name: 'kagent',
     namespace: 'kagent',
@@ -965,54 +1110,49 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'KagentChart',
       props: {
         version: '0.7.4',
-        defaultProvider: 'openAI',
-        enableKmcp: true,
-        replicas: 1
+        ui: { enabled: true },
+        kmcp: { enabled: true },
+        profiling: { enabled: false }
       }
     },
+    dependencies: {
+      kagentCrds: { type: 'KagentCrdsChart' },
+      kgateway: { type: 'KgatewayChart' }
+    },
     argocd: {
-      syncWave: '-110',  // Deploy after kagent CRDs
+      syncWave: '-110',
       labels: {
+        'app.kubernetes.io/name': 'kagent',
         'app.kubernetes.io/component': 'platform',
-        'app.kubernetes.io/part-of': 'kagent',
-        'app.kubernetes.io/name': 'kagent'
+        'app.kubernetes.io/part-of': 'kagent'
       },
       syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['ServerSideApply=true']
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
       }
     }
   },
 
-  // kagent LLM Provider Secrets (External Secrets from Azure Key Vault)
+  // kagent secrets (ExternalSecret for LLM/API keys)
   {
     name: 'kagent-secrets',
     namespace: 'kagent',
     chart: {
-      type: 'KagentSecretsChart',
-      props: {
-        namespace: 'kagent',
-        secretName: 'kagent-llm-providers',
-        clusterSecretStoreName: 'azure-keyvault-store',
-        refreshInterval: '1h'
-      }
+      type: 'KagentSecretsChart'
+    },
+    dependencies: {
+      kagent: { type: 'KagentChart' }
     },
     argocd: {
-      syncWave: '-70',  // Deploy after kagent namespace exists, before agents
+      syncWave: '-70',
       labels: {
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'kagent',
         'app.kubernetes.io/name': 'kagent-secrets'
       },
       syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=false']  // Namespace created by kagent-crds
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=false']
       }
     }
   },
