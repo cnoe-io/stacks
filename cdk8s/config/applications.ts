@@ -1024,6 +1024,30 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale exposure for all ingress hosts via ingress-nginx
+  {
+    name: 'ingress-tailscale-publish',
+    namespace: 'ingress-nginx',
+    chart: {
+      type: 'IngressTailscalePublishChart'
+    },
+    argocd: {
+      syncWave: '-35',
+      labels: {
+        'app.kubernetes.io/name': 'ingress-tailscale-publish',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // kagent CRDs (Install CRDs before kagent platform)
   {
     name: 'kagent-crds',
