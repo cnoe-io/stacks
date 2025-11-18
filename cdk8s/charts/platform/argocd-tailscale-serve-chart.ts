@@ -60,6 +60,11 @@ tailscaled --tun=userspace-networking \
   --socket=/run/tailscale/tailscaled.sock \
   --state=/var/lib/tailscale/tailscaled.state &
 
+# install lightweight TCP proxy to keep backend on localhost (required by new tailscale serve)
+apk add --no-cache socat >/dev/null
+PORT_FWD=8443
+socat TCP-LISTEN:\${PORT_FWD},fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
+
 # wait for tailscaled to come up
 for i in $(seq 1 40); do
   tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1 && break
@@ -74,7 +79,7 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \
 
 # expose ArgoCD via tailscale serve (tailscale handles HTTPS cert)
 tailscale --socket=/run/tailscale/tailscaled.sock \
-  serve --bg https://argocd-server.argocd.svc.cluster.local:443
+  serve --bg https://127.0.0.1:\${PORT_FWD}
 
 echo "tailscale serve running for ArgoCD at $TS_HOSTNAME"
 exec tail -f /dev/null
