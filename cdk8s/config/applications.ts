@@ -827,7 +827,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         routes: ['10.244.0.0/16', '10.96.0.0/16'],  // Kind cluster pod and service CIDRs
         authKeySecretName: 'tailscale-auth-key',
         authKeySecretKey: 'authKey',
-        serviceAccountName: 'operator'
+        // ServiceAccount is now created by the chart itself (no longer depends on operator)
       }
     },
     argocd: {

@@ -191,11 +191,10 @@ export class KagentChart extends Chart {
           },
         },
 
-        // Security context
+        // Security context (container-level only; fsGroup removed as it's pod-level only)
         securityContext: {
           runAsNonRoot: true,
           runAsUser: 1000,
-          fsGroup: 1000,
         },
 
         // RBAC configuration
