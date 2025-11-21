@@ -318,6 +318,35 @@ cluster-recreate() {
     export DOCKER_HOST=""
   fi
 
+  # Tailscale best practice: Clean up old devices before cluster recreation
+  # This ensures new devices get canonical hostnames (no -1 suffix)
+  # See: https://tailscale.com/kb/1439/kubernetes-operator-cluster-ingress
+  local CLEANUP_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/cleanup-old-devices.sh"
+  if command -v tailscale &>/dev/null && [ -f "$CLEANUP_SCRIPT" ]; then
+    echo "🧹 Cleaning up old Tailscale devices..."
+    echo "   (Ensures canonical hostnames on cluster recreation)"
+    echo ""
+
+    # Run cleanup with grace period wait
+    if "$CLEANUP_SCRIPT" --wait; then
+      echo ""
+      echo "✅ Tailscale cleanup complete"
+    else
+      echo ""
+      echo "⚠️  Tailscale cleanup failed (continuing anyway)"
+      echo "   New devices may get -1 suffix (e.g., kagent-1 instead of kagent)"
+    fi
+    echo ""
+  else
+    if [ ! -f "$CLEANUP_SCRIPT" ]; then
+      echo "⚠️  Tailscale cleanup script not found"
+    elif ! command -v tailscale &>/dev/null; then
+      echo "⚠️  Tailscale CLI not found - skipping device cleanup"
+    fi
+    echo "   New devices may get -1 suffix (e.g., kagent-1 instead of kagent)"
+    echo ""
+  fi
+
   echo "🗑️  Deleting existing cluster..."
   idpbuilder delete
 
