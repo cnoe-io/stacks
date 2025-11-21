@@ -289,7 +289,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     },
     argocd: {
-      syncWave: '-100',
+      syncWave: '-85',  // After external-secrets-workload-identity (-90) patches ESO for Azure auth
       labels: {
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'platform',
