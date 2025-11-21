@@ -112,10 +112,23 @@ export class TailscaleOperatorChart extends Chart {
       },
     });
 
-    // T011: Create ServiceAccount
+    // T011: Create ServiceAccount for operator
     new k8s.KubeServiceAccount(this, 'operator-sa', {
       metadata: {
         name: 'operator',
+        namespace: namespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-90',
+        },
+      },
+    });
+
+    // T011b: Create ServiceAccount for proxy pods
+    // Note: The operator creates StatefulSets with serviceAccountName: proxies
+    // but does not auto-create this ServiceAccount, so we must provision it
+    new k8s.KubeServiceAccount(this, 'proxies-sa', {
+      metadata: {
+        name: 'proxies',
         namespace: namespace,
         annotations: {
           'argocd.argoproj.io/sync-wave': '-90',
@@ -230,6 +243,48 @@ export class TailscaleOperatorChart extends Chart {
         {
           kind: 'ServiceAccount',
           name: 'operator',
+          namespace: namespace,
+        },
+      ],
+    });
+
+    // T014b: Create Role for proxy pods
+    // Proxy pods need permissions to get/update their state Secrets
+    new k8s.KubeRole(this, 'proxies-role', {
+      metadata: {
+        name: 'proxies',
+        namespace: namespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-90',
+        },
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'update', 'patch', 'create'],
+        },
+      ],
+    });
+
+    // T014c: Create RoleBinding for proxy pods
+    new k8s.KubeRoleBinding(this, 'proxies-rolebinding', {
+      metadata: {
+        name: 'proxies',
+        namespace: namespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-90',
+        },
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'Role',
+        name: 'proxies',
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: 'proxies',
           namespace: namespace,
         },
       ],
