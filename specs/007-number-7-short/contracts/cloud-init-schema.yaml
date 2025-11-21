@@ -1,0 +1,241 @@
+# Cloud-Init Configuration Schema
+# Purpose: Define the simplified cloud-init structure without RustDesk
+# Feature: 007-number-7-short (NixOS Wayland/Sway VM Migration)
+
+---
+# Simplified Cloud-Init User Data (without RustDesk)
+#cloud-config
+hostname: nixos-dev-vm
+
+# User configuration
+users:
+  - name: vpittamp
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPmr7VOVazmcseVIUsqiXIcPBwzownP4ejkOuNg+o7
+
+# Password configuration
+chpasswd:
+  list: |
+    vpittamp:nixos123
+    root:nixos123
+  expire: false
+
+# Optional: Tailscale auto-authentication
+runcmd:
+  # Enable and start Tailscale
+  - systemctl enable tailscaled
+  - systemctl start tailscaled
+
+  # Authenticate with Tailscale (if auth key provided)
+  - tailscale up --authkey ${TAILSCALE_AUTH_KEY} --hostname nixos-dev-vm
+
+---
+# Schema Definition
+
+schema_version: "1.1"
+
+# Required Fields
+required_fields:
+  hostname:
+    type: string
+    description: "VM hostname (must match VirtualMachine.metadata.name)"
+    pattern: "^[a-z0-9-]+$"
+    max_length: 63
+
+  users:
+    type: array
+    min_items: 1
+    description: "At least one user must be defined"
+    items:
+      - name: string (required)
+      - sudo: string (optional)
+      - shell: string (optional)
+      - ssh_authorized_keys: array of strings (optional)
+
+  chpasswd:
+    type: object
+    description: "Password configuration for users"
+    properties:
+      list: string (pipe-separated username:password pairs)
+      expire: boolean (default: false)
+
+# Optional Fields
+optional_fields:
+  runcmd:
+    type: array
+    description: "Commands to run after boot"
+    items: string (shell command)
+
+  packages:
+    type: array
+    description: "Additional packages to install (not supported in NixOS)"
+    items: string (package name)
+    note: "NixOS uses declarative package management, cloud-init packages field ignored"
+
+  write_files:
+    type: array
+    description: "Files to create"
+    items:
+      - path: string (absolute path)
+      - content: string (file content)
+      - permissions: string (octal mode, e.g., "0644")
+      - owner: string (username:group)
+
+# Removed Fields (from RustDesk version)
+removed_fields:
+  - installDesktop: "Desktop environment is pre-installed in base image"
+  - enableRustDesk: "RustDesk remote desktop replaced by WayVNC"
+  - rustdeskPassword: "No longer needed, WayVNC uses PAM authentication"
+  - xrdp configuration: "X11/RDP removed, replaced by Wayland/VNC"
+  - desktop environment installation: "~240 lines of NixOS configuration removed"
+
+# Size Comparison
+size_comparison:
+  old_cloud_init: "~800 lines (with RustDesk, X11, desktop installation)"
+  new_cloud_init: "~80 lines (hostname, users, SSH keys, Tailscale only)"
+  reduction: "90% reduction in cloud-init complexity"
+
+# Generation Function Signature (buildCloudInitUserData)
+function_signature:
+  old:
+    parameters:
+      - hostname: string
+      - username: string
+      - sshKeys: string[] (optional)
+      - password: string (optional)
+      - installDesktop: boolean (default: false)
+      - enableTailscale: boolean (default: false)
+      - enableRustDesk: boolean (default: false)  # REMOVED
+      - tailscaleAuthKey: string (optional)
+      - rustdeskPassword: string (optional)       # REMOVED
+    return_type: string (cloud-init YAML)
+
+  new:
+    parameters:
+      - hostname: string
+      - username: string
+      - sshKeys: string[] (optional)
+      - password: string (optional)
+      - installDesktop: boolean (default: false)
+      - enableTailscale: boolean (default: false)
+      - tailscaleAuthKey: string (optional)
+    return_type: string (cloud-init YAML)
+
+# Usage in NixOsVmChart
+usage:
+  location: "cdk8s/charts/apps/nixos-vm-chart.ts"
+  call_site: "lines 132-142"
+  example: |
+    const userData = buildCloudInitUserData(
+      vmName,                     // hostname
+      'vpittamp',                 // username
+      [sshPublicKey],             // sshKeys
+      'nixos123',                 // password
+      false,                      // installDesktop (false = desktop pre-installed)
+      true,                       // enableTailscale
+      tailscaleAuthKey            // tailscaleAuthKey (from ExternalSecret)
+    );
+
+# Secret Reference Pattern
+secret_reference:
+  name: "nixos-dev-vm-cloudinit"
+  namespace: "default"
+  type: "Opaque"
+  data_field: "userdata"
+  encoding: "UTF-8 plain text (no base64)"
+  max_size: "unlimited (Secret reference avoids 2048 byte inline limit)"
+
+# ExternalSecret Integration (optional)
+external_secret:
+  enabled: true
+  chart: "NixOsVmCloudInitSecretsChart"
+  azure_key_vault:
+    vault_name: "your-keyvault"
+    secret_name: "nixos-vm-tailscale-authkey"
+    secret_key: "authkey"
+  template:
+    stringData:
+      userdata: |
+        #cloud-config
+        hostname: nixos-dev-vm
+        users: [...]
+        chpasswd: [...]
+        runcmd:
+          - tailscale up --authkey {{ .tailscaleAuthKey }} --hostname nixos-dev-vm
+
+# Validation Rules
+validation:
+  hostname:
+    - "Must match VirtualMachine.metadata.name"
+    - "Must be valid DNS label (lowercase, alphanumeric, hyphens)"
+    - "Must be <= 63 characters"
+
+  ssh_authorized_keys:
+    - "Must be valid SSH public key format (ed25519, RSA, ECDSA)"
+    - "Must start with 'ssh-ed25519', 'ssh-rsa', or 'ecdsa-sha2-nistp256'"
+
+  chpasswd:
+    - "Passwords must not contain colon character (:)"
+    - "Passwords should be synced from Azure Key Vault (not hardcoded)"
+
+  runcmd:
+    - "Commands must not be interactive (no stdin prompts)"
+    - "Commands should use absolute paths or check PATH availability"
+
+# Testing
+test_cases:
+  minimal:
+    description: "Minimal cloud-init with hostname and user only"
+    input:
+      hostname: "nixos-dev-vm"
+      username: "vpittamp"
+      sshKeys: []
+      password: null
+      installDesktop: false
+      enableTailscale: false
+    expected_output: |
+      #cloud-config
+      hostname: nixos-dev-vm
+      users:
+        - name: vpittamp
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+
+  full:
+    description: "Full cloud-init with SSH keys, password, and Tailscale"
+    input:
+      hostname: "nixos-dev-vm"
+      username: "vpittamp"
+      sshKeys: ["ssh-ed25519 AAAAC3..."]
+      password: "nixos123"
+      installDesktop: false
+      enableTailscale: true
+      tailscaleAuthKey: "tskey-auth-xxxxx"
+    expected_output: |
+      #cloud-config
+      hostname: nixos-dev-vm
+      users:
+        - name: vpittamp
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+          ssh_authorized_keys:
+            - ssh-ed25519 AAAAC3...
+      chpasswd:
+        list: |
+          vpittamp:nixos123
+          root:nixos123
+        expire: false
+      runcmd:
+        - systemctl enable tailscaled
+        - systemctl start tailscaled
+        - tailscale up --authkey tskey-auth-xxxxx --hostname nixos-dev-vm
+
+# Success Criteria (from spec.md)
+success_criteria:
+  - "Cloud-init Secret size < 2048 bytes (if inline) or unlimited (if Secret reference)"
+  - "Cloud-init execution completes within 30 seconds of VM boot"
+  - "User can SSH into VM with provided SSH key"
+  - "Tailscale authentication succeeds (if enabled)"
+  - "No RustDesk or X11 configuration present in cloud-init"

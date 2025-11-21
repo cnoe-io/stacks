@@ -56,8 +56,8 @@ export interface NixOsVmChartProps extends ChartProps {
   enableTailscale?: boolean;
 
   /**
-   * Tailscale hostname for the RDP service
-   * @default "{vmName}-rdp"
+   * Tailscale hostname for the VNC service
+   * @default "{vmName}-vnc"
    */
   tailscaleHostname?: string;
 
@@ -76,6 +76,26 @@ export interface NixOsVmChartProps extends ChartProps {
    * @default true
    */
   enableGraphics?: boolean;
+
+  /**
+   * Tailscale auth key (if known at synthesis time)
+   * If not provided, will expect it in tailscale-vm-auth-key secret
+   */
+  tailscaleAuthKey?: string;
+
+  /**
+   * WayVNC password (if known at synthesis time)
+   * If not provided, will expect it in wayvnc-password secret
+   */
+  wayvncPassword?: string;
+
+  /**
+   * Use ExternalSecret for cloud-init generation (production approach)
+   * When true, expects nixos-vm-cloudinit-secrets chart to create the cloud-init Secret
+   * When false, generates cloud-init Secret inline (development/testing approach)
+   * @default false
+   */
+  useExternalSecretsCloudInit?: boolean;
 }
 
 export class NixOsVmChart extends Chart {
@@ -93,37 +113,46 @@ export class NixOsVmChart extends Chart {
       tailscaleHostname,
       runStrategy = 'Always',
       enableGraphics = true,
+      tailscaleAuthKey,
+      wayvncPassword,
+      useExternalSecretsCloudInit = false,
     } = props;
 
-    // SSH public key - hard-coded from 1Password k8s_ed_test
-    const sshPublicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAq4r867qHnS9YUMbu+X7i40sfWZmkdymioHFmtewegC k8s_ed_test';
+    // SSH public key - from 1Password (Git Signing Key)
+    const sshPublicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPmr7VOVazmcseVIUsqiXIcPBwzownP4ejkOuNg+o7';
 
-    // Generate default cloud-init if not provided
-    // Desktop is pre-installed in the image, so skip desktop installation
-    const userData = cloudInitUserData || buildCloudInitUserData(
-      vmName,
-      'vpittamp',
-      [sshPublicKey],
-      'nixos123',  // Default password for console access
-      false,  // Skip desktop installation (already in base image)
-      true,   // Enable Tailscale auto-authentication
-      true    // Enable RustDesk autostart
-    );
-
-    // Create Secret for cloud-init data (required when userData > 2048 bytes)
+    // Cloud-init Secret name (will be created either inline or via ExternalSecret)
     const cloudInitSecretName = `${vmName}-cloudinit`;
-    new k8s.KubeSecret(this, 'cloudinit-secret', {
-      metadata: {
-        name: cloudInitSecretName,
-        namespace: targetNamespace,
-        annotations: {
-          'argocd.argoproj.io/sync-wave': '5',  // Before VM creation
+
+    // Only create inline Secret if NOT using ExternalSecrets
+    // When useExternalSecretsCloudInit=true, the NixOsVmCloudInitSecretsChart creates the Secret
+    if (!useExternalSecretsCloudInit) {
+      // Generate default cloud-init if not provided
+      // Desktop is pre-installed in the image, so skip desktop installation
+      const userData = cloudInitUserData || buildCloudInitUserData(
+        vmName,
+        'vpittamp',
+        [sshPublicKey],
+        'nixos123',  // Default password for console access
+        false,  // Skip desktop installation (already in base image)
+        true,   // Enable Tailscale auto-authentication
+        tailscaleAuthKey  // Tailscale auth key (if provided)
+      );
+
+      // Create Secret for cloud-init data (required when userData > 2048 bytes)
+      new k8s.KubeSecret(this, 'cloudinit-secret', {
+        metadata: {
+          name: cloudInitSecretName,
+          namespace: targetNamespace,
+          annotations: {
+            'argocd.argoproj.io/sync-wave': '5',  // Before VM creation
+          },
         },
-      },
-      stringData: {
-        userdata: userData,
-      },
-    });
+        stringData: {
+          userdata: userData,
+        },
+      });
+    }
 
     // Build VirtualMachine with root disk and cloud-init disk
     const vm = buildVirtualMachine(this, 'vm', {
@@ -159,14 +188,9 @@ export class NixOsVmChart extends Chart {
               port: 22,  // SSH port
             },
             {
-              name: 'rdp',
+              name: 'vnc',
               protocol: 'TCP',
-              port: 3389,  // RDP port
-            },
-            {
-              name: 'rustdesk',
-              protocol: 'TCP',
-              port: 21116,  // RustDesk port
+              port: 5900,  // VNC port for WayVNC
             },
           ],
         },
@@ -183,7 +207,7 @@ export class NixOsVmChart extends Chart {
 
     // Determine service type and annotations based on Tailscale configuration
     const serviceType = enableTailscale ? 'LoadBalancer' : 'NodePort';
-    const hostname = tailscaleHostname || `${vmName}-rdp`;
+    const hostname = tailscaleHostname || `${vmName}-vnc`;
 
     const serviceAnnotations: Record<string, string> = {
       'argocd.argoproj.io/sync-wave': '15',  // After VM creation
@@ -197,10 +221,10 @@ export class NixOsVmChart extends Chart {
       serviceAnnotations['tailscale.com/tags'] = 'tag:k8s';
     }
 
-    // Create Service to expose RDP port
-    const rdpService = new k8s.KubeService(this, 'rdp-service', {
+    // Create Service to expose VNC port
+    const vncService = new k8s.KubeService(this, 'vnc-service', {
       metadata: {
-        name: `${vmName}-rdp`,
+        name: `${vmName}-vnc`,
         namespace: targetNamespace,
         labels: {
           'app.kubernetes.io/name': vmName,
@@ -223,16 +247,10 @@ export class NixOsVmChart extends Chart {
             targetPort: k8s.IntOrString.fromNumber(22),
           },
           {
-            name: 'rdp',
+            name: 'vnc',
             protocol: 'TCP',
-            port: 3389,
-            targetPort: k8s.IntOrString.fromNumber(3389),
-          },
-          {
-            name: 'rustdesk',
-            protocol: 'TCP',
-            port: 21116,
-            targetPort: k8s.IntOrString.fromNumber(21116),
+            port: 5900,
+            targetPort: k8s.IntOrString.fromNumber(5900),
           },
         ],
       },

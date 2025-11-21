@@ -1,0 +1,156 @@
+# DataVolume HTTP Source Contract
+# Purpose: Define the DataVolume source configuration for Wayland/Sway image
+# Feature: 007-number-7-short (NixOS Wayland/Sway VM Migration)
+
+---
+# DataVolume Resource Specification
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: hetzner-sway-disk
+  namespace: default
+  labels:
+    app.kubernetes.io/name: nixos-dev-vm
+    app.kubernetes.io/component: disk-image
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    cdi.kubevirt.io/storage.import.requiresScratch: "false"
+spec:
+  source:
+    http:
+      # HTTP URL to QCOW2 image (MinIO object storage)
+      url: "http://minio.nix-cache.svc.cluster.local:9000/nixos-images/hetzner-sway-v1.qcow2"
+
+      # Optional: Secret reference for HTTP authentication (not needed for MinIO public bucket)
+      # secretRef: "image-pull-secret"
+
+      # Optional: Certificate ConfigMap for HTTPS (not needed for HTTP)
+      # certConfigMap: "image-server-ca"
+
+  pvc:
+    # Access mode for KubeVirt VM (must be ReadWriteOnce for local-path)
+    accessModes:
+      - ReadWriteOnce
+
+    # Storage request (must be >= image virtual size)
+    resources:
+      requests:
+        storage: 50Gi
+
+    # Storage class (local-path for Kind cluster, adjust for production)
+    storageClassName: local-path
+
+    # Volume mode (Filesystem for QCOW2 conversion)
+    volumeMode: Filesystem
+
+---
+# Image Source Requirements
+
+image_requirements:
+  format: "qcow2"
+  compression: "zlib"
+  virtual_size: "50 GiB"
+  physical_size: "~7 GiB"
+  bootloader: "GRUB (EFI + legacy BIOS)"
+  kernel_modules:
+    - virtio_pci
+    - virtio_scsi
+    - ahci
+    - xhci_pci
+  filesystem: "ext4"
+  partition_table: "hybrid (GPT + MBR)"
+
+# HTTP Server Configuration (MinIO)
+http_server:
+  service: "minio.nix-cache.svc.cluster.local"
+  port: 9000
+  bucket: "nixos-images"
+  object: "hetzner-sway-v1.qcow2"
+  access_policy: "public-read"
+  authentication: "none"
+  tls: false
+
+# Alternative HTTP Server (Python SimpleHTTPServer for testing)
+alternative_http_server:
+  host: "192.168.1.100"
+  port: 8000
+  path: "/nixos.qcow2"
+  command: "cd /etc/nixos/result && python3 -m http.server 8000"
+  access_policy: "public-read"
+  authentication: "none"
+
+# CDI Import Process
+cdi_import:
+  importer_pod_name: "importer-hetzner-sway-disk-xxxxx"
+  importer_image: "quay.io/kubevirt/cdi-importer:latest"
+  scratch_pvc: "not required (QCOW2 can be imported without scratch space)"
+  conversion: "QCOW2 → raw format"
+  validation: "disk image checksum (if provided)"
+  retry_policy: "exponential backoff (3 attempts)"
+
+# Import Lifecycle States
+import_states:
+  - state: "Pending"
+    condition: "Bound=False"
+    reason: "WaitForFirstConsumer"
+    description: "PVC waiting for pod to claim"
+
+  - state: "ImportScheduled"
+    condition: "Running=True"
+    reason: "ImportScheduled"
+    description: "Importer pod scheduled, waiting for pod start"
+
+  - state: "ImportInProgress"
+    condition: "Running=True"
+    reason: "ImportInProgress"
+    description: "Downloading from HTTP source, converting to raw"
+    progress_tracking: "cdi.kubevirt.io/storage.pod.progress annotation"
+
+  - state: "Succeeded"
+    condition: "Ready=True"
+    reason: "Succeeded"
+    description: "Import complete, PVC ready for use"
+
+  - state: "Bound"
+    condition: "Bound=True"
+    reason: "InUse"
+    description: "VirtualMachine using PVC as rootdisk"
+
+# Expected Import Duration
+import_duration:
+  download_time: "~2-5 minutes (for 7GB QCOW2, in-cluster network)"
+  conversion_time: "~1-2 minutes (QCOW2 to raw)"
+  total_time: "~3-7 minutes"
+
+# Troubleshooting
+troubleshooting:
+  - error: "ImportInProgress stuck"
+    cause: "HTTP URL not accessible from cluster"
+    solution: "Check DNS resolution, verify MinIO service is Running"
+
+  - error: "Scratch space required"
+    cause: "Image format requires scratch PVC"
+    solution: "Set cdi.kubevirt.io/storage.import.requiresScratch: 'false' annotation"
+
+  - error: "PVC size too small"
+    cause: "storage request < image virtual size"
+    solution: "Increase storage request to >= 50Gi"
+
+  - error: "StorageClass not found"
+    cause: "local-path StorageClass not installed"
+    solution: "Install local-path-provisioner or use different StorageClass"
+
+# Validation Commands
+validation:
+  check_datavolume_status: "kubectl get dv hetzner-sway-disk -n default -o yaml"
+  check_importer_pod: "kubectl get pods -n default -l cdi.kubevirt.io/dataVolume=hetzner-sway-disk"
+  check_import_progress: "kubectl get dv hetzner-sway-disk -o jsonpath='{.status.progress}'"
+  check_pvc_bound: "kubectl get pvc hetzner-sway-disk -n default"
+  test_http_url: "curl -I http://minio.nix-cache.svc.cluster.local:9000/nixos-images/hetzner-sway-v1.qcow2"
+
+# Success Criteria (from spec.md)
+success_criteria:
+  - "DataVolume import completes within 7 minutes"
+  - "PVC reaches Bound state with 50Gi storage"
+  - "No importer pod errors or restarts"
+  - "VM boots successfully from imported disk"

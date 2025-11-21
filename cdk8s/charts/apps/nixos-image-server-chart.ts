@@ -78,6 +78,7 @@ export class NixOsImageServerChart extends Chart {
               {
                 name: 'nginx',
                 image,
+                imagePullPolicy: 'Always', // Always pull to get latest qcow2 content
                 ports: [
                   {
                     name: 'http',

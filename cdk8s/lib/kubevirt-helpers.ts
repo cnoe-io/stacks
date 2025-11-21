@@ -198,14 +198,36 @@ export function buildVirtualMachine(
       },
       spec: {
         domain: {
+          cpu: {
+            cores: cpuCores,
+            sockets: 1,
+            threads: 1,
+            model: 'host-model',  // Host model provides ~90% of passthrough performance with better compatibility
+            dedicatedCpuPlacement: false,  // Don't require dedicated CPUs (for Kind compatibility)
+          },
           resources: {
             requests: {
               memory,
               cpu: `${cpuCores}`,
             },
+            // Request same as limits for guaranteed QoS (better performance)
+            limits: {
+              memory,
+              cpu: `${cpuCores}`,
+            },
           },
           devices: {
-            disks,
+            disks: disks.map((disk: any, index: number) => ({
+              ...disk,
+              disk: {
+                ...disk.disk,
+                // Keep virtio bus for I/O thread support (better for our use case)
+                // virtio-blk with I/O threads >> virtio-scsi without I/O threads
+                bus: disk.disk.bus,
+              },
+              // Assign dedicated I/O thread to each virtio disk for parallelism
+              ...(disk.disk.bus === 'virtio' ? { dedicatedIOThread: true } : {}),
+            })),
             interfaces: interfaces.length > 0 ? interfaces : undefined,
             ...(enableGraphics ? {
               autoattachGraphicsDevice: true,
@@ -215,6 +237,19 @@ export function buildVirtualMachine(
                 name: 'tablet'
               }]
             } : {}),
+          },
+          // Machine type q35 supports PCIe (better than i440fx)
+          machine: {
+            type: 'q35',
+          },
+          // Enable I/O threads for disk parallelism
+          ioThreadsPolicy: 'auto',
+          features: {
+            // ACPI for proper power management
+            acpi: { enabled: true },
+            // APIC for better interrupt handling (multi-core performance)
+            apic: { enabled: true },
+            // Hyperv enlightenments disabled (Linux guest doesn't benefit)
           },
         },
         networks: networkSpecs.length > 0 ? networkSpecs : undefined,
@@ -249,7 +284,7 @@ export function buildVirtualMachine(
  * @param password - Plain text password (will be set via chpasswd)
  * @param installDesktop - Install desktop environment (for base images without desktop)
  * @param enableTailscale - Enable Tailscale with auto-authentication
- * @param enableRustDesk - Enable RustDesk remote desktop
+ * @param tailscaleAuthKey - Tailscale auth key (if available, injected directly)
  */
 export function buildCloudInitUserData(
   hostname: string,
@@ -258,7 +293,7 @@ export function buildCloudInitUserData(
   password?: string,
   installDesktop: boolean = false,
   enableTailscale: boolean = false,
-  enableRustDesk: boolean = false
+  tailscaleAuthKey?: string
 ): string {
   // Generate proper YAML format, not JSON
   let userData = `#cloud-config
@@ -477,139 +512,34 @@ runcmd:
   }
 
   // Add runcmd section header if not already present (installDesktop adds it)
-  if (!installDesktop && (enableTailscale || enableRustDesk)) {
+  if (!installDesktop && enableTailscale) {
     userData += `\nruncmd:`;
   }
 
   // Add Tailscale auto-authentication if enabled
   if (enableTailscale) {
-    userData += `
-  # Tailscale authentication with auth key from Azure Key Vault
+    if (tailscaleAuthKey) {
+      // Direct injection - auth key provided at synthesis time
+      userData += `
+  # Tailscale authentication with directly injected auth key
   - |
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
-    # Fetch auth key from Kubernetes secret (synced from Azure Key Vault via External Secrets)
-    # Note: This requires network access to the Kubernetes API from within the VM
-    # The VM pod has access to the Kubernetes service account by default
-    AUTH_KEY=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | \\
-      xargs -I {} curl -s -H "Authorization: Bearer {}" \\
-      -H "Content-Type: application/json" \\
-      --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \\
-      https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/secrets/tailscale-vm-auth-key | \\
-      grep -oP '"authkey":\\s*"\\K[^"]+' | base64 -d || echo "")
-
-    if [ -n "$AUTH_KEY" ] && [ "$AUTH_KEY" != "" ]; then
-      echo "Authenticating Tailscale with auth key from Azure Key Vault..."
-      tailscale up --authkey="$AUTH_KEY" --ssh --advertise-tags=tag:vm && \\
-        echo "✓ Tailscale authenticated successfully" || \\
-        echo "✗ Tailscale authentication failed, falling back to OAuth"
-    else
-      echo "No auth key found in secret, attempting OAuth (one-time setup)..."
-      tailscale up --ssh --advertise-tags=tag:vm || \\
-        echo "Tailscale OAuth required - visit the URL shown above"
-    fi`;
-  }
-
-  // Add RustDesk headless setup if enabled
-  if (enableRustDesk) {
-    userData += `
-  # RustDesk remote desktop setup (NixOS declarative approach)
+    echo "Authenticating Tailscale with injected auth key..."
+    tailscale up --authkey="${tailscaleAuthKey}" --ssh --advertise-tags=tag:vm && \\
+      echo "✓ Tailscale authenticated successfully" || \\
+      echo "✗ Tailscale authentication failed"`;
+    } else {
+      // OAuth fallback - no auth key provided
+      userData += `
+  # Tailscale OAuth authentication (manual one-time setup required)
   - |
-    # Create NixOS configuration with RustDesk system service
-    cat > /etc/nixos/configuration.nix <<'NIXEOF'
-    { config, pkgs, ... }:
-    {
-      imports = [ ];
-
-      # Networking
-      networking.hostName = "${hostname}";
-      networking.networkmanager.enable = false;  # Use systemd-networkd in VMs
-      networking.useDHCP = true;
-
-      # SSH - CRITICAL for remote management
-      services.openssh = {
-        enable = true;
-        settings = {
-          PasswordAuthentication = true;
-          PermitRootLogin = "yes";
-        };
-      };
-
-      # User configuration
-      users.users.${username} = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ];
-        shell = pkgs.bash;
-      };
-      users.users.root.initialPassword = "${password || 'nixos123'}";
-
-      # Security - allow sudo without password for wheel group
-      security.sudo.wheelNeedsPassword = false;
-
-      # RustDesk system service (headless mode)
-      systemd.services.rustdesk = {
-        description = "RustDesk Remote Desktop Service (Headless Mode)";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
-
-        serviceConfig = {
-          Type = "simple";
-          User = "root";
-          Environment = [
-            "LIBGL_ALWAYS_SOFTWARE=1"
-            "MESA_GL_VERSION_OVERRIDE=3.3"
-            "GALLIUM_DRIVER=llvmpipe"
-          ];
-          ExecStart = "\${pkgs.rustdesk-flutter}/bin/rustdesk --service";
-          Restart = "on-failure";
-          RestartSec = "5s";
-        };
-      };
-
-      # Firewall configuration for RustDesk
-      networking.firewall = {
-        enable = true;
-        allowedTCPPorts = [ 22 21116 ];
-        allowedUDPPorts = [ 21116 ];
-      };
-
-      # System packages
-      environment.systemPackages = with pkgs; [
-        wget curl vim git htop
-        rustdesk-flutter
-      ];
-
-      # Nix configuration
-      nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-      system.stateVersion = "24.05";
+    # Wait for tailscaled to be ready
+    timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
+    echo "No auth key provided - attempting OAuth (one-time setup)..."
+    tailscale up --ssh --advertise-tags=tag:vm || \\
+      echo "Tailscale OAuth required - visit the URL shown above"`;
     }
-    NIXEOF
-  # Rebuild NixOS with RustDesk configuration
-  - nixos-rebuild switch
-  # Configure RustDesk settings
-  - mkdir -p /root/.config/rustdesk
-  - |
-    cat > /root/.config/rustdesk/RustDesk2.toml <<'RUSTDESKEOF'
-    [options]
-    direct-server = "Y"
-    direct-access-port = "21116"
-    allow-linux-headless = "Y"
-    verification-method = "use-permanent-password"
-    enable-keyboard = true
-    enable-clipboard = true
-    enable-file-transfer = true
-    enable-audio = true
-    RUSTDESKEOF
-  # Set RustDesk permanent password
-  - rustdesk --password ${password || 'nixos123'}
-  # Enable headless mode
-  - rustdesk --option allow-linux-headless Y
-  # Get RustDesk ID for connection
-  - echo "RustDesk ID: $(rustdesk --get-id)" | tee /root/rustdesk-info.txt
-  # Restart RustDesk service to apply configuration
-  - systemctl restart rustdesk.service`;
   }
 
   return userData;

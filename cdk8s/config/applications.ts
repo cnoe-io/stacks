@@ -276,7 +276,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     }
   },
-  
+
   {
     name: 'bootstrap-secrets',
     namespace: 'argocd',
@@ -827,7 +827,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         routes: ['10.244.0.0/16', '10.96.0.0/16'],  // Kind cluster pod and service CIDRs
         authKeySecretName: 'tailscale-auth-key',
         authKeySecretKey: 'authKey',
-        serviceAccountName: 'operator'
+        // ServiceAccount is now created by the chart itself (no longer depends on operator)
       }
     },
     argocd: {
@@ -842,6 +842,63 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         }
+      }
+    }
+  },
+
+  // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
+  {
+    name: 'argocd-tailscale-serve',
+    namespace: 'tailscale',
+    chart: { type: 'ArgoCdTailscaleServeChart' },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale exposure for all ingress hosts via ingress-nginx
+  {
+    name: 'ingress-tailscale-publish',
+    namespace: 'ingress-nginx',
+    chart: { type: 'IngressTailscalePublishChart' },
+    argocd: {
+      syncWave: '-35',
+      labels: {
+        'app.kubernetes.io/name': 'ingress-tailscale-publish',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailnet host aliases to match ingress hosts so SNI/Host route correctly
+  {
+    name: 'tailnet-ingress-alias',
+    namespace: 'ingress-nginx',
+    chart: { type: 'TailnetIngressAliasChart' },
+    argocd: {
+      syncWave: '-34',
+      labels: {
+        'app.kubernetes.io/name': 'tailnet-ingress-alias',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
       }
     }
   },
