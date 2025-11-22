@@ -747,53 +747,49 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale Operator - Remote Kubernetes Cluster Access
-  // TEMPORARILY DISABLED: Missing ProxyGroup CRD import (tailscale.com)
-  // TODO: Fix import for ProxyGroup CRD in imports/tailscale.com.ts
-  // {
-  //   name: 'tailscale-operator',
-  //   namespace: 'tailscale',
-  //   chart: {
-  //     type: 'TailscaleOperatorChart',
-  //     props: {
-  //       environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
-  //       clusterName: process.env.CLUSTER_NAME || 'kind',
-  //       oauthSecretName: 'tailscale-oauth',
-  //       enableHA: true,  // Enable ProxyGroup for API server access
-  //       proxyReplicas: 2,
-  //       impersonationGrants: [
-  //         {
-  //           tailscaleGroup: 'group:admins',
-  //           kubernetesGroups: ['system:masters'],
-  //           description: 'Full cluster admin access for Tailscale admin group'
-  //         },
-  //         {
-  //           tailscaleGroup: 'group:developers',
-  //           kubernetesGroups: ['developers'],
-  //           description: 'Developer namespace access via Kubernetes RBAC'
-  //         }
-  //       ]
-  //     }
-  //   },
-  //   dependencies: {
-  //     tailscaleCrds: {
-  //       type: 'TailscaleCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-90',  // Deploy after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/name': 'tailscale-operator',
-  //       'app.kubernetes.io/component': 'network-proxy'
-  //     },
-  //     syncPolicy: {
-  //       automated: {
-  //         prune: true,
-  //         selfHeal: true
-  //       },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']  // Skip dry-run for ProxyGroup CR until CRD is installed
-  //     }
-  //   }
-  // },
+  // Enables LoadBalancer service exposure via Tailscale network
+  {
+    name: 'tailscale-operator',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleOperatorChart',
+      props: {
+        environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
+        clusterName: process.env.CLUSTER_NAME || 'kind',
+        oauthSecretName: 'tailscale-oauth',
+        enableHA: false,  // Disable ProxyGroup in dev (conflicts with APISERVER_PROXY=true)
+        proxyReplicas: 2,
+        impersonationGrants: [
+          {
+            tailscaleGroup: 'group:admins',
+            kubernetesGroups: ['system:masters'],
+            description: 'Full cluster admin access for Tailscale admin group'
+          },
+          {
+            tailscaleGroup: 'group:developers',
+            kubernetesGroups: ['developers'],
+            description: 'Developer namespace access via Kubernetes RBAC'
+          }
+        ]
+      }
+    },
+    dependencies: {
+      tailscaleCrds: {
+        type: 'TailscaleCrdsChart'
+      }
+    },
+    argocd: {
+      syncWave: '-90',  // Deploy after CRDs
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-operator',
+        'app.kubernetes.io/component': 'network-proxy'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['SkipDryRunOnMissingResource=true']
+      }
+    }
+  },
 
   // Tailscale API Proxy (sidecar approach)
   {
