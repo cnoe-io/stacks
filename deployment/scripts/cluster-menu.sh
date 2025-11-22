@@ -321,23 +321,29 @@ cluster-recreate() {
   # Tailscale best practice: Clean up old devices before cluster recreation
   # This ensures new devices get canonical hostnames (no -1 suffix)
   # See: https://tailscale.com/kb/1439/kubernetes-operator-cluster-ingress
+  #
+  # Strategy: Async cleanup + delayed service deployment via ArgoCD sync waves
+  # - Cleanup starts 120-second grace period for hostname release
+  # - Tailscale LoadBalancer services deploy at sync wave 50 (~3-5 min into sync)
+  # - Grace period completes well before LoadBalancer services are created
+  # - Result: Canonical hostnames (argocd, kagent, etc.) without suffixes
   local CLEANUP_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/cleanup-old-devices.sh"
   if command -v tailscale &>/dev/null && [ -f "$CLEANUP_SCRIPT" ]; then
     echo "🧹 Cleaning up old Tailscale devices..."
-    echo "   (Grace period will elapse during cluster creation)"
+    echo "   (Grace period will elapse before Tailscale services deploy at sync wave 50)"
     echo ""
 
     # Run cleanup WITHOUT --wait flag
-    # The 120-second grace period will naturally elapse during cluster creation (2-5 minutes)
-    # This saves ~2 minutes from the total cluster recreation time
+    # LoadBalancer services delayed to sync wave 50 (~3-5 min into ArgoCD sync)
+    # This ensures the 120-second grace period completes naturally
     if "$CLEANUP_SCRIPT"; then
       echo ""
       echo "✅ Tailscale devices deleted (grace period starts now)"
-      echo "   Cluster creation will take 2-5 minutes, allowing hostname release"
+      echo "   LoadBalancer services will deploy at sync wave 50 (~3-5 min)"
     else
       echo ""
       echo "⚠️  Tailscale cleanup failed (continuing anyway)"
-      echo "   New devices may get -1 suffix (e.g., kagent-1 instead of kagent)"
+      echo "   New devices may get -3 suffix (e.g., kagent-3 instead of kagent)"
     fi
     echo ""
   else
@@ -346,7 +352,7 @@ cluster-recreate() {
     elif ! command -v tailscale &>/dev/null; then
       echo "⚠️  Tailscale CLI not found - skipping device cleanup"
     fi
-    echo "   New devices may get -1 suffix (e.g., kagent-1 instead of kagent)"
+    echo "   New devices may get -3 suffix (e.g., kagent-3 instead of kagent)"
     echo ""
   fi
 

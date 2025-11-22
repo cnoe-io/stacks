@@ -862,12 +862,14 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale exposure for all ingress hosts via ingress-nginx
+  // Sync wave 50: Delayed to allow Tailscale device cleanup grace period (120s) to complete
+  // during cluster recreation. Early sync wave (-35) caused hostname conflicts (-3 suffix).
   {
     name: 'ingress-tailscale-publish',
     namespace: 'ingress-nginx',
     chart: { type: 'IngressTailscalePublishChart' },
     argocd: {
-      syncWave: '-35',
+      syncWave: '50',
       labels: {
         'app.kubernetes.io/name': 'ingress-tailscale-publish',
         'app.kubernetes.io/component': 'network',
@@ -886,7 +888,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     namespace: 'ingress-nginx',
     chart: { type: 'TailnetIngressAliasChart' },
     argocd: {
-      syncWave: '-34',
+      syncWave: '51',
       labels: {
         'app.kubernetes.io/name': 'tailnet-ingress-alias',
         'app.kubernetes.io/component': 'network',
