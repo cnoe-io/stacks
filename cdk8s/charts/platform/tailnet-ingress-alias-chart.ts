@@ -7,6 +7,7 @@ interface AliasRule {
   name: string;
   host: string;
   paths: { path: string; service: string; port: number | string; pathType?: string; }[];
+  annotations?: { [key: string]: string };
 }
 
 const ALIASES: AliasRule[] = [
@@ -15,6 +16,10 @@ const ALIASES: AliasRule[] = [
     name: 'argocd-tailnet-alias',
     host: 'argocd.tail286401.ts.net',
     paths: [{ path: '/', service: 'argocd-server', port: 443, pathType: 'Prefix' }],
+    annotations: {
+      'nginx.ingress.kubernetes.io/force-ssl-redirect': 'true',
+      'nginx.ingress.kubernetes.io/ssl-passthrough': 'true',
+    },
   },
   {
     namespace: 'backstage',
@@ -80,6 +85,7 @@ export class TailnetIngressAliasChart extends Chart {
           namespace: rule.namespace,
           annotations: {
             'kubernetes.io/ingress.class': 'nginx',
+            ...(rule.annotations || {}),
           },
         },
         spec: {
