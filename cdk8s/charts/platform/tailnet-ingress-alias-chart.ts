@@ -59,7 +59,7 @@ const ALIASES: AliasRule[] = [
     namespace: 'kagent',
     name: 'kagent-tailnet-alias',
     host: 'kagent.tail286401.ts.net',
-    paths: [{ path: '/', service: 'kagent-grafana-mcp', port: 8000, pathType: 'Prefix' }],
+    paths: [{ path: '/', service: 'kagent-ui', port: 8080, pathType: 'Prefix' }],
   },
   {
     namespace: 'kgateway-system',
