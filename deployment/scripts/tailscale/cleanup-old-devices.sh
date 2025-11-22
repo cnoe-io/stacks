@@ -36,24 +36,57 @@ if kubectl get secret -n tailscale tailscale-oauth &>/dev/null; then
   CLIENT_ID=$(kubectl get secret -n tailscale tailscale-oauth -o jsonpath='{.data.clientId}' | base64 -d)
   CLIENT_SECRET=$(kubectl get secret -n tailscale tailscale-oauth -o jsonpath='{.data.clientSecret}' | base64 -d)
 else
-  echo "✓ Running outside cluster, checking for credentials in environment"
+  echo "✓ Running outside cluster, checking for credentials..."
 
-  # Try to get from 1Password
-  if command -v op &>/dev/null && op account get &>/dev/null; then
-    echo "  Using 1Password for credentials..."
-    CLIENT_ID=$(op read "op://Private/tailscale-oauth/client-id" 2>/dev/null || echo "")
-    CLIENT_SECRET=$(op read "op://Private/tailscale-oauth/client-secret" 2>/dev/null || echo "")
-  else
-    # Fall back to environment variables
+  # Try to get from Azure Key Vault first (if az CLI is authenticated)
+  if command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
+    echo "  Trying Azure Key Vault..."
+    VAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
+    CLIENT_ID=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "TAILSCALE-OAUTH-CLIENT-ID" --query value -o tsv 2>/dev/null || echo "")
+    CLIENT_SECRET=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "TAILSCALE-OAUTH-CLIENT-SECRET" --query value -o tsv 2>/dev/null || echo "")
+
+    if [[ -n "$CLIENT_ID" ]] && [[ -n "$CLIENT_SECRET" ]]; then
+      echo "  ✓ Using credentials from Azure Key Vault"
+    fi
+  fi
+
+  # Fall back to 1Password if Azure Key Vault didn't work
+  if [[ -z "$CLIENT_ID" ]] || [[ -z "$CLIENT_SECRET" ]]; then
+    if command -v op &>/dev/null && op account get &>/dev/null 2>&1; then
+      echo "  Trying 1Password..."
+      CLIENT_ID=$(op read "op://Private/tailscale-oauth/client-id" 2>/dev/null || echo "")
+      CLIENT_SECRET=$(op read "op://Private/tailscale-oauth/client-secret" 2>/dev/null || echo "")
+
+      if [[ -n "$CLIENT_ID" ]] && [[ -n "$CLIENT_SECRET" ]]; then
+        echo "  ✓ Using credentials from 1Password"
+      fi
+    fi
+  fi
+
+  # Final fallback to environment variables
+  if [[ -z "$CLIENT_ID" ]] || [[ -z "$CLIENT_SECRET" ]]; then
     CLIENT_ID="${TAILSCALE_CLIENT_ID:-}"
     CLIENT_SECRET="${TAILSCALE_CLIENT_SECRET:-}"
+
+    if [[ -n "$CLIENT_ID" ]] && [[ -n "$CLIENT_SECRET" ]]; then
+      echo "  ✓ Using credentials from environment variables"
+    fi
   fi
 fi
 
 if [[ -z "$CLIENT_ID" ]] || [[ -z "$CLIENT_SECRET" ]]; then
   echo "Error: Tailscale OAuth credentials not found"
-  echo "Please set TAILSCALE_CLIENT_ID and TAILSCALE_CLIENT_SECRET environment variables"
-  echo "Or ensure 1Password CLI is authenticated: eval \$(op signin)"
+  echo ""
+  echo "Tried:"
+  echo "  1. Kubernetes secret: tailscale-oauth (in cluster only)"
+  echo "  2. Azure Key Vault: TAILSCALE-OAUTH-CLIENT-ID/SECRET"
+  echo "  3. 1Password: op://Private/tailscale-oauth/*"
+  echo "  4. Environment: TAILSCALE_CLIENT_ID/SECRET"
+  echo ""
+  echo "Solutions:"
+  echo "  - Set environment variables: export TAILSCALE_CLIENT_ID=... TAILSCALE_CLIENT_SECRET=..."
+  echo "  - Authenticate with Azure: az login"
+  echo "  - Authenticate with 1Password: eval \$(op signin)"
   exit 1
 fi
 
