@@ -324,13 +324,16 @@ cluster-recreate() {
   local CLEANUP_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/cleanup-old-devices.sh"
   if command -v tailscale &>/dev/null && [ -f "$CLEANUP_SCRIPT" ]; then
     echo "🧹 Cleaning up old Tailscale devices..."
-    echo "   (Ensures canonical hostnames on cluster recreation)"
+    echo "   (Grace period will elapse during cluster creation)"
     echo ""
 
-    # Run cleanup with grace period wait
-    if "$CLEANUP_SCRIPT" --wait; then
+    # Run cleanup WITHOUT --wait flag
+    # The 120-second grace period will naturally elapse during cluster creation (2-5 minutes)
+    # This saves ~2 minutes from the total cluster recreation time
+    if "$CLEANUP_SCRIPT"; then
       echo ""
-      echo "✅ Tailscale cleanup complete"
+      echo "✅ Tailscale devices deleted (grace period starts now)"
+      echo "   Cluster creation will take 2-5 minutes, allowing hostname release"
     else
       echo ""
       echo "⚠️  Tailscale cleanup failed (continuing anyway)"

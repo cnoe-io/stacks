@@ -281,18 +281,26 @@ rules:
 ```bash
 # In deployment/scripts/cluster-menu.sh
 
-cluster-create() {
+cluster-recreate() {
   # Step 1: Cleanup old Tailscale devices (Tailscale recommended)
   echo "Cleaning up old Tailscale devices..."
-  ./deployment/scripts/tailscale/cleanup-old-devices.sh --wait
+  # Run WITHOUT --wait - grace period elapses during cluster creation
+  ./deployment/scripts/tailscale/cleanup-old-devices.sh
 
-  # Step 2: Create cluster
-  kind create cluster --name localdev
+  # Step 2: Delete old cluster
+  idpbuilder delete
 
-  # Step 3: Deploy platform
-  cluster-update
+  # Step 3: Create cluster (2-5 minutes, grace period naturally elapses)
+  cluster-deploy
 }
 ```
+
+**Performance Optimization:**
+- Cleanup runs without blocking (no --wait flag)
+- Cluster creation takes 2-5 minutes (far exceeds 120-second grace period)
+- Saves ~2 minutes from total recreation time
+- Grace period guaranteed to complete before Tailscale operator deploys
+
 
 ### Why This Follows Best Practices
 

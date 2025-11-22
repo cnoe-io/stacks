@@ -183,27 +183,31 @@ metadata: {
 
 ### Automated Cleanup on Cluster Creation
 
-Add to `deployment/scripts/cluster-menu.sh`:
+Integrated into `deployment/scripts/cluster-menu.sh`:
 
 ```bash
-cluster-create() {
-  # Delete old Tailscale devices before creating cluster
+cluster-recreate() {
+  # Delete old Tailscale devices before recreating cluster
   if command -v tailscale &>/dev/null; then
     echo "Cleaning up old Tailscale devices..."
+    # No --wait flag - grace period elapses during cluster creation
     bash deployment/scripts/tailscale/cleanup-old-devices.sh
   fi
 
-  # Create cluster
-  kind create cluster --name localdev
+  # Delete existing cluster
+  idpbuilder delete
 
-  # Wait for Tailscale grace period
-  echo "Waiting 120s for Tailscale hostname release..."
-  sleep 120
-
-  # Deploy platform
-  cluster-update
+  # Create cluster (2-5 minutes - grace period naturally elapses)
+  cluster-deploy
 }
 ```
+
+**Performance Optimization:**
+- Cleanup runs without blocking wait
+- Cluster creation (2-5 min) exceeds grace period (120 sec)
+- Saves ~2 minutes from total recreation time
+- Canonical hostnames guaranteed when Tailscale operator deploys
+
 
 ### Cleanup Script
 
