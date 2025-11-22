@@ -108,7 +108,7 @@ spec:
     spec:
       containers:
         - name: backstage
-          image: ghcr.io/pittampalliorg/backstage-app:v25
+          image: vpittamp23/ubuntu-nix-backstage:latest
           env:
             - name: LOG_LEVEL
               value: debug
