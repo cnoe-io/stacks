@@ -137,7 +137,9 @@ class BaseAgent(ABC):
         value = workflow.model_dump_json()
 
         try:
-            self.dapr_client.save_state(
+            # Wrap synchronous Dapr client call in thread pool for async compatibility
+            await asyncio.to_thread(
+                self.dapr_client.save_state,
                 store_name=self.config.workflow_state_store,
                 key=key,
                 value=value,
@@ -152,7 +154,9 @@ class BaseAgent(ABC):
         key = f"workflow:{workflow_id}"
 
         try:
-            state = self.dapr_client.get_state(
+            # Wrap synchronous Dapr client call in thread pool for async compatibility
+            state = await asyncio.to_thread(
+                self.dapr_client.get_state,
                 store_name=self.config.workflow_state_store,
                 key=key,
             )
@@ -183,7 +187,9 @@ class BaseAgent(ABC):
         }
 
         try:
-            self.dapr_client.publish_event(
+            # Wrap synchronous Dapr client call in thread pool for async compatibility
+            await asyncio.to_thread(
+                self.dapr_client.publish_event,
                 pubsub_name=self.config.pubsub_name,
                 topic_name=self.config.workflow_status_topic,
                 data=json.dumps(message),
@@ -210,7 +216,9 @@ class BaseAgent(ABC):
         )
 
         try:
-            self.dapr_client.publish_event(
+            # Wrap synchronous Dapr client call in thread pool for async compatibility
+            await asyncio.to_thread(
+                self.dapr_client.publish_event,
                 pubsub_name=self.config.pubsub_name,
                 topic_name=topic,
                 data=message.model_dump_json(),
@@ -337,9 +345,8 @@ def create_durable_agent(
         llm=llm,
     )
 
-    # Create runner and register routes for pub/sub subscriptions
+    # Create runner - routes will be registered when runner.serve() is called
     runner = AgentRunner()
-    runner.register_routes(agent)
 
     logger.info(f"Created DurableAgent: {name} with topic {pubsub.agent_topic}")
 

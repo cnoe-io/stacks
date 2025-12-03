@@ -3,12 +3,11 @@
 This module implements the dapr-agents SDK pattern for running agents:
 - Worker agents (specifier, planner, task-generator, implementer) use DurableAgent
 - Orchestrator uses LLMOrchestrator for workflow coordination
-- All agents use AgentRunner.serve() for proper pub/sub subscription handling
+- Follows the reference implementation from dapr-agents quickstart 05-multi-agent-workflows
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import signal
 import sys
@@ -17,7 +16,6 @@ from typing import TYPE_CHECKING, Optional
 
 from dapr_agents.agents.durable import DurableAgent
 from dapr_agents.workflow.runners import AgentRunner
-from fastapi import FastAPI
 
 from src.common.config import get_config
 from src.agents.base import create_durable_agent
@@ -236,8 +234,77 @@ def handle_signal(signum: int, frame) -> None:
     sys.exit(0)
 
 
+def add_health_endpoints(app, agent_name: str) -> None:
+    """Add Kubernetes health probe endpoints to a FastAPI app.
+
+    Args:
+        app: FastAPI application instance
+        agent_name: Name of the agent for health response
+    """
+    from fastapi import FastAPI
+    from datetime import datetime
+
+    @app.get("/healthz")
+    async def health():
+        """Liveness probe - returns healthy if server is running."""
+        return {
+            "status": "healthy",
+            "agent": agent_name,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    @app.get("/ready")
+    async def ready():
+        """Readiness probe - returns ready if agent is ready to accept work."""
+        return {
+            "ready": True,
+            "agent": agent_name,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+
+def run_worker_agent(agent_name: str, port: int) -> None:
+    """Run a worker agent with HTTP endpoints for Kubernetes compatibility.
+
+    Uses runner.serve() which returns a FastAPI app with:
+    - /run endpoint for workflow entry
+    - /dapr/subscribe endpoint for pub/sub subscriptions
+    - /dapr/config endpoint for Dapr configuration
+
+    We add health endpoints to the same app for Kubernetes probes.
+    """
+    import uvicorn
+    from fastapi import FastAPI
+
+    agent, runner = create_worker_agent(agent_name)
+    logger.info(f"Running DurableAgent: {agent_name}...")
+
+    # Create base FastAPI app with health endpoints
+    base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
+    add_health_endpoints(base_app, agent_name)
+
+    # runner.serve() adds agent routes (/run, /dapr/subscribe, etc.) to our app
+    # and returns the configured FastAPI app (does NOT start uvicorn)
+    app = runner.serve(agent, app=base_app, port=port)
+
+    try:
+        # Start uvicorn with the fully configured app
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    finally:
+        # Graceful shutdown
+        runner.shutdown()
+
+
 def main() -> None:
-    """Main entrypoint for SpecKit agents using dapr-agents SDK pattern."""
+    """Main entrypoint for SpecKit agents using dapr-agents SDK pattern.
+
+    Follows the reference implementation from dapr-agents quickstart 05-multi-agent-workflows:
+    - Orchestrator: runner.serve(orchestrator, port=PORT) - blocking call with uvicorn
+    - Worker agents: runner.register_routes(agent) + wait_for_shutdown() - async pattern
+
+    Key fix: Let runner.serve() handle everything (including uvicorn startup) instead of
+    calling uvicorn.run() separately which was causing the double-startup issue.
+    """
     # Register signal handlers
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
@@ -259,31 +326,31 @@ def main() -> None:
     logger.info(f"Topic: {config.agent_topic}")
 
     try:
-        import uvicorn
-
-        # Create FastAPI app with health endpoints
-        app = create_app_with_health(agent_name)
-
         if agent_name == "orchestrator":
-            # Create and run orchestrator
+            # Create orchestrator using runner.serve() pattern
+            import uvicorn
+            from fastapi import FastAPI
+
             orchestrator, runner = create_orchestrator()
             logger.info("Running LLMOrchestrator...")
+
+            # Create base FastAPI app with health endpoints
+            base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
+            add_health_endpoints(base_app, agent_name)
+
+            # runner.serve() adds orchestrator routes (/run, /dapr/subscribe, etc.)
+            # and returns the configured FastAPI app (does NOT start uvicorn)
+            app = runner.serve(orchestrator, app=base_app, port=port)
+
             try:
-                # Pass our app to mount routes, then run uvicorn ourselves
-                runner.serve(orchestrator, app=app, port=port)
+                # Start uvicorn with the fully configured app
                 uvicorn.run(app, host="0.0.0.0", port=port)
             finally:
                 runner.shutdown()
         else:
-            # Create and run worker agent
-            agent, runner = create_worker_agent(agent_name)
-            logger.info(f"Running DurableAgent: {agent_name}...")
-            try:
-                # Pass our app to mount routes, then run uvicorn ourselves
-                runner.serve(agent, app=app, port=port)
-                uvicorn.run(app, host="0.0.0.0", port=port)
-            finally:
-                runner.shutdown()
+            # Run worker agent using serve() pattern for Kubernetes health probes
+            # All agents need HTTP endpoints for liveness/readiness probes
+            run_worker_agent(agent_name, port)
 
     except Exception as e:
         logger.error(f"Failed to start agent {agent_name}: {e}")
