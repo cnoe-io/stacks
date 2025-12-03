@@ -280,6 +280,13 @@ def run_worker_agent(agent_name: str, port: int) -> None:
     agent, runner = create_worker_agent(agent_name)
     logger.info(f"Running DurableAgent: {agent_name}...")
 
+    # CRITICAL: Start the agent's workflow runtime BEFORE serving
+    # This registers workflows/activities with Dapr and starts the runtime
+    # Without this, Dapr will not process the agent_workflow and broadcast_listener
+    # workflows, causing the orchestrator to time out waiting for agent responses
+    agent.start()
+    logger.info(f"Started {agent_name} workflow runtime")
+
     # Create base FastAPI app with health endpoints
     base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
     add_health_endpoints(base_app, agent_name)
@@ -293,6 +300,7 @@ def run_worker_agent(agent_name: str, port: int) -> None:
         uvicorn.run(app, host="0.0.0.0", port=port)
     finally:
         # Graceful shutdown
+        agent.stop()
         runner.shutdown()
 
 
