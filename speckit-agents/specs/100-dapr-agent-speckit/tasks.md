@@ -93,7 +93,7 @@
 
 ### Completion Criteria
 - PostgreSQL deployment with 20Gi PVC, postgres:16-alpine image
-- Langfuse deployment with langfuse/langfuse:3.123.1 image
+- Langfuse deployment with langfuse/langfuse:2.95.1 image (v2.x, PostgreSQL-only, no ClickHouse)
 - Langfuse has DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET, SALT, ENCRYPTION_KEY env vars from secrets
 - Ingress routes to langfuse service on port 3000
 

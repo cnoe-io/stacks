@@ -1,7 +1,8 @@
 /**
  * LangfuseChart - Langfuse LLM Observability Platform
  *
- * Deploys Langfuse v3.123.1 self-hosted with PostgreSQL backend.
+ * Deploys Langfuse v2.95.1 self-hosted with PostgreSQL backend.
+ * Note: Using v2 because v3 requires ClickHouse. v2 only needs PostgreSQL.
  * - Connects to langfuse-postgres service
  * - Auth secrets from langfuse-auth
  * - Ingress for local access via langfuse.cnoe.localtest.me
@@ -22,7 +23,7 @@ export interface LangfuseChartProps extends ChartProps {
 
   /**
    * Langfuse image version
-   * @default '3.123.1'
+   * @default '2.95.1' (v2.x only requires PostgreSQL, v3.x requires ClickHouse)
    */
   imageVersion?: string;
 
@@ -74,7 +75,7 @@ export class LangfuseChart extends Chart {
     super(scope, id, props);
 
     const namespace = props?.namespace || 'observability';
-    const imageVersion = props?.imageVersion || '3.123.1';
+    const imageVersion = props?.imageVersion || '2.95.1';
     const postgresHost = props?.postgresHost || 'langfuse-postgres';
     const postgresPort = props?.postgresPort || 5432;
     const databaseName = props?.databaseName || 'langfuse';

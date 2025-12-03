@@ -1222,7 +1222,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'JaegerChart',
       props: {
         namespace: 'observability',
-        imageVersion: '2.12.0',
+        imageVersion: '1.66.0', // Latest 1.x version (2.x doesn't exist yet as tagged release)
         storageSize: '10Gi',
         spanStorageTtl: '168h',
         ingressHost: 'jaeger.cnoe.localtest.me'
@@ -1282,7 +1282,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'LangfuseChart',
       props: {
         namespace: 'observability',
-        imageVersion: '3.123.1',
+        imageVersion: '2.95.1', // Using v2.x because v3.x requires ClickHouse
         postgresHost: 'langfuse-postgres',
         postgresPort: 5432,
         databaseName: 'langfuse',
