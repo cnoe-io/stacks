@@ -1,7 +1,7 @@
 /**
  * JaegerChart - Jaeger All-in-One Distributed Tracing
  *
- * Deploys Jaeger v2.12.0 all-in-one with Badger embedded storage.
+ * Deploys Jaeger v1.66.0 all-in-one with Badger embedded storage.
  * - PVC for persistent Badger storage (10Gi)
  * - Services: query (16686), collector (9411 Zipkin)
  * - Ingress for local access via jaeger.cnoe.localtest.me
@@ -22,7 +22,7 @@ export interface JaegerChartProps extends ChartProps {
 
   /**
    * Jaeger image version
-   * @default '2.12.0'
+   * @default '1.66.0'
    */
   imageVersion?: string;
 
@@ -50,7 +50,7 @@ export class JaegerChart extends Chart {
     super(scope, id, props);
 
     const namespace = props?.namespace || 'observability';
-    const imageVersion = props?.imageVersion || '2.12.0';
+    const imageVersion = props?.imageVersion || '1.66.0';
     const storageSize = props?.storageSize || '10Gi';
     const spanStorageTtl = props?.spanStorageTtl || '168h';
     const ingressHost = props?.ingressHost || 'jaeger.cnoe.localtest.me';

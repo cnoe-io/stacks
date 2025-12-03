@@ -71,7 +71,7 @@
 - [x] T013 [FR1] Add Jaeger Ingress resource to jaeger-chart.ts for `jaeger.cnoe.localtest.me`
 
 ### Completion Criteria
-- Jaeger deployment YAML includes: PVC (10Gi), Deployment (jaegertracing/all-in-one:2.12.0), Services (query:16686, collector:9411)
+- Jaeger deployment YAML includes: PVC (10Gi), Deployment (jaegertracing/all-in-one:1.66.0), Services (query:16686, collector:9411)
 - Badger environment variables configured for 7-day retention
 - Ingress routes to jaeger-query service
 
