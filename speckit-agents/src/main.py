@@ -334,6 +334,13 @@ def main() -> None:
             orchestrator, runner = create_orchestrator()
             logger.info("Running LLMOrchestrator...")
 
+            # CRITICAL: Start the orchestrator's workflow runtime BEFORE serving
+            # This registers workflows/activities with Dapr and starts the runtime
+            # Without this, Dapr will report "DaprBuiltInActorNotFoundRetries"
+            # because the workflow actors are never registered
+            orchestrator.start()
+            logger.info("Started orchestrator workflow runtime")
+
             # Create base FastAPI app with health endpoints
             base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
             add_health_endpoints(base_app, agent_name)
