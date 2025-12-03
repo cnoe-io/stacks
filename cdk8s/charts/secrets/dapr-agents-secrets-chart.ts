@@ -8,6 +8,8 @@
  * - OPENAI_API_KEY from Azure Key Vault secret OPENAI-API-KEY
  * - ANTHROPIC_API_KEY from Azure Key Vault secret ANTHROPIC-API-KEY
  * - GEMINI_API_KEY from Azure Key Vault secret GEMINI-API-KEY
+ * - LANGFUSE_PUBLIC_KEY from Azure Key Vault secret LANGFUSE-PUBLIC-KEY
+ * - LANGFUSE_SECRET_KEY from Azure Key Vault secret LANGFUSE-SECRET-KEY
  *
  * Uses Azure Workload Identity via ClusterSecretStore.
  * These are the same secrets as kagent-secrets-chart but in a different namespace.
@@ -113,6 +115,20 @@ export class DaprAgentsSecretsChart extends Chart {
             secretKey: 'GEMINI_API_KEY',
             remoteRef: {
               key: 'GEMINI-API-KEY',
+            },
+          },
+          // Langfuse Public Key (LLM observability)
+          {
+            secretKey: 'LANGFUSE_PUBLIC_KEY',
+            remoteRef: {
+              key: 'LANGFUSE-PUBLIC-KEY',
+            },
+          },
+          // Langfuse Secret Key (LLM observability)
+          {
+            secretKey: 'LANGFUSE_SECRET_KEY',
+            remoteRef: {
+              key: 'LANGFUSE-SECRET-KEY',
             },
           },
         ],

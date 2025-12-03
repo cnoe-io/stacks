@@ -31,6 +31,11 @@ from src.common.models import (
     WorkflowPhase,
     WorkflowStatus,
 )
+from src.common.observability import (
+    get_langfuse,
+    observe_llm_call,
+    shutdown_langfuse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +243,9 @@ class BaseAgent(ABC):
 
     async def shutdown(self) -> None:
         """Graceful shutdown of agent resources."""
+        # Shutdown Langfuse client first to flush any pending traces
+        shutdown_langfuse()
+
         if self._dapr_client:
             try:
                 self._dapr_client.close()

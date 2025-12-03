@@ -236,6 +236,10 @@ export class SpecKitAgentsChart extends Chart {
       // Dapr sidecar address (injected automatically)
       { name: 'DAPR_HTTP_PORT', value: '3500' },
       { name: 'DAPR_GRPC_PORT', value: '50001' },
+
+      // Langfuse observability configuration
+      { name: 'LANGFUSE_HOST', value: 'http://langfuse.observability.svc.cluster.local:3000' },
+      { name: 'LANGFUSE_ENABLED', value: 'true' },
     ];
 
     // Deployment

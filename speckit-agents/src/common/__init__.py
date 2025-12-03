@@ -14,6 +14,13 @@ from .models import (
     TaskStatus,
     WorkflowMessage,
 )
+from .observability import (
+    get_langfuse,
+    observe_llm_call,
+    create_generation,
+    flush_langfuse,
+    shutdown_langfuse,
+)
 
 __all__ = [
     "Config",
@@ -28,4 +35,10 @@ __all__ = [
     "TaskPhase",
     "TaskStatus",
     "WorkflowMessage",
+    # Observability
+    "get_langfuse",
+    "observe_llm_call",
+    "create_generation",
+    "flush_langfuse",
+    "shutdown_langfuse",
 ]
