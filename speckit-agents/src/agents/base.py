@@ -1,8 +1,9 @@
-"""Base agent class with common Dapr configuration."""
+"""Base agent class with common Dapr configuration and DurableAgent factory."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -16,9 +17,12 @@ from dapr_agents.agents.configs import (
     AgentRegistryConfig,
     AgentStateConfig,
 )
+from dapr_agents.agents.durable import DurableAgent
 from dapr_agents.agents.prompting import AgentProfileConfig
+from dapr_agents.llm.dapr import DaprChatClient
 from dapr_agents.memory import ConversationDaprStateMemory
 from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
 
 from src.common.config import Config, get_config
 from src.common.models import (
@@ -177,7 +181,7 @@ class BaseAgent(ABC):
             self.dapr_client.publish_event(
                 pubsub_name=self.config.pubsub_name,
                 topic_name=self.config.workflow_status_topic,
-                data=message,
+                data=json.dumps(message),
                 data_content_type="application/json",
             )
             logger.debug(f"Published status update for workflow {workflow_id}")
@@ -204,7 +208,7 @@ class BaseAgent(ABC):
             self.dapr_client.publish_event(
                 pubsub_name=self.config.pubsub_name,
                 topic_name=topic,
-                data=message.model_dump(),
+                data=message.model_dump_json(),
                 data_content_type="application/json",
                 publish_metadata={"cloudevent.type": "AgentTask"},
             )
@@ -240,3 +244,95 @@ class BaseAgent(ABC):
             except Exception as e:
                 logger.error(f"Error closing Dapr client: {e}")
             self._dapr_client = None
+
+
+def create_durable_agent(
+    name: str,
+    role: str,
+    goal: str,
+    instructions: list[str],
+    config: Optional[Config] = None,
+) -> tuple[DurableAgent, AgentRunner]:
+    """Factory function to create a DurableAgent with proper Dapr configuration.
+
+    This follows the dapr-agents SDK pattern for creating agents that can
+    receive and process pub/sub messages.
+
+    Args:
+        name: Agent name (e.g., "specifier", "planner")
+        role: Agent role description
+        goal: Agent's primary goal
+        instructions: List of behavioral instructions
+        config: Optional config override (defaults to env config)
+
+    Returns:
+        Tuple of (DurableAgent, AgentRunner) configured for the agent
+    """
+    config = config or get_config()
+
+    # Build agent profile
+    profile = AgentProfileConfig(
+        name=name,
+        role=role,
+        goal=goal,
+        instructions=instructions,
+        style_guidelines=[
+            "Be concise and focused on the task at hand.",
+            "Follow SpecKit template formats strictly.",
+            "Provide clear, actionable outputs.",
+        ],
+    )
+
+    # Build pub/sub configuration
+    pubsub = AgentPubSubConfig(
+        pubsub_name=config.pubsub_name,
+        agent_topic=f"{config.team_name}.{name}.requests",
+        broadcast_topic=config.broadcast_topic,
+    )
+
+    # Build state store configuration
+    state = AgentStateConfig(
+        store=StateStoreService(
+            store_name=config.workflow_state_store,
+            key_prefix=f"{name}:",
+        )
+    )
+
+    # Build agent registry configuration
+    registry = AgentRegistryConfig(
+        store=StateStoreService(store_name=config.registry_state_store),
+        team_name=config.team_name,
+    )
+
+    # Build conversation memory configuration
+    memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name=config.memory_store,
+            session_id=f"{name}-session",
+        )
+    )
+
+    # Create LLM client using Dapr conversation component (anthropic)
+    # This uses the conversation.anthropic component configured in Kubernetes
+    # with model: claude-opus-4-5-20251101
+    llm = DaprChatClient(
+        component_name="anthropic",  # References the Dapr conversation component
+    )
+
+    # Create the DurableAgent
+    agent = DurableAgent(
+        profile=profile,
+        pubsub=pubsub,
+        state=state,
+        registry=registry,
+        memory=memory,
+        llm=llm,
+    )
+
+    # Create runner and register routes for pub/sub subscriptions
+    runner = AgentRunner()
+    runner.register_routes(agent)
+
+    logger.info(f"Created DurableAgent: {name} with topic {pubsub.agent_topic}")
+
+    return agent, runner

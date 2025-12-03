@@ -107,6 +107,7 @@ class ArtifactType(str, Enum):
     CONTRACT = "contract"
     SOURCE = "source"
     TEST = "test"
+    IMPLEMENTATION = "implementation"
 
 
 class Artifact(BaseModel):

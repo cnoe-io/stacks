@@ -1,0 +1,31 @@
+# Dapr Tracing Configuration Contract
+# This Configuration resource enables distributed tracing for SpecKit agents
+
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: speckit-tracing
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: speckit-tracing
+    app.kubernetes.io/component: tracing
+    app.kubernetes.io/part-of: speckit-agents
+spec:
+  # Tracing configuration
+  tracing:
+    # Sampling rate: 1 = 100% (all requests traced)
+    # For production, consider 0.1 (10%) or 0.01 (1%)
+    samplingRate: "1"
+
+    # Zipkin-compatible endpoint (Jaeger collector)
+    zipkin:
+      endpointAddress: "http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans"
+
+  # Optional: Enable metrics alongside tracing
+  # metric:
+  #   enabled: true
+  #   rules:
+  #     - name: http
+  #       labels:
+  #         - name: method
+  #         - name: path

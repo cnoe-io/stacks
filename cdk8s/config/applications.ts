@@ -1156,6 +1156,188 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // =========================================================================
+  // Observability Stack - Jaeger + Langfuse
+  // =========================================================================
+
+  // Observability Namespace
+  {
+    name: 'observability-namespace',
+    namespace: 'observability',
+    chart: {
+      type: 'ObservabilityNamespaceChart',
+      props: {
+        namespaceName: 'observability'
+      }
+    },
+    argocd: {
+      syncWave: '-70',
+      labels: {
+        'app.kubernetes.io/name': 'observability-namespace',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // Observability Secrets (from Azure Key Vault)
+  {
+    name: 'observability-secrets',
+    namespace: 'observability',
+    chart: {
+      type: 'ObservabilitySecretsChart',
+      props: {
+        namespace: 'observability',
+        clusterSecretStoreName: 'azure-keyvault-store',
+        refreshInterval: '1h'
+      }
+    },
+    argocd: {
+      syncWave: '-75',
+      labels: {
+        'app.kubernetes.io/name': 'observability-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Jaeger Distributed Tracing
+  {
+    name: 'jaeger',
+    namespace: 'observability',
+    chart: {
+      type: 'JaegerChart',
+      props: {
+        namespace: 'observability',
+        imageVersion: '2.12.0',
+        storageSize: '10Gi',
+        spanStorageTtl: '168h',
+        ingressHost: 'jaeger.cnoe.localtest.me'
+      }
+    },
+    argocd: {
+      syncWave: '-65',
+      labels: {
+        'app.kubernetes.io/name': 'jaeger',
+        'app.kubernetes.io/component': 'tracing',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Langfuse PostgreSQL Database
+  {
+    name: 'langfuse-postgres',
+    namespace: 'observability',
+    chart: {
+      type: 'LangfusePostgresChart',
+      props: {
+        namespace: 'observability',
+        image: 'postgres:16-alpine',
+        storageSize: '20Gi',
+        databaseName: 'langfuse',
+        credentialsSecretName: 'langfuse-postgres-credentials'
+      }
+    },
+    argocd: {
+      syncWave: '-65',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-postgres',
+        'app.kubernetes.io/component': 'database',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Langfuse LLM Observability
+  {
+    name: 'langfuse',
+    namespace: 'observability',
+    chart: {
+      type: 'LangfuseChart',
+      props: {
+        namespace: 'observability',
+        imageVersion: '3.123.1',
+        postgresHost: 'langfuse-postgres',
+        postgresPort: 5432,
+        databaseName: 'langfuse',
+        credentialsSecretName: 'langfuse-postgres-credentials',
+        authSecretName: 'langfuse-auth',
+        ingressHost: 'langfuse.cnoe.localtest.me',
+        nextAuthUrl: 'https://langfuse.cnoe.localtest.me:8443'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse',
+        'app.kubernetes.io/component': 'llm-observability',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Dapr Tracing Configuration (for SpecKit agents)
+  {
+    name: 'dapr-tracing-config',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'DaprTracingConfigChart',
+      props: {
+        namespace: 'dapr-agents',
+        configName: 'speckit-tracing',
+        samplingRate: '1',
+        zipkinEndpoint: 'http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans'
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'dapr-tracing-config',
+        'app.kubernetes.io/component': 'tracing',
+        'app.kubernetes.io/part-of': 'speckit-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // =========================================================================
   // Dapr Agents - SpecKit Multi-Agent Workflow System
   // =========================================================================
 

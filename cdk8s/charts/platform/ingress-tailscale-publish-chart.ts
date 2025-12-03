@@ -14,6 +14,9 @@ const HOSTS: HostSpec[] = [
   { name: 'keycloak', hostname: 'keycloak' },
   { name: 'kagent', hostname: 'kagent' },
   { name: 'agentgateway', hostname: 'agentgateway' },
+  // Observability UIs
+  { name: 'jaeger', hostname: 'jaeger' },
+  { name: 'langfuse', hostname: 'langfuse' },
 ];
 
 export class IngressTailscalePublishChart extends Chart {

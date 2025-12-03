@@ -3,6 +3,7 @@
 
 # Core dependencies
 dapr-agents>=0.10.0
+dapr-ext-workflow>=0.4.0
 fastapi>=0.111.0
 uvicorn>=0.30.0
 anthropic>=0.30.0

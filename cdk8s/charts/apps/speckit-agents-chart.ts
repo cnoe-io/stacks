@@ -209,6 +209,8 @@ export class SpecKitAgentsChart extends Chart {
       'dapr.io/app-protocol': 'http',
       // Configure sidecar to wait for app
       'dapr.io/sidecar-listen-addresses': '0.0.0.0',
+      // Tracing configuration - send traces to Jaeger via Zipkin
+      'dapr.io/config': 'speckit-tracing',
     };
 
     // Environment variables for the agent
