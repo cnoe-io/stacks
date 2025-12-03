@@ -1,0 +1,244 @@
+# SpecKit Pub/Sub Message Contracts
+# CloudEvents format with Dapr pub/sub
+
+asyncapi: 3.0.0
+info:
+  title: SpecKit Agent Messaging
+  version: 1.0.0
+  description: |
+    Pub/sub message contracts for SpecKit multi-agent workflow system.
+    All messages use CloudEvents envelope via Dapr pub/sub.
+
+servers:
+  dapr-redis:
+    host: redis:6379
+    protocol: redis
+    description: Redis pub/sub via Dapr messagepubsub component
+
+channels:
+  speckit.orchestrator.requests:
+    address: speckit.orchestrator.requests
+    description: Workflow start requests to orchestrator
+    messages:
+      TriggerAction:
+        $ref: "#/components/messages/TriggerAction"
+
+  speckit.specifier.requests:
+    address: speckit.specifier.requests
+    description: Specification generation requests
+    messages:
+      AgentTask:
+        $ref: "#/components/messages/AgentTask"
+
+  speckit.planner.requests:
+    address: speckit.planner.requests
+    description: Planning requests
+    messages:
+      AgentTask:
+        $ref: "#/components/messages/AgentTask"
+
+  speckit.task-generator.requests:
+    address: speckit.task-generator.requests
+    description: Task generation requests
+    messages:
+      AgentTask:
+        $ref: "#/components/messages/AgentTask"
+
+  speckit.implementer.requests:
+    address: speckit.implementer.requests
+    description: Implementation task requests
+    messages:
+      AgentTask:
+        $ref: "#/components/messages/AgentTask"
+
+  speckit.broadcast:
+    address: speckit.broadcast
+    description: Broadcast messages to all agents
+    messages:
+      BroadcastMessage:
+        $ref: "#/components/messages/BroadcastMessage"
+
+  speckit.workflow.status:
+    address: speckit.workflow.status
+    description: Workflow status updates
+    messages:
+      WorkflowStatusUpdate:
+        $ref: "#/components/messages/WorkflowStatusUpdate"
+
+components:
+  messages:
+    TriggerAction:
+      name: TriggerAction
+      title: Workflow Trigger
+      summary: Initiates a new workflow with a feature description
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          cloudevent.type:
+            type: string
+            const: TriggerAction
+          cloudevent.source:
+            type: string
+            example: client/http
+      payload:
+        $ref: "#/components/schemas/TriggerActionPayload"
+
+    AgentTask:
+      name: AgentTask
+      title: Agent Task Assignment
+      summary: Task assignment from orchestrator to specific agent
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          cloudevent.type:
+            type: string
+            const: AgentTask
+          cloudevent.source:
+            type: string
+            example: speckit-orchestrator
+      payload:
+        $ref: "#/components/schemas/AgentTaskPayload"
+
+    BroadcastMessage:
+      name: BroadcastMessage
+      title: Team Broadcast
+      summary: Message broadcast to all team members
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          cloudevent.type:
+            type: string
+            const: BroadcastMessage
+      payload:
+        $ref: "#/components/schemas/BroadcastPayload"
+
+    WorkflowStatusUpdate:
+      name: WorkflowStatusUpdate
+      title: Workflow Status Update
+      summary: Status change notification for workflow monitoring
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          cloudevent.type:
+            type: string
+            const: WorkflowStatusUpdate
+      payload:
+        $ref: "#/components/schemas/WorkflowStatusPayload"
+
+  schemas:
+    TriggerActionPayload:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          type: string
+          description: Natural language feature description
+          example: "Add user authentication with OAuth2 support"
+        context:
+          type: object
+          properties:
+            priority:
+              type: string
+              enum: [low, normal, high]
+              default: normal
+            timeout_seconds:
+              type: integer
+              default: 600
+
+    AgentTaskPayload:
+      type: object
+      required:
+        - workflow_id
+        - task
+        - phase
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+          description: Workflow this task belongs to
+        task:
+          type: string
+          description: Task instruction for the agent
+        phase:
+          type: string
+          enum: [specification, planning, task_generation, implementation]
+        context:
+          type: object
+          properties:
+            artifacts:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  path:
+                    type: string
+              description: Previously generated artifacts
+            iteration:
+              type: integer
+              description: Current iteration number (for retries)
+
+    BroadcastPayload:
+      type: object
+      required:
+        - message
+        - source
+      properties:
+        message:
+          type: string
+          description: Broadcast message content
+        source:
+          type: string
+          description: Originating agent
+        workflow_id:
+          type: string
+          format: uuid
+          description: Associated workflow (if applicable)
+        urgency:
+          type: string
+          enum: [info, warning, critical]
+          default: info
+
+    WorkflowStatusPayload:
+      type: object
+      required:
+        - workflow_id
+        - status
+        - phase
+        - agent
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [started, in_progress, completed, failed]
+        phase:
+          type: string
+          enum: [specification, planning, task_generation, implementation]
+        agent:
+          type: string
+          description: Agent publishing this update
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        artifact_created:
+          type: object
+          properties:
+            type:
+              type: string
+            path:
+              type: string
+        error:
+          type: string
+          description: Error message if status is failed
+        timestamp:
+          type: string
+          format: date-time

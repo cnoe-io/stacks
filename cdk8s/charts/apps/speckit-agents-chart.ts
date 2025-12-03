@@ -101,7 +101,7 @@ export class SpecKitAgentsChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || 'dapr-agents';
-    const agentImage = props.agentImage || 'ghcr.io/pittampalliorg/speckit-agents';
+    const agentImage = props.agentImage || 'speckit-agents';
     const imageTag = props.imageTag || 'latest';
     const teamName = props.teamName || 'speckit';
     const pubsubName = props.pubsubName || 'messagepubsub';
@@ -264,7 +264,7 @@ export class SpecKitAgentsChart extends Chart {
               {
                 name: agent.name,
                 image: `${image}:${tag}`,
-                imagePullPolicy: 'Always',
+                imagePullPolicy: 'IfNotPresent',
                 ports: [
                   { containerPort: agent.port, name: 'http' },
                 ],

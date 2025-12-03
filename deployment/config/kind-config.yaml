@@ -4,12 +4,12 @@ nodes:
 - role: control-plane
   extraMounts:
     # Mount Azure Workload Identity service account keys
-    - hostPath: /home/vpittamp/stacks/ref-implementation/azure-workload-identity/keys
+    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/main/ref-implementation/azure-workload-identity/keys
       containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
     # Mount NixOS images directory for KubeVirt VMs
-    - hostPath: /home/vpittamp/stacks/nixos-images
-      containerPath: /home/vpittamp/stacks/nixos-images
+    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/main/nixos-images
+      containerPath: /home/vpittamp/repos/PittampalliOrg/stacks/main/nixos-images
       readOnly: true
 
   kubeadmConfigPatches:

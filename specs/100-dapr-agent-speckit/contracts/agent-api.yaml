@@ -1,0 +1,268 @@
+openapi: 3.1.0
+info:
+  title: SpecKit Agent API
+  description: |
+    HTTP API exposed by each SpecKit agent for health checks and direct invocation.
+    Agents primarily communicate via Dapr pub/sub, but expose HTTP endpoints for
+    health probes and optional direct interaction.
+  version: 1.0.0
+  contact:
+    name: SpecKit Team
+
+servers:
+  - url: http://localhost:{port}
+    description: Local agent instance
+    variables:
+      port:
+        default: "8000"
+        enum: ["8000", "8001", "8002", "8003", "8004"]
+        description: |
+          - 8000: Orchestrator
+          - 8001: Specifier
+          - 8002: Planner
+          - 8003: Task Generator
+          - 8004: Implementer
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      description: Returns 200 if the agent process is alive
+      operationId: getLiveness
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Agent is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Agent is unhealthy
+
+  /ready:
+    get:
+      summary: Readiness probe
+      description: Returns 200 if the agent is ready to receive requests (Dapr sidecar connected)
+      operationId: getReadiness
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Agent is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: Agent is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+
+  /run:
+    post:
+      summary: Start workflow (Orchestrator only)
+      description: |
+        Initiates a new workflow with the given feature description.
+        Only available on the Orchestrator agent (port 8000).
+      operationId: startWorkflow
+      tags:
+        - Workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRequest"
+      responses:
+        "202":
+          description: Workflow accepted and started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Orchestrator not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /status/{workflow_id}:
+    get:
+      summary: Get workflow status
+      description: Returns the current status of a workflow
+      operationId: getWorkflowStatus
+      tags:
+        - Workflow
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workflow identifier
+      responses:
+        "200":
+          description: Workflow status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowStatus"
+        "404":
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - agent
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+        agent:
+          type: string
+          description: Agent name
+        timestamp:
+          type: string
+          format: date-time
+
+    ReadinessResponse:
+      type: object
+      required:
+        - ready
+        - agent
+      properties:
+        ready:
+          type: boolean
+        agent:
+          type: string
+        dapr_connected:
+          type: boolean
+        components_ready:
+          type: array
+          items:
+            type: string
+          description: List of ready Dapr components
+
+    WorkflowRequest:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          type: string
+          description: Natural language feature description
+          minLength: 10
+          maxLength: 10000
+          example: "Add user authentication with OAuth2 support and role-based access control"
+
+    WorkflowResponse:
+      type: object
+      required:
+        - instance_id
+        - status
+      properties:
+        instance_id:
+          type: string
+          format: uuid
+          description: Unique workflow identifier
+        status:
+          type: string
+          enum: [pending, specifying]
+        status_url:
+          type: string
+          format: uri
+          description: URL to check workflow status
+
+    WorkflowStatus:
+      type: object
+      required:
+        - id
+        - status
+        - current_phase
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, specifying, planning, task_generating, implementing, completed, failed]
+        current_phase:
+          type: string
+          enum: [specification, planning, task_generation, implementation]
+        current_agent:
+          type: string
+          nullable: true
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        artifacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArtifactRef"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        error:
+          type: string
+          nullable: true
+
+    ArtifactRef:
+      type: object
+      required:
+        - type
+        - path
+      properties:
+        type:
+          type: string
+          enum: [spec, plan, research, data_model, tasks, contract, source, test]
+        path:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+tags:
+  - name: Health
+    description: Health and readiness endpoints
+  - name: Workflow
+    description: Workflow management endpoints
