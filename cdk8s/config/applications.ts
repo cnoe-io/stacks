@@ -1311,7 +1311,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'ghcr.io/pittampalliorg/speckit-agents',
+        agentImage: 'speckit-agents',  // Local image loaded via 'kind load docker-image'
         imageTag: 'latest',
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
