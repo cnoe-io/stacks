@@ -1152,5 +1152,188 @@ export const applicationConfigs: ApplicationConfig[] = [
         }
       }
     }
+  },
+
+  // =========================================================================
+  // Dapr Agents - SpecKit Multi-Agent Workflow System
+  // =========================================================================
+
+  // Dapr Runtime (Control Plane)
+  {
+    name: 'dapr-runtime',
+    namespace: 'dapr-system',
+    chart: {
+      type: 'DaprRuntimeChart',
+      props: {
+        version: '1.16',
+        enableHA: false,
+        enableDashboard: true,
+        logLevel: 'info'
+      }
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy Dapr control plane early
+      labels: {
+        'app.kubernetes.io/name': 'dapr-runtime',
+        'app.kubernetes.io/component': 'control-plane',
+        'app.kubernetes.io/part-of': 'dapr-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Dapr Agents Redis (State and Pub/Sub backend)
+  {
+    name: 'dapr-agents-redis',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'DaprAgentsRedisChart',
+      props: {
+        namespace: 'dapr-agents',
+        replicas: 1,
+        enablePersistence: false  // For dev environment
+      }
+    },
+    argocd: {
+      syncWave: '-100',  // Deploy Redis before Dapr components
+      labels: {
+        'app.kubernetes.io/name': 'dapr-agents-redis',
+        'app.kubernetes.io/component': 'state-store',
+        'app.kubernetes.io/part-of': 'dapr-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // Dapr Agents Secrets (LLM API keys from Azure Key Vault)
+  {
+    name: 'dapr-agents-secrets',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'DaprAgentsSecretsChart',
+      props: {
+        namespace: 'dapr-agents',
+        secretName: 'dapr-agents-llm-providers',
+        clusterSecretStoreName: 'azure-keyvault-store',
+        refreshInterval: '1h'
+      }
+    },
+    argocd: {
+      syncWave: '-95',  // Deploy secrets before Dapr components need them
+      labels: {
+        'app.kubernetes.io/name': 'dapr-agents-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'dapr-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Dapr Components (State stores, Pub/Sub, Conversation)
+  {
+    name: 'dapr-components',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'DaprComponentsChart',
+      props: {
+        namespace: 'dapr-agents',
+        redisHost: 'redis-service.dapr-agents.svc.cluster.local:6379',
+        llmSecretName: 'dapr-agents-llm-providers',
+        anthropicModel: 'claude-opus-4-5-20251101',
+        cacheTTL: '10m'
+      }
+    },
+    argocd: {
+      syncWave: '-90',  // Deploy Dapr components after Redis and secrets
+      labels: {
+        'app.kubernetes.io/name': 'dapr-components',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'dapr-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // SpecKit Agents RBAC (ServiceAccount, Role, RoleBinding)
+  {
+    name: 'speckit-agents-rbac',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'SpecKitAgentsRbacChart',
+      props: {
+        namespace: 'dapr-agents'
+      }
+    },
+    argocd: {
+      syncWave: '-80',  // Deploy RBAC before agents
+      labels: {
+        'app.kubernetes.io/name': 'speckit-agents-rbac',
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/part-of': 'speckit'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // SpecKit Agents (Orchestrator, Specifier, Planner, TaskGenerator, Implementer)
+  {
+    name: 'speckit-agents',
+    namespace: 'dapr-agents',
+    chart: {
+      type: 'SpecKitAgentsChart',
+      props: {
+        namespace: 'dapr-agents',
+        agentImage: 'ghcr.io/pittampalliorg/speckit-agents',
+        imageTag: 'latest',
+        teamName: 'speckit',
+        pubsubName: 'messagepubsub',
+        workflowStateStore: 'workflowstatestore',
+        registryStateStore: 'agentregistrystore',
+        memoryStore: 'memorystore',
+        conversationComponent: 'anthropic',
+        llmSecretName: 'dapr-agents-llm-providers'
+      }
+    },
+    argocd: {
+      syncWave: '-60',  // Deploy agents after all infrastructure is ready
+      labels: {
+        'app.kubernetes.io/name': 'speckit-agents',
+        'app.kubernetes.io/component': 'agents',
+        'app.kubernetes.io/part-of': 'speckit'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
   }
 ];
