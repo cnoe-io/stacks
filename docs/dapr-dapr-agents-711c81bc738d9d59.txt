@@ -1,0 +1,1768 @@
+Directory structure:
+└── 05-multi-agent-workflows/
+    ├── README.md
+    ├── dapr-llm.yaml
+    ├── dapr-random.yaml
+    ├── dapr-roundrobin.yaml
+    ├── docker-compose.yml
+    ├── components/
+    │   ├── memorystore.yaml
+    │   ├── openai.yaml
+    │   ├── pubsub.yaml
+    │   ├── registrystore.yaml
+    │   ├── registrystore_llm.yaml
+    │   ├── registrystore_random.yaml
+    │   ├── registrystore_roundrobin.yaml
+    │   └── statestore.yaml
+    └── services/
+        ├── client/
+        │   ├── http_client.py
+        │   └── pubsub_client.py
+        ├── frodo/
+        │   └── app.py
+        ├── gandalf/
+        │   └── app.py
+        ├── legolas/
+        │   └── app.py
+        ├── sam/
+        │   └── app.py
+        ├── workflow-llm/
+        │   └── app.py
+        ├── workflow-random/
+        │   └── app.py
+        └── workflow-roundrobin/
+            └── app.py
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/README.md
+================================================
+# Multi-Agent Workflows with Configuration Classes
+
+This quickstart demonstrates how to create and orchestrate event-driven workflows with multiple autonomous agents using **Agent Configuration Classes** from Dapr Agents. You'll learn how to set up agents as separate services, implement three different workflow orchestration patterns, and enable real-time agent collaboration through pub/sub messaging—all using the modern configuration-based approach.
+
+## What You'll Learn
+
+- How to use **Agent Configuration Classes** for production-ready multi-agent systems
+- Configure multiple agents with **AgentProfileConfig**, **AgentPubSubConfig**, **AgentStateConfig**, **AgentRegistryConfig**, and **AgentMemoryConfig**
+- Implement three orchestration patterns: **Random**, **Round-Robin**, and **LLM-based**
+- Deploy agents as separate microservices using **Dapr Multi-App Run**
+- Enable agent collaboration through pub/sub messaging and shared registries
+- Send messages to orchestrators or directly to individual agents
+
+## Prerequisites
+
+- Python 3.10 (recommended)
+- pip package manager
+- Dapr CLI and Docker
+- OpenAI API key (or compatible LLM provider)
+
+## The Fellowship: Multi-Agent Architecture
+
+This quickstart features four agents from the Fellowship of the Ring, each with distinct roles and expertise:
+
+| Agent | Role | Expertise | Topic |
+|-------|------|-----------|-------|
+| **Frodo** | Hobbit & Ring-bearer | Endurance, stealth, burden-bearing | `fellowship.frodo.requests` |
+| **Sam** | Logistics & Support | Supplies, provisions, morale | `fellowship.sam.requests` |
+| **Gandalf** | Wizard & Loremaster | Strategy, magic, ancient knowledge | `fellowship.gandalf.requests` |
+| **Legolas** | Elf Scout & Marksman | Scouting, archery, terrain navigation | `fellowship.legolas.requests` |
+
+### Orchestration Patterns
+
+Three orchestrators coordinate the Fellowship:
+
+1. **Random Orchestrator** (`fellowship.orchestrator.random.requests`)
+   - Randomly selects an agent for each task
+   - Good for load distribution and testing
+
+2. **Round-Robin Orchestrator** (`fellowship.orchestrator.roundrobin.requests`)
+   - Cycles through agents sequentially
+   - Ensures fair task distribution
+
+3. **LLM Orchestrator** (`llm.orchestrator.requests`)
+   - AI-powered agent selection based on task content
+   - Intelligent routing to the most appropriate agent
+
+## Environment Setup
+
+```bash
+# Create a virtual environment
+python3.10 -m venv .venv
+
+# Activate the virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+## Configuration
+
+### Option 1: Using Environment Variables (Recommended)
+
+1. Create a `.env` file in the project root:
+```env
+OPENAI_API_KEY=your_api_key_here
+```
+
+2. Export environment variables before running:
+```bash
+# Get environment variables from .env file
+export $(grep -v '^#' ../../.env | xargs)
+```
+
+### Option 2: Direct Component Configuration
+
+Update the `key` in [components/openai.yaml](components/openai.yaml):
+```yaml
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: openai
+spec:
+  type: conversation.openai
+  metadata:
+    - name: key
+      value: "YOUR_OPENAI_API_KEY"
+```
+
+### Required Components
+
+Make sure Dapr is initialized:
+
+```bash
+dapr init
+```
+
+This quickstart uses these Dapr components (in `components/` directory):
+- `openai.yaml`: LLM conversation component
+- `workflowstate.yaml`: Workflow state storage
+- `memorystore.yaml`: Conversation memory storage
+- `agentregistrystore.yaml`: Agent registry storage (shared across all agents)
+- `messagepubsub.yaml`: Pub/sub messaging for agent communication
+
+## Project Structure
+
+```
+05-multi-agent-workflows-new/
+├── components/                    # Dapr configuration files
+│   ├── agentregistrystore.yaml    # Shared agent registry
+│   ├── memorystore.yaml           # Conversation memory
+│   ├── messagepubsub.yaml         # Pub/sub messaging
+│   ├── openai.yaml                # LLM provider
+│   └── workflowstate.yaml         # Workflow state
+├── services/                      # Agent and orchestrator services
+│   ├── frodo/                     # Frodo agent service
+│   │   └── app.py
+│   ├── sam/                       # Sam agent service
+│   │   └── app.py
+│   ├── gandalf/                   # Gandalf agent service
+│   │   └── app.py
+│   ├── legolas/                   # Legolas agent service
+│   │   └── app.py
+│   ├── workflow-random/           # Random orchestrator
+│   │   └── app.py
+│   ├── workflow-roundrobin/       # Round-robin orchestrator
+│   │   └── app.py
+│   ├── workflow-llm/              # LLM-based orchestrator
+│   │   └── app.py
+│   └── client/                    # Client for publishing messages
+│       └── pubsub_client.py
+├── dapr-random.yaml               # Multi-app config: Random orchestrator
+├── dapr-roundrobin.yaml           # Multi-app config: Round-robin orchestrator
+├── dapr-llm.yaml                  # Multi-app config: LLM orchestrator
+└── README.md
+```
+
+## Agent Configuration with Config Classes
+
+Each agent in this quickstart uses the latest **Agent Configuration Classes** updates.
+
+### Key Benefits of Configuration Classes
+
+1. **Shared Registry**: All agents use the same `team_name="fellowship"`, enabling discovery and coordination
+2. **Isolated State**: Each agent has its own state store with unique key prefix
+3. **Individual Topics**: Each agent subscribes to its own direct message topic
+4. **Broadcast Channel**: All agents can receive team-wide broadcasts via `fellowship.broadcast`
+5. **Type Safety**: Configuration classes provide validation and type checking
+
+## Running the Multi-Agent System
+
+The quickstart includes three Dapr Multi-App Run configurations, each showcasing a different orchestration pattern.
+
+### Option 1: Random Orchestrator
+
+Randomly selects agents for each task:
+
+```bash
+dapr run -f dapr-random.yaml
+```
+
+**What's running:**
+- ✅ Frodo agent
+- ✅ Sam agent  
+- ✅ Random orchestrator
+- ✅ Client (publishes to `fellowship.orchestrator.random.requests`)
+
+### Option 2: Round-Robin Orchestrator
+
+Cycles through agents sequentially:
+
+```bash
+dapr run -f dapr-roundrobin.yaml
+```
+
+**What's running:**
+- ✅ Frodo agent
+- ✅ Sam agent
+- ✅ Gandalf agent
+- ✅ Round-robin orchestrator
+- ✅ Client (publishes to `fellowship.orchestrator.roundrobin.requests`)
+
+### Option 3: LLM Orchestrator
+
+AI-powered agent selection based on task:
+
+```bash
+dapr run -f dapr-llm.yaml
+```
+
+**What's running:**
+- ✅ Frodo agent
+- ✅ Sam agent
+- ✅ Gandalf agent
+- ✅ LLM orchestrator
+- ✅ HTTP client (hits the orchestrator’s `/run` endpoint)
+
+### Triggering Workflows
+
+Each `dapr-*.yaml` spins up an `HttpClientApp` that keeps POSTing to `/run` until the orchestrator responds (max 10 tries with a 5s delay). You’ll see the returned instance ID printed in that client’s console.
+
+If you prefer to drive the system via pub/sub (for multiple tasks, or to target a specific orchestrator), run:
+
+```bash
+python services/client/pubsub_client.py --orchestrator llm
+python services/client/pubsub_client.py --orchestrator random
+python services/client/pubsub_client.py --orchestrator roundrobin
+```
+
+That publishes `TriggerAction` messages onto the same topics the orchestrators subscribe to.
+
+
+### Expected Output
+
+You'll see logs from all services showing:
+1. **Agent startup**: Each agent registers with the fellowship registry
+2. **Client message**: Task published to orchestrator topic
+3. **Orchestration**: Orchestrator selects and routes to an agent
+4. **Agent response**: Selected agent processes the task
+5. **Workflow completion**: Final result logged
+
+## How Agent Coordination Works
+
+### 1. Shared Registry
+All agents register themselves in the fellowship registry:
+```python
+registry = AgentRegistryConfig(
+    store=StateStoreService(store_name="agentregistrystore"),
+    team_name="fellowship",  # SAME for all agents
+)
+```
+
+### 2. Message Flow
+
+**Via Orchestrator:**
+```
+Client → Orchestrator Topic → Orchestrator Logic → Agent Topic → Specific Agent
+```
+
+**Direct to Agent:**
+```
+Client → Agent Topic → Specific Agent
+```
+
+### 3. Agent Discovery
+
+Orchestrators query the registry to discover available agents:
+```python
+# Orchestrator can find all fellowship members
+available_agents = registry.get_team_members("fellowship")
+# Returns: [frodo, sam, gandalf, legolas]
+```
+
+### 4. Broadcast Messages
+
+Send to all agents simultaneously:
+```python
+# All agents subscribed to fellowship.broadcast receive this
+pubsub_client.py --topic fellowship.broadcast --task "Emergency: Nazgûl approaching!"
+```
+
+## Agent Profiles Summary
+
+### Frodo - Ring-bearer
+- **Focus**: Endurance, stealth, burden management
+- **Style**: Humble, determined, shows vulnerability but maintains courage
+- **Best for**: Tasks requiring persistence and careful navigation
+
+### Sam - Logistics Expert
+- **Focus**: Supplies, provisions, morale, practical support
+- **Style**: Warm, plain-spoken, grounded, loyal
+- **Best for**: Resource management and practical problem-solving
+
+### Gandalf - Wizard & Strategist
+- **Focus**: Strategy, lore, magic, long-term planning
+- **Style**: Wise, patient, mysterious yet clear in critical moments
+- **Best for**: Complex decisions requiring wisdom and foresight
+
+### Legolas - Scout & Marksman
+- **Focus**: Scouting, threat detection, terrain navigation, ranged tactics
+- **Style**: Graceful, precise, observant, elvish elegance
+- **Best for**: Reconnaissance and tactical positioning
+
+## Troubleshooting
+
+### Issue: Agents not discovering each other
+
+**Solution:** Verify all agents use the same registry configuration:
+```python
+registry = AgentRegistryConfig(
+    store=StateStoreService(store_name="agentregistrystore"),
+    team_name="fellowship",  # Must be identical
+)
+```
+
+### Issue: Messages not reaching agents
+
+**Solution:** Check topic names match between client and agent configurations:
+- Client publishes to: `fellowship.frodo.requests`
+- Agent subscribes to: `fellowship.frodo.requests` (must match exactly)
+
+### Issue: Orchestrator not finding agents
+
+**Solution:** Ensure orchestrator has access to the registry and agents are started first.
+
+## Learn More
+
+- **Configuration Classes Guide**: [`03-durable-agent-with-configs`](../03-durable-agent-with-configs/) - Complete guide to all configuration classes
+- **Simple Agent Example**: [`03-durable-agent-tool-call`](../03-durable-agent-tool-call/) - Basic single-agent pattern
+- **Message Router**: [`04-message-router-workflow`](../04-message-router-workflow/) - Pub/sub workflow patterns
+- **Dapr Multi-App Run**: [Dapr Documentation](https://docs.dapr.io/developing-applications/local-development/multi-app-dapr-run/)
+- **Dapr Pub/Sub**: [Pub/Sub Building Block](https://docs.dapr.io/developing-applications/building-blocks/pubsub/)
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/dapr-llm.yaml
+================================================
+# https://docs.dapr.io/developing-applications/local-development/multi-app-dapr-run/multi-app-template/#template-properties
+version: 1
+common:
+  resourcesPath: ./components
+  logLevel: info
+  appLogDestination: console
+  daprdLogDestination: console
+
+apps:
+- appID: FrodoApp
+  appDirPath: ./services/frodo/
+  command: ["python3", "app.py"]
+
+- appID: SamApp
+  appDirPath: ./services/sam/
+  command: ["python3", "app.py"]
+
+- appID: GandalfApp
+  appDirPath: ./services/gandalf/
+  command: ["python3", "app.py"]
+
+- appID: LegolasApp
+  appDirPath: ./services/legolas/
+  command: ["python3", "app.py"]
+
+- appID: LLMOrchestratorApp
+  appDirPath: ./services/workflow-llm/
+  command: ["python3", "app.py"]
+  appPort: 8004
+
+- appID: HttpClientApp
+  appDirPath: ./services/client/
+  command: ["python3", "http_client.py"]
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/dapr-random.yaml
+================================================
+# https://docs.dapr.io/developing-applications/local-development/multi-app-dapr-run/multi-app-template/#template-properties
+version: 1
+common:
+  resourcesPath: ./components
+  logLevel: info
+  appLogDestination: console
+  daprdLogDestination: console
+
+apps:
+- appID: FrodoApp
+  appDirPath: ./services/frodo/
+  command: ["python3", "app.py"]
+
+- appID: SamApp
+  appDirPath: ./services/sam/
+  command: ["python3", "app.py"]
+
+- appID: GandalfApp
+  appDirPath: ./services/gandalf/
+  command: ["python3", "app.py"]
+
+- appID: LegolasApp
+  appDirPath: ./services/legolas/
+  command: ["python3", "app.py"]
+
+- appID: RandomApp
+  appDirPath: ./services/workflow-random/
+  command: ["python3", "app.py"]
+  appPort: 8004
+
+- appID: HttpClientApp
+  appDirPath: ./services/client/
+  command: ["python3", "http_client.py"]
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/dapr-roundrobin.yaml
+================================================
+# https://docs.dapr.io/developing-applications/local-development/multi-app-dapr-run/multi-app-template/#template-properties
+version: 1
+common:
+  resourcesPath: ./components
+  logLevel: info
+  appLogDestination: console
+  daprdLogDestination: console
+
+apps:
+- appID: FrodoApp
+  appDirPath: ./services/frodo/
+  command: ["python3", "app.py"]
+
+- appID: SamApp
+  appDirPath: ./services/sam/
+  command: ["python3", "app.py"]
+
+- appID: GandalfApp
+  appDirPath: ./services/gandalf/
+  command: ["python3", "app.py"]
+
+- appID: LegolasApp
+  appDirPath: ./services/legolas/
+  command: ["python3", "app.py"]
+
+- appID: RoundRobinApp
+  appDirPath: ./services/workflow-roundrobin/
+  command: ["python3", "app.py"]
+  appPort: 8004
+
+- appID: HttpClientApp
+  appDirPath: ./services/client/
+  command: ["python3", "http_client.py"]
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/docker-compose.yml
+================================================
+# docker-compose.yml
+services:
+  phoenix:
+    image: arizephoenix/phoenix:latest # Must be greater than 4.0 version to work
+    depends_on:
+      - db
+    ports:
+      - 6006:6006  # PHOENIX_PORT
+      - 4317:4317  # PHOENIX_GRPC_PORT
+      - 9090:9090  # [Optional] PROMETHEUS PORT IF ENABLED
+    environment:
+      - PHOENIX_SQL_DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - 5432
+    volumes:
+      - database_data:/var/lib/postgresql
+volumes:
+  database_data:
+    driver: local
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/memorystore.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: memorystore
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/openai.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: openai
+spec:
+  type: conversation.openai
+  version: v1
+  metadata:
+  - name: key
+    value: "{{OPENAI_API_KEY}}"
+  - name: model
+    value: gpt-5-mini
+  - name: temperature
+    value: 1
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/pubsub.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: messagepubsub
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: localhost:6379
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/registrystore.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: agentregistrystore
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+  - name: keyPrefix
+    value: none
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/registrystore_llm.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: agentregistrystore_llm
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+  - name: keyPrefix
+    value: none
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/registrystore_random.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: agentregistrystore_random
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+  - name: keyPrefix
+    value: none
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/registrystore_roundrobin.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: agentregistrystore_roundrobin
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+  - name: keyPrefix
+    value: none
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/components/statestore.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: workflowstatestore
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: localhost:6379
+    - name: actorStateStore
+      value: "true"
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/client/http_client.py
+================================================
+from __future__ import annotations
+
+import os
+import sys
+import time
+from typing import Any, Dict
+
+import requests
+
+BASE_URL = os.getenv("WORKFLOW_BASE_URL", "http://localhost:8004")
+ENTRY_PATH = os.getenv("WORKFLOW_ENTRY_PATH", "/run")
+TASK_PROMPT = os.getenv(
+    "WORKFLOW_TASK", "How do we get everyone to Mordor? We all need to help!"
+)
+MAX_ATTEMPTS = int(os.getenv("WORKFLOW_MAX_ATTEMPTS", "10"))
+RETRY_DELAY_SECONDS = int(os.getenv("WORKFLOW_RETRY_DELAY_SECONDS", "5"))
+
+
+def build_workflow_url() -> str:
+    base = BASE_URL.rstrip("/")
+    path = ENTRY_PATH if ENTRY_PATH.startswith("/") else f"/{ENTRY_PATH}"
+    return f"{base}{path}"
+
+
+def start_workflow() -> None:
+    workflow_url = build_workflow_url()
+    payload: Dict[str, Any] = {"task": TASK_PROMPT}
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        print(f"Attempt {attempt}/{MAX_ATTEMPTS}: POST {workflow_url}")
+        try:
+            response = requests.post(workflow_url, json=payload, timeout=60)
+        except requests.exceptions.RequestException as exc:  # noqa: PERF203
+            print(f"Request failed: {exc}")
+        else:
+            if response.status_code in (200, 202):
+                print("Workflow scheduled successfully!")
+                try:
+                    body = response.json()
+                except ValueError:
+                    body = {}
+
+                instance_id = body.get("instance_id")
+                status_url = body.get("status_url")
+                if instance_id:
+                    print(f"Instance ID: {instance_id}")
+                if status_url:
+                    print(f"Status URL: {status_url}")
+                else:
+                    print("Check Phoenix UI or Dapr workflow queries for progress.")
+                return
+
+            print(
+                f"Received status code {response.status_code}: {response.text.strip()}"
+            )
+
+        if attempt < MAX_ATTEMPTS:
+            print(f"Waiting {RETRY_DELAY_SECONDS}s before retrying...")
+            time.sleep(RETRY_DELAY_SECONDS)
+
+    print("Workflow app did not respond in time.")
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    start_workflow()
+    sys.exit(0)
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/client/pubsub_client.py
+================================================
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import logging
+import os
+import random
+import signal
+import sys
+from typing import Any, Dict, List
+
+from dapr.clients import DaprClient
+
+# ---------------------------
+# Env defaults (CLI can override)
+# ---------------------------
+PUBSUB_NAME = os.getenv("PUBSUB_NAME", "messagepubsub")
+
+# Named orchestrator topics (used when --orchestrator is provided)
+# These orchestrators coordinate multiple agents in the Fellowship
+RANDOM_TOPIC_DEFAULT = os.getenv(
+    "RANDOM_TOPIC", "fellowship.orchestrator.random.requests"
+)
+ROUNDROBIN_TOPIC_DEFAULT = os.getenv(
+    "ROUNDROBIN_TOPIC", "fellowship.orchestrator.roundrobin.requests"
+)
+LLM_TOPIC_DEFAULT = os.getenv("LLM_TOPIC", "llm.orchestrator.requests")
+
+# Individual agent topics (can be used with --topic for direct agent messaging)
+# Frodo: fellowship.frodo.requests
+# Sam: fellowship.sam.requests
+# Gandalf: fellowship.gandalf.requests
+# Legolas: fellowship.legolas.requests
+
+# Legacy single-topic env (still honored if you pass --topic without a value)
+ORCHESTRATOR_TOPIC_ENV = os.getenv("ORCHESTRATOR_TOPIC")
+
+RAW_DATA = os.getenv("RAW_DATA")
+TASK_TEXT_DEFAULT = os.getenv(
+    "TASK_TEXT",
+    "Set the next step for the journey to Mordor. Consider safety, supplies, and stealth. Start from the Shire to Bree.",
+)
+
+CONTENT_TYPE = os.getenv("CONTENT_TYPE", "application/json")
+CLOUDEVENT_TYPE_DEFAULT = os.getenv("CLOUDEVENT_TYPE", "TriggerAction")
+
+PUBLISH_ONCE_DEFAULT = os.getenv("PUBLISH_ONCE", "true").lower() in {"1", "true", "yes"}
+INTERVAL_SEC_DEFAULT = float(os.getenv("INTERVAL_SEC", "0"))
+MAX_ATTEMPTS_DEFAULT = int(os.getenv("MAX_ATTEMPTS", "8"))
+INITIAL_DELAY_DEFAULT = float(os.getenv("INITIAL_DELAY", "0.5"))
+BACKOFF_FACTOR_DEFAULT = float(os.getenv("BACKOFF_FACTOR", "2.0"))
+JITTER_FRAC_DEFAULT = float(os.getenv("JITTER_FRAC", "0.2"))
+STARTUP_DELAY_DEFAULT = float(os.getenv("STARTUP_DELAY", "5.0"))
+
+logger = logging.getLogger("orchestrator_publisher")
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Publish TriggerAction messages to orchestrator(s)."
+    )
+    # Orchestrator selection (mutually exclusive with explicit topics)
+    p.add_argument(
+        "--orchestrator",
+        choices=["random", "roundrobin", "llm"],
+        help="Route to a named orchestrator topic (or both).",
+    )
+    p.add_argument(
+        "--topic",
+        action="append",
+        help="Explicit topic name (can be repeated). If provided, --orchestrator is ignored.",
+    )
+
+    # Message/data knobs
+    p.add_argument("--task", help="Task text to send (ignored if --raw JSON is used).")
+    p.add_argument("--raw", help="Raw JSON object to send as the event data.")
+    p.add_argument(
+        "--ce-type", default=CLOUDEVENT_TYPE_DEFAULT, help="CloudEvent type to set."
+    )
+    p.add_argument("--content-type", default=CONTENT_TYPE, help="Content type.")
+
+    # Behavior
+    p.add_argument("--pubsub", default=PUBSUB_NAME, help="Dapr pubsub name.")
+    p.add_argument(
+        "--once",
+        dest="publish_once",
+        action="store_true",
+        help="Publish once and exit.",
+    )
+    p.add_argument(
+        "--loop",
+        dest="publish_once",
+        action="store_false",
+        help="Publish periodically.",
+    )
+    p.set_defaults(publish_once=PUBLISH_ONCE_DEFAULT)
+
+    p.add_argument(
+        "--interval",
+        type=float,
+        default=INTERVAL_SEC_DEFAULT,
+        help="Interval seconds when looping.",
+    )
+    p.add_argument(
+        "--startup-delay",
+        type=float,
+        default=STARTUP_DELAY_DEFAULT,
+        help="Initial delay seconds.",
+    )
+    p.add_argument(
+        "--max-attempts",
+        type=int,
+        default=MAX_ATTEMPTS_DEFAULT,
+        help="Max retry attempts.",
+    )
+    p.add_argument(
+        "--initial-delay",
+        type=float,
+        default=INITIAL_DELAY_DEFAULT,
+        help="Initial backoff seconds.",
+    )
+    p.add_argument(
+        "--backoff-factor",
+        type=float,
+        default=BACKOFF_FACTOR_DEFAULT,
+        help="Backoff multiplier.",
+    )
+    p.add_argument(
+        "--jitter",
+        type=float,
+        default=JITTER_FRAC_DEFAULT,
+        help="± jitter fraction on backoff.",
+    )
+
+    # Topic defaults (so you can override per run)
+    p.add_argument(
+        "--random-topic",
+        default=RANDOM_TOPIC_DEFAULT,
+        help="Topic for random orchestrator.",
+    )
+    p.add_argument(
+        "--roundrobin-topic",
+        default=ROUNDROBIN_TOPIC_DEFAULT,
+        help="Topic for round-robin orchestrator.",
+    )
+    p.add_argument(
+        "--llm-topic", default=LLM_TOPIC_DEFAULT, help="Topic for LLM orchestrator."
+    )
+
+    return p.parse_args()
+
+
+async def _backoff_sleep(delay: float, jitter: float, factor: float) -> float:
+    actual = max(0.0, delay * (1 + random.uniform(-jitter, jitter)))
+    if actual:
+        await asyncio.sleep(actual)
+    return delay * factor
+
+
+def _build_payload(args: argparse.Namespace) -> Dict[str, Any]:
+    if args.raw or RAW_DATA:
+        raw = args.raw or RAW_DATA
+        try:
+            data = json.loads(raw)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Invalid --raw/RAW_DATA JSON: {exc}") from exc
+        if not isinstance(data, dict):
+            raise ValueError("--raw/RAW_DATA must be a JSON object")
+        return data
+    return {"task": args.task or TASK_TEXT_DEFAULT}
+
+
+def _encode_payload(payload: Dict[str, Any]) -> bytes:
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
+def _resolve_topics(args: argparse.Namespace) -> List[str]:
+    # If explicit topics were passed, use them directly
+    if args.topic:
+        return args.topic
+
+    # Otherwise use orchestrator selection
+    if args.orchestrator == "random":
+        return [args.random_topic]
+    if args.orchestrator == "roundrobin":
+        return [args.roundrobin_topic]
+    if args.orchestrator == "llm":
+        return [args.llm_topic]
+
+    # Fallbacks:
+    # 1) Legacy single-topic env if set
+    if ORCHESTRATOR_TOPIC_ENV:
+        return [ORCHESTRATOR_TOPIC_ENV]
+
+    # 2) Default to random
+    return [args.random_topic]
+
+
+async def publish_once(
+    client: DaprClient,
+    payload: Dict[str, Any],
+    *,
+    pubsub_name: str,
+    topics: List[str],
+    content_type: str,
+    ce_type: str | None,
+    max_attempts: int,
+    initial_delay: float,
+    jitter: float,
+    backoff_factor: float,
+) -> None:
+    delay = initial_delay
+    body = _encode_payload(payload)
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            for topic in topics:
+                logger.info("publish attempt %d → %s/%s", attempt, pubsub_name, topic)
+                client.publish_event(
+                    pubsub_name=pubsub_name,
+                    topic_name=topic,
+                    data=body,
+                    data_content_type=content_type,
+                    publish_metadata=(
+                        {"cloudevent.type": ce_type} if ce_type else None
+                    ),
+                )
+                logger.info("published successfully to %s", topic)
+            return
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("publish failed: %s", exc)
+            if attempt == max_attempts:
+                raise
+            logger.info("retrying in ~%.2fs …", delay)
+            delay = await _backoff_sleep(delay, jitter, backoff_factor)
+
+
+async def main() -> int:
+    logging.basicConfig(level=logging.INFO)
+    args = parse_args()
+    stop_event = asyncio.Event()
+
+    # Signal-aware shutdown
+    loop = asyncio.get_running_loop()
+
+    def _stop(*_: object) -> None:
+        stop_event.set()
+
+    try:
+        loop.add_signal_handler(signal.SIGINT, _stop)
+        loop.add_signal_handler(signal.SIGTERM, _stop)
+    except NotImplementedError:
+        import signal as _signal
+
+        _signal.signal(_signal.SIGINT, lambda *_: _stop())
+        _signal.signal(_signal.SIGTERM, lambda *_: _stop())
+
+    # Optional warmup
+    if args.startup_delay > 0:
+        await asyncio.sleep(args.startup_delay)
+
+    topics = _resolve_topics(args)
+    payload = _build_payload(args)
+    logger.info("payload: %s", payload)
+    logger.info("topics: %s", topics)
+
+    try:
+        with DaprClient() as client:
+            if args.publish_once:
+                await publish_once(
+                    client,
+                    payload,
+                    pubsub_name=args.pubsub,
+                    topics=topics,
+                    content_type=args.content_type,
+                    ce_type=args.ce_type,
+                    max_attempts=args.max_attempts,
+                    initial_delay=args.initial_delay,
+                    jitter=args.jitter,
+                    backoff_factor=args.backoff_factor,
+                )
+                await asyncio.sleep(0.2)
+                return 0
+
+            # periodic mode
+            if args.interval <= 0:
+                logger.error("--interval must be > 0 when --loop is used")
+                return 2
+
+            logger.info("starting periodic publisher every %.2fs", args.interval)
+            while not stop_event.is_set():
+                try:
+                    payload = _build_payload(args)
+                    await publish_once(
+                        client,
+                        payload,
+                        pubsub_name=args.pubsub,
+                        topics=topics,
+                        content_type=args.content_type,
+                        ce_type=args.ce_type,
+                        max_attempts=args.max_attempts,
+                        initial_delay=args.initial_delay,
+                        jitter=args.jitter,
+                        backoff_factor=args.backoff_factor,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "giving up after %d attempts: %s", args.max_attempts, exc
+                    )
+
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=args.interval)
+                except asyncio.TimeoutError:
+                    pass
+
+            logger.info("shutdown requested; exiting")
+            return 0
+
+    except KeyboardInterrupt:
+        return 130
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("fatal error: %s", exc)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/frodo/app.py
+================================================
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+
+from dotenv import load_dotenv
+
+from dapr_agents.agents.durable import DurableAgent
+from dapr_agents.agents.configs import (
+    AgentMemoryConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.prompting import AgentProfileConfig
+from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.memory import ConversationDaprStateMemory
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+from dapr_agents.workflow.utils.core import wait_for_shutdown
+
+# Load environment
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship-app")
+
+
+async def main() -> None:
+    """
+    Fellowship durable-agent app.
+    """
+    # Shared infra (registry)
+    registry = AgentRegistryConfig(
+        store=StateStoreService(
+            store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+        ),
+        team_name="fellowship",
+    )
+
+    # Single LLM client reused for both agents
+    llm = OpenAIChatClient()
+
+    # ---------------------------
+    # Frodo (journey lead)
+    # ---------------------------
+    frodo_name = "frodo"
+
+    frodo_pubsub = AgentPubSubConfig(
+        pubsub_name="messagepubsub",
+        agent_topic="fellowship.frodo.requests",
+        broadcast_topic="fellowship.broadcast",
+    )
+    frodo_state = AgentStateConfig(
+        store=StateStoreService(store_name="workflowstatestore", key_prefix="frodo:")
+    )
+    frodo_memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="memorystore",
+            session_id=f"{frodo_name}-session",
+        )
+    )
+    frodo_profile = AgentProfileConfig(
+        name="Frodo Baggins",
+        role="Hobbit & Ring-bearer",
+        goal=(
+            "Carry the One Ring to Mount Doom, resisting its corruptive power while "
+            "navigating danger and uncertainty with determination and humility."
+        ),
+        instructions=[
+            "Endure hardships and temptations, staying true to the mission even when faced with doubt.",
+            "Seek guidance and trust allies, but bear the ultimate burden alone when necessary.",
+            "Move carefully through enemy-infested lands, avoiding unnecessary risks.",
+            "Plan cautious, low-profile routes across Middle-earth.",
+            "When uncertain, propose options and seek counsel from Gandalf or the Fellowship.",
+            "Respond concisely, accurately, and relevantly, ensuring clarity and strict alignment with the task.",
+        ],
+        style_guidelines=[
+            "Speak with humility, determination, and a growing sense of resolve.",
+            "Keep tone steady and focused on the mission.",
+            "Show vulnerability when the burden is heavy, but maintain courage.",
+            "Prefer concise, thoughtful responses with brief justification.",
+        ],
+    )
+
+    frodo = DurableAgent(
+        profile=frodo_profile,
+        pubsub=frodo_pubsub,
+        state=frodo_state,
+        registry=registry,
+        memory=frodo_memory,
+        llm=llm,
+    )
+
+    # ---------------------------
+    # PubSub routing & shutdown
+    # ---------------------------
+    runner = AgentRunner()
+    try:
+        # Expose both agents’ endpoints
+        runner.register_routes(frodo)
+        await wait_for_shutdown()
+    finally:
+        runner.shutdown(frodo)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/gandalf/app.py
+================================================
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+
+from dotenv import load_dotenv
+
+from dapr_agents.agents.durable import DurableAgent
+from dapr_agents.agents.configs import (
+    AgentMemoryConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.prompting import AgentProfileConfig
+from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.memory import ConversationDaprStateMemory
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+from dapr_agents.workflow.utils.core import wait_for_shutdown
+
+# Load environment
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship-app")
+
+
+async def main() -> None:
+    """
+    Gandalf durable-agent app.
+    """
+    # Shared infra (registry)
+    registry = AgentRegistryConfig(
+        store=StateStoreService(
+            store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+        ),
+        team_name="fellowship",
+    )
+
+    # Single LLM client reused for both agents
+    llm = OpenAIChatClient()
+
+    # ---------------------------
+    # Gandalf (wizard & loremaster)
+    # ---------------------------
+    gandalf_name = "Gandalf"
+
+    gandalf_pubsub = AgentPubSubConfig(
+        pubsub_name="messagepubsub",
+        agent_topic="fellowship.gandalf.requests",
+        broadcast_topic="fellowship.broadcast",
+    )
+    gandalf_state = AgentStateConfig(
+        store=StateStoreService(store_name="workflowstatestore", key_prefix="gandalf:")
+    )
+    gandalf_memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="memorystore",
+            session_id=f"{gandalf_name}-session",
+        )
+    )
+    gandalf_profile = AgentProfileConfig(
+        name="Gandalf",
+        role="Wizard & Loremaster",
+        goal=(
+            "Guide the Fellowship with wisdom and strategy, using magic and insight to "
+            "ensure the downfall of Sauron while encouraging others to find their own strength."
+        ),
+        instructions=[
+            "Provide strategic counsel, always considering the long-term consequences of actions.",
+            "Share knowledge of Middle-earth lore, ancient history, and magical matters when needed.",
+            "Use magic sparingly, applying it when necessary to guide or protect.",
+            "Encourage allies to find strength within themselves rather than relying solely on your power.",
+            "Warn of dangers and explain the significance of artifacts, places, and creatures.",
+            "When asked for guidance, offer wisdom but allow others to make their own choices.",
+            "Respond concisely, accurately, and relevantly, ensuring clarity and strict alignment with the task.",
+        ],
+        style_guidelines=[
+            "Speak with wisdom, patience, and a touch of mystery.",
+            "Balance gravitas with warmth when appropriate.",
+            "Show patience and understanding, especially with the hobbits.",
+            "Use occasional references to ancient lore or history to add depth.",
+            "Be cryptic only when necessary; prefer clarity in critical moments.",
+        ],
+    )
+
+    gandalf = DurableAgent(
+        profile=gandalf_profile,
+        pubsub=gandalf_pubsub,
+        state=gandalf_state,
+        registry=registry,
+        memory=gandalf_memory,
+        llm=llm,
+    )
+
+    # ---------------------------
+    # PubSub routing & shutdown
+    # ---------------------------
+    runner = AgentRunner()
+    try:
+        runner.register_routes(gandalf)
+        await wait_for_shutdown()
+    finally:
+        runner.shutdown(gandalf)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/legolas/app.py
+================================================
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+
+from dotenv import load_dotenv
+
+from dapr_agents.agents.durable import DurableAgent
+from dapr_agents.agents.configs import (
+    AgentMemoryConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.prompting import AgentProfileConfig
+from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.memory import ConversationDaprStateMemory
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+from dapr_agents.workflow.utils.core import wait_for_shutdown
+
+# Load environment
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship-app")
+
+
+async def main() -> None:
+    """
+    Legolas durable-agent app.
+    """
+    # Shared infra (registry)
+    registry = AgentRegistryConfig(
+        store=StateStoreService(
+            store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+        ),
+        team_name="fellowship",
+    )
+
+    # Single LLM client
+    llm = OpenAIChatClient()
+
+    # ---------------------------
+    # Legolas (Elf scout & marksman)
+    # ---------------------------
+    legolas_name = "Legolas"
+
+    legolas_pubsub = AgentPubSubConfig(
+        pubsub_name="messagepubsub",
+        agent_topic="fellowship.legolas.requests",
+        broadcast_topic="fellowship.broadcast",
+    )
+    legolas_state = AgentStateConfig(
+        store=StateStoreService(store_name="workflowstatestore", key_prefix="legolas:")
+    )
+    legolas_memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="memorystore",
+            session_id=f"{legolas_name}-session",
+        )
+    )
+    legolas_profile = AgentProfileConfig(
+        name="Legolas",
+        role="Elf Scout & Marksman",
+        goal=(
+            "Act as a scout, marksman, and protector, using keen senses and deadly accuracy "
+            "to ensure the success of the journey."
+        ),
+        instructions=[
+            "Use superior vision and heightened senses to scout ahead and detect threats.",
+            "Report distant movements, tracks, and environmental changes that others might miss.",
+            "Excel in ranged combat, advising on positioning and defensive strategy.",
+            "Move swiftly and silently across any terrain, suggesting efficient routes.",
+            "Provide concise, accurate observations without unnecessary embellishment.",
+            "Respond to queries about threats, terrain, or tactical positioning with precision.",
+        ],
+        style_guidelines=[
+            "Speak with grace, wisdom, and keen observation.",
+            "Be swift, silent, and precise in your communication.",
+            "Maintain an air of elvish elegance while being practical.",
+            "Show respect for nature and the land while focusing on the mission.",
+        ],
+    )
+
+    legolas = DurableAgent(
+        profile=legolas_profile,
+        pubsub=legolas_pubsub,
+        state=legolas_state,
+        registry=registry,
+        memory=legolas_memory,
+        llm=llm,
+    )
+
+    # ---------------------------
+    # PubSub routing & shutdown
+    # ---------------------------
+    runner = AgentRunner()
+    try:
+        runner.register_routes(legolas)
+        await wait_for_shutdown()
+    finally:
+        runner.shutdown(legolas)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/sam/app.py
+================================================
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+
+from dotenv import load_dotenv
+
+from dapr_agents.agents.durable import DurableAgent
+from dapr_agents.agents.configs import (
+    AgentMemoryConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.prompting import AgentProfileConfig
+from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.memory import ConversationDaprStateMemory
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+from dapr_agents.workflow.utils.core import wait_for_shutdown
+
+# Load environment
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship-app")
+
+
+async def main() -> None:
+    """
+    Fellowship durable-agent app.
+
+    Notes:
+      - If you don't specify models in AgentStateConfig, it defaults to
+        AgentWorkflowState / AgentWorkflowMessage internally.
+      - We run TWO durable agents: Frodo and Sam, in the same process.
+    """
+    # Shared infra (registry)
+    registry = AgentRegistryConfig(
+        store=StateStoreService(
+            store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+        ),
+        team_name="fellowship",
+    )
+
+    # Single LLM client reused for both agents
+    llm = OpenAIChatClient()
+
+    # ---------------------------
+    # Sam (logistics & support)
+    # ---------------------------
+    sam_name = "sam"
+
+    sam_pubsub = AgentPubSubConfig(
+        pubsub_name="messagepubsub",
+        agent_topic="fellowship.sam.requests",
+        broadcast_topic="fellowship.broadcast",
+    )
+    sam_state = AgentStateConfig(
+        store=StateStoreService(store_name="workflowstatestore", key_prefix="sam:")
+    )
+    sam_memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="memorystore",
+            session_id=f"{sam_name}-session",
+        )
+    )
+    sam_profile = AgentProfileConfig(
+        name="Samwise Gamgee",
+        role="Logistics, Provisions & Morale",
+        goal=(
+            "Keep the party supplied, rested, and on schedule; watch Frodo's back, "
+            "offer practical counsel, and maintain morale."
+        ),
+        instructions=[
+            "Track food, water, camp gear, and rest cadence; flag shortages early.",
+            "Advise on campsite selection (cover, water, distance from threats).",
+            "Provide pragmatic alternatives to risky ideas and note trade-offs.",
+            "Remind the party of the plan and next small step when confusion arises.",
+            "End with a short, encouraging line if stakes are high.",
+        ],
+        style_guidelines=[
+            "Warm, plain-spoken, and grounded.",
+            "Emphasize practicality over poetry.",
+            "Stay loyal and supportive, especially under pressure.",
+        ],
+    )
+
+    sam = DurableAgent(
+        profile=sam_profile,
+        pubsub=sam_pubsub,
+        state=sam_state,
+        registry=registry,
+        memory=sam_memory,
+        llm=llm,
+    )
+
+    # ---------------------------
+    # PubSub routing & shutdown
+    # ---------------------------
+    runner = AgentRunner()
+    try:
+        # Expose both agents’ endpoints
+        runner.register_routes(sam)
+        await wait_for_shutdown()
+    finally:
+        runner.shutdown(sam)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/workflow-llm/app.py
+================================================
+from __future__ import annotations
+
+import logging
+import os
+
+from dotenv import load_dotenv
+
+import dapr.ext.workflow as wf
+from dapr_agents.agents.configs import (
+    AgentExecutionConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.orchestrators.llm import LLMOrchestrator
+from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("llm.orchestrator.app")
+
+
+def main() -> None:
+    orchestrator_name = os.getenv("ORCHESTRATOR_NAME", "LLMOrchestrator")
+    team_name = os.getenv("TEAM_NAME", "fellowship")
+
+    pubsub = AgentPubSubConfig(
+        pubsub_name=os.getenv("PUBSUB_NAME", "messagepubsub"),
+        agent_topic=os.getenv("ORCHESTRATOR_TOPIC", "llm.orchestrator.requests"),
+        broadcast_topic=os.getenv("BROADCAST_TOPIC", "fellowship.broadcast"),
+    )
+
+    state = AgentStateConfig(
+        store=StateStoreService(
+            store_name=os.getenv("WORKFLOW_STATE_STORE", "workflowstatestore"),
+            key_prefix="llm.orchestrator:",
+        ),
+    )
+    registry = AgentRegistryConfig(
+        store=StateStoreService(
+            store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+        ),
+        team_name=team_name,
+    )
+    execution = AgentExecutionConfig(
+        max_iterations=int(os.getenv("MAX_ITERATIONS", "1"))
+    )
+
+    def on_summary(summary: str):
+        print("Journey complete! Summary:", summary, flush=True)
+
+    orchestrator = LLMOrchestrator(
+        name=orchestrator_name,
+        llm=OpenAIChatClient(),
+        pubsub=pubsub,
+        state=state,
+        registry=registry,
+        execution=execution,
+        agent_metadata={
+            "type": "LLMOrchestrator",
+            "description": "LLM-driven Orchestrator",
+        },
+        timeout_seconds=int(os.getenv("TIMEOUT_SECONDS", "45")),
+        runtime=wf.WorkflowRuntime(),
+        final_summary_callback=on_summary,
+    )
+
+    runner = AgentRunner()
+    try:
+        runner.serve(orchestrator, port=8004)
+    finally:
+        runner.shutdown(orchestrator)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/workflow-random/app.py
+================================================
+import logging
+import os
+
+from dotenv import load_dotenv
+
+import dapr.ext.workflow as wf
+from dapr_agents.agents.configs import (
+    AgentExecutionConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.orchestrators.random import RandomOrchestrator
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship.orchestrator.random.app")
+
+
+def main() -> None:
+    orchestrator = RandomOrchestrator(
+        name=os.getenv("ORCHESTRATOR_NAME", "FellowshipRandom"),
+        pubsub=AgentPubSubConfig(
+            pubsub_name=os.getenv("PUBSUB_NAME", "messagepubsub"),
+            agent_topic=os.getenv(
+                "ORCHESTRATOR_TOPIC", "fellowship.orchestrator.random.requests"
+            ),
+            broadcast_topic=os.getenv("BROADCAST_TOPIC", "fellowship.broadcast"),
+        ),
+        state=AgentStateConfig(
+            store=StateStoreService(
+                store_name=os.getenv("WORKFLOW_STATE_STORE", "workflowstatestore"),
+                key_prefix="fellowship.random:",
+            ),
+        ),
+        registry=AgentRegistryConfig(
+            store=StateStoreService(
+                store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+            ),
+            team_name=os.getenv("TEAM_NAME", "fellowship"),
+        ),
+        execution=AgentExecutionConfig(
+            max_iterations=int(os.getenv("MAX_ITERATIONS", "1"))
+        ),
+        agent_metadata={"legend": "One orchestrator to guide them all."},
+        timeout_seconds=int(os.getenv("TIMEOUT_SECONDS", "45")),
+        runtime=wf.WorkflowRuntime(),
+    )
+
+    runner = AgentRunner()
+    try:
+        runner.serve(orchestrator, port=8004)
+    finally:
+        runner.shutdown(orchestrator)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+
+
+
+================================================
+FILE: quickstarts/05-multi-agent-workflows/services/workflow-roundrobin/app.py
+================================================
+import logging
+import os
+
+from dotenv import load_dotenv
+
+import dapr.ext.workflow as wf
+from dapr_agents.agents.configs import (
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
+from dapr_agents.agents.orchestrators.roundrobin import RoundRobinOrchestrator
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("fellowship.orchestrator.roundrobin.app")
+
+
+def main() -> None:
+    orchestrator = RoundRobinOrchestrator(
+        name=os.getenv("ORCHESTRATOR_NAME", "FellowshipRoundRobin"),
+        pubsub=AgentPubSubConfig(
+            pubsub_name=os.getenv("PUBSUB_NAME", "messagepubsub"),
+            agent_topic=os.getenv(
+                "ORCHESTRATOR_TOPIC", "fellowship.orchestrator.roundrobin.requests"
+            ),
+            broadcast_topic=os.getenv("BROADCAST_TOPIC", "fellowship.broadcast"),
+        ),
+        state=AgentStateConfig(
+            store=StateStoreService(
+                store_name=os.getenv("WORKFLOW_STATE_STORE", "workflowstatestore"),
+                key_prefix="fellowship.roundrobin:",
+            ),
+        ),
+        registry=AgentRegistryConfig(
+            store=StateStoreService(
+                store_name=os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
+            ),
+            team_name=os.getenv("TEAM_NAME", "fellowship"),
+        ),
+        agent_metadata={"legend": "Sends tasks in a fair rotation."},
+        runtime=wf.WorkflowRuntime(),
+    )
+
+    runner = AgentRunner()
+    try:
+        runner.serve(orchestrator, port=8004)
+    finally:
+        runner.shutdown(orchestrator)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+
+

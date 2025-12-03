@@ -1,0 +1,222 @@
+Directory structure:
+└── dapr-integration/
+    ├── README.md
+    ├── dapr-components.yaml
+    ├── dapr.yaml
+    ├── redis.yaml
+    └── dapr-components/
+        ├── pubsub.yaml
+        └── statestore.yaml
+
+================================================
+FILE: dapr-integration/README.md
+================================================
+# Dapr Integrations 
+
+`idpBuilder` is extensible to launch custom Dapr patterns using package extensions. 
+
+Please use the following command to deploy Dapr using `idpbuilder`:
+
+```bash
+idpbuilder create \
+  --use-path-routing \
+  -p https://github.com/cnoe-io/stacks//dapr-integrations \
+```
+
+Notice that you can add Dapr to the reference implementation:
+
+```bash
+idpbuilder create \
+  --use-path-routing \
+  -p https://github.com/cnoe-io/stacks//ref-implementation \
+  -p https://github.com/cnoe-io/stacks//dapr-integrations
+```
+
+## What is installed?
+
+1. Dapr Control Plane
+1. Dapr Statestore and PubSub components
+2. Redis instance to support Statestore and Pubsub components
+
+Once installed, you can enable your workloads (Deployments) to use the Dapr APIs by using the Dapr annotations:
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp
+  labels:
+    app: node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node
+  template:
+    metadata:
+      labels:
+        app: node
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "nodeapp"
+        dapr.io/app-port: "3000"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+      - name: node
+        image: ghcr.io/dapr/samples/hello-k8s-node:latest
+        env:
+        - name: APP_PORT
+          value: "3000"
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: Always
+```
+This example creates a Dapr-enabled Kubernetes Deployment (setting the `dapr.io/*` annotations). This application can now use the Dapr APIs to interact with the Statestore and PubSub components provided by the default installation. Applications can be written in any programming language, check the [Dapr SDKs here](https://docs.dapr.io/developing-applications/sdks/).
+
+For more information, check the Hello Kubernetes Dapr tutorial [here](https://github.com/dapr/quickstarts/tree/master/tutorials/hello-kubernetes)
+
+
+
+
+
+================================================
+FILE: dapr-integration/dapr-components.yaml
+================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dapr-components
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: cnoe://dapr-components
+    targetRevision: HEAD
+    path: "."
+    directory:
+      recurse: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: default
+  syncPolicy:
+    automated: {}
+
+
+
+================================================
+FILE: dapr-integration/dapr.yaml
+================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dapr
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://dapr.github.io/helm-charts/'
+    targetRevision: 1.13.5
+    helm:
+      releaseName: dapr
+    chart: dapr
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: dapr-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+
+
+================================================
+FILE: dapr-integration/redis.yaml
+================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redis-dapr
+  namespace: argocd
+  labels:
+    env: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'registry-1.docker.io/bitnamicharts'
+    targetRevision: 19.6.4
+    helm:
+      valuesObject:
+        architecture: standalone
+      releaseName: redis
+    chart: redis
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+
+
+================================================
+FILE: dapr-integration/dapr-components/pubsub.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    # These settings will work out of the box if you use `helm install
+    # bitnami/redis`.  If you have your own setup, replace
+    # `redis-master:6379` with your own Redis master address, and the
+    # Redis password with your own Secret's name. For more information,
+    # see https://docs.dapr.io/operations/components/component-secrets .
+    - name: redisHost
+      value: redis-master:6379
+    - name: redisPassword
+      secretKeyRef:
+        name: redis
+        key: redis-password
+auth:
+  secretStore: kubernetes
+
+
+================================================
+FILE: dapr-integration/dapr-components/statestore.yaml
+================================================
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: redis-master:6379
+    - name: redisPassword
+      secretKeyRef:
+        name: redis
+        key: redis-password
+auth:
+  secretStore: kubernetes
+
