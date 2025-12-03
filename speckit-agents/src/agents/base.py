@@ -19,7 +19,7 @@ from dapr_agents.agents.configs import (
 )
 from dapr_agents.agents.durable import DurableAgent
 from dapr_agents.agents.prompting import AgentProfileConfig
-from dapr_agents.llm.dapr import DaprChatClient
+from dapr_agents.llm.openai import OpenAIChatClient
 from dapr_agents.memory import ConversationDaprStateMemory
 from dapr_agents.storage.daprstores.stateservice import StateStoreService
 from dapr_agents.workflow.runners import AgentRunner
@@ -328,12 +328,12 @@ def create_durable_agent(
         )
     )
 
-    # Create LLM client using Dapr conversation component (anthropic)
-    # This uses the conversation.anthropic component configured in Kubernetes
-    # with model: claude-opus-4-5-20251101
-    llm = DaprChatClient(
-        component_name="anthropic",  # References the Dapr conversation component
-    )
+    # Create LLM client using OpenAI directly
+    # NOTE: DaprChatClient has a bug where it sets provider="dapr" which is not
+    # a recognized format type in validate_and_format_tool (only supports:
+    # openai, azure_openai, nvidia, huggingface, claude, llama).
+    # The official dapr-agents quickstart uses OpenAIChatClient.
+    llm = OpenAIChatClient()
 
     # Create the DurableAgent
     agent = DurableAgent(
