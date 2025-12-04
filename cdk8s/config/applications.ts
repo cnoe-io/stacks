@@ -1341,6 +1341,34 @@ export const applicationConfigs: ApplicationConfig[] = [
   // Dapr Agents - SpecKit Multi-Agent Workflow System
   // =========================================================================
 
+  // Dapr CRDs - Must be installed before Dapr runtime
+  // These CRDs are required for Dapr components, configurations, subscriptions, etc.
+  {
+    name: 'dapr-crds',
+    namespace: 'default',  // CRDs are cluster-scoped
+    chart: {
+      type: 'DaprCrdsChart',
+      props: {
+        daprVersion: 'v1.16.3'
+      }
+    },
+    argocd: {
+      syncWave: '-200',  // Deploy CRDs very early, before dapr-runtime
+      labels: {
+        'app.kubernetes.io/name': 'dapr-crds',
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'dapr-agents'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['ServerSideApply=true', 'Replace=true']
+      }
+    }
+  },
+
   // Dapr Runtime (Control Plane)
   {
     name: 'dapr-runtime',
