@@ -177,6 +177,10 @@ export class K8sApiTailscaleServeChart extends Chart {
 
 /**
  * Generate the shell script for the K8s API Tailscale serve container.
+ *
+ * Note: In userspace networking mode with Tailscale Services, netstack routes
+ * incoming traffic to the exposed port (443), not the configured backend port.
+ * We use socat to forward from 443 -> 8001 (kubectl-proxy).
  */
 function generateK8sApiServeScript(serviceName: string): string {
   return `
@@ -187,6 +191,9 @@ mkdir -p /var/lib/tailscale
 tailscaled --tun=userspace-networking \\
   --socket=/run/tailscale/tailscaled.sock \\
   --state=/var/lib/tailscale/tailscaled.state &
+
+# install socat for port forwarding (required for userspace networking + Services)
+apk add --no-cache socat >/dev/null
 
 # wait for tailscaled to come up
 for i in $(seq 1 40); do
@@ -205,10 +212,14 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
+# Start socat to forward from exposed port (443) to kubectl-proxy (8001)
+# This is required because netstack in userspace mode routes to the exposed port
+socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
+
 # expose kubectl-proxy via tailscale serve on HTTPS 443
-# kubectl-proxy runs on localhost:8001
+# The serve command tells Tailscale to route traffic to localhost:443 (socat)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:8001
+  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:443
 
 echo "Kubernetes API proxy running at https://${serviceName}.<tailnet>.ts.net"
 exec tail -f /dev/null
