@@ -178,6 +178,12 @@ export class LangfuseChart extends Chart {
     // doesn't work when the referenced variable comes from valueFrom (secretKeyRef).
     // Only $(VAR) syntax for variables defined as literal 'value:' works.
     const commonEnv: k8s.EnvVar[] = [
+      // HOSTNAME=0.0.0.0 is required for Next.js to bind to all interfaces in Kubernetes
+      // Without this, Next.js binds to the pod hostname/IP which prevents service discovery
+      {
+        name: 'HOSTNAME',
+        value: '0.0.0.0',
+      },
       // Database connection - uses $(VAR) substitution (works because POSTGRES_USER/PASSWORD come first)
       {
         name: 'POSTGRES_USER',
