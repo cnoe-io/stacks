@@ -255,6 +255,12 @@ export class LangfuseChart extends Chart {
         name: 'LANGFUSE_S3_REGION',
         value: 'us-east-1',
       },
+      // AWS_REGION is required by the AWS SDK even when using MinIO
+      // Without this, S3 uploads fail with "Region is missing" error
+      {
+        name: 'AWS_REGION',
+        value: 'us-east-1',
+      },
       {
         name: 'LANGFUSE_S3_FORCE_PATH_STYLE',
         value: 'true',
