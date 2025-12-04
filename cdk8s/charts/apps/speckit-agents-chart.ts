@@ -238,8 +238,12 @@ export class SpecKitAgentsChart extends Chart {
       { name: 'DAPR_GRPC_PORT', value: '50001' },
 
       // Langfuse observability configuration
+      // LangfuseOpenAIChatClient uses direct HTTP ingestion API to log LLM calls
       { name: 'LANGFUSE_HOST', value: 'http://langfuse.observability.svc.cluster.local:3000' },
       { name: 'LANGFUSE_ENABLED', value: 'true' },
+      // Project-specific API keys from langfuse-init secret (generated during headless initialization)
+      { name: 'LANGFUSE_PUBLIC_KEY', value: 'pk-lf-37df8de0-fbee-4c38-a0cc-05ce1ceb22c0' },
+      { name: 'LANGFUSE_SECRET_KEY', value: 'sk-lf-76f23bdc-7782-4064-8ffd-c163c203a5b7' },
     ];
 
     // Deployment
