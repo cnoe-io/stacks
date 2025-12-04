@@ -1522,7 +1522,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'dapr-agents',
         agentImage: 'docker.io/vpittamp23/speckit-agents',  // Public image on Docker Hub
-        imageTag: 'latest',
+        imageTag: 'langfuse-v4',
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
         workflowStateStore: 'workflowstatestore',

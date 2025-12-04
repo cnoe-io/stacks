@@ -325,7 +325,7 @@ class LangfuseOpenAIChatClient:
             **kwargs: Additional arguments passed to the underlying client
 
         Returns:
-            LLMChatResponse from the underlying client
+            LLMChatResponse or Pydantic model (when response_format is specified)
         """
         import time
 
@@ -336,7 +336,7 @@ class LangfuseOpenAIChatClient:
         input_messages = self._normalize_messages(messages)
 
         # Get model from kwargs or use default
-        model = kwargs.get("model") or self._client.config.model if hasattr(self._client, "config") else "gpt-4o"
+        model = kwargs.get("model", "gpt-4o")
 
         try:
             # Call the underlying client
@@ -347,20 +347,51 @@ class LangfuseOpenAIChatClient:
 
             # Log to Langfuse if available
             if langfuse:
-                self._log_generation(
-                    langfuse=langfuse,
-                    name=f"{self._agent_name}_llm_call",
-                    model=response.metadata.get("model", model),
-                    input_messages=input_messages,
-                    output=self._extract_output(response),
-                    usage=response.metadata.get("usage"),
-                    latency_ms=latency_ms,
-                    metadata={
-                        "agent": self._agent_name,
-                        "provider": response.metadata.get("provider", "openai"),
-                        "finish_reason": response.results[0].finish_reason if response.results else None,
-                    },
-                )
+                # When response_format is specified, OpenAIChatClient returns the Pydantic
+                # model directly instead of LLMChatResponse. Detect this by checking for
+                # the presence of 'metadata' and 'results' attributes.
+                if hasattr(response, "metadata") and hasattr(response, "results"):
+                    # Standard LLMChatResponse
+                    self._log_generation(
+                        langfuse=langfuse,
+                        name=f"{self._agent_name}_llm_call",
+                        model=response.metadata.get("model", model),
+                        input_messages=input_messages,
+                        output=self._extract_output(response),
+                        usage=response.metadata.get("usage"),
+                        latency_ms=latency_ms,
+                        metadata={
+                            "agent": self._agent_name,
+                            "provider": response.metadata.get("provider", "openai"),
+                            "finish_reason": response.results[0].finish_reason if response.results else None,
+                        },
+                    )
+                else:
+                    # Structured output - response is a Pydantic model
+                    output_str = None
+                    if hasattr(response, "model_dump"):
+                        import json
+                        output_str = json.dumps(response.model_dump(), indent=2)
+                    elif hasattr(response, "__dict__"):
+                        output_str = str(response.__dict__)
+                    else:
+                        output_str = str(response)
+
+                    self._log_generation(
+                        langfuse=langfuse,
+                        name=f"{self._agent_name}_llm_call",
+                        model=model,
+                        input_messages=input_messages,
+                        output=output_str,
+                        usage=None,  # Not available for structured output
+                        latency_ms=latency_ms,
+                        metadata={
+                            "agent": self._agent_name,
+                            "provider": "openai",
+                            "structured_output": True,
+                            "response_type": type(response).__name__,
+                        },
+                    )
 
             return response
 
@@ -437,46 +468,74 @@ class LangfuseOpenAIChatClient:
         metadata: Optional[dict[str, Any]] = None,
         level: str = "DEFAULT",
     ) -> None:
-        """Log an LLM generation to Langfuse."""
-        try:
-            # If we have a trace context, attach to it; otherwise create a standalone trace
-            if self._trace_id:
-                langfuse.generation(
-                    trace_id=self._trace_id,
-                    name=name,
-                    model=model,
-                    input=input_messages,
-                    output=output,
-                    usage=usage,
-                    metadata={
-                        **(metadata or {}),
-                        "latency_ms": latency_ms,
-                    },
-                    level=level,
-                )
-            else:
-                # Create a new trace for this generation
-                trace = langfuse.trace(
-                    name=f"{self._agent_name}_workflow",
-                    session_id=self._session_id,
-                    metadata={"agent": self._agent_name},
-                )
-                langfuse.generation(
-                    trace_id=trace.id,
-                    name=name,
-                    model=model,
-                    input=input_messages,
-                    output=output,
-                    usage=usage,
-                    metadata={
-                        **(metadata or {}),
-                        "latency_ms": latency_ms,
-                    },
-                    level=level,
-                )
+        """Log an LLM generation to Langfuse using direct HTTP ingestion API.
 
-            # Flush to ensure traces are sent promptly
-            langfuse.flush()
+        Uses Langfuse's /api/public/ingestion endpoint directly since v3 SDK
+        defaults to OTEL which may not be configured.
+        """
+        import os
+        import uuid
+        from datetime import datetime
+        import requests
+
+        try:
+            host = os.getenv("LANGFUSE_HOST", "http://langfuse.observability.svc.cluster.local:3000")
+            pk = os.getenv("LANGFUSE_PUBLIC_KEY")
+            sk = os.getenv("LANGFUSE_SECRET_KEY")
+
+            if not pk or not sk:
+                logger.warning("Langfuse API keys not configured, skipping trace")
+                return
+
+            trace_id = str(uuid.uuid4())
+            generation_id = str(uuid.uuid4())
+            timestamp = datetime.utcnow().isoformat() + "Z"
+
+            # Build batch request with trace and generation
+            batch = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "trace-create",
+                    "timestamp": timestamp,
+                    "body": {
+                        "id": trace_id,
+                        "name": f"{self._agent_name}_workflow",
+                        "metadata": {"agent": self._agent_name},
+                    }
+                },
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "generation-create",
+                    "timestamp": timestamp,
+                    "body": {
+                        "id": generation_id,
+                        "traceId": trace_id,
+                        "name": name,
+                        "model": model,
+                        "input": input_messages,
+                        "output": output,
+                        "metadata": {
+                            **(metadata or {}),
+                            "latency_ms": latency_ms,
+                            "agent": self._agent_name,
+                        },
+                        "level": level,
+                        "usage": usage,
+                    }
+                }
+            ]
+
+            resp = requests.post(
+                f"{host}/api/public/ingestion",
+                json={"batch": batch},
+                auth=(pk, sk),
+                timeout=5,
+            )
+
+            if resp.status_code not in (200, 207):
+                logger.error(f"Langfuse ingestion failed: {resp.status_code} {resp.text[:200]}")
+            else:
+                logger.debug(f"Langfuse trace logged: {trace_id}")
 
         except Exception as e:
             logger.error(f"Failed to log generation to Langfuse: {e}")
