@@ -251,6 +251,16 @@ export class LangfuseChart extends Chart {
         name: 'LANGFUSE_S3_SECRET_ACCESS_KEY',
         value: minioPassword,
       },
+      // AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are required by the AWS SDK
+      // The LANGFUSE_S3_* vars are only read by Langfuse, not passed to AWS SDK
+      {
+        name: 'AWS_ACCESS_KEY_ID',
+        value: minioUser,
+      },
+      {
+        name: 'AWS_SECRET_ACCESS_KEY',
+        value: minioPassword,
+      },
       {
         name: 'LANGFUSE_S3_REGION',
         value: 'us-east-1',
