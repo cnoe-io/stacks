@@ -82,7 +82,7 @@ export interface LangfuseChartProps extends ChartProps {
 
   /**
    * MinIO root user (statically configured to work around K8s env substitution limitations)
-   * @default 'minio'
+   * @default 'minioadmin'
    */
   minioUser?: string;
 
@@ -149,7 +149,7 @@ export class LangfuseChart extends Chart {
     const clickhousePassword = props?.clickhousePassword || 'clickhouse_langfuse_password';
     const redisHost = props?.redisHost || 'langfuse-redis';
     const minioHost = props?.minioHost || 'langfuse-minio';
-    const minioUser = props?.minioUser || 'minio';
+    const minioUser = props?.minioUser || 'minioadmin';
     const minioPassword = props?.minioPassword || 'minio_langfuse_password';
     const credentialsSecretName = props?.credentialsSecretName || 'langfuse-postgres-credentials';
     const _clickhouseCredentialsSecretName = props?.clickhouseCredentialsSecretName || 'langfuse-clickhouse-credentials';
