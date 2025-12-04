@@ -1395,7 +1395,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         clickhousePassword: 'clickhouse_langfuse_password',
         redisHost: 'langfuse-redis',
         minioHost: 'langfuse-minio',
-        minioUser: 'minio',
+        minioUser: 'minioadmin',
         minioPassword: 'minio_langfuse_password',
         credentialsSecretName: 'langfuse-postgres-credentials',
         clickhouseCredentialsSecretName: 'langfuse-clickhouse-credentials',
