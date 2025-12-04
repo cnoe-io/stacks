@@ -1,20 +1,18 @@
 /**
  * LangfuseChart - Langfuse LLM Observability Platform
  *
- * Deploys Langfuse v2.95.1 self-hosted with PostgreSQL backend.
- * Note: Using v2 because v3 requires ClickHouse. v2 only needs PostgreSQL.
- * - Connects to langfuse-postgres service
- * - Auth secrets from langfuse-auth
- * - Headless initialization via langfuse-init secret for declarative setup
- * - Ingress for local access via langfuse.cnoe.localtest.me
+ * Deploys Langfuse v3 self-hosted with full infrastructure stack:
+ * - PostgreSQL: Primary database
+ * - ClickHouse: Analytics storage (langfuse-clickhouse)
+ * - Redis: Caching (langfuse-redis)
+ * - MinIO: Blob storage (langfuse-minio)
+ * - Web container: Main application
+ * - Worker container: Background job processing
  *
- * Headless Initialization:
- * On startup, Langfuse checks for LANGFUSE_INIT_* environment variables
- * and automatically creates the specified organization, project, user,
- * and API keys if they don't already exist. This enables fully declarative
- * setup without manual UI configuration.
+ * Auth secrets from langfuse-auth, headless initialization via langfuse-init.
+ * Ingress for local access via langfuse.cnoe.localtest.me
  *
- * Sync wave: -60 (after PostgreSQL at -65)
+ * Sync wave: -60 (after infrastructure at -70)
  */
 
 import { Chart, ChartProps } from 'cdk8s';
@@ -30,7 +28,7 @@ export interface LangfuseChartProps extends ChartProps {
 
   /**
    * Langfuse image version
-   * @default '2.95.1' (v2.x only requires PostgreSQL, v3.x requires ClickHouse)
+   * @default '3'
    */
   imageVersion?: string;
 
@@ -53,10 +51,64 @@ export interface LangfuseChartProps extends ChartProps {
   databaseName?: string;
 
   /**
+   * ClickHouse service hostname
+   * @default 'langfuse-clickhouse'
+   */
+  clickhouseHost?: string;
+
+  /**
+   * ClickHouse user (statically configured to work around K8s env substitution limitations)
+   * @default 'default'
+   */
+  clickhouseUser?: string;
+
+  /**
+   * ClickHouse password (statically configured to work around K8s env substitution limitations)
+   * @default 'clickhouse_langfuse_password'
+   */
+  clickhousePassword?: string;
+
+  /**
+   * Redis service hostname
+   * @default 'langfuse-redis'
+   */
+  redisHost?: string;
+
+  /**
+   * MinIO service hostname
+   * @default 'langfuse-minio'
+   */
+  minioHost?: string;
+
+  /**
+   * MinIO root user (statically configured to work around K8s env substitution limitations)
+   * @default 'minio'
+   */
+  minioUser?: string;
+
+  /**
+   * MinIO root password (statically configured to work around K8s env substitution limitations)
+   * @default 'minio_langfuse_password'
+   */
+  minioPassword?: string;
+
+  /**
    * Credentials secret name
    * @default 'langfuse-postgres-credentials'
    */
   credentialsSecretName?: string;
+
+  /**
+   * ClickHouse credentials secret name
+   * @default 'langfuse-clickhouse-credentials'
+   */
+  clickhouseCredentialsSecretName?: string;
+
+  /**
+   * MinIO credentials secret name
+   * @default 'langfuse-minio-credentials'
+   */
+  minioCredentialsSecretName?: string;
 
   /**
    * Auth secret name
@@ -88,11 +140,20 @@ export class LangfuseChart extends Chart {
     super(scope, id, props);
 
     const namespace = props?.namespace || 'observability';
-    const imageVersion = props?.imageVersion || '2.95.1';
+    const imageVersion = props?.imageVersion || '3';
     const postgresHost = props?.postgresHost || 'langfuse-postgres';
     const postgresPort = props?.postgresPort || 5432;
     const databaseName = props?.databaseName || 'langfuse';
+    const clickhouseHost = props?.clickhouseHost || 'langfuse-clickhouse';
+    const clickhouseUser = props?.clickhouseUser || 'default';
+    const clickhousePassword = props?.clickhousePassword || 'clickhouse_langfuse_password';
+    const redisHost = props?.redisHost || 'langfuse-redis';
+    const minioHost = props?.minioHost || 'langfuse-minio';
+    const minioUser = props?.minioUser || 'minio';
+    const minioPassword = props?.minioPassword || 'minio_langfuse_password';
     const credentialsSecretName = props?.credentialsSecretName || 'langfuse-postgres-credentials';
+    const _clickhouseCredentialsSecretName = props?.clickhouseCredentialsSecretName || 'langfuse-clickhouse-credentials';
+    const _minioCredentialsSecretName = props?.minioCredentialsSecretName || 'langfuse-minio-credentials';
     const authSecretName = props?.authSecretName || 'langfuse-auth';
     const initSecretName = props?.initSecretName || 'langfuse-init';
     const ingressHost = props?.ingressHost || 'langfuse.cnoe.localtest.me';
@@ -105,7 +166,148 @@ export class LangfuseChart extends Chart {
       'app.kubernetes.io/part-of': 'observability',
     };
 
-    // Langfuse Deployment
+    const workerLabels = {
+      'app': 'langfuse-worker',
+      'app.kubernetes.io/name': 'langfuse-worker',
+      'app.kubernetes.io/component': 'llm-observability',
+      'app.kubernetes.io/part-of': 'observability',
+    };
+
+    // Common environment variables for both web and worker
+    // Note: Using static values for credentials in URLs because Kubernetes $(VAR) substitution
+    // doesn't work when the referenced variable comes from valueFrom (secretKeyRef).
+    // Only $(VAR) syntax for variables defined as literal 'value:' works.
+    const commonEnv: k8s.EnvVar[] = [
+      // Database connection - uses $(VAR) substitution (works because POSTGRES_USER/PASSWORD come first)
+      {
+        name: 'POSTGRES_USER',
+        valueFrom: {
+          secretKeyRef: {
+            name: credentialsSecretName,
+            key: 'POSTGRES_USER',
+          },
+        },
+      },
+      {
+        name: 'POSTGRES_PASSWORD',
+        valueFrom: {
+          secretKeyRef: {
+            name: credentialsSecretName,
+            key: 'POSTGRES_PASSWORD',
+          },
+        },
+      },
+      {
+        name: 'DATABASE_URL',
+        value: `postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@${postgresHost}:${postgresPort}/${databaseName}`,
+      },
+      // ClickHouse connection - use static values (K8s env substitution limitation)
+      // CLICKHOUSE_USER/PASSWORD required by migration script, CLICKHOUSE_URL used by app
+      {
+        name: 'CLICKHOUSE_USER',
+        value: clickhouseUser,
+      },
+      {
+        name: 'CLICKHOUSE_PASSWORD',
+        value: clickhousePassword,
+      },
+      {
+        name: 'CLICKHOUSE_URL',
+        value: `http://${clickhouseUser}:${clickhousePassword}@${clickhouseHost}:8123`,
+      },
+      {
+        name: 'CLICKHOUSE_MIGRATION_URL',
+        value: `clickhouse://${clickhouseUser}:${clickhousePassword}@${clickhouseHost}:9000`,
+      },
+      // Redis connection
+      {
+        name: 'REDIS_HOST',
+        value: redisHost,
+      },
+      {
+        name: 'REDIS_PORT',
+        value: '6379',
+      },
+      // MinIO/S3 connection - use static values (K8s env substitution limitation)
+      {
+        name: 'LANGFUSE_S3_BUCKET_NAME',
+        value: 'langfuse',
+      },
+      {
+        name: 'LANGFUSE_S3_ENDPOINT',
+        value: `http://${minioHost}:9000`,
+      },
+      {
+        name: 'LANGFUSE_S3_ACCESS_KEY_ID',
+        value: minioUser,
+      },
+      {
+        name: 'LANGFUSE_S3_SECRET_ACCESS_KEY',
+        value: minioPassword,
+      },
+      {
+        name: 'LANGFUSE_S3_REGION',
+        value: 'us-east-1',
+      },
+      {
+        name: 'LANGFUSE_S3_FORCE_PATH_STYLE',
+        value: 'true',
+      },
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_BUCKET',
+        value: 'langfuse',
+      },
+      // NextAuth configuration
+      {
+        name: 'NEXTAUTH_URL',
+        value: nextAuthUrl,
+      },
+      {
+        name: 'NEXTAUTH_SECRET',
+        valueFrom: {
+          secretKeyRef: {
+            name: authSecretName,
+            key: 'NEXTAUTH_SECRET',
+          },
+        },
+      },
+      // Langfuse secrets
+      {
+        name: 'SALT',
+        valueFrom: {
+          secretKeyRef: {
+            name: authSecretName,
+            key: 'SALT',
+          },
+        },
+      },
+      {
+        name: 'ENCRYPTION_KEY',
+        valueFrom: {
+          secretKeyRef: {
+            name: authSecretName,
+            key: 'ENCRYPTION_KEY',
+          },
+        },
+      },
+      // ClickHouse single-node mode (no Zookeeper/cluster)
+      // Required for single-node ClickHouse deployments without Zookeeper
+      {
+        name: 'CLICKHOUSE_CLUSTER_ENABLED',
+        value: 'false',
+      },
+      // Settings
+      {
+        name: 'TELEMETRY_ENABLED',
+        value: 'false',
+      },
+      {
+        name: 'AUTH_DISABLE_SIGNUP',
+        value: 'false',
+      },
+    ];
+
+    // Langfuse Web Deployment
     new k8s.KubeDeployment(this, 'deployment', {
       metadata: {
         name: 'langfuse',
@@ -140,81 +342,13 @@ export class LangfuseChart extends Chart {
                 ports: [
                   { containerPort: 3000, name: 'http', protocol: 'TCP' },
                 ],
-                env: [
-                  // Database connection via constructed URL
-                  {
-                    name: 'POSTGRES_USER',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: credentialsSecretName,
-                        key: 'POSTGRES_USER',
-                      },
-                    },
-                  },
-                  {
-                    name: 'POSTGRES_PASSWORD',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: credentialsSecretName,
-                        key: 'POSTGRES_PASSWORD',
-                      },
-                    },
-                  },
-                  {
-                    name: 'DATABASE_URL',
-                    value: `postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@${postgresHost}:${postgresPort}/${databaseName}`,
-                  },
-                  // NextAuth configuration
-                  {
-                    name: 'NEXTAUTH_URL',
-                    value: nextAuthUrl,
-                  },
-                  {
-                    name: 'NEXTAUTH_SECRET',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: authSecretName,
-                        key: 'NEXTAUTH_SECRET',
-                      },
-                    },
-                  },
-                  // Langfuse specific secrets
-                  {
-                    name: 'SALT',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: authSecretName,
-                        key: 'SALT',
-                      },
-                    },
-                  },
-                  {
-                    name: 'ENCRYPTION_KEY',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: authSecretName,
-                        key: 'ENCRYPTION_KEY',
-                      },
-                    },
-                  },
-                  // Enable telemetry for self-hosted
-                  {
-                    name: 'TELEMETRY_ENABLED',
-                    value: 'false',
-                  },
-                  // Disable sign-ups after initial admin (optional)
-                  {
-                    name: 'AUTH_DISABLE_SIGNUP',
-                    value: 'false',
-                  },
-                ],
+                env: commonEnv,
                 // Mount headless initialization secrets as environment variables
-                // These LANGFUSE_INIT_* vars configure automatic org/project/user/API key creation
                 envFrom: [
                   {
                     secretRef: {
                       name: initSecretName,
-                      optional: true, // Allow deployment without init secret (manual setup fallback)
+                      optional: true,
                     },
                   },
                 ],
@@ -233,7 +367,7 @@ export class LangfuseChart extends Chart {
                     path: '/api/public/health',
                     port: k8s.IntOrString.fromNumber(3000),
                   },
-                  initialDelaySeconds: 30,
+                  initialDelaySeconds: 60,
                   periodSeconds: 10,
                 },
                 livenessProbe: {
@@ -241,8 +375,66 @@ export class LangfuseChart extends Chart {
                     path: '/api/public/health',
                     port: k8s.IntOrString.fromNumber(3000),
                   },
-                  initialDelaySeconds: 60,
+                  initialDelaySeconds: 90,
                   periodSeconds: 30,
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    // Langfuse Worker Deployment (v3 requirement)
+    new k8s.KubeDeployment(this, 'worker-deployment', {
+      metadata: {
+        name: 'langfuse-worker',
+        namespace,
+        labels: workerLabels,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-60',
+        },
+      },
+      spec: {
+        replicas: 1,
+        selector: {
+          matchLabels: {
+            'app': 'langfuse-worker',
+          },
+        },
+        template: {
+          metadata: {
+            labels: workerLabels,
+          },
+          spec: {
+            securityContext: {
+              runAsNonRoot: true,
+              runAsUser: 1000,
+              runAsGroup: 1000,
+              fsGroup: 1000,
+            },
+            containers: [
+              {
+                name: 'langfuse-worker',
+                image: `langfuse/langfuse-worker:${imageVersion}`,
+                env: commonEnv,
+                envFrom: [
+                  {
+                    secretRef: {
+                      name: initSecretName,
+                      optional: true,
+                    },
+                  },
+                ],
+                resources: {
+                  requests: {
+                    memory: k8s.Quantity.fromString('512Mi'),
+                    cpu: k8s.Quantity.fromString('250m'),
+                  },
+                  limits: {
+                    memory: k8s.Quantity.fromString('2Gi'),
+                    cpu: k8s.Quantity.fromString('1000m'),
+                  },
                 },
               },
             ],

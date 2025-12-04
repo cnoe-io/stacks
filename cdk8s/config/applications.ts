@@ -862,6 +862,25 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale Serve endpoint for Langfuse (userspace, independent of operator proxy)
+  {
+    name: 'langfuse-tailscale-serve',
+    namespace: 'tailscale',
+    chart: { type: 'LangfuseTailscaleServeChart' },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
   // Tailscale exposure for all ingress hosts via ingress-nginx
   // Sync wave 50: Delayed to allow Tailscale device cleanup grace period (120s) to complete
   // during cluster recreation. Early sync wave (-35) caused hostname conflicts (-3 suffix).
@@ -1259,7 +1278,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     },
     argocd: {
-      syncWave: '-65',
+      syncWave: '-75',
       labels: {
         'app.kubernetes.io/name': 'langfuse-postgres',
         'app.kubernetes.io/component': 'database',
@@ -1274,7 +1293,92 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Langfuse LLM Observability
+  // Langfuse ClickHouse (v3 requirement)
+  {
+    name: 'langfuse-clickhouse',
+    namespace: 'observability',
+    chart: {
+      type: 'LangfuseClickhouseChart',
+      props: {
+        namespace: 'observability',
+        imageVersion: '24.3',
+        storageSize: '10Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-70',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-clickhouse',
+        'app.kubernetes.io/component': 'database',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Langfuse Redis (v3 requirement)
+  {
+    name: 'langfuse-redis',
+    namespace: 'observability',
+    chart: {
+      type: 'LangfuseRedisChart',
+      props: {
+        namespace: 'observability',
+        imageVersion: '7-alpine',
+        enablePersistence: false
+      }
+    },
+    argocd: {
+      syncWave: '-70',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-redis',
+        'app.kubernetes.io/component': 'cache',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Langfuse MinIO (v3 requirement for blob storage)
+  {
+    name: 'langfuse-minio',
+    namespace: 'observability',
+    chart: {
+      type: 'LangfuseMinioChart',
+      props: {
+        namespace: 'observability',
+        storageSize: '10Gi',
+        bucketName: 'langfuse'
+      }
+    },
+    argocd: {
+      syncWave: '-70',
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-minio',
+        'app.kubernetes.io/component': 'blob-storage',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Langfuse LLM Observability (v3 with full infrastructure)
+  // Access via Tailscale: https://langfuse-2.tail286401.ts.net/
   {
     name: 'langfuse',
     namespace: 'observability',
@@ -1282,14 +1386,24 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'LangfuseChart',
       props: {
         namespace: 'observability',
-        imageVersion: '2.95.1', // Using v2.x because v3.x requires ClickHouse
+        imageVersion: '3',
         postgresHost: 'langfuse-postgres',
         postgresPort: 5432,
         databaseName: 'langfuse',
+        clickhouseHost: 'langfuse-clickhouse',
+        clickhouseUser: 'default',
+        clickhousePassword: 'clickhouse_langfuse_password',
+        redisHost: 'langfuse-redis',
+        minioHost: 'langfuse-minio',
+        minioUser: 'minio',
+        minioPassword: 'minio_langfuse_password',
         credentialsSecretName: 'langfuse-postgres-credentials',
+        clickhouseCredentialsSecretName: 'langfuse-clickhouse-credentials',
+        minioCredentialsSecretName: 'langfuse-minio-credentials',
         authSecretName: 'langfuse-auth',
         ingressHost: 'langfuse.cnoe.localtest.me',
-        nextAuthUrl: 'https://langfuse.cnoe.localtest.me:8443'
+        // Use Tailscale URL for remote access (NextAuth requires exact URL match)
+        nextAuthUrl: 'https://langfuse-2.tail286401.ts.net'
       }
     },
     argocd: {
