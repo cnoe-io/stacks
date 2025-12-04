@@ -5,7 +5,14 @@
  * Note: Using v2 because v3 requires ClickHouse. v2 only needs PostgreSQL.
  * - Connects to langfuse-postgres service
  * - Auth secrets from langfuse-auth
+ * - Headless initialization via langfuse-init secret for declarative setup
  * - Ingress for local access via langfuse.cnoe.localtest.me
+ *
+ * Headless Initialization:
+ * On startup, Langfuse checks for LANGFUSE_INIT_* environment variables
+ * and automatically creates the specified organization, project, user,
+ * and API keys if they don't already exist. This enables fully declarative
+ * setup without manual UI configuration.
  *
  * Sync wave: -60 (after PostgreSQL at -65)
  */
@@ -58,6 +65,12 @@ export interface LangfuseChartProps extends ChartProps {
   authSecretName?: string;
 
   /**
+   * Headless initialization secret name (contains LANGFUSE_INIT_* vars)
+   * @default 'langfuse-init'
+   */
+  initSecretName?: string;
+
+  /**
    * Ingress hostname
    * @default 'langfuse.cnoe.localtest.me'
    */
@@ -81,6 +94,7 @@ export class LangfuseChart extends Chart {
     const databaseName = props?.databaseName || 'langfuse';
     const credentialsSecretName = props?.credentialsSecretName || 'langfuse-postgres-credentials';
     const authSecretName = props?.authSecretName || 'langfuse-auth';
+    const initSecretName = props?.initSecretName || 'langfuse-init';
     const ingressHost = props?.ingressHost || 'langfuse.cnoe.localtest.me';
     const nextAuthUrl = props?.nextAuthUrl || 'https://langfuse.cnoe.localtest.me:8443';
 
@@ -192,6 +206,16 @@ export class LangfuseChart extends Chart {
                   {
                     name: 'AUTH_DISABLE_SIGNUP',
                     value: 'false',
+                  },
+                ],
+                // Mount headless initialization secrets as environment variables
+                // These LANGFUSE_INIT_* vars configure automatic org/project/user/API key creation
+                envFrom: [
+                  {
+                    secretRef: {
+                      name: initSecretName,
+                      optional: true, // Allow deployment without init secret (manual setup fallback)
+                    },
                   },
                 ],
                 resources: {

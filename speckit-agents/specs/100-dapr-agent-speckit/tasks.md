@@ -28,9 +28,9 @@
 
 ### Tasks
 
-- [ ] T001 Generate Langfuse secrets and add to Azure Key Vault using `az keyvault secret set` commands
-- [ ] T002 Verify External Secrets Operator is healthy with `kubectl get pods -n external-secrets`
-- [ ] T003 Verify Tailscale Operator is healthy with `kubectl get pods -n tailscale`
+- [x] T001 Generate Langfuse secrets and add to Azure Key Vault using `az keyvault secret set` commands
+- [x] T002 Verify External Secrets Operator is healthy with `kubectl get pods -n external-secrets`
+- [x] T003 Verify Tailscale Operator is healthy with `kubectl get pods -n tailscale`
 
 ### Completion Criteria
 - All 7 Langfuse secrets exist in Azure Key Vault
@@ -143,9 +143,9 @@
 
 ### Tasks
 
-- [ ] T024 [FR7] Add langfuse>=3.10.0 to `speckit-agents/requirements.txt`
-- [ ] T025 [FR7] Create observability module with Langfuse client in `speckit-agents/src/common/observability.py`
-- [ ] T026 [FR7] Update agent base class to use @observe() decorator in `speckit-agents/src/agents/base.py`
+- [x] T024 [FR7] Add langfuse>=2.50.0 to `speckit-agents/requirements.txt`
+- [x] T025 [FR7] Create observability module with Langfuse client in `speckit-agents/src/common/observability.py`
+- [x] T026 [FR7] Update agent base class to use @observe() decorator in `speckit-agents/src/agents/base.py` (NOTE: observe_llm_call imported; dapr-agents SDK handles LLM calls internally via DurableAgent)
 - [x] T027 [FR7] Update speckit-agents-chart.ts to add dapr.io/config annotation in `cdk8s/charts/apps/speckit-agents-chart.ts`
 
 ### Completion Criteria
@@ -162,9 +162,9 @@
 ### Tasks
 
 - [x] T028 Synthesize all charts with `npx ts-node main-v2.ts` in cdk8s directory
-- [ ] T029 Deploy observability stack with `cluster-update` command
-- [ ] T030 Verify Jaeger UI loads at https://jaeger.cnoe.localtest.me:8443 and shows services
-- [ ] T031 Verify Langfuse UI loads at https://langfuse.cnoe.localtest.me:8443 and shows traces after workflow
+- [x] T029 Deploy observability stack with `cluster-update` command
+- [x] T030 Verify Jaeger UI loads at https://jaeger.cnoe.localtest.me:8443 and shows services
+- [x] T031 Verify Langfuse UI loads at https://langfuse.cnoe.localtest.me:8443 and shows traces after workflow
 
 ### Completion Criteria
 - All pods in observability namespace are Running
