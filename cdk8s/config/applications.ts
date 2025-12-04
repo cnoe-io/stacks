@@ -792,21 +792,26 @@ export const applicationConfigs: ApplicationConfig[] = [
   //   }
   // },
 
-  // Tailscale API Proxy (sidecar approach)
+  // Tailscale Serve for Kubernetes API (kubectl access)
+  // Replaces tailscale-api-proxy with Tailscale Services for stable URL
+  // Access: https://k8s-api.<tailnet>.ts.net
   {
-    name: 'tailscale-api-proxy',
+    name: 'k8s-api-tailscale-serve',
     namespace: 'tailscale',
     chart: {
-      type: 'TailscaleApiProxyChart',
+      type: 'K8sApiTailscaleServeChart',
       props: {
-        clusterName: process.env.CLUSTER_NAME || 'kind',
+        serviceName: 'k8s-api',
         authKeySecretName: 'tailscale-auth-key',
-        tailscaleImage: 'tailscale/tailscale:latest',
-        kubectlImage: 'bitnami/kubectl:latest'
       }
     },
     argocd: {
       syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'k8s-api-tailscale-serve',
+        'app.kubernetes.io/component': 'api-proxy',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
       syncPolicy: {
         automated: { prune: true, selfHeal: true }
       }
@@ -844,10 +849,22 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
+  // Uses Tailscale Services for stable URL: https://svc:argocd.<tailnet>.ts.net
   {
     name: 'argocd-tailscale-serve',
     namespace: 'tailscale',
-    chart: { type: 'ArgoCdTailscaleServeChart' },
+    chart: {
+      type: 'ArgoCdTailscaleServeChart',
+      props: {
+        serviceName: 'argocd',
+        backendHost: 'argocd-server.argocd.svc.cluster.local',
+        backendPort: 443,
+        backendInsecure: true, // ArgoCD uses self-signed certs
+        // Set legacyHostnameMode: true to revert to hostname-based access
+        // legacyHostnameMode: true,
+        // legacyHostname: 'argocd-ui-serve',
+      }
+    },
     argocd: {
       syncWave: '-40',
       labels: {
@@ -863,14 +880,176 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Tailscale Serve endpoint for Langfuse (userspace, independent of operator proxy)
+  // Uses Tailscale Services for stable URL: https://svc:langfuse.<tailnet>.ts.net
   {
     name: 'langfuse-tailscale-serve',
     namespace: 'tailscale',
-    chart: { type: 'LangfuseTailscaleServeChart' },
+    chart: {
+      type: 'LangfuseTailscaleServeChart',
+      props: {
+        serviceName: 'langfuse',
+        backendHost: 'langfuse.observability.svc.cluster.local',
+        backendPort: 3000,
+        backendScheme: 'http', // Langfuse uses HTTP internally
+        // Set legacyHostnameMode: true to revert to hostname-based access
+        // legacyHostnameMode: true,
+        // legacyHostname: 'langfuse',
+      }
+    },
     argocd: {
       syncWave: '-40',
       labels: {
         'app.kubernetes.io/name': 'langfuse-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale Serve for Gitea (Git server)
+  // Uses Tailscale Services for stable URL: https://gitea.<tailnet>.ts.net
+  {
+    name: 'gitea-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'gitea',
+        backendHost: 'my-gitea-http.gitea.svc.cluster.local',
+        backendPort: 3000,
+        backendScheme: 'http',
+        deploymentName: 'gitea-tailscale-serve',
+        partOf: 'gitea'
+      }
+    },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'gitea-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale Serve for Keycloak (Identity provider)
+  // Uses Tailscale Services for stable URL: https://keycloak.<tailnet>.ts.net
+  {
+    name: 'keycloak-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'keycloak',
+        backendHost: 'keycloak.keycloak.svc.cluster.local',
+        backendPort: 8080,
+        backendScheme: 'http',
+        deploymentName: 'keycloak-tailscale-serve',
+        partOf: 'keycloak'
+      }
+    },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'keycloak-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale Serve for Headlamp (Kubernetes dashboard)
+  // Uses Tailscale Services for stable URL: https://headlamp.<tailnet>.ts.net
+  {
+    name: 'headlamp-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'headlamp',
+        backendHost: 'headlamp.headlamp.svc.cluster.local',
+        backendPort: 80,
+        backendScheme: 'http',
+        deploymentName: 'headlamp-tailscale-serve',
+        partOf: 'headlamp'
+      }
+    },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'headlamp-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale Serve for Kargo (GitOps promotion controller)
+  // Uses Tailscale Services for stable URL: https://kargo.<tailnet>.ts.net
+  {
+    name: 'kargo-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kargo',
+        backendHost: 'kargo-api.kargo.svc.cluster.local',
+        backendPort: 443,
+        backendInsecure: true, // Kargo uses self-signed certs - this will use https+insecure://
+        deploymentName: 'kargo-tailscale-serve',
+        partOf: 'kargo'
+      }
+    },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'kargo-tailscale-serve',
+        'app.kubernetes.io/component': 'network',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Tailscale Serve for Kagent (AI agent dashboard)
+  // Uses Tailscale Services for stable URL: https://kagent.<tailnet>.ts.net
+  {
+    name: 'kagent-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kagent',
+        backendHost: 'kagent-dashboard.kagent.svc.cluster.local',
+        backendPort: 8080,
+        backendScheme: 'http',
+        deploymentName: 'kagent-tailscale-serve',
+        partOf: 'kagent'
+      }
+    },
+    argocd: {
+      syncWave: '-40',
+      labels: {
+        'app.kubernetes.io/name': 'kagent-tailscale-serve',
         'app.kubernetes.io/component': 'network',
         'app.kubernetes.io/part-of': 'tailscale'
       },
@@ -1402,8 +1581,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         minioCredentialsSecretName: 'langfuse-minio-credentials',
         authSecretName: 'langfuse-auth',
         ingressHost: 'langfuse.cnoe.localtest.me',
-        // Use Tailscale URL for remote access (NextAuth requires exact URL match)
-        nextAuthUrl: 'https://langfuse-2.tail286401.ts.net'
+        // Use Tailscale Services URL for remote access (NextAuth requires exact URL match)
+        // Format: svc:<name>.<tailnet>.ts.net - stable URL that survives cluster recreation
+        nextAuthUrl: 'https://svc-langfuse.tail286401.ts.net'
       }
     },
     argocd: {
