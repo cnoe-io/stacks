@@ -43,7 +43,7 @@ export interface SpecKitAgentsChartProps extends ChartProps {
 
   /**
    * Container image for agents
-   * @default 'ghcr.io/pittampalliorg/speckit-agents'
+   * @default 'docker.io/vpittamp23/speckit-agents'
    */
   agentImage?: string;
 
@@ -101,7 +101,7 @@ export class SpecKitAgentsChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || 'dapr-agents';
-    const agentImage = props.agentImage || 'speckit-agents';
+    const agentImage = props.agentImage || 'docker.io/vpittamp23/speckit-agents';
     const imageTag = props.imageTag || 'latest';
     const teamName = props.teamName || 'speckit';
     const pubsubName = props.pubsubName || 'messagepubsub';

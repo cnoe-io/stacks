@@ -1493,7 +1493,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'speckit-agents',  // Local image loaded via 'kind load docker-image'
+        agentImage: 'docker.io/vpittamp23/speckit-agents',  // Public image on Docker Hub
         imageTag: 'latest',
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
