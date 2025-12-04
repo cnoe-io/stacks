@@ -285,9 +285,33 @@ export class LangfuseChart extends Chart {
         name: 'AWS_S3_FORCE_PATH_STYLE',
         value: 'true',
       },
+      // Langfuse v3 Event Upload S3 configuration (these are the actual vars Langfuse uses internally)
+      // See https://langfuse.com/self-hosting/deployment/infrastructure/blobstorage
       {
         name: 'LANGFUSE_S3_EVENT_UPLOAD_BUCKET',
         value: 'langfuse',
+      },
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_REGION',
+        value: 'us-east-1',
+      },
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID',
+        value: minioUser,
+      },
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY',
+        value: minioPassword,
+      },
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT',
+        value: `http://${minioHost}:9000`,
+      },
+      // CRITICAL: This enables path-style URLs for MinIO (bucket.endpoint -> endpoint/bucket)
+      // Without this, Langfuse tries to resolve langfuse.langfuse-minio which fails DNS
+      {
+        name: 'LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE',
+        value: 'true',
       },
       // NextAuth configuration
       {
