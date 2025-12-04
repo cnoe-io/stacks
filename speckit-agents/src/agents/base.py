@@ -19,19 +19,23 @@ from dapr_agents.agents.configs import (
 )
 from dapr_agents.agents.durable import DurableAgent
 from dapr_agents.agents.prompting import AgentProfileConfig
-from dapr_agents.llm.openai import OpenAIChatClient
+from dapr_agents.llm.openai import OpenAIChatClient  # noqa: F401 - kept for type compatibility
 from dapr_agents.memory import ConversationDaprStateMemory
 from dapr_agents.storage.daprstores.stateservice import StateStoreService
 from dapr_agents.workflow.runners import AgentRunner
 
 from src.common.config import Config, get_config
 from src.common.models import (
+    TraceContext,
     Workflow,
     WorkflowMessage,
     WorkflowPhase,
     WorkflowStatus,
 )
 from src.common.observability import (
+    LangfuseOpenAIChatClient,
+    create_generation,
+    flush_langfuse,
     get_langfuse,
     observe_llm_call,
     shutdown_langfuse,
@@ -68,6 +72,10 @@ class BaseAgent(ABC):
 
         # Dapr client (lazy initialized)
         self._dapr_client: Optional[DaprClient] = None
+
+        # Langfuse trace management (T006)
+        self._trace_id: Optional[str] = None
+        self._workflow_id: Optional[UUID] = None
 
         # Build Dapr agent configurations
         self.profile = self._build_profile()
@@ -206,13 +214,19 @@ class BaseAgent(ABC):
         task: str,
         context: Optional[dict[str, Any]] = None,
     ) -> None:
-        """Route a task to another agent via pub/sub."""
+        """Route a task to another agent via pub/sub with embedded trace context (T009)."""
         topic = f"{self.config.team_name}.{target_agent}.requests"
+
+        # Embed trace_id in context for propagation to worker agents
+        enriched_context = context.copy() if context else {}
+        if self._trace_id:
+            enriched_context["langfuse_trace_id"] = self._trace_id
+
         message = WorkflowMessage(
             source=self.name,
             workflow_id=workflow_id,
             task=task,
-            context=context or {},
+            context=enriched_context,
         )
 
         try:
@@ -225,10 +239,57 @@ class BaseAgent(ABC):
                 data_content_type="application/json",
                 publish_metadata={"cloudevent.type": "AgentTask"},
             )
-            logger.info(f"Routed task to {target_agent} for workflow {workflow_id}")
+            logger.info(f"Routed task to {target_agent} for workflow {workflow_id} (trace_id: {self._trace_id})")
         except Exception as e:
             logger.error(f"Failed to route to {target_agent}: {e}")
             raise
+
+    async def initialize_trace_for_workflow(self, workflow_id: UUID) -> None:
+        """Initialize Langfuse trace for this workflow (T007).
+
+        Called at the start of workflow execution (typically by Orchestrator).
+        Sets self._trace_id which is used by all subsequent LLM calls.
+
+        Args:
+            workflow_id: The workflow instance ID (used as session_id)
+        """
+        langfuse = get_langfuse()
+        if langfuse:
+            try:
+                trace = langfuse.trace(
+                    name=f"workflow_{workflow_id}",
+                    session_id=str(workflow_id),
+                    metadata={
+                        "workflow_id": str(workflow_id),
+                        "agent": self.name,
+                    },
+                )
+                self._trace_id = trace.id
+                self._workflow_id = workflow_id
+                logger.info(f"Initialized Langfuse trace: {self._trace_id} for workflow {workflow_id}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Langfuse trace: {e}")
+                # Continue without tracing - graceful degradation
+        else:
+            self._workflow_id = workflow_id
+
+    def extract_trace_context_from_message(self, context: dict[str, Any]) -> Optional[str]:
+        """Extract Langfuse trace ID from incoming workflow message context (T008).
+
+        Called by worker agents when receiving routed tasks. The trace_id
+        is embedded in the message context by the sender (Orchestrator).
+
+        Args:
+            context: The context dict from WorkflowMessage
+
+        Returns:
+            The trace_id if present, None otherwise
+        """
+        trace_id = context.get("langfuse_trace_id")
+        if trace_id:
+            self._trace_id = trace_id
+            logger.debug(f"Extracted trace_id from context: {trace_id}")
+        return trace_id
 
     @abstractmethod
     async def process_task(
@@ -328,12 +389,10 @@ def create_durable_agent(
         )
     )
 
-    # Create LLM client using OpenAI directly
-    # NOTE: DaprChatClient has a bug where it sets provider="dapr" which is not
-    # a recognized format type in validate_and_format_tool (only supports:
-    # openai, azure_openai, nvidia, huggingface, claude, llama).
-    # The official dapr-agents quickstart uses OpenAIChatClient.
-    llm = OpenAIChatClient()
+    # Create LLM client with Langfuse instrumentation
+    # This wrapper automatically logs all LLM calls to Langfuse with token usage,
+    # latency, and error tracking. It delegates to OpenAIChatClient for actual API calls.
+    llm = LangfuseOpenAIChatClient(agent_name=name)
 
     # Create the DurableAgent
     agent = DurableAgent(

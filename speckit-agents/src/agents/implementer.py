@@ -60,17 +60,26 @@ class ImplementerAgent(BaseAgent):
         task: str,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process an implementation task.
+        """Process an implementation task (T018).
 
         Args:
             workflow_id: The workflow ID
             task: Task description from orchestrator
-            context: Context including artifacts and task info
+            context: Context including artifacts, task info, and langfuse_trace_id
 
         Returns:
             Result dict with implementation status
         """
         logger.info(f"Implementer processing task for workflow {workflow_id}")
+
+        # Extract trace context from message (T018)
+        # This allows LLM calls to be correlated under the parent workflow trace
+        trace_id = self.extract_trace_context_from_message(context)
+        if not trace_id:
+            # Fallback: create new trace if not propagated from orchestrator
+            await self.initialize_trace_for_workflow(workflow_id)
+        else:
+            self._workflow_id = workflow_id
 
         try:
             # Get artifacts from context

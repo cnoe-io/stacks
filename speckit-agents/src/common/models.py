@@ -178,6 +178,60 @@ class WorkflowMessage(BaseModel):
 
 
 # =============================================================================
+# Observability Models (Langfuse Tracing)
+# =============================================================================
+
+
+class Message(BaseModel):
+    """Chat message in OpenAI format for Langfuse tracing."""
+
+    role: str = Field(..., pattern="^(system|user|assistant)$")
+    content: str
+
+
+class TokenUsage(BaseModel):
+    """Token consumption for an LLM call."""
+
+    prompt_tokens: int = Field(..., ge=0)
+    completion_tokens: int = Field(..., ge=0)
+    total_tokens: int = Field(..., ge=0)
+
+
+class TraceContext(BaseModel):
+    """Runtime trace context for agents.
+
+    Used to propagate Langfuse trace_id across agents via workflow messages.
+    """
+
+    trace_id: Optional[str] = None
+    workflow_id: UUID
+    agent_name: str
+    parent_observation_id: Optional[str] = None
+
+    def to_message_context(self) -> dict[str, Any]:
+        """Convert to dict for embedding in workflow message."""
+        return {
+            "langfuse_trace_id": self.trace_id,
+            "langfuse_parent_observation_id": self.parent_observation_id,
+        }
+
+    @classmethod
+    def from_message_context(
+        cls,
+        workflow_id: UUID,
+        agent_name: str,
+        context: dict[str, Any],
+    ) -> "TraceContext":
+        """Extract trace context from workflow message."""
+        return cls(
+            trace_id=context.get("langfuse_trace_id"),
+            workflow_id=workflow_id,
+            agent_name=agent_name,
+            parent_observation_id=context.get("langfuse_parent_observation_id"),
+        )
+
+
+# =============================================================================
 # Response Models
 # =============================================================================
 

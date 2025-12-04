@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -18,6 +19,7 @@ from src.common.models import (
     WorkflowPhase,
     WorkflowStatus,
 )
+from src.common.observability import create_generation
 from src.prompts.specifier import format_spec_prompt, get_system_prompt
 
 logger = logging.getLogger(__name__)
@@ -60,17 +62,26 @@ class SpecifierAgent(BaseAgent):
         task: str,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process a specification generation task.
+        """Process a specification generation task (T017).
 
         Args:
             workflow_id: The workflow this task belongs to
             task: The feature description to specify
-            context: Additional context (may contain hints, constraints)
+            context: Additional context (may contain hints, constraints, langfuse_trace_id)
 
         Returns:
             Result dict with spec.md content and artifact info
         """
         logger.info(f"Specifier processing task for workflow {workflow_id}")
+
+        # Extract trace context from message (T017)
+        # This allows LLM calls to be correlated under the parent workflow trace
+        trace_id = self.extract_trace_context_from_message(context)
+        if not trace_id:
+            # Fallback: create new trace if not propagated from orchestrator
+            await self.initialize_trace_for_workflow(workflow_id)
+        else:
+            self._workflow_id = workflow_id
 
         # Update workflow status
         await self.publish_status_update(
@@ -130,7 +141,7 @@ class SpecifierAgent(BaseAgent):
         feature_description: str,
         context: dict[str, Any],
     ) -> str:
-        """Generate spec.md content using LLM.
+        """Generate spec.md content using LLM with Langfuse tracing (T010).
 
         Args:
             feature_description: Natural language feature description
@@ -139,12 +150,21 @@ class SpecifierAgent(BaseAgent):
         Returns:
             Generated spec.md content
         """
+        start_time = time.time()
+
         # Format the prompt
         prompt = format_spec_prompt(feature_description)
 
         # Add any context hints
         if context.get("hints"):
             prompt += f"\n\n## Additional Context\n{context['hints']}"
+
+        # Build messages for LLM call
+        messages = [
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        model = "claude-sonnet-4-20250514"
 
         # Call Dapr conversation API
         # Note: This uses the Dapr conversation building block
@@ -153,12 +173,9 @@ class SpecifierAgent(BaseAgent):
                 app_id=self.config.conversation_component,
                 method_name="converse",
                 data={
-                    "messages": [
-                        {"role": "system", "content": self._system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": messages,
                     "metadata": {
-                        "model": "claude-sonnet-4-20250514",
+                        "model": model,
                         "max_tokens": 4000,
                     },
                 },
@@ -175,10 +192,43 @@ class SpecifierAgent(BaseAgent):
             if isinstance(content, list) and content:
                 content = content[0].get("text", "")
 
+            # Extract usage if available
+            usage = result.get("usage")
+
+            # Log to Langfuse (T010) - graceful degradation if trace_id not set (T015)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_spec",
+                    model=model,
+                    input_messages=messages,
+                    output=content,
+                    usage=usage,
+                    metadata={
+                        "agent": self.name,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
+
             return content
 
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
+            # Log error to Langfuse (T014)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_spec",
+                    model=model,
+                    input_messages=messages,
+                    output=None,
+                    metadata={
+                        "agent": self.name,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
             # Fallback: Generate a basic template
             return self._generate_fallback_spec(feature_description)
 

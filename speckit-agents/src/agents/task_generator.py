@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -18,6 +19,7 @@ from src.common.models import (
     WorkflowPhase,
     WorkflowStatus,
 )
+from src.common.observability import create_generation
 from src.prompts.task_generator import (
     format_tasks_prompt,
     get_system_prompt,
@@ -64,17 +66,26 @@ class TaskGeneratorAgent(BaseAgent):
         task: str,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process a task generation request.
+        """Process a task generation request (T018).
 
         Args:
             workflow_id: The workflow this task belongs to
             task: Task description
-            context: Context with plan artifacts
+            context: Context with plan artifacts and langfuse_trace_id
 
         Returns:
             Result dict with generated tasks.md
         """
         logger.info(f"TaskGenerator processing task for workflow {workflow_id}")
+
+        # Extract trace context from message (T018)
+        # This allows LLM calls to be correlated under the parent workflow trace
+        trace_id = self.extract_trace_context_from_message(context)
+        if not trace_id:
+            # Fallback: create new trace if not propagated from orchestrator
+            await self.initialize_trace_for_workflow(workflow_id)
+        else:
+            self._workflow_id = workflow_id
 
         # Update workflow status
         await self.publish_status_update(
@@ -204,7 +215,7 @@ class TaskGeneratorAgent(BaseAgent):
         plan_content: str,
         spec_summary: str,
     ) -> str:
-        """Generate tasks.md content using LLM.
+        """Generate tasks.md content using LLM with Langfuse tracing (T012).
 
         Args:
             workflow_id: The workflow ID
@@ -214,8 +225,17 @@ class TaskGeneratorAgent(BaseAgent):
         Returns:
             Generated tasks.md content
         """
+        start_time = time.time()
+
         # Format the prompt
         prompt = format_tasks_prompt(plan_content, spec_summary)
+
+        # Build messages for LLM call
+        messages = [
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        model = "claude-sonnet-4-20250514"
 
         # Call Dapr conversation API
         try:
@@ -223,12 +243,9 @@ class TaskGeneratorAgent(BaseAgent):
                 app_id=self.config.conversation_component,
                 method_name="converse",
                 data={
-                    "messages": [
-                        {"role": "system", "content": self._system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": messages,
                     "metadata": {
-                        "model": "claude-sonnet-4-20250514",
+                        "model": model,
                         "max_tokens": 6000,
                     },
                 },
@@ -245,10 +262,43 @@ class TaskGeneratorAgent(BaseAgent):
             if isinstance(content, list) and content:
                 content = content[0].get("text", "")
 
+            # Extract usage if available
+            usage = result.get("usage")
+
+            # Log to Langfuse (T012) - graceful degradation if trace_id not set (T015)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_tasks",
+                    model=model,
+                    input_messages=messages,
+                    output=content,
+                    usage=usage,
+                    metadata={
+                        "agent": self.name,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
+
             return content
 
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
+            # Log error to Langfuse (T014)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_tasks",
+                    model=model,
+                    input_messages=messages,
+                    output=None,
+                    metadata={
+                        "agent": self.name,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
             # Fallback to basic template
             return self._generate_fallback_tasks(plan_content)
 

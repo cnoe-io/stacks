@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -18,6 +19,7 @@ from src.common.models import (
     WorkflowPhase,
     WorkflowStatus,
 )
+from src.common.observability import create_generation
 from src.prompts.planner import (
     format_plan_prompt,
     get_system_prompt,
@@ -67,17 +69,26 @@ class PlannerAgent(BaseAgent):
         task: str,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process a planning task.
+        """Process a planning task (T018).
 
         Args:
             workflow_id: The workflow this task belongs to
             task: Task description
-            context: Context with spec.md content and previous artifacts
+            context: Context with spec.md content, previous artifacts, and langfuse_trace_id
 
         Returns:
             Result dict with generated artifacts
         """
         logger.info(f"Planner processing task for workflow {workflow_id}")
+
+        # Extract trace context from message (T018)
+        # This allows LLM calls to be correlated under the parent workflow trace
+        trace_id = self.extract_trace_context_from_message(context)
+        if not trace_id:
+            # Fallback: create new trace if not propagated from orchestrator
+            await self.initialize_trace_for_workflow(workflow_id)
+        else:
+            self._workflow_id = workflow_id
 
         # Update workflow status
         await self.publish_status_update(
@@ -160,7 +171,7 @@ class PlannerAgent(BaseAgent):
         workflow_id: UUID,
         spec_content: str,
     ) -> list[Artifact]:
-        """Generate all planning artifacts using LLM.
+        """Generate all planning artifacts using LLM with Langfuse tracing (T011).
 
         Args:
             workflow_id: The workflow ID
@@ -169,8 +180,17 @@ class PlannerAgent(BaseAgent):
         Returns:
             List of created Artifact records
         """
+        start_time = time.time()
+
         # Format the prompt
         prompt = format_plan_prompt(spec_content)
+
+        # Build messages for LLM call
+        messages = [
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        model = "claude-sonnet-4-20250514"
 
         # Call Dapr conversation API
         try:
@@ -178,12 +198,9 @@ class PlannerAgent(BaseAgent):
                 app_id=self.config.conversation_component,
                 method_name="converse",
                 data={
-                    "messages": [
-                        {"role": "system", "content": self._system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": messages,
                     "metadata": {
-                        "model": "claude-sonnet-4-20250514",
+                        "model": model,
                         "max_tokens": 8000,
                     },
                 },
@@ -200,11 +217,44 @@ class PlannerAgent(BaseAgent):
             if isinstance(content, list) and content:
                 content = content[0].get("text", "")
 
+            # Extract usage if available
+            usage = result.get("usage")
+
+            # Log to Langfuse (T011) - graceful degradation if trace_id not set (T015)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_plan",
+                    model=model,
+                    input_messages=messages,
+                    output=content,
+                    usage=usage,
+                    metadata={
+                        "agent": self.name,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
+
             # Parse into separate artifacts
             artifact_contents = parse_plan_response(content)
 
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
+            # Log error to Langfuse (T014)
+            if self._trace_id:
+                create_generation(
+                    trace_id=self._trace_id,
+                    name="generate_plan",
+                    model=model,
+                    input_messages=messages,
+                    output=None,
+                    metadata={
+                        "agent": self.name,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    },
+                )
             # Fallback to basic templates
             artifact_contents = self._generate_fallback_artifacts(spec_content)
 

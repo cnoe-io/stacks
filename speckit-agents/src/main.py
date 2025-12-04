@@ -18,6 +18,7 @@ from dapr_agents.agents.durable import DurableAgent
 from dapr_agents.workflow.runners import AgentRunner
 
 from src.common.config import get_config
+from src.common.observability import LangfuseOpenAIChatClient
 from src.agents.base import create_durable_agent
 
 if TYPE_CHECKING:
@@ -127,7 +128,6 @@ def create_orchestrator() -> tuple["LLMOrchestrator", AgentRunner]:
         AgentStateConfig,
     )
     from dapr_agents.agents.orchestrators.llm import LLMOrchestrator
-    from dapr_agents.llm.openai import OpenAIChatClient
     from dapr_agents.storage.daprstores.stateservice import StateStoreService
 
     config = get_config()
@@ -158,12 +158,10 @@ def create_orchestrator() -> tuple["LLMOrchestrator", AgentRunner]:
         max_iterations=4,  # One per workflow phase
     )
 
-    # Create LLM client using OpenAI directly
-    # NOTE: DaprChatClient has a bug where it sets provider="dapr" which is not
-    # a recognized format type in validate_and_format_tool (only supports:
-    # openai, azure_openai, nvidia, huggingface, claude, llama).
-    # The official dapr-agents quickstart uses OpenAIChatClient.
-    llm = OpenAIChatClient()
+    # Create LLM client with Langfuse instrumentation
+    # This wrapper automatically logs all LLM calls to Langfuse with token usage,
+    # latency, and error tracking. It delegates to OpenAIChatClient for actual API calls.
+    llm = LangfuseOpenAIChatClient(agent_name="orchestrator")
 
     # Summary callback when workflow completes
     def on_summary(summary: str):

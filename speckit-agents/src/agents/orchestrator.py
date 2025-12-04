@@ -95,7 +95,7 @@ class OrchestratorAgent(BaseAgent):
         workflow_id: UUID,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Start a new workflow by routing to the first agent.
+        """Start a new workflow by routing to the first agent (T016).
 
         Args:
             workflow_id: The workflow ID
@@ -106,7 +106,12 @@ class OrchestratorAgent(BaseAgent):
         """
         feature_description = context.get("feature_description", "")
 
+        # Initialize Langfuse trace for this workflow (T016)
+        # This creates a parent trace that all agent LLM calls will be grouped under
+        await self.initialize_trace_for_workflow(workflow_id)
+
         # Route to specifier as the first agent
+        # Note: route_to_agent now embeds langfuse_trace_id in context (T009)
         await self.route_to_agent(
             target_agent="specifier",
             workflow_id=workflow_id,
@@ -118,6 +123,7 @@ class OrchestratorAgent(BaseAgent):
             "success": True,
             "message": "Workflow started, routed to specifier",
             "current_agent": "specifier",
+            "trace_id": self._trace_id,
         }
 
     async def _handle_phase_completion(

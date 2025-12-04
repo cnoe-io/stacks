@@ -272,3 +272,216 @@ def shutdown_langfuse() -> None:
             logger.error(f"Error during Langfuse shutdown: {e}")
         finally:
             _langfuse_client = None
+
+
+class LangfuseOpenAIChatClient:
+    """Wrapper around OpenAIChatClient that instruments all LLM calls with Langfuse tracing.
+
+    This wrapper intercepts the generate() method to automatically log all LLM calls
+    to Langfuse with proper token usage, latency, and error tracking.
+
+    Usage:
+        from src.common.observability import LangfuseOpenAIChatClient
+
+        # Use in place of OpenAIChatClient
+        llm = LangfuseOpenAIChatClient(agent_name="planner")
+
+        # Pass to DurableAgent or LLMOrchestrator
+        agent = DurableAgent(..., llm=llm)
+    """
+
+    def __init__(self, agent_name: str = "unknown"):
+        """Initialize the Langfuse-instrumented OpenAI client.
+
+        Args:
+            agent_name: Name of the agent using this client (for trace metadata)
+        """
+        from dapr_agents.llm.openai import OpenAIChatClient
+
+        self._client = OpenAIChatClient()
+        self._agent_name = agent_name
+        self._trace_id: Optional[str] = None
+        self._session_id: Optional[str] = None
+
+        logger.info(f"LangfuseOpenAIChatClient initialized for agent: {agent_name}")
+
+    def set_trace_context(self, trace_id: str, session_id: Optional[str] = None) -> None:
+        """Set the trace context for subsequent LLM calls.
+
+        Args:
+            trace_id: Langfuse trace ID to attach generations to
+            session_id: Optional session ID for grouping traces
+        """
+        self._trace_id = trace_id
+        self._session_id = session_id
+
+    def generate(self, messages: Any = None, **kwargs: Any) -> Any:
+        """Generate LLM response with Langfuse instrumentation.
+
+        Wraps the underlying OpenAIChatClient.generate() to log all calls to Langfuse.
+
+        Args:
+            messages: Input messages (string, dict, or list)
+            **kwargs: Additional arguments passed to the underlying client
+
+        Returns:
+            LLMChatResponse from the underlying client
+        """
+        import time
+
+        start_time = time.time()
+        langfuse = get_langfuse()
+
+        # Convert messages to list format for logging
+        input_messages = self._normalize_messages(messages)
+
+        # Get model from kwargs or use default
+        model = kwargs.get("model") or self._client.config.model if hasattr(self._client, "config") else "gpt-4o"
+
+        try:
+            # Call the underlying client
+            response = self._client.generate(messages, **kwargs)
+
+            # Calculate latency
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Log to Langfuse if available
+            if langfuse:
+                self._log_generation(
+                    langfuse=langfuse,
+                    name=f"{self._agent_name}_llm_call",
+                    model=response.metadata.get("model", model),
+                    input_messages=input_messages,
+                    output=self._extract_output(response),
+                    usage=response.metadata.get("usage"),
+                    latency_ms=latency_ms,
+                    metadata={
+                        "agent": self._agent_name,
+                        "provider": response.metadata.get("provider", "openai"),
+                        "finish_reason": response.results[0].finish_reason if response.results else None,
+                    },
+                )
+
+            return response
+
+        except Exception as e:
+            # Calculate latency even on error
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Log error to Langfuse
+            if langfuse:
+                self._log_generation(
+                    langfuse=langfuse,
+                    name=f"{self._agent_name}_llm_call",
+                    model=model,
+                    input_messages=input_messages,
+                    output=None,
+                    usage=None,
+                    latency_ms=latency_ms,
+                    metadata={
+                        "agent": self._agent_name,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    },
+                    level="ERROR",
+                )
+
+            raise
+
+    def _normalize_messages(self, messages: Any) -> list[dict[str, str]]:
+        """Convert messages to a normalized list format for logging."""
+        if messages is None:
+            return []
+
+        if isinstance(messages, str):
+            return [{"role": "user", "content": messages}]
+
+        if isinstance(messages, dict):
+            return [messages]
+
+        if hasattr(messages, "__iter__"):
+            result = []
+            for msg in messages:
+                if isinstance(msg, dict):
+                    result.append(msg)
+                elif hasattr(msg, "model_dump"):
+                    result.append(msg.model_dump())
+                elif hasattr(msg, "content") and hasattr(msg, "role"):
+                    result.append({"role": msg.role, "content": msg.content})
+                else:
+                    result.append({"content": str(msg)})
+            return result
+
+        return [{"content": str(messages)}]
+
+    def _extract_output(self, response: Any) -> Optional[str]:
+        """Extract output text from LLMChatResponse."""
+        if not response or not response.results:
+            return None
+
+        first_result = response.results[0]
+        if first_result.message and first_result.message.content:
+            return first_result.message.content
+
+        return None
+
+    def _log_generation(
+        self,
+        langfuse: "Langfuse",
+        name: str,
+        model: str,
+        input_messages: list[dict[str, str]],
+        output: Optional[str],
+        usage: Optional[dict[str, Any]],
+        latency_ms: int,
+        metadata: Optional[dict[str, Any]] = None,
+        level: str = "DEFAULT",
+    ) -> None:
+        """Log an LLM generation to Langfuse."""
+        try:
+            # If we have a trace context, attach to it; otherwise create a standalone trace
+            if self._trace_id:
+                langfuse.generation(
+                    trace_id=self._trace_id,
+                    name=name,
+                    model=model,
+                    input=input_messages,
+                    output=output,
+                    usage=usage,
+                    metadata={
+                        **(metadata or {}),
+                        "latency_ms": latency_ms,
+                    },
+                    level=level,
+                )
+            else:
+                # Create a new trace for this generation
+                trace = langfuse.trace(
+                    name=f"{self._agent_name}_workflow",
+                    session_id=self._session_id,
+                    metadata={"agent": self._agent_name},
+                )
+                langfuse.generation(
+                    trace_id=trace.id,
+                    name=name,
+                    model=model,
+                    input=input_messages,
+                    output=output,
+                    usage=usage,
+                    metadata={
+                        **(metadata or {}),
+                        "latency_ms": latency_ms,
+                    },
+                    level=level,
+                )
+
+            # Flush to ensure traces are sent promptly
+            langfuse.flush()
+
+        except Exception as e:
+            logger.error(f"Failed to log generation to Langfuse: {e}")
+
+    # Delegate all other attributes to the underlying client
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to the underlying client."""
+        return getattr(self._client, name)
