@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
+from contextvars import ContextVar
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
@@ -34,8 +35,35 @@ logger = logging.getLogger(__name__)
 _langfuse_client: Optional["Langfuse"] = None
 _langfuse_enabled: bool = True
 
+# Context variable for session ID propagation across async boundaries
+# This allows the workflow_id to be passed to LLM calls without modifying dapr-agents SDK
+_current_session_id: ContextVar[Optional[str]] = ContextVar("langfuse_session_id", default=None)
+
 # Type variable for decorators
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+def set_session_id(session_id: str) -> None:
+    """Set the current session ID for Langfuse trace grouping.
+
+    Call this at the start of processing a workflow message to ensure
+    all subsequent LLM calls are grouped under the same session.
+
+    Args:
+        session_id: The workflow ID to use as session ID
+    """
+    _current_session_id.set(session_id)
+    logger.debug(f"Set Langfuse session_id: {session_id}")
+
+
+def get_session_id() -> Optional[str]:
+    """Get the current session ID for Langfuse trace grouping."""
+    return _current_session_id.get()
+
+
+def clear_session_id() -> None:
+    """Clear the current session ID."""
+    _current_session_id.set(None)
 
 
 def get_langfuse() -> Optional["Langfuse"]:
@@ -492,16 +520,24 @@ class LangfuseOpenAIChatClient:
             timestamp = datetime.utcnow().isoformat() + "Z"
 
             # Build batch request with trace and generation
+            # Include sessionId to group traces from the same workflow together
+            trace_body = {
+                "id": trace_id,
+                "name": f"{self._agent_name}_workflow",
+                "metadata": {"agent": self._agent_name},
+            }
+            # Add sessionId if available (workflow ID groups all agent traces)
+            # First check context variable (set by agent message handler), then instance variable
+            session_id = get_session_id() or self._session_id
+            if session_id:
+                trace_body["sessionId"] = session_id
+
             batch = [
                 {
                     "id": str(uuid.uuid4()),
                     "type": "trace-create",
                     "timestamp": timestamp,
-                    "body": {
-                        "id": trace_id,
-                        "name": f"{self._agent_name}_workflow",
-                        "metadata": {"agent": self._agent_name},
-                    }
+                    "body": trace_body,
                 },
                 {
                     "id": str(uuid.uuid4()),

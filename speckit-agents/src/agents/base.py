@@ -34,10 +34,12 @@ from src.common.models import (
 )
 from src.common.observability import (
     LangfuseOpenAIChatClient,
+    clear_session_id,
     create_generation,
     flush_langfuse,
     get_langfuse,
     observe_llm_call,
+    set_session_id,
     shutdown_langfuse,
 )
 
@@ -249,10 +251,17 @@ class BaseAgent(ABC):
 
         Called at the start of workflow execution (typically by Orchestrator).
         Sets self._trace_id which is used by all subsequent LLM calls.
+        Also sets the session_id context variable for trace grouping.
 
         Args:
             workflow_id: The workflow instance ID (used as session_id)
         """
+        # Set session ID context variable for trace grouping
+        # This ensures all LLM calls in this async context are grouped together
+        self._workflow_id = workflow_id
+        set_session_id(str(workflow_id))
+        logger.debug(f"Set Langfuse session_id to workflow_id: {workflow_id}")
+
         langfuse = get_langfuse()
         if langfuse:
             try:
@@ -265,22 +274,23 @@ class BaseAgent(ABC):
                     },
                 )
                 self._trace_id = trace.id
-                self._workflow_id = workflow_id
                 logger.info(f"Initialized Langfuse trace: {self._trace_id} for workflow {workflow_id}")
             except Exception as e:
                 logger.warning(f"Failed to initialize Langfuse trace: {e}")
                 # Continue without tracing - graceful degradation
-        else:
-            self._workflow_id = workflow_id
 
-    def extract_trace_context_from_message(self, context: dict[str, Any]) -> Optional[str]:
+    def extract_trace_context_from_message(
+        self, context: dict[str, Any], workflow_id: Optional[UUID] = None
+    ) -> Optional[str]:
         """Extract Langfuse trace ID from incoming workflow message context (T008).
 
         Called by worker agents when receiving routed tasks. The trace_id
         is embedded in the message context by the sender (Orchestrator).
+        Also sets the session ID for trace grouping using the workflow_id.
 
         Args:
             context: The context dict from WorkflowMessage
+            workflow_id: Optional workflow ID to use as session ID for trace grouping
 
         Returns:
             The trace_id if present, None otherwise
@@ -289,6 +299,14 @@ class BaseAgent(ABC):
         if trace_id:
             self._trace_id = trace_id
             logger.debug(f"Extracted trace_id from context: {trace_id}")
+
+        # Set session ID for Langfuse trace grouping
+        # This ensures all LLM calls from this workflow are grouped together
+        if workflow_id:
+            self._workflow_id = workflow_id
+            set_session_id(str(workflow_id))
+            logger.debug(f"Set Langfuse session_id to workflow_id: {workflow_id}")
+
         return trace_id
 
     @abstractmethod

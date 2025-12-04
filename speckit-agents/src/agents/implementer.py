@@ -74,12 +74,11 @@ class ImplementerAgent(BaseAgent):
 
         # Extract trace context from message (T018)
         # This allows LLM calls to be correlated under the parent workflow trace
-        trace_id = self.extract_trace_context_from_message(context)
+        # Also sets session_id for Langfuse trace grouping by workflow
+        trace_id = self.extract_trace_context_from_message(context, workflow_id)
         if not trace_id:
             # Fallback: create new trace if not propagated from orchestrator
             await self.initialize_trace_for_workflow(workflow_id)
-        else:
-            self._workflow_id = workflow_id
 
         try:
             # Get artifacts from context
