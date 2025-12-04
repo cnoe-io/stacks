@@ -275,6 +275,16 @@ export class LangfuseChart extends Chart {
         name: 'LANGFUSE_S3_FORCE_PATH_STYLE',
         value: 'true',
       },
+      // AWS SDK endpoint - required for S3-compatible stores like MinIO
+      // Without this, AWS SDK tries to use virtual-hosted style URLs
+      {
+        name: 'AWS_ENDPOINT_URL_S3',
+        value: `http://${minioHost}:9000`,
+      },
+      {
+        name: 'AWS_S3_FORCE_PATH_STYLE',
+        value: 'true',
+      },
       {
         name: 'LANGFUSE_S3_EVENT_UPLOAD_BUCKET',
         value: 'langfuse',
