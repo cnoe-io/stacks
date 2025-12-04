@@ -143,7 +143,7 @@ export class K8sApiTailscaleServeChart extends Chart {
                   'kubectl',
                   'proxy',
                   '--port=8001',
-                  '--address=127.0.0.1',
+                  '--address=0.0.0.0',
                   '--accept-hosts=.*',
                   '--reject-paths=^$',
                 ],
