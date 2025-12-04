@@ -484,6 +484,67 @@ class LangfuseOpenAIChatClient:
 
         return None
 
+    def _get_dapr_workflow_instance_id(self) -> Optional[str]:
+        """Try to extract the current Dapr workflow instance ID.
+
+        DurableAgent runs LLM calls within Dapr workflow activities.
+        The workflow context may provide access to the instance ID.
+
+        Returns:
+            The workflow instance ID if available, None otherwise
+        """
+        try:
+            # Try to get from dapr-agents internal context
+            # The DurableAgent uses dapr.ext.workflow for execution
+            from dapr.ext.workflow import WorkflowActivityContext
+            import inspect
+
+            # Walk up the call stack to find a WorkflowActivityContext
+            for frame_info in inspect.stack():
+                frame_locals = frame_info.frame.f_locals
+                for var_name, var_value in frame_locals.items():
+                    if isinstance(var_value, WorkflowActivityContext):
+                        # Found the workflow context
+                        if hasattr(var_value, 'workflow_id'):
+                            return str(var_value.workflow_id)
+                        if hasattr(var_value, 'instance_id'):
+                            return str(var_value.instance_id)
+        except Exception as e:
+            logger.debug(f"Could not get Dapr workflow instance ID: {e}")
+
+        return None
+
+    def _extract_workflow_id_from_messages(self, messages: list[dict[str, str]]) -> Optional[str]:
+        """Try to extract workflow_id from input messages.
+
+        The orchestrator may embed workflow context in the system or user messages.
+        This is a fallback when ContextVar and Dapr context are not available.
+
+        Args:
+            messages: Normalized input messages
+
+        Returns:
+            The workflow ID if found, None otherwise
+        """
+        import re
+
+        # Pattern to match UUID-like workflow IDs in messages
+        uuid_pattern = r'\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b'
+
+        for msg in messages:
+            content = msg.get("content", "")
+            if not content:
+                continue
+
+            # Look for explicit workflow_id mentions
+            if "workflow_id" in content.lower() or "workflow" in content.lower():
+                matches = re.findall(uuid_pattern, content, re.IGNORECASE)
+                if matches:
+                    logger.debug(f"Extracted workflow_id from message: {matches[0]}")
+                    return matches[0]
+
+        return None
+
     def _log_generation(
         self,
         langfuse: "Langfuse",
@@ -527,10 +588,16 @@ class LangfuseOpenAIChatClient:
                 "metadata": {"agent": self._agent_name},
             }
             # Add sessionId if available (workflow ID groups all agent traces)
-            # First check context variable (set by agent message handler), then instance variable
-            session_id = get_session_id() or self._session_id
+            # Priority: 1. Context variable, 2. Instance variable, 3. Dapr workflow ID, 4. Message extraction
+            session_id = (
+                get_session_id()
+                or self._session_id
+                or self._get_dapr_workflow_instance_id()
+                or self._extract_workflow_id_from_messages(input_messages)
+            )
             if session_id:
                 trace_body["sessionId"] = session_id
+                logger.debug(f"Using session_id: {session_id} for Langfuse trace")
 
             batch = [
                 {
