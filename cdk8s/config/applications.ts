@@ -1636,7 +1636,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'dapr-agents',
         agentImage: 'docker.io/vpittamp23/speckit-agents',  // Public image on Docker Hub
-        imageTag: 'langfuse-sessions-v2',  // Langfuse session grouping with Dapr workflow context extraction
+        imageTag: 'langfuse-sessions-v3',  // Fixed session ID extraction from call_llm payload
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
         workflowStateStore: 'workflowstatestore',

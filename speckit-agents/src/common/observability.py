@@ -488,27 +488,43 @@ class LangfuseOpenAIChatClient:
         """Try to extract the current Dapr workflow instance ID.
 
         DurableAgent runs LLM calls within Dapr workflow activities.
-        The workflow context may provide access to the instance ID.
+        The call_llm activity receives a payload dict containing 'instance_id'.
+        We walk the call stack to find this payload and extract the instance_id.
 
         Returns:
             The workflow instance ID if available, None otherwise
         """
-        try:
-            # Try to get from dapr-agents internal context
-            # The DurableAgent uses dapr.ext.workflow for execution
-            from dapr.ext.workflow import WorkflowActivityContext
-            import inspect
+        import inspect
 
-            # Walk up the call stack to find a WorkflowActivityContext
+        try:
+            # Walk up the call stack to find the instance_id
             for frame_info in inspect.stack():
                 frame_locals = frame_info.frame.f_locals
-                for var_name, var_value in frame_locals.items():
-                    if isinstance(var_value, WorkflowActivityContext):
-                        # Found the workflow context
-                        if hasattr(var_value, 'workflow_id'):
-                            return str(var_value.workflow_id)
-                        if hasattr(var_value, 'instance_id'):
-                            return str(var_value.instance_id)
+
+                # Look for 'payload' dict with 'instance_id' (from DurableAgent.call_llm)
+                payload = frame_locals.get('payload')
+                if isinstance(payload, dict):
+                    instance_id = payload.get('instance_id')
+                    if instance_id:
+                        logger.debug(f"Found instance_id in payload: {instance_id}")
+                        return str(instance_id)
+
+                # Also check for direct 'instance_id' variable
+                instance_id = frame_locals.get('instance_id')
+                if instance_id:
+                    logger.debug(f"Found instance_id variable: {instance_id}")
+                    return str(instance_id)
+
+                # Check for WorkflowActivityContext with workflow_id attribute
+                ctx = frame_locals.get('ctx')
+                if ctx is not None:
+                    # WorkflowActivityContext has workflow_id attribute
+                    if hasattr(ctx, 'workflow_id'):
+                        workflow_id = getattr(ctx, 'workflow_id', None)
+                        if workflow_id:
+                            logger.debug(f"Found workflow_id from ctx: {workflow_id}")
+                            return str(workflow_id)
+
         except Exception as e:
             logger.debug(f"Could not get Dapr workflow instance ID: {e}")
 
