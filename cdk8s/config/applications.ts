@@ -803,6 +803,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         serviceName: 'k8s-api',
         authKeySecretName: 'tailscale-auth-key',
+        tailnetName: 'tail286401',
+        createStaticTokenSecret: true,
+        remoteAccessTokenSecretName: 'k8s-remote-access-token',
       }
     },
     argocd: {

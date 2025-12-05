@@ -35,6 +35,27 @@ export interface K8sApiTailscaleServeChartProps extends ChartProps {
    * @default 'bitnami/kubectl:latest'
    */
   kubectlImage?: string;
+
+  /**
+   * Tailnet name for generating kubeconfig instructions
+   * @default 'tail286401'
+   */
+  tailnetName?: string;
+
+  /**
+   * Whether to create a static token secret for remote access
+   * When true, creates a Secret that can be used with ExternalSecrets
+   * to maintain a stable token across cluster recreations
+   * @default true
+   */
+  createStaticTokenSecret?: boolean;
+
+  /**
+   * Name of the secret containing the static remote access token
+   * This secret should be synced from Azure Key Vault via ExternalSecrets
+   * @default 'k8s-remote-access-token'
+   */
+  remoteAccessTokenSecretName?: string;
 }
 
 /**
@@ -49,8 +70,13 @@ export interface K8sApiTailscaleServeChartProps extends ChartProps {
  *
  * Access: https://k8s-api.<tailnet>.ts.net/api/v1/...
  *
+ * For stable remote access across cluster recreations:
+ * 1. Store a static token in Azure Key Vault (K8S-REMOTE-ACCESS-TOKEN)
+ * 2. The ExternalSecret syncs it to k8s-remote-access-token secret
+ * 3. Use the kubeconfig template from the ConfigMap
+ *
  * Usage:
- *   kubectl --server=https://k8s-api.<tailnet>.ts.net --token=<sa-token> get pods
+ *   kubectl --kubeconfig=~/.kube/tailscale-cluster.yaml get pods
  */
 export class K8sApiTailscaleServeChart extends Chart {
   constructor(scope: Construct, id: string, props?: K8sApiTailscaleServeChartProps) {
@@ -61,13 +87,17 @@ export class K8sApiTailscaleServeChart extends Chart {
     const authKeySecretName = props?.authKeySecretName ?? 'tailscale-auth-key';
     const tailscaleImage = props?.tailscaleImage ?? 'tailscale/tailscale:latest';
     const kubectlImage = props?.kubectlImage ?? 'bitnami/kubectl:latest';
+    const tailnetName = props?.tailnetName ?? 'tail286401';
+    const createStaticTokenSecret = props?.createStaticTokenSecret ?? true;
+    const remoteAccessTokenSecretName = props?.remoteAccessTokenSecretName ?? 'k8s-remote-access-token';
 
     const deploymentName = 'k8s-api-tailscale-serve';
+    const serviceAccountName = 'k8s-api-serve';
 
-    // ServiceAccount for API access
+    // ServiceAccount for API access (used by kubectl-proxy)
     new k8s.KubeServiceAccount(this, 'sa', {
       metadata: {
-        name: 'k8s-api-serve',
+        name: serviceAccountName,
         namespace,
       },
     });
@@ -85,11 +115,132 @@ export class K8sApiTailscaleServeChart extends Chart {
       subjects: [
         {
           kind: 'ServiceAccount',
-          name: 'k8s-api-serve',
+          name: serviceAccountName,
           namespace,
         },
       ],
     });
+
+    // ServiceAccount for remote access (token stored in Key Vault)
+    const remoteServiceAccountName = 'k8s-remote-access';
+    new k8s.KubeServiceAccount(this, 'remote-sa', {
+      metadata: {
+        name: remoteServiceAccountName,
+        namespace,
+        annotations: {
+          'description': 'ServiceAccount for remote kubectl access via Tailscale',
+        },
+      },
+    });
+
+    // ClusterRoleBinding for remote access ServiceAccount
+    new k8s.KubeClusterRoleBinding(this, 'remote-crb', {
+      metadata: {
+        name: 'k8s-remote-access',
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'ClusterRole',
+        name: 'cluster-admin',
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: remoteServiceAccountName,
+          namespace,
+        },
+      ],
+    });
+
+    // ConfigMap with kubeconfig template for remote access
+    // Users can copy this and add their token from Key Vault
+    if (createStaticTokenSecret) {
+      const kubeconfigTemplate = `apiVersion: v1
+kind: Config
+clusters:
+- name: tailscale-cluster
+  cluster:
+    server: https://${serviceName}.${tailnetName}.ts.net
+contexts:
+- name: tailscale-cluster
+  context:
+    cluster: tailscale-cluster
+    user: tailscale-admin
+current-context: tailscale-cluster
+users:
+- name: tailscale-admin
+  user:
+    # Token is stored in Azure Key Vault: K8S-REMOTE-ACCESS-TOKEN
+    # Retrieve with: az keyvault secret show --vault-name <vault> --name K8S-REMOTE-ACCESS-TOKEN --query value -o tsv
+    token: <TOKEN_FROM_KEY_VAULT>
+`;
+
+      new k8s.KubeConfigMap(this, 'kubeconfig-template', {
+        metadata: {
+          name: 'k8s-remote-kubeconfig-template',
+          namespace,
+          labels: {
+            'app.kubernetes.io/name': 'k8s-remote-access',
+            'app.kubernetes.io/component': 'kubeconfig',
+          },
+        },
+        data: {
+          'kubeconfig.yaml': kubeconfigTemplate,
+          'README.md': `# Remote Kubernetes Access via Tailscale
+
+## Setup Instructions
+
+1. Ensure you're connected to Tailscale on your remote machine
+
+2. Get the token from Azure Key Vault:
+   \`\`\`bash
+   az keyvault secret show --vault-name <your-vault> --name K8S-REMOTE-ACCESS-TOKEN --query value -o tsv
+   \`\`\`
+
+3. Create your kubeconfig file on your remote machine:
+   \`\`\`bash
+   mkdir -p ~/.kube
+   cat > ~/.kube/tailscale-cluster.yaml << 'EOF'
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: tailscale-cluster
+     cluster:
+       server: https://${serviceName}.${tailnetName}.ts.net
+   contexts:
+   - name: tailscale-cluster
+     context:
+       cluster: tailscale-cluster
+       user: tailscale-admin
+   current-context: tailscale-cluster
+   users:
+   - name: tailscale-admin
+     user:
+       token: <PASTE_TOKEN_HERE>
+   EOF
+   \`\`\`
+
+4. Test the connection:
+   \`\`\`bash
+   kubectl --kubeconfig=~/.kube/tailscale-cluster.yaml get nodes
+   \`\`\`
+
+## One-Time Token Generation
+
+If K8S-REMOTE-ACCESS-TOKEN doesn't exist in Key Vault, generate it:
+\`\`\`bash
+# On the cluster host
+TOKEN=$(kubectl create token k8s-remote-access -n tailscale --duration=8760h)
+
+# Store in Azure Key Vault
+az keyvault secret set --vault-name <your-vault> --name K8S-REMOTE-ACCESS-TOKEN --value "$TOKEN"
+\`\`\`
+
+Note: The token is valid for 1 year. Regenerate before expiration.
+`,
+        },
+      });
+    }
 
     // Deployment with Tailscale + kubectl-proxy
     new k8s.KubeDeployment(this, 'deployment', {
