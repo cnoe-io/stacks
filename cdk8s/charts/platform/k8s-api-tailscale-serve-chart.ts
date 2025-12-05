@@ -262,6 +262,23 @@ Note: The token is valid for 1 year. Regenerate before expiration.
           },
           spec: {
             serviceAccountName: 'k8s-api-serve',
+            // Init container waits for secret to exist before starting main containers
+            // This prevents CreateContainerConfigError when ESO hasn't synced yet
+            initContainers: [
+              {
+                name: 'wait-for-secret',
+                image: kubectlImage,
+                command: ['/bin/sh', '-c'],
+                args: [`
+echo "Waiting for secret ${authKeySecretName} to exist..."
+while ! kubectl get secret ${authKeySecretName} -n ${namespace} > /dev/null 2>&1; do
+  echo "Secret not found, waiting 5s..."
+  sleep 5
+done
+echo "Secret ${authKeySecretName} found, proceeding..."
+`],
+              },
+            ],
             containers: [
               {
                 name: 'tailscale-serve',
