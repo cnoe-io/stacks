@@ -8,6 +8,43 @@
 import { ResolvedTailscaleServeChartProps } from './tailscale-serve-chart-props';
 
 /**
+ * Generate an init container that waits for the auth key secret to exist.
+ *
+ * This prevents CreateContainerConfigError when the main container starts
+ * before ExternalSecrets has synced the secret from Azure Key Vault.
+ *
+ * @param props Resolved chart properties
+ * @param kubectlImage Image to use for kubectl (default: bitnami/kubectl:latest)
+ * @returns Init container definition
+ */
+export function generateWaitForSecretInitContainer(
+  props: ResolvedTailscaleServeChartProps,
+  kubectlImage = 'bitnami/kubectl:latest'
+): {
+  name: string;
+  image: string;
+  command: string[];
+  args: string[];
+} {
+  const { authKeySecretName, namespace } = props;
+  return {
+    name: 'wait-for-secret',
+    image: kubectlImage,
+    command: ['/bin/sh', '-c'],
+    args: [
+      `
+echo "Waiting for secret ${authKeySecretName} to exist..."
+while ! kubectl get secret ${authKeySecretName} -n ${namespace} > /dev/null 2>&1; do
+  echo "Secret not found, waiting 5s..."
+  sleep 5
+done
+echo "Secret ${authKeySecretName} found, proceeding..."
+`,
+    ],
+  };
+}
+
+/**
  * Generate the shell script for the Tailscale serve container.
  *
  * This script:
