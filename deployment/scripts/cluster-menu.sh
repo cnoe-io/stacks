@@ -272,6 +272,29 @@ cluster-deploy() {
     fi
   fi
 
+  # Generate Tailscale remote access token after deployment
+  if [ $result -eq 0 ] && [ "${SKIP_TAILSCALE_TOKEN:-}" != "true" ]; then
+    local TAILSCALE_KUBECONFIG_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh"
+    if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
+      echo ""
+      echo "🔑 Generating Tailscale remote access token..."
+
+      # Wait for k8s-api-tailscale-serve to be ready
+      echo "   Waiting for k8s-api-tailscale-serve pod..."
+      if kubectl wait --for=condition=available deployment/k8s-api-tailscale-serve -n tailscale --timeout=120s &>/dev/null; then
+        sleep 5  # Additional wait for ServiceAccount to be ready
+        if "$TAILSCALE_KUBECONFIG_SCRIPT" generate &>/dev/null; then
+          echo "✅ Tailscale remote access token generated and stored in Azure Key Vault"
+          echo "   Kubeconfig: ~/.kube/tailscale-cluster.yaml"
+        else
+          echo "⚠️  Tailscale token generation failed (may retry with: tailscale-kubeconfig.sh generate)"
+        fi
+      else
+        echo "⚠️  k8s-api-tailscale-serve not ready yet (retry later with: tailscale-kubeconfig.sh generate)"
+      fi
+    fi
+  fi
+
   cd "$ORIG_DIR"
   return $result
 }
@@ -811,6 +834,15 @@ if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
   alias argo-outofsync="argocd-list-outofsync"
 fi
 
+# Tailscale remote access aliases
+TAILSCALE_KUBECONFIG_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh"
+if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
+  alias ts-kubeconfig="$TAILSCALE_KUBECONFIG_SCRIPT"
+  alias ts-kubeconfig-gen="$TAILSCALE_KUBECONFIG_SCRIPT generate"
+  alias ts-kubeconfig-get="$TAILSCALE_KUBECONFIG_SCRIPT get"
+  alias ts-kubeconfig-test="$TAILSCALE_KUBECONFIG_SCRIPT test"
+fi
+
 # If script is being run directly (not sourced), show help
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "🎯 Cluster Management Functions"
@@ -827,6 +859,12 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  cluster-recreate (clr)   - Delete and recreate cluster"
   echo "  cluster-status (clst)    - Show cluster and ArgoCD status"
   echo "  cluster-menu (clm)       - Interactive management menu (requires gum)"
+  echo ""
+  echo "Tailscale Remote Access:"
+  echo "  ts-kubeconfig            - Manage remote kubeconfig (see ts-kubeconfig help)"
+  echo "  ts-kubeconfig-gen        - Generate new token after cluster recreation"
+  echo "  ts-kubeconfig-get        - Get kubeconfig from Azure Key Vault"
+  echo "  ts-kubeconfig-test       - Test remote kubectl access"
   echo ""
 
   # If gum is available, run the menu directly
