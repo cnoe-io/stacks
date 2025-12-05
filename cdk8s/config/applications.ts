@@ -1819,7 +1819,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     },
     argocd: {
-      syncWave: '-60',  // Deploy agents after all infrastructure is ready
+      syncWave: '50',  // Deploy agents late to ensure Dapr sidecar injector webhook is ready
       labels: {
         'app.kubernetes.io/name': 'speckit-agents',
         'app.kubernetes.io/component': 'agents',
