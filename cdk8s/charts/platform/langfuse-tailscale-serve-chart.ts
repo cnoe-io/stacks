@@ -1,20 +1,45 @@
-import { Chart, ChartProps } from 'cdk8s';
+import { Chart } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
+import {
+  TailscaleServeChartProps,
+  resolveProps,
+} from '../../lib/tailscale-serve-chart-props';
+import {
+  generateTailscaleServeScript,
+  generateTailscaleEnvVars,
+} from '../../lib/tailscale-serve-helpers';
 
 /**
  * Expose Langfuse over Tailscale using tailscale serve (userspace, no TUN).
+ *
+ * Supports two modes:
+ * - Tailscale Services mode (default): Uses --service flag for stable service URLs
+ * - Legacy hostname mode: Uses TS_HOSTNAME for device-based URLs (backward compatibility)
+ *
  * Uses existing secret tailscale-auth-key in the tailscale namespace.
  *
- * Access: https://langfuse.<tailnet>.ts.net
+ * Access (Tailscale Services mode): https://svc:langfuse.<tailnet>.ts.net
+ * Access (legacy mode): https://langfuse.<tailnet>.ts.net
  */
 export class LangfuseTailscaleServeChart extends Chart {
-  constructor(scope: Construct, id: string, props?: ChartProps) {
+  constructor(scope: Construct, id: string, props?: TailscaleServeChartProps) {
     super(scope, id, props);
 
-    const namespace = 'tailscale';
+    // Apply defaults for backward compatibility when props not provided
+    const defaultProps: TailscaleServeChartProps = {
+      serviceName: 'langfuse',
+      backendHost: 'langfuse.observability.svc.cluster.local',
+      backendPort: 3000,
+      backendInsecure: false, // Langfuse uses HTTP internally
+      backendScheme: 'http', // Langfuse is HTTP on port 3000
+      ...props,
+    };
+
+    const resolvedProps = resolveProps(defaultProps);
+
+    const namespace = resolvedProps.namespace;
     const name = 'langfuse-tailscale-serve';
-    const hostname = 'langfuse';
 
     new k8s.KubeDeployment(this, 'ts-serve-deployment', {
       metadata: {
@@ -37,56 +62,14 @@ export class LangfuseTailscaleServeChart extends Chart {
             containers: [
               {
                 name: 'tailscale-serve',
-                image: 'tailscale/tailscale:latest',
+                image: resolvedProps.tailscaleImage,
                 securityContext: {
                   runAsNonRoot: false,
                   privileged: false,
                 },
-                env: [
-                  {
-                    name: 'TS_AUTHKEY',
-                    valueFrom: {
-                      secretKeyRef: { name: 'tailscale-auth-key', key: 'authKey' },
-                    },
-                  },
-                  { name: 'TS_HOSTNAME', value: hostname },
-                ],
+                env: generateTailscaleEnvVars(resolvedProps),
                 command: ['/bin/sh', '-c'],
-                args: [
-`
-set -euo pipefail
-
-# start tailscaled in userspace mode (no TUN device needed)
-mkdir -p /var/lib/tailscale
-tailscaled --tun=userspace-networking \\
-  --socket=/run/tailscale/tailscaled.sock \\
-  --state=/var/lib/tailscale/tailscaled.state &
-
-# install lightweight TCP proxy to keep backend on localhost (required by new tailscale serve)
-apk add --no-cache socat >/dev/null
-PORT_FWD=3000
-socat TCP-LISTEN:\${PORT_FWD},fork,reuseaddr TCP:langfuse.observability.svc.cluster.local:3000 &
-
-# wait for tailscaled to come up
-for i in $(seq 1 40); do
-  tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1 && break
-  sleep 0.5
-done
-
-# bring the node up (no DNS/routes/ssh)
-tailscale --socket=/run/tailscale/tailscaled.sock up \\
-  --authkey="$TS_AUTHKEY" \\
-  --hostname="$TS_HOSTNAME" \\
-  --accept-dns=false --accept-routes=false --ssh=false
-
-# expose Langfuse via tailscale serve (tailscale handles HTTPS cert)
-tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg http://127.0.0.1:\${PORT_FWD}
-
-echo "tailscale serve running for Langfuse at $TS_HOSTNAME"
-exec tail -f /dev/null
-`
-                ],
+                args: [generateTailscaleServeScript(resolvedProps)],
                 ports: [
                   { name: 'peerapi', containerPort: 443 },
                 ],
