@@ -26,13 +26,14 @@ export class LangfuseTailscaleServeChart extends Chart {
   constructor(scope: Construct, id: string, props?: TailscaleServeChartProps) {
     super(scope, id, props);
 
-    // Apply defaults for backward compatibility when props not provided
+    // Apply defaults for langfuse service
+    // Langfuse runs on HTTP port 3000, so we use http:// scheme
     const defaultProps: TailscaleServeChartProps = {
       serviceName: 'langfuse',
       backendHost: 'langfuse.observability.svc.cluster.local',
       backendPort: 3000,
-      backendInsecure: false, // Langfuse uses HTTP internally
-      backendScheme: 'http', // Langfuse is HTTP on port 3000
+      backendInsecure: false,
+      backendScheme: 'http',
       ...props,
     };
 
