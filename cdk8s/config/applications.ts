@@ -237,12 +237,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'kubevirt'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
+        limit: 10,
+        backoff: {
+          duration: '5s',
+          factor: 2,
+          maxDuration: '3m'
         }
-      }
+      })
     }
   },
 
@@ -299,7 +302,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
@@ -338,7 +341,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   //       retry: {
   //         limit: 5,
   //         backoff: {
-  //           duration: '10s',
+  //           duration: '5s',
   //           factor: 2,
   //           maxDuration: '3m'
   //         }
@@ -440,7 +443,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
@@ -495,7 +498,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
@@ -815,7 +818,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
@@ -1270,7 +1273,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
@@ -1410,12 +1413,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'observability'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
+        limit: 10,
+        backoff: {
+          duration: '5s',
+          factor: 2,
+          maxDuration: '3m'
         }
-      }
+      })
     }
   },
 
@@ -1753,7 +1759,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
         limit: 10,
         backoff: {
-          duration: '10s',
+          duration: '5s',
           factor: 2,
           maxDuration: '3m'
         }
