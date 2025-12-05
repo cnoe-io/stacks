@@ -7,9 +7,9 @@ nodes:
     - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/ref-implementation/azure-workload-identity/keys
       containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
-    # Mount NixOS images directory for KubeVirt VMs
-    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/nixos-images
-      containerPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/nixos-images
+    # Mount Docker Hub registry config (with auth from 1Password)
+    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/deployment/config/containerd
+      containerPath: /etc/containerd/certs.d
       readOnly: true
 
   kubeadmConfigPatches:
@@ -24,3 +24,8 @@ nodes:
     controllerManager:
       extraArgs:
         service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
+
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"

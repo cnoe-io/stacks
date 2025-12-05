@@ -24,6 +24,13 @@ export interface GenericTailscaleServeChartProps extends TailscaleServeChartProp
    * Label for app.kubernetes.io/part-of
    */
   partOf?: string;
+
+  /**
+   * Skip creating RBAC resources (ServiceAccount, Role, RoleBinding)
+   * Set to true when using shared RBAC from TailscaleServeRbacChart
+   * @default true
+   */
+  skipRbac?: boolean;
 }
 
 /**
@@ -46,54 +53,59 @@ export class TailscaleServeChart extends Chart {
     const deploymentName = props.deploymentName || `${props.serviceName}-tailscale-serve`;
     const partOf = props.partOf || props.serviceName;
     const serviceAccountName = 'tailscale-serve';
+    // Default to skipping RBAC (use shared TailscaleServeRbacChart)
+    const skipRbac = props.skipRbac !== false;
 
-    // Create ServiceAccount for tailscale-serve pods
-    // This SA has permission to read secrets (needed by init container)
-    new k8s.KubeServiceAccount(this, 'sa', {
-      metadata: {
-        name: serviceAccountName,
-        namespace,
-        labels: {
-          'app.kubernetes.io/name': 'tailscale-serve',
-          'app.kubernetes.io/component': 'tailscale-serve',
-        },
-      },
-    });
-
-    // Role to read secrets in the tailscale namespace
-    new k8s.KubeRole(this, 'role', {
-      metadata: {
-        name: 'tailscale-serve-secret-reader',
-        namespace,
-      },
-      rules: [
-        {
-          apiGroups: [''],
-          resources: ['secrets'],
-          verbs: ['get', 'list', 'watch'],
-        },
-      ],
-    });
-
-    // Bind the role to the ServiceAccount
-    new k8s.KubeRoleBinding(this, 'role-binding', {
-      metadata: {
-        name: 'tailscale-serve-secret-reader',
-        namespace,
-      },
-      roleRef: {
-        apiGroup: 'rbac.authorization.k8s.io',
-        kind: 'Role',
-        name: 'tailscale-serve-secret-reader',
-      },
-      subjects: [
-        {
-          kind: 'ServiceAccount',
+    // Only create RBAC if not using shared RBAC chart
+    if (!skipRbac) {
+      // Create ServiceAccount for tailscale-serve pods
+      // This SA has permission to read secrets (needed by init container)
+      new k8s.KubeServiceAccount(this, 'sa', {
+        metadata: {
           name: serviceAccountName,
           namespace,
+          labels: {
+            'app.kubernetes.io/name': 'tailscale-serve',
+            'app.kubernetes.io/component': 'tailscale-serve',
+          },
         },
-      ],
-    });
+      });
+
+      // Role to read secrets in the tailscale namespace
+      new k8s.KubeRole(this, 'role', {
+        metadata: {
+          name: 'tailscale-serve-secret-reader',
+          namespace,
+        },
+        rules: [
+          {
+            apiGroups: [''],
+            resources: ['secrets'],
+            verbs: ['get', 'list', 'watch'],
+          },
+        ],
+      });
+
+      // Bind the role to the ServiceAccount
+      new k8s.KubeRoleBinding(this, 'role-binding', {
+        metadata: {
+          name: 'tailscale-serve-secret-reader',
+          namespace,
+        },
+        roleRef: {
+          apiGroup: 'rbac.authorization.k8s.io',
+          kind: 'Role',
+          name: 'tailscale-serve-secret-reader',
+        },
+        subjects: [
+          {
+            kind: 'ServiceAccount',
+            name: serviceAccountName,
+            namespace,
+          },
+        ],
+      });
+    }
 
     new k8s.KubeDeployment(this, 'ts-serve-deployment', {
       metadata: {

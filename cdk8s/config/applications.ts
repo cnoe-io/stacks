@@ -61,224 +61,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // KubeVirt Infrastructure (Virtual Machine Platform)
-  // KubeVirt Operator - deploys CRDs and operator
-  {
-    name: 'kubevirt-operator',
-    namespace: 'kubevirt',
-    chart: {
-      type: 'KubeVirtOperatorChart',
-      props: {
-        version: 'v1.3.1'
-      }
-    },
-    argocd: {
-      syncWave: '-110',  // Deploy very early with CRDs
-      labels: {
-        'app.kubernetes.io/name': 'kubevirt-operator',
-        'app.kubernetes.io/component': 'infrastructure',
-        'app.kubernetes.io/part-of': 'platform'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
-      }
-    }
-  },
-
-  // KubeVirt CR - creates KubeVirt instance with software emulation
-  {
-    name: 'kubevirt-cr',
-    namespace: 'kubevirt',
-    chart: {
-      type: 'KubeVirtCRChart',
-      props: {
-        useEmulation: true  // Required for Kind cluster (no KVM access)
-      }
-    },
-    argocd: {
-      syncWave: '-90',  // After operator deploys CRDs
-      labels: {
-        'app.kubernetes.io/name': 'kubevirt-cr',
-        'app.kubernetes.io/component': 'infrastructure',
-        'app.kubernetes.io/part-of': 'platform'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['ServerSideApply=true']
-      }
-    }
-  },
-
-  // CDI (Containerized Data Importer) for VM Disk Images
-  // CDI Operator - deploys CRDs and operator
-  {
-    name: 'cdi-operator',
-    namespace: 'cdi',
-    chart: {
-      type: 'CDIOperatorChart',
-      props: {
-        version: 'v1.59.0'
-      }
-    },
-    argocd: {
-      syncWave: '-110',  // Deploy alongside KubeVirt operator
-      labels: {
-        'app.kubernetes.io/name': 'cdi-operator',
-        'app.kubernetes.io/component': 'infrastructure',
-        'app.kubernetes.io/part-of': 'platform'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
-      }
-    }
-  },
-
-  // CDI CR - creates CDI instance
-  {
-    name: 'cdi-cr',
-    namespace: 'cdi',
-    chart: {
-      type: 'CDICRChart'
-    },
-    argocd: {
-      syncWave: '-90',  // After operator deploys CRDs
-      labels: {
-        'app.kubernetes.io/name': 'cdi-cr',
-        'app.kubernetes.io/component': 'infrastructure',
-        'app.kubernetes.io/part-of': 'platform'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['ServerSideApply=true']
-      }
-    }
-  },
-
-  // NixOS Image Server (HTTP server for qcow2 images from Docker Hub)
-  {
-    name: 'nixos-image-server',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsImageServerChart',
-      props: {
-        image: 'vpittamp23/nixos-kubevirt-desktop:v1.0.0-x11'
-      }
-    },
-    argocd: {
-      syncWave: '-50',  // Before DataVolumes
-      labels: {
-        'app.kubernetes.io/name': 'nixos-image-server',
-        'app.kubernetes.io/component': 'image-server',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
-    }
-  },
-
-  // NixOS DataVolume (Import NixOS image into PVC)
-  {
-    name: 'nixos-dev-datavolume',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsDataVolumeChart',
-      props: {
-        dataVolumeName: 'nixos-dev-datavolume',
-        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
-        storageSize: '50Gi'  // Need 50Gi for full KDE Plasma 6 desktop (~25.5 GB system + overhead)
-      }
-    },
-    argocd: {
-      syncWave: '0',  // After image server
-      labels: {
-        'app.kubernetes.io/name': 'nixos-dev-datavolume',
-        'app.kubernetes.io/component': 'storage',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
-  // Tailscale VM Secrets (Auth key for VM Tailscale authentication)
-  {
-    name: 'tailscale-vm-secrets',
-    namespace: 'default',
-    chart: {
-      type: 'TailscaleVmSecretsChart',
-      props: {
-        namespace: 'default',
-        syncWave: '5'  // Before VM creation
-      }
-    },
-    argocd: {
-      syncWave: '5',  // Before VM
-      labels: {
-        'app.kubernetes.io/name': 'tailscale-vm-secrets',
-        'app.kubernetes.io/component': 'secrets',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      // Retry logic handles ESO webhook not being ready during initial cluster startup
-      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
-      syncPolicy: externalSecretsAppSyncPolicy(['CreateNamespace=false']),
-      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
-    }
-  },
-
-  // NixOS Virtual Machine
-  {
-    name: 'nixos-dev-vm',
-    namespace: 'default',
-    chart: {
-      type: 'NixOsVmChart',
-      props: {
-        vmName: 'nixos-dev-vm',
-        dataVolumeName: 'nixos-dev-datavolume',
-        cpuCores: 8,  // Increased to 8 for maximum performance
-        memory: '32Gi',  // Increased to 32Gi for smooth desktop experience with full NixOS config
-        enableTailscale: true,  // Enable Tailscale LoadBalancer for direct IP access
-        tailscaleHostname: 'nixos-dev-vm'  // Tailscale hostname (without -rdp suffix)
-      }
-    },
-    argocd: {
-      syncWave: '10',  // After DataVolume
-      labels: {
-        'app.kubernetes.io/name': 'nixos-dev-vm',
-        'app.kubernetes.io/component': 'virtual-machine',
-        'app.kubernetes.io/part-of': 'kubevirt'
-      },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        }
-      }
-    }
-  },
-
   {
     name: 'bootstrap-secrets',
     namespace: 'argocd',
@@ -847,6 +629,30 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Shared RBAC for all Tailscale Serve deployments
+  // Creates ServiceAccount, Role, and RoleBinding once to eliminate SharedResourceWarning
+  {
+    name: 'tailscale-serve-rbac',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeRbacChart',
+      props: {
+        namespace: 'tailscale'
+      }
+    },
+    argocd: {
+      syncWave: '-45',  // After tailscale-secrets (-70), before tailscale-serve apps (-40)
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-serve-rbac',
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
   // Tailscale Serve endpoint for ArgoCD UI (userspace, independent of operator proxy)
   // Uses Tailscale Services for stable URL: https://svc:argocd.<tailnet>.ts.net
   {
@@ -1254,7 +1060,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     },
     argocd: {
-      syncWave: '-70',  // Deploy after kagent namespace exists, before agents
+      syncWave: '-112',  // Deploy after kagent-crds (-115), before kagent (-110) which needs the secrets
       labels: {
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'kagent',

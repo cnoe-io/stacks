@@ -111,6 +111,60 @@ export class SpecKitAgentsChart extends Chart {
     const conversationComponent = props.conversationComponent || 'anthropic';
     const llmSecretName = props.llmSecretName || 'dapr-agents-llm-providers';
 
+    // ArgoCD PreSync hook Job to wait for Dapr sidecar injector webhook to be ready
+    // This prevents race condition where pods are created before webhook CA is propagated
+    new k8s.KubeJob(this, 'wait-for-dapr-injector', {
+      metadata: {
+        name: 'speckit-wait-for-dapr-injector',
+        namespace: namespace,
+        annotations: {
+          'argocd.argoproj.io/hook': 'PreSync',
+          'argocd.argoproj.io/hook-delete-policy': 'BeforeHookCreation,HookSucceeded',
+        },
+        labels: {
+          'app.kubernetes.io/name': 'speckit-wait-for-dapr-injector',
+          'app.kubernetes.io/component': 'presync-hook',
+          'app.kubernetes.io/part-of': 'speckit',
+        },
+      },
+      spec: {
+        ttlSecondsAfterFinished: 60,
+        backoffLimit: 10,
+        template: {
+          metadata: {
+            labels: {
+              'app.kubernetes.io/name': 'speckit-wait-for-dapr-injector',
+            },
+          },
+          spec: {
+            restartPolicy: 'OnFailure',
+            serviceAccountName: 'speckit-agents',
+            containers: [
+              {
+                name: 'wait-for-dapr',
+                image: 'bitnami/kubectl:latest',
+                command: ['sh', '-c'],
+                args: [
+                  `echo "Waiting for Dapr sidecar injector webhook to be ready..." && \
+                   for i in $(seq 1 60); do \
+                     CA=$(kubectl get mutatingwebhookconfiguration dapr-sidecar-injector -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null); \
+                     if [ -n "$CA" ] && echo "$CA" | grep -q '^[A-Za-z0-9]'; then \
+                       echo "Dapr sidecar injector is ready with CA bundle!"; \
+                       sleep 5; \
+                       exit 0; \
+                     fi; \
+                     echo "Attempt $i: Dapr sidecar injector not ready, waiting..."; \
+                     sleep 2; \
+                   done && \
+                   echo "Timeout waiting for Dapr sidecar injector" && exit 1`
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+
     // Define all SpecKit agents
     const agents: SpecKitAgentConfig[] = [
       {
@@ -411,6 +465,51 @@ export class SpecKitAgentsRbacChart extends Chart {
       roleRef: {
         kind: 'Role',
         name: 'speckit-agents',
+        apiGroup: 'rbac.authorization.k8s.io',
+      },
+    });
+
+    // ClusterRole for reading MutatingWebhookConfigurations (cluster-scoped)
+    // Required for PreSync hook to check if Dapr sidecar injector is ready
+    new k8s.KubeClusterRole(this, 'speckit-webhook-reader', {
+      metadata: {
+        name: 'speckit-webhook-reader',
+        labels: {
+          'app.kubernetes.io/name': 'speckit-agents',
+          'app.kubernetes.io/component': 'rbac',
+          'app.kubernetes.io/part-of': 'speckit',
+        },
+      },
+      rules: [
+        {
+          apiGroups: ['admissionregistration.k8s.io'],
+          resources: ['mutatingwebhookconfigurations'],
+          verbs: ['get', 'list'],
+          resourceNames: ['dapr-sidecar-injector'],
+        },
+      ],
+    });
+
+    // ClusterRoleBinding
+    new k8s.KubeClusterRoleBinding(this, 'speckit-webhook-reader-binding', {
+      metadata: {
+        name: 'speckit-webhook-reader',
+        labels: {
+          'app.kubernetes.io/name': 'speckit-agents',
+          'app.kubernetes.io/component': 'rbac',
+          'app.kubernetes.io/part-of': 'speckit',
+        },
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: 'speckit-agents',
+          namespace: namespace,
+        },
+      ],
+      roleRef: {
+        kind: 'ClusterRole',
+        name: 'speckit-webhook-reader',
         apiGroup: 'rbac.authorization.k8s.io',
       },
     });
