@@ -87,6 +87,10 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   ${hostnameEnv}--accept-dns=false --accept-routes=false --ssh=false
 
+# wait for node registration and tag assignment before advertising service
+# This ensures the node's tag is registered with control server for auto-approval
+sleep 5
+
 # expose service via tailscale serve
 ${serveCommand}
 
