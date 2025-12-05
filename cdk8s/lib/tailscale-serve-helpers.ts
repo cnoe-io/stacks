@@ -35,9 +35,10 @@ export function generateTailscaleServeScript(props: ResolvedTailscaleServeChartP
   } = props;
 
   // Determine local proxy port
-  // Use the backend port for socat to avoid conflicts with tailscale serve's TLS listener on 443
-  // tailscale serve will handle TLS termination and proxy to this local port
-  const localPort = backendPort;
+  // In userspace networking mode, netstack routes the exposed port (443) directly to 127.0.0.1:443
+  // So socat must listen on the exposed port (443), not the backend port
+  // Tailscale serve handles TLS termination before proxying to socat
+  const localPort = exposedPort;
 
   // Build the tailscale serve command based on mode
   let serveCommand: string;
