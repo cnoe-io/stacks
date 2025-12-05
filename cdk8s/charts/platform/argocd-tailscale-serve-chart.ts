@@ -8,6 +8,7 @@ import {
 import {
   generateTailscaleServeScript,
   generateTailscaleEnvVars,
+  generateWaitForSecretInitContainer,
 } from '../../lib/tailscale-serve-helpers';
 
 /**
@@ -58,6 +59,9 @@ export class ArgoCdTailscaleServeChart extends Chart {
           },
           spec: {
             automountServiceAccountToken: false,
+            // Init container waits for secret to exist before starting main container
+            // This prevents CreateContainerConfigError when ESO hasn't synced yet
+            initContainers: [generateWaitForSecretInitContainer(resolvedProps)],
             containers: [
               {
                 name: 'tailscale-serve',

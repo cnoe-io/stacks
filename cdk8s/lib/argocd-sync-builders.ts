@@ -32,3 +32,44 @@ export function automatedSyncWithOptions(options: string[], retry?: SyncRetry): 
   };
 }
 
+/**
+ * Standard ignoreDifferences configuration for ExternalSecret resources.
+ * Server-side apply causes perpetual OutOfSync due to controller-added fields.
+ */
+export const EXTERNAL_SECRET_IGNORE_DIFFERENCES = [
+  {
+    group: 'external-secrets.io',
+    kind: 'ExternalSecret',
+    jsonPointers: ['/spec/refreshInterval']
+  },
+  {
+    group: 'external-secrets.io',
+    kind: 'ClusterSecretStore',
+    jsonPointers: ['/spec']
+  }
+];
+
+/**
+ * Standard retry configuration for ESO-dependent apps.
+ * Handles webhook not being ready during cluster startup.
+ */
+export const ESO_RETRY_CONFIG: SyncRetry = {
+  limit: 10,
+  backoff: {
+    duration: '5s',
+    factor: 2,
+    maxDuration: '3m'
+  }
+};
+
+/**
+ * Build sync policy for apps that depend on External Secrets Operator.
+ * Includes retry logic and RespectIgnoreDifferences option.
+ */
+export function externalSecretsAppSyncPolicy(extraOptions: string[] = []): SyncPolicyShape {
+  return automatedSyncWithOptions(
+    ['CreateNamespace=true', 'ServerSideApply=true', 'RespectIgnoreDifferences=true', ...extraOptions],
+    ESO_RETRY_CONFIG
+  );
+}
+

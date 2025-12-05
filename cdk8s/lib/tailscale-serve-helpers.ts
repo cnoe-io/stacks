@@ -8,6 +8,43 @@
 import { ResolvedTailscaleServeChartProps } from './tailscale-serve-chart-props';
 
 /**
+ * Generate an init container that waits for the auth key secret to exist.
+ *
+ * This prevents CreateContainerConfigError when the main container starts
+ * before ExternalSecrets has synced the secret from Azure Key Vault.
+ *
+ * @param props Resolved chart properties
+ * @param kubectlImage Image to use for kubectl (default: bitnami/kubectl:latest)
+ * @returns Init container definition
+ */
+export function generateWaitForSecretInitContainer(
+  props: ResolvedTailscaleServeChartProps,
+  kubectlImage = 'bitnami/kubectl:latest'
+): {
+  name: string;
+  image: string;
+  command: string[];
+  args: string[];
+} {
+  const { authKeySecretName, namespace } = props;
+  return {
+    name: 'wait-for-secret',
+    image: kubectlImage,
+    command: ['/bin/sh', '-c'],
+    args: [
+      `
+echo "Waiting for secret ${authKeySecretName} to exist..."
+while ! kubectl get secret ${authKeySecretName} -n ${namespace} > /dev/null 2>&1; do
+  echo "Secret not found, waiting 5s..."
+  sleep 5
+done
+echo "Secret ${authKeySecretName} found, proceeding..."
+`,
+    ],
+  };
+}
+
+/**
  * Generate the shell script for the Tailscale serve container.
  *
  * This script:
@@ -34,10 +71,12 @@ export function generateTailscaleServeScript(props: ResolvedTailscaleServeChartP
     legacyHostname,
   } = props;
 
-  // Determine local proxy port
-  // For Tailscale Services mode in userspace networking, we need to listen on the exposed port (443)
-  // because the netstack routes to the exposed port, not the configured backend port
-  const localPort = legacyHostnameMode ? backendPort : exposedPort;
+  // Determine local proxy port for socat
+  // For TLS passthrough backends (https+insecure://), socat must listen on 443
+  // because tailscale serve just proxies without TLS termination
+  // For HTTP backends (http://), socat must listen on a different port (e.g., 8080)
+  // so tailscale serve can handle TLS termination on 443
+  const localPort = backendScheme.startsWith('https') ? exposedPort : 8080;
 
   // Build the tailscale serve command based on mode
   let serveCommand: string;
@@ -85,6 +124,10 @@ done
 tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   ${hostnameEnv}--accept-dns=false --accept-routes=false --ssh=false
+
+# wait for node registration and tag assignment before advertising service
+# This ensures the node's tag is registered with control server for auto-approval
+sleep 5
 
 # expose service via tailscale serve
 ${serveCommand}
