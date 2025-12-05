@@ -40,6 +40,55 @@ export class ArgoCdTailscaleServeChart extends Chart {
 
     const namespace = resolvedProps.namespace;
     const name = 'argocd-tailscale-serve';
+    const serviceAccountName = 'tailscale-serve';
+
+    // Create ServiceAccount for tailscale-serve pods
+    // This SA has permission to read secrets (needed by init container)
+    new k8s.KubeServiceAccount(this, 'sa', {
+      metadata: {
+        name: serviceAccountName,
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': 'tailscale-serve',
+          'app.kubernetes.io/component': 'tailscale-serve',
+        },
+      },
+    });
+
+    // Role to read secrets in the tailscale namespace
+    new k8s.KubeRole(this, 'role', {
+      metadata: {
+        name: 'tailscale-serve-secret-reader',
+        namespace,
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'list', 'watch'],
+        },
+      ],
+    });
+
+    // Bind the role to the ServiceAccount
+    new k8s.KubeRoleBinding(this, 'role-binding', {
+      metadata: {
+        name: 'tailscale-serve-secret-reader',
+        namespace,
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'Role',
+        name: 'tailscale-serve-secret-reader',
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: serviceAccountName,
+          namespace,
+        },
+      ],
+    });
 
     new k8s.KubeDeployment(this, 'ts-serve-deployment', {
       metadata: {
@@ -58,7 +107,7 @@ export class ArgoCdTailscaleServeChart extends Chart {
             labels: { 'app.kubernetes.io/name': name },
           },
           spec: {
-            automountServiceAccountToken: false,
+            serviceAccountName,
             // Init container waits for secret to exist before starting main container
             // This prevents CreateContainerConfigError when ESO hasn't synced yet
             initContainers: [generateWaitForSecretInitContainer(resolvedProps)],
