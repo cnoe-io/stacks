@@ -1,5 +1,9 @@
 import { ApplicationConfig } from '../lib/idpbuilder-types';
-import { automatedSyncWithOptions } from '../lib/argocd-sync-builders';
+import {
+  automatedSyncWithOptions,
+  externalSecretsAppSyncPolicy,
+  EXTERNAL_SECRET_IGNORE_DIFFERENCES
+} from '../lib/argocd-sync-builders';
 
 /**
  * IDPBuilder application configurations
@@ -238,14 +242,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'kubevirt'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(['CreateNamespace=false']),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
 
@@ -299,14 +298,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'bootstrap-secrets'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
   // Replaced with multi-env version below
@@ -448,14 +442,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'headlamp-keycloak-secrets'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
   {
@@ -503,14 +492,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'kargo-secrets'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
   {
@@ -827,14 +811,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'tailscale'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
 
@@ -1282,14 +1261,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'kagent-secrets'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(['CreateNamespace=false']),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
 
@@ -1426,14 +1400,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'observability'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(['CreateNamespace=false']),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
 
@@ -1768,14 +1737,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'dapr-agents'
       },
       // Retry logic handles ESO webhook not being ready during initial cluster startup
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
-        limit: 10,
-        backoff: {
-          duration: '5s',
-          factor: 2,
-          maxDuration: '3m'
-        }
-      })
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
 
