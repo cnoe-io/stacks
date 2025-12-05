@@ -418,7 +418,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'keycloak',
         'app.kubernetes.io/name': 'keycloak-headlamp-client'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'SkipDryRunOnMissingResource=true'])
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'SkipDryRunOnMissingResource=true'], {
+        limit: 10,
+        backoff: {
+          duration: '5s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   {
@@ -634,13 +642,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'kargo-pipelines',
         'app.kubernetes.io/name': 'kargo-pipelines-credentials'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '5s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   {
@@ -684,13 +694,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'kargo-gitea-webhook-setup',
         'app.kubernetes.io/managed-by': 'argocd'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '5s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   {
