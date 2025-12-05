@@ -295,7 +295,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'platform',
         'app.kubernetes.io/name': 'bootstrap-secrets'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   // Replaced with multi-env version below
@@ -428,7 +436,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'headlamp',
         'app.kubernetes.io/name': 'headlamp-keycloak-secrets'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   {
@@ -475,13 +491,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'kargo',
         'app.kubernetes.io/name': 'kargo-secrets'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=true']
-      }
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
   {
@@ -746,52 +764,6 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Tailscale Operator - Remote Kubernetes Cluster Access
-  // Enables LoadBalancer service exposure via Tailscale network
-  // TODO: Re-enable when tailscale.com CRD imports are generated
-  // {
-  //   name: 'tailscale-operator',
-  //   namespace: 'tailscale',
-  //   chart: {
-  //     type: 'TailscaleOperatorChart',
-  //     props: {
-  //       environmentName: process.env.ENVIRONMENT_NAME as 'dev' | 'staging' | 'production' || 'dev',
-  //       clusterName: process.env.CLUSTER_NAME || 'kind',
-  //       oauthSecretName: 'tailscale-oauth',
-  //       enableHA: false,  // Disable ProxyGroup in dev (conflicts with APISERVER_PROXY=true)
-  //       proxyReplicas: 2,
-  //       impersonationGrants: [
-  //         {
-  //           tailscaleGroup: 'group:admins',
-  //           kubernetesGroups: ['system:masters'],
-  //           description: 'Full cluster admin access for Tailscale admin group'
-  //         },
-  //         {
-  //           tailscaleGroup: 'group:developers',
-  //           kubernetesGroups: ['developers'],
-  //           description: 'Developer namespace access via Kubernetes RBAC'
-  //         }
-  //       ]
-  //     }
-  //   },
-  //   dependencies: {
-  //     tailscaleCrds: {
-  //       type: 'TailscaleCrdsChart'
-  //     }
-  //   },
-  //   argocd: {
-  //     syncWave: '-90',  // Deploy after CRDs
-  //     labels: {
-  //       'app.kubernetes.io/name': 'tailscale-operator',
-  //       'app.kubernetes.io/component': 'network-proxy'
-  //     },
-  //     syncPolicy: {
-  //       automated: { prune: true, selfHeal: true },
-  //       syncOptions: ['SkipDryRunOnMissingResource=true']
-  //     }
-  //   }
-  // },
-
   // Tailscale Serve for Kubernetes API (kubectl access)
   // Replaces tailscale-api-proxy with Tailscale Services for stable URL
   // Access: https://k8s-api.<tailnet>.ts.net
@@ -839,12 +811,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'tailscale'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
         }
-      }
+      })
     }
   },
 
@@ -1291,13 +1266,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'kagent',
         'app.kubernetes.io/name': 'kagent-secrets'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
-        },
-        syncOptions: ['CreateNamespace=false']  // Namespace created by kagent-crds
-      }
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=false'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
+        }
+      })
     }
   },
 
@@ -1772,12 +1749,15 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'dapr-agents'
       },
-      syncPolicy: {
-        automated: {
-          prune: true,
-          selfHeal: true
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'], {
+        limit: 10,
+        backoff: {
+          duration: '10s',
+          factor: 2,
+          maxDuration: '3m'
         }
-      }
+      })
     }
   },
 
