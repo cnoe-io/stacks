@@ -818,6 +818,33 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // Tailscale Secrets (Auth key for Tailscale Services pods)
+  {
+    name: 'tailscale-secrets',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleSecretsChart',
+      props: {
+        namespace: 'tailscale',
+        syncWave: '-70'  // Before tailscale pods that need the auth key
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // After ClusterSecretStore, before tailscale pods
+      labels: {
+        'app.kubernetes.io/name': 'tailscale-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
   // Tailscale Subnet Router (exposes cluster pod and service networks to Tailscale)
   {
     name: 'tailscale-subnet-router',
