@@ -280,8 +280,32 @@ cluster-deploy() {
       echo "🔑 Generating Tailscale remote access token..."
 
       # Wait for k8s-api-tailscale-serve to be ready
-      echo "   Waiting for k8s-api-tailscale-serve pod..."
-      if kubectl wait --for=condition=available deployment/k8s-api-tailscale-serve -n tailscale --timeout=120s &>/dev/null; then
+      # Note: With init containers waiting for ESO secrets, this can take 5-10 minutes
+      # The init container approach prevents CreateContainerConfigError but requires patience
+      echo "   Waiting for k8s-api-tailscale-serve pod (may take 5-10 min due to ESO sync)..."
+
+      # Show progress while waiting
+      local TIMEOUT=600  # 10 minutes
+      local INTERVAL=30
+      local ELAPSED=0
+      local READY=false
+
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        if kubectl wait --for=condition=available deployment/k8s-api-tailscale-serve -n tailscale --timeout=${INTERVAL}s &>/dev/null; then
+          READY=true
+          break
+        fi
+        ELAPSED=$((ELAPSED + INTERVAL))
+
+        # Show status update
+        local POD_STATUS
+        POD_STATUS=$(kubectl get pods -n tailscale -l app.kubernetes.io/name=k8s-api-tailscale-serve -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "Unknown")
+        local INIT_STATUS
+        INIT_STATUS=$(kubectl get pods -n tailscale -l app.kubernetes.io/name=k8s-api-tailscale-serve -o jsonpath='{.items[0].status.initContainerStatuses[0].state}' 2>/dev/null | grep -o 'running\|waiting\|terminated' | head -1 || echo "unknown")
+        echo "   ... still waiting (${ELAPSED}s/${TIMEOUT}s) - Pod: $POD_STATUS, Init: $INIT_STATUS"
+      done
+
+      if [ "$READY" = true ]; then
         sleep 5  # Additional wait for ServiceAccount to be ready
         if "$TAILSCALE_KUBECONFIG_SCRIPT" generate &>/dev/null; then
           echo "✅ Tailscale remote access token generated and stored in Azure Key Vault"
@@ -290,7 +314,9 @@ cluster-deploy() {
           echo "⚠️  Tailscale token generation failed (may retry with: tailscale-kubeconfig.sh generate)"
         fi
       else
-        echo "⚠️  k8s-api-tailscale-serve not ready yet (retry later with: tailscale-kubeconfig.sh generate)"
+        echo "⚠️  k8s-api-tailscale-serve not ready after ${TIMEOUT}s"
+        echo "   This is expected during first deployment while ESO syncs secrets from Azure Key Vault"
+        echo "   Retry later with: tailscale-kubeconfig.sh generate"
       fi
     fi
   fi
