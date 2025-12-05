@@ -118,6 +118,23 @@ export class TailscaleSubnetRouterChart extends Chart {
       },
       spec: {
         serviceAccountName,
+        // Init container waits for secret to exist before starting main container
+        // This prevents CreateContainerConfigError when ESO hasn't synced yet
+        initContainers: [
+          {
+            name: 'wait-for-secret',
+            image: 'bitnami/kubectl:latest',
+            command: ['/bin/sh', '-c'],
+            args: [`
+echo "Waiting for secret ${authKeySecretName} to exist..."
+while ! kubectl get secret ${authKeySecretName} -n ${namespace} > /dev/null 2>&1; do
+  echo "Secret not found, waiting 5s..."
+  sleep 5
+done
+echo "Secret ${authKeySecretName} found, proceeding..."
+`],
+          },
+        ],
         containers: [
           {
             name: 'tailscale',
