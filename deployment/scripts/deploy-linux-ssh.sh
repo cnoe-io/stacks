@@ -133,6 +133,31 @@ mkdir -p "${DEPLOYMENT_DIR}/config"
 # Use SERVICE_ACCOUNT_ISSUER from wi.env, or fall back to default
 SERVICE_ACCOUNT_ISSUER="${SERVICE_ACCOUNT_ISSUER:-https://oidcissuer65846b7df97b.z13.web.core.windows.net/}"
 
+# Generate Docker Hub registry config from 1Password (avoids rate limiting)
+CONTAINERD_CONFIG_DIR="${DEPLOYMENT_DIR}/config/containerd"
+DOCKER_USER="vpittamp23"
+if command -v op &>/dev/null; then
+    echo -e "${GREEN}Generating Docker Hub registry config from 1Password...${NC}"
+    DOCKER_TOKEN=$(op read 'op://CLI/DOCKER_PERSONAL_ACCESS_TOKEN/password' 2>/dev/null)
+    if [ -n "$DOCKER_TOKEN" ]; then
+        mkdir -p "${CONTAINERD_CONFIG_DIR}/docker.io"
+        AUTH_B64=$(echo -n "${DOCKER_USER}:${DOCKER_TOKEN}" | base64 -w0)
+        cat > "${CONTAINERD_CONFIG_DIR}/docker.io/hosts.toml" <<DOCKEREOF
+server = "https://registry-1.docker.io"
+
+[host."https://registry-1.docker.io"]
+  capabilities = ["pull", "resolve"]
+  [host."https://registry-1.docker.io".header]
+    Authorization = ["Basic ${AUTH_B64}"]
+DOCKEREOF
+        echo -e "${GREEN}✓ Docker Hub auth configured (200 pulls/6hr limit)${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Could not retrieve Docker token from 1Password${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  1Password CLI not available, skipping Docker Hub auth${NC}"
+fi
+
 cat > "${CONFIG_FILE}" <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -143,9 +168,9 @@ nodes:
     - hostPath: ${KEYS_DIR}
       containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
-    # Mount NixOS images directory for KubeVirt VMs
-    - hostPath: ${STACKS_DIR}/nixos-images
-      containerPath: ${STACKS_DIR}/nixos-images
+    # Mount Docker Hub registry config (with auth from 1Password)
+    - hostPath: ${CONTAINERD_CONFIG_DIR}
+      containerPath: /etc/containerd/certs.d
       readOnly: true
 
   kubeadmConfigPatches:
@@ -160,6 +185,11 @@ nodes:
     controllerManager:
       extraArgs:
         service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
+
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"
 EOF
 
 echo -e "${GREEN}✓ Generated config with issuer: ${SERVICE_ACCOUNT_ISSUER}${NC}"

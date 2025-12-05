@@ -35,12 +35,25 @@ export function automatedSyncWithOptions(options: string[], retry?: SyncRetry): 
 /**
  * Standard ignoreDifferences configuration for ExternalSecret resources.
  * Server-side apply causes perpetual OutOfSync due to controller-added fields.
+ * The ESO controller adds default values for many fields that aren't in the original manifest:
+ * - refreshInterval, conversionStrategy, decodingStrategy, metadataPolicy
+ * - creationPolicy, deletionPolicy, engineVersion, mergePolicy
  */
 export const EXTERNAL_SECRET_IGNORE_DIFFERENCES = [
   {
     group: 'external-secrets.io',
     kind: 'ExternalSecret',
-    jsonPointers: ['/spec/refreshInterval']
+    // Use jqPathExpressions for more flexible ignoring of controller-defaulted fields
+    jqPathExpressions: [
+      '.spec.refreshInterval',
+      '.spec.data[].remoteRef.conversionStrategy',
+      '.spec.data[].remoteRef.decodingStrategy',
+      '.spec.data[].remoteRef.metadataPolicy',
+      '.spec.target.creationPolicy',
+      '.spec.target.deletionPolicy',
+      '.spec.target.template.engineVersion',
+      '.spec.target.template.mergePolicy'
+    ]
   },
   {
     group: 'external-secrets.io',
