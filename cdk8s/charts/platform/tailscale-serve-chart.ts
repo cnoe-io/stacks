@@ -230,9 +230,11 @@ function generateServeScriptWithBackend(
   backendPort: number,
   backendInsecure: boolean
 ): string {
-  // Use http or https based on backend port and insecure flag
+  // For backend health check - use http for insecure backends, https for secure
   const backendScheme = backendInsecure ? 'http' : (backendPort === 443 ? 'https' : 'http');
-  const insecureFlag = backendInsecure ? '+insecure' : '';
+  // For tailscale serve - always use https (socat forwards to local 443)
+  // Use https+insecure when backend uses self-signed certs
+  const serveScheme = backendInsecure ? 'https+insecure' : 'http';
 
   return `
 set -euo pipefail
@@ -277,7 +279,7 @@ socat TCP-LISTEN:443,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 # Expose via Tailscale serve on HTTPS 443 with service registration
 # The serve command tells Tailscale to route traffic to localhost:443 (socat)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 ${backendScheme}${insecureFlag}://127.0.0.1:443
+  serve --service=svc:${serviceName} --https=443 ${serveScheme}://127.0.0.1:443
 
 echo "Service running at https://svc-${serviceName}.<tailnet>.ts.net"
 echo "Backend: ${backendHost}:${backendPort}"
