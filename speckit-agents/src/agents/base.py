@@ -268,12 +268,46 @@ class BaseClaudeAgent(ABC):
             logger.error(f"Failed to publish status update: {e}")
 
     # =========================================================================
-    # Artifact Management
+    # Artifact Management (Dapr State Store)
     # =========================================================================
 
     def get_artifacts_path(self, workflow_id: UUID) -> Path:
-        """Get the artifacts directory path for a workflow."""
+        """Get the artifacts directory path for a workflow (for local fallback)."""
         return Path(self.settings.artifacts_path) / str(workflow_id)
+
+    def _artifact_state_key(self, workflow_id: UUID, artifact_type: ArtifactType) -> str:
+        """Generate Dapr state key for an artifact.
+
+        Format: artifact:{workflow_id}:{artifact_type}
+        """
+        return f"artifact:{workflow_id}:{artifact_type.value}"
+
+    async def save_artifact_content(
+        self,
+        workflow_id: UUID,
+        artifact_type: ArtifactType,
+        content: str,
+    ) -> None:
+        """Save artifact content to Dapr state store.
+
+        Args:
+            workflow_id: Workflow ID
+            artifact_type: Type of artifact
+            content: Artifact content to save
+        """
+        key = self._artifact_state_key(workflow_id, artifact_type)
+
+        try:
+            await asyncio.to_thread(
+                self.dapr_client.save_state,
+                store_name=self.settings.workflow_state_store,
+                key=key,
+                value=content,
+            )
+            logger.info(f"Saved artifact to Dapr state: {key}")
+        except Exception as e:
+            logger.error(f"Failed to save artifact to Dapr state: {e}")
+            raise
 
     async def register_artifact(
         self,
@@ -282,13 +316,13 @@ class BaseClaudeAgent(ABC):
         path: str,
         content: str,
     ) -> Artifact:
-        """Register a generated artifact in workflow state.
+        """Register a generated artifact and store content in Dapr state.
 
         Args:
             workflow_id: Workflow ID
             artifact_type: Type of artifact
-            path: Relative path from artifacts root
-            content: Artifact content (for hash calculation)
+            path: Relative path (for reference, not used for storage)
+            content: Artifact content to save
 
         Returns:
             Created Artifact object
@@ -303,7 +337,10 @@ class BaseClaudeAgent(ABC):
             created_by=self.name,
         )
 
-        # Update workflow state with new artifact
+        # Save artifact content to Dapr state store
+        await self.save_artifact_content(workflow_id, artifact_type, content)
+
+        # Update workflow state with new artifact metadata
         workflow = await self.get_workflow_state(workflow_id)
         if workflow:
             # Remove existing artifact of same type if present
@@ -311,7 +348,7 @@ class BaseClaudeAgent(ABC):
             workflow.artifacts.append(artifact)
             await self.save_workflow_state(workflow)
 
-        logger.info(f"Registered artifact: {artifact_type.value} at {path}")
+        logger.info(f"Registered artifact: {artifact_type.value} (stored in Dapr state)")
         return artifact
 
     async def get_artifact_content(
@@ -319,7 +356,7 @@ class BaseClaudeAgent(ABC):
         workflow_id: UUID,
         artifact_type: ArtifactType,
     ) -> Optional[str]:
-        """Read artifact content from file system.
+        """Read artifact content from Dapr state store.
 
         Args:
             workflow_id: Workflow ID
@@ -328,29 +365,23 @@ class BaseClaudeAgent(ABC):
         Returns:
             Artifact content or None if not found
         """
-        # Map artifact type to filename
-        filename_map = {
-            ArtifactType.SPEC: "spec.md",
-            ArtifactType.PLAN: "plan.md",
-            ArtifactType.RESEARCH: "research.md",
-            ArtifactType.DATA_MODEL: "data-model.md",
-            ArtifactType.TASKS: "tasks.md",
-        }
-
-        filename = filename_map.get(artifact_type)
-        if not filename:
-            logger.warning(f"Unknown artifact type: {artifact_type}")
-            return None
-
-        path = self.get_artifacts_path(workflow_id) / filename
+        key = self._artifact_state_key(workflow_id, artifact_type)
 
         try:
-            return path.read_text()
-        except FileNotFoundError:
-            logger.warning(f"Artifact not found: {path}")
-            return None
+            state = await asyncio.to_thread(
+                self.dapr_client.get_state,
+                store_name=self.settings.workflow_state_store,
+                key=key,
+            )
+            if state.data:
+                content = state.data.decode() if isinstance(state.data, bytes) else state.data
+                logger.debug(f"Retrieved artifact from Dapr state: {key}")
+                return content
+            else:
+                logger.warning(f"Artifact not found in Dapr state: {key}")
+                return None
         except Exception as e:
-            logger.error(f"Failed to read artifact: {e}")
+            logger.error(f"Failed to read artifact from Dapr state: {e}")
             return None
 
     # =========================================================================
