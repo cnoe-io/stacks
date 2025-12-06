@@ -1411,8 +1411,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'vpittamp/speckit-agents',  // Local image loaded into kind
-        imageTag: 'claude-sdk-v9',  // Fixed: all directory creation issues
+        agentImage: 'vpittamp23/speckit-agents',  // Docker Hub image
+        imageTag: 'v1.0.1',  // Fixed: Langfuse v2, Deprecated module, prometheus-client
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
         workflowStateStore: 'workflowstatestore',

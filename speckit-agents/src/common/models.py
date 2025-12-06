@@ -45,6 +45,10 @@ class Workflow(BaseModel):
     current_phase: WorkflowPhase = Field(default=WorkflowPhase.SPECIFICATION)
     current_agent: Optional[str] = Field(default=None, description="Currently processing agent")
     artifacts: list["Artifact"] = Field(default_factory=list)
+    trace_ids: Optional["TraceIds"] = Field(
+        default=None,
+        description="Cross-system trace IDs for Langfuse and Jaeger correlation",
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = Field(default=None)
@@ -197,6 +201,31 @@ class TokenUsage(BaseModel):
     total_tokens: int = Field(..., ge=0)
 
 
+class TraceIds(BaseModel):
+    """Cross-system trace IDs for observability correlation.
+
+    Stores trace identifiers from both Langfuse (LLM traces) and
+    Jaeger (distributed traces) for cross-system lookup.
+    """
+
+    langfuse_trace_id: Optional[str] = Field(
+        default=None,
+        description="Langfuse trace ID for LLM generation lookup",
+    )
+    langfuse_session_id: Optional[str] = Field(
+        default=None,
+        description="Langfuse session ID (typically workflow_id)",
+    )
+    jaeger_trace_id: Optional[str] = Field(
+        default=None,
+        description="Jaeger/OpenTelemetry trace ID (hex format)",
+    )
+    jaeger_span_id: Optional[str] = Field(
+        default=None,
+        description="Current Jaeger span ID",
+    )
+
+
 class TraceContext(BaseModel):
     """Runtime trace context for agents.
 
@@ -207,10 +236,12 @@ class TraceContext(BaseModel):
     workflow_id: UUID
     agent_name: str
     parent_observation_id: Optional[str] = None
+    span_id: Optional[str] = None
 
     def to_message_context(self) -> dict[str, Any]:
         """Convert to dict for embedding in workflow message."""
         return {
+            "workflow_id": str(self.workflow_id),
             "langfuse_trace_id": self.trace_id,
             "langfuse_parent_observation_id": self.parent_observation_id,
         }
@@ -276,6 +307,10 @@ class WorkflowStatusResponse(BaseModel):
     current_agent: Optional[str] = None
     progress_percent: int = 0
     artifacts: list[Artifact] = Field(default_factory=list)
+    trace_ids: Optional[TraceIds] = Field(
+        default=None,
+        description="Cross-system trace IDs for observability correlation",
+    )
     created_at: datetime
     updated_at: datetime
     error: Optional[str] = None

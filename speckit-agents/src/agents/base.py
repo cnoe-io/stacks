@@ -6,6 +6,8 @@ Provides:
 - Artifact management
 - Workflow state management
 - Langfuse observability integration
+- OpenTelemetry/Jaeger distributed tracing
+- Tool invocation recording
 """
 
 from __future__ import annotations
@@ -33,6 +35,13 @@ from src.common.models import (
     WorkflowPhase,
     WorkflowStatus,
 )
+from src.services.tracing import (
+    TracingService,
+    get_tracing_service,
+    inject_trace_context,
+    extract_trace_context,
+)
+from src.services.tool_recorder import ToolRecorder, get_tool_recorder
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +96,8 @@ class BaseClaudeAgent(ABC):
     - Artifact management
     - Workflow state management
     - Langfuse trace context propagation
+    - OpenTelemetry/Jaeger tracing with W3C propagation
+    - Tool invocation recording to Langfuse
     """
 
     def __init__(
@@ -114,12 +125,104 @@ class BaseClaudeAgent(ABC):
         # MCP servers (to be registered by subclasses)
         self._mcp_servers: dict[str, Any] = {}
 
+        # OpenTelemetry tracing (lazy initialized)
+        self._tracing: Optional[TracingService] = None
+        self._current_span: Optional[Any] = None
+
+        # Tool recording for Langfuse
+        self._tool_recorder: Optional[ToolRecorder] = None
+
     @property
     def dapr_client(self) -> DaprClient:
         """Get or create Dapr client."""
         if self._dapr_client is None:
             self._dapr_client = DaprClient()
         return self._dapr_client
+
+    @property
+    def tracing(self) -> TracingService:
+        """Get or create the tracing service."""
+        if self._tracing is None:
+            self._tracing = get_tracing_service()
+        return self._tracing
+
+    @property
+    def tool_recorder(self) -> ToolRecorder:
+        """Get or create the tool recorder."""
+        if self._tool_recorder is None:
+            self._tool_recorder = get_tool_recorder()
+            # Link tool recorder to current Langfuse trace if available
+            if hasattr(self, "_langfuse_trace") and self._langfuse_trace:
+                self._tool_recorder.set_langfuse_trace(self._langfuse_trace)
+        return self._tool_recorder
+
+    # =========================================================================
+    # OpenTelemetry Tracing
+    # =========================================================================
+
+    def start_workflow_span(
+        self,
+        workflow_id: UUID,
+        operation: str = "process_task",
+    ) -> Optional[Any]:
+        """Start an OpenTelemetry span for workflow processing.
+
+        Args:
+            workflow_id: Workflow UUID
+            operation: Operation name
+
+        Returns:
+            Span object or None if tracing disabled
+        """
+        span = self.tracing.start_workflow_span(
+            workflow_id=str(workflow_id),
+            agent_name=self.name,
+            operation=operation,
+            langfuse_trace_id=self._trace_id,
+        )
+        self._current_span = span
+        return span
+
+    def end_workflow_span(
+        self,
+        success: bool = True,
+        error: Optional[str] = None,
+    ) -> None:
+        """End the current workflow span.
+
+        Args:
+            success: Whether processing succeeded
+            error: Optional error message
+        """
+        if self._current_span:
+            self.tracing.end_span(self._current_span, success=success, error=error)
+            self._current_span = None
+
+    def add_span_attributes(self, attributes: dict[str, Any]) -> None:
+        """Add attributes to the current span.
+
+        Args:
+            attributes: Key-value attributes to add
+        """
+        if self._current_span:
+            self.tracing.set_span_attributes(self._current_span, attributes)
+
+    def get_trace_propagation_headers(self) -> dict[str, str]:
+        """Get W3C trace context headers for propagation.
+
+        Returns:
+            Dict with traceparent/tracestate headers
+        """
+        carrier: dict[str, str] = {}
+        return inject_trace_context(carrier)
+
+    def extract_trace_from_headers(self, headers: dict[str, str]) -> None:
+        """Extract and set trace context from propagation headers.
+
+        Args:
+            headers: Dict with traceparent/tracestate headers
+        """
+        extract_trace_context(headers)
 
     def register_mcp_server(self, name: str, server: Any) -> None:
         """Register an MCP server for use with Claude SDK.

@@ -86,6 +86,15 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
         self.extract_trace_from_context(context)
         self.set_trace_context(workflow_id, self._trace_id)
 
+        # Create Langfuse trace for this agent's execution
+        self.create_trace(
+            name=f"task-generator:{workflow_id}",
+            metadata={"task": task[:200], "phase": "task_generation"},
+        )
+
+        # Start OpenTelemetry span for distributed tracing
+        self.start_workflow_span(workflow_id, "task_generation")
+
         # Update workflow status
         await self.publish_status_update(
             workflow_id=workflow_id,
@@ -146,6 +155,10 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
 
             logger.info(f"TaskGenerator completed task for workflow {workflow_id}")
 
+            # End spans and flush traces
+            self.end_workflow_span(success=True)
+            self.flush_traces()
+
             return {
                 "success": True,
                 "artifact": artifact.model_dump(),
@@ -155,6 +168,12 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
 
         except Exception as e:
             logger.error(f"TaskGenerator failed for workflow {workflow_id}: {e}")
+
+            # End spans with error and flush traces
+            self.log_error_to_trace(str(e), {"workflow_id": str(workflow_id)})
+            self.end_workflow_span(success=False, error=str(e))
+            self.flush_traces()
+
             await self.publish_status_update(
                 workflow_id=workflow_id,
                 status=WorkflowStatus.FAILED,
