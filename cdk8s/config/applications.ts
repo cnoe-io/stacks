@@ -680,26 +680,222 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Tailscale Ingress (uses Tailscale Operator's ingressClassName: tailscale)
-  // Centralizes all service exposure through the operator, avoiding Let's Encrypt rate limits
+  // =========================================================================
+  // Tailscale Services - Stable URLs via --service flag (Constitution Principle V)
+  // =========================================================================
+  //
+  // These serve charts replace the legacy TailscaleIngressChart pattern.
+  // Benefits:
+  // - Stable URLs (svc-<name>.<tailnet>.ts.net) that survive cluster recreation
+  // - No hostname suffix drift (-1, -2, etc.)
+  // - Persistent storage for certificates (avoids Let's Encrypt rate limits)
+  // - ACL auto-approvers with tag:k8s-services
+  //
+  // Let's Encrypt Rate Limits (avoided via PVC):
+  // - 5 certificates per domain per 168 hours (7 days)
+  // - 10 new registrations per IP per 3 hours
+  // - PVC persists /var/lib/tailscale across pod restarts
+
+  // ArgoCD Tailscale Serve - Access: https://argocd2.tail286401.ts.net
+  // Note: Using 'argocd2' to bypass Let's Encrypt rate limit on 'argocd'
   {
-    name: 'tailscale-ingresses',
+    name: 'argocd-tailscale-serve',
     namespace: 'tailscale',
     chart: {
-      type: 'TailscaleIngressChart',
+      type: 'TailscaleServeChart',
       props: {
-        defaultTags: ['tag:k8s']
-        // Uses default services: argocd, langfuse, gitea, keycloak, headlamp, kargo, kagent
+        serviceName: 'argocd2',
+        backendHost: 'argocd-server.argocd.svc.cluster.local',
+        backendPort: 443,
+        backendInsecure: true,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
       }
     },
     argocd: {
-      syncWave: '-30',  // After operator is running
+      syncWave: '-60',  // After auth key secret
       labels: {
-        'app.kubernetes.io/name': 'tailscale-ingresses',
-        'app.kubernetes.io/component': 'ingress',
+        'app.kubernetes.io/name': 'argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
         'app.kubernetes.io/part-of': 'tailscale'
       },
-      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Langfuse Tailscale Serve - Access: https://langfuse2.tail286401.ts.net
+  // Note: Using 'langfuse2' to bypass Let's Encrypt rate limit on 'langfuse'
+  {
+    name: 'langfuse-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'langfuse2',
+        backendHost: 'langfuse.observability.svc.cluster.local',
+        backendPort: 3000,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',  // After langfuse deployment
+      labels: {
+        'app.kubernetes.io/name': 'langfuse-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Gitea Tailscale Serve - Access: https://gitea2.tail286401.ts.net
+  // Note: Using 'gitea2' to bypass Let's Encrypt rate limit on 'gitea'
+  {
+    name: 'gitea-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'gitea2',
+        backendHost: 'my-gitea-http.gitea.svc.cluster.local',
+        backendPort: 3000,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'gitea-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // kagent Tailscale Serve - Access: https://kagent2.tail286401.ts.net
+  // Note: Using 'kagent2' to bypass Let's Encrypt rate limit on 'kagent'
+  {
+    name: 'kagent-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kagent2',
+        backendHost: 'kagent-ui.kagent.svc.cluster.local',
+        backendPort: 8080,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'kagent-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Kargo Tailscale Serve - Access: https://kargo2.tail286401.ts.net
+  // Note: Using 'kargo2' to bypass Let's Encrypt rate limit on 'kargo'
+  {
+    name: 'kargo-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kargo2',
+        backendHost: 'kargo-api.kargo.svc.cluster.local',
+        backendPort: 80,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'kargo-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Headlamp Tailscale Serve - Access: https://headlamp2.tail286401.ts.net
+  // Note: Using 'headlamp2' to bypass Let's Encrypt rate limit on 'headlamp'
+  {
+    name: 'headlamp-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'headlamp2',
+        backendHost: 'headlamp.headlamp.svc.cluster.local',
+        backendPort: 80,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'headlamp-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Keycloak Tailscale Serve - Access: https://keycloak2.tail286401.ts.net
+  // Note: Using 'keycloak2' to bypass Let's Encrypt rate limit on 'keycloak'
+  {
+    name: 'keycloak-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'keycloak2',
+        backendHost: 'keycloak.keycloak.svc.cluster.local',
+        backendPort: 8080,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'keycloak-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
     }
   },
 
@@ -1180,8 +1376,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         authSecretName: 'langfuse-auth',
         ingressHost: 'langfuse.cnoe.localtest.me',
         // Use Tailscale Services URL for remote access (NextAuth requires exact URL match)
-        // Format: svc:<name>.<tailnet>.ts.net - stable URL that survives cluster recreation
-        nextAuthUrl: 'https://svc-langfuse.tail286401.ts.net'
+        // Format: <name>.<tailnet>.ts.net - stable URL that survives cluster recreation
+        // Note: Using 'langfuse2' to bypass Let's Encrypt rate limit on 'langfuse'
+        nextAuthUrl: 'https://langfuse2.tail286401.ts.net'
       }
     },
     argocd: {
