@@ -1,19 +1,15 @@
-"""Environment configuration with validation for SpecKit agents."""
+"""Environment configuration with validation for SpecKit agents using Claude Agent SDK."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Optional
-
-from dotenv import load_dotenv
-
-# Load .env file if present (for local development)
-load_dotenv()
 
 
 @dataclass
-class Config:
+class Settings:
     """Configuration for SpecKit agents loaded from environment variables."""
 
     # Agent identity
@@ -37,9 +33,6 @@ class Config:
         default_factory=lambda: os.getenv("REGISTRY_STATE_STORE", "agentregistrystore")
     )
     memory_store: str = field(default_factory=lambda: os.getenv("MEMORY_STORE", "memorystore"))
-    conversation_component: str = field(
-        default_factory=lambda: os.getenv("CONVERSATION_COMPONENT", "anthropic")
-    )
 
     # Dapr sidecar
     dapr_http_port: int = field(default_factory=lambda: int(os.getenv("DAPR_HTTP_PORT", "3500")))
@@ -50,12 +43,27 @@ class Config:
         default_factory=lambda: os.getenv("ARTIFACTS_PATH", "/artifacts")
     )
 
-    # LLM configuration
-    llm_timeout_seconds: int = field(
-        default_factory=lambda: int(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
+    # Claude SDK configuration
+    # Note: ANTHROPIC_API_KEY is read directly by Claude SDK from environment
+    claude_model: str = field(
+        default_factory=lambda: os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
     )
-    max_iterations: int = field(
-        default_factory=lambda: int(os.getenv("MAX_ITERATIONS", "5"))
+    claude_max_turns: int = field(
+        default_factory=lambda: int(os.getenv("CLAUDE_MAX_TURNS", "10"))
+    )
+
+    # Langfuse observability (graceful degradation if not configured)
+    langfuse_enabled: bool = field(
+        default_factory=lambda: os.getenv("LANGFUSE_ENABLED", "true").lower() == "true"
+    )
+    langfuse_host: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_HOST", "")
+    )
+    langfuse_public_key: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_PUBLIC_KEY", "")
+    )
+    langfuse_secret_key: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_SECRET_KEY", "")
     )
 
     def __post_init__(self) -> None:
@@ -66,6 +74,14 @@ class Config:
             self.broadcast_topic = f"{self.team_name}.broadcast"
         if not self.workflow_status_topic:
             self.workflow_status_topic = f"{self.team_name}.workflow.status"
+
+        # Disable Langfuse if credentials are missing
+        if self.langfuse_enabled and not all([
+            self.langfuse_host,
+            self.langfuse_public_key,
+            self.langfuse_secret_key,
+        ]):
+            self.langfuse_enabled = False
 
     @property
     def dapr_base_url(self) -> str:
@@ -90,25 +106,34 @@ class Config:
         if not self.pubsub_name:
             errors.append("PUBSUB_NAME is required")
 
+        # Check ANTHROPIC_API_KEY for non-orchestrator agents
+        if self.agent_name != "orchestrator" and not os.getenv("ANTHROPIC_API_KEY"):
+            errors.append("ANTHROPIC_API_KEY is required for Claude SDK agents")
+
         return errors
 
     @classmethod
-    def from_env(cls) -> "Config":
-        """Create Config instance from environment variables."""
-        config = cls()
-        errors = config.validate()
+    def from_env(cls) -> "Settings":
+        """Create Settings instance from environment variables."""
+        settings = cls()
+        errors = settings.validate()
         if errors:
             raise ValueError(f"Configuration errors: {', '.join(errors)}")
-        return config
+        return settings
 
 
-# Singleton config instance
-_config: Optional[Config] = None
+# Singleton settings instance
+_settings: Optional[Settings] = None
 
 
-def get_config() -> Config:
-    """Get the singleton configuration instance."""
-    global _config
-    if _config is None:
-        _config = Config.from_env()
-    return _config
+def get_settings() -> Settings:
+    """Get the singleton settings instance."""
+    global _settings
+    if _settings is None:
+        _settings = Settings.from_env()
+    return _settings
+
+
+# Backwards compatibility alias
+Config = Settings
+get_config = get_settings

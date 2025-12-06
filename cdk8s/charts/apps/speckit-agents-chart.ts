@@ -2,16 +2,16 @@
  * SpecKitAgentsChart - Deploys SpecKit multi-agent workflow system
  *
  * This chart creates Kubernetes Deployments for each SpecKit agent:
- * - Orchestrator: LLM-based routing to appropriate agent
- * - Specifier: Generates spec.md from feature descriptions
- * - Planner: Creates plan.md, research.md, data-model.md
- * - TaskGenerator: Produces dependency-ordered tasks.md
- * - Implementer: Executes tasks phase-by-phase
+ * - Orchestrator: Pure Dapr routing (no LLM)
+ * - Specifier: Claude SDK agent - generates spec.md from feature descriptions
+ * - Planner: Claude SDK agent with subagents - creates plan.md, research.md, data-model.md
+ * - TaskGenerator: Claude SDK agent - produces dependency-ordered tasks.md
+ * - Implementer: Claude SDK agent - executes tasks with TDD workflow
  *
- * Each deployment is annotated for Dapr sidecar injection with:
- * - Pub/Sub subscription for agent topic
- * - State store access
- * - Conversation component for LLM
+ * Architecture:
+ * - Claude Agent SDK handles all LLM-powered agent execution
+ * - Dapr handles distributed systems (pub/sub, state store)
+ * - Orchestrator is pure Dapr routing (no LLM calls)
  *
  * Agents communicate via Dapr pub/sub and are orchestrated through
  * the SpecKit workflow state machine.
@@ -84,13 +84,8 @@ export interface SpecKitAgentsChartProps extends ChartProps {
   memoryStore?: string;
 
   /**
-   * Conversation component name (LLM)
-   * @default 'anthropic'
-   */
-  conversationComponent?: string;
-
-  /**
    * Secret name containing LLM API keys
+   * Note: Claude SDK reads ANTHROPIC_API_KEY directly from environment
    * @default 'dapr-agents-llm-providers'
    */
   llmSecretName?: string;
@@ -108,7 +103,6 @@ export class SpecKitAgentsChart extends Chart {
     const workflowStateStore = props.workflowStateStore || 'workflowstatestore';
     const registryStateStore = props.registryStateStore || 'agentregistrystore';
     const memoryStore = props.memoryStore || 'memorystore';
-    const conversationComponent = props.conversationComponent || 'anthropic';
     const llmSecretName = props.llmSecretName || 'dapr-agents-llm-providers';
 
     // ArgoCD PreSync hook Job to wait for Dapr sidecar injector webhook to be ready
@@ -172,35 +166,35 @@ export class SpecKitAgentsChart extends Chart {
         topic: `${teamName}.orchestrator.requests`,
         port: 8000,
         replicas: 1,
-        description: 'LLM-based routing to appropriate agent based on workflow phase',
+        description: 'Pure Dapr routing - no LLM, manages workflow lifecycle',
       },
       {
         name: 'specifier',
         topic: `${teamName}.specifier.requests`,
         port: 8001,
         replicas: 1,
-        description: 'Generates spec.md from feature descriptions',
+        description: 'Claude SDK agent - generates spec.md from feature descriptions',
       },
       {
         name: 'planner',
         topic: `${teamName}.planner.requests`,
         port: 8002,
         replicas: 1,
-        description: 'Creates plan.md, research.md, data-model.md, contracts/',
+        description: 'Claude SDK agent with parallel subagents - creates plan.md, research.md, data-model.md',
       },
       {
         name: 'task-generator',
         topic: `${teamName}.task-generator.requests`,
         port: 8003,
         replicas: 1,
-        description: 'Produces dependency-ordered tasks.md',
+        description: 'Claude SDK agent - produces dependency-ordered tasks.md',
       },
       {
         name: 'implementer',
         topic: `${teamName}.implementer.requests`,
         port: 8004,
         replicas: 1,
-        description: 'Executes tasks phase-by-phase with TDD approach',
+        description: 'Claude SDK agent - executes tasks with TDD workflow',
       },
     ];
 
@@ -216,7 +210,6 @@ export class SpecKitAgentsChart extends Chart {
         workflowStateStore,
         registryStateStore,
         memoryStore,
-        conversationComponent,
         llmSecretName
       );
     });
@@ -232,7 +225,6 @@ export class SpecKitAgentsChart extends Chart {
     workflowStateStore: string,
     registryStateStore: string,
     memoryStore: string,
-    conversationComponent: string,
     llmSecretName: string
   ): void {
     const appId = `speckit-${agent.name}`;
@@ -285,7 +277,7 @@ export class SpecKitAgentsChart extends Chart {
       { name: 'WORKFLOW_STATE_STORE', value: workflowStateStore },
       { name: 'REGISTRY_STATE_STORE', value: registryStateStore },
       { name: 'MEMORY_STORE', value: memoryStore },
-      { name: 'CONVERSATION_COMPONENT', value: conversationComponent },
+      // Note: CONVERSATION_COMPONENT removed - Claude SDK reads ANTHROPIC_API_KEY directly
 
       // Dapr sidecar address (injected automatically)
       { name: 'DAPR_HTTP_PORT', value: '3500' },

@@ -1,64 +1,68 @@
-"""Task Generator agent for creating tasks.md from planning artifacts."""
+"""Task Generator agent using Claude Agent SDK.
+
+Transforms planning artifacts (plan.md, data-model.md, research.md) into
+structured, dependency-ordered task lists in tasks.md format.
+"""
 
 from __future__ import annotations
 
 import logging
-import time
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, FastAPI, Request
 
-from src.agents.base import BaseAgent
-from src.common.artifacts import get_artifact_storage
-from src.common.config import Config
+from src.agents.base import BaseClaudeAgent
+
+# Claude SDK imports (optional - graceful degradation if not available)
+try:
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions, ClaudeSDKError
+    CLAUDE_SDK_AVAILABLE = True
+except ImportError:
+    CLAUDE_SDK_AVAILABLE = False
+    claude_query = None
+    ClaudeCodeOptions = None
+    ClaudeSDKError = Exception
+from src.common.claude_config import TASK_GENERATOR_CONFIG
+from src.common.config import Settings, get_settings
+from src.common.health import router as health_router
 from src.common.models import (
-    Artifact,
     ArtifactType,
     WorkflowPhase,
     WorkflowStatus,
 )
-from src.common.observability import create_generation
 from src.prompts.task_generator import (
     format_tasks_prompt,
     get_system_prompt,
 )
+from src.tools.dapr_tools import dapr_mcp_server
+from src.tools.artifact_tools import artifact_mcp_server
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["TaskGenerator"])
 
+class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
+    """Claude SDK agent that generates tasks.md from planning artifacts.
 
-class TaskGeneratorAgent(BaseAgent):
-    """Agent that generates tasks.md from planning artifacts.
-
-    The Task Generator converts plan.md into a structured, dependency-ordered
-    task list that developers can execute to implement the feature.
+    The Task Generator:
+    - Reads plan.md, research.md, data-model.md
+    - Analyzes implementation requirements
+    - Creates dependency-ordered task list
+    - Marks parallel-safe tasks with [P]
     """
 
-    def __init__(self, config: Optional[Config] = None) -> None:
-        """Initialize the Task Generator agent.
-
-        Args:
-            config: Optional configuration override
-        """
+    def __init__(self, settings: Optional[Settings] = None) -> None:
+        """Initialize the Claude Task Generator agent."""
         super().__init__(
-            name="task-generator",
-            role="Task Breakdown Specialist",
-            goal="Convert implementation plans into actionable, dependency-ordered task lists",
-            instructions=[
-                "Analyze plan.md to identify all required work items",
-                "Order tasks by dependencies so they can be executed sequentially",
-                "Mark parallel-safe tasks with [P] indicator",
-                "Tag tasks with user story references for traceability",
-                "Include specific file paths for each task",
-                "Group tasks into logical phases (Setup, Core, Tests, etc.)",
-            ],
-            config=config,
+            agent_config=TASK_GENERATOR_CONFIG,
+            settings=settings,
         )
-        self._system_prompt = get_system_prompt()
-        self._storage = get_artifact_storage()
+        # Register MCP servers
+        self.register_mcp_server("dapr", dapr_mcp_server)
+        self.register_mcp_server("artifacts", artifact_mcp_server)
 
     async def process_task(
         self,
@@ -66,25 +70,21 @@ class TaskGeneratorAgent(BaseAgent):
         task: str,
         context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process a task generation request (T018).
+        """Process a task generation request.
 
         Args:
             workflow_id: The workflow this task belongs to
             task: Task description
-            context: Context with plan artifacts and langfuse_trace_id
+            context: Additional context (artifacts, langfuse_trace_id)
 
         Returns:
             Result dict with generated tasks.md
         """
         logger.info(f"TaskGenerator processing task for workflow {workflow_id}")
 
-        # Extract trace context from message (T018)
-        # This allows LLM calls to be correlated under the parent workflow trace
-        # Also sets session_id for Langfuse trace grouping by workflow
-        trace_id = self.extract_trace_context_from_message(context, workflow_id)
-        if not trace_id:
-            # Fallback: create new trace if not propagated from orchestrator
-            await self.initialize_trace_for_workflow(workflow_id)
+        # Extract trace context
+        self.extract_trace_from_context(context)
+        self.set_trace_context(workflow_id, self._trace_id)
 
         # Update workflow status
         await self.publish_status_update(
@@ -95,44 +95,53 @@ class TaskGeneratorAgent(BaseAgent):
         )
 
         try:
-            # Get plan.md content
-            plan_content = await self._get_plan_content(workflow_id, context)
+            # Get planning artifacts
+            plan_content = await self.get_artifact_content(workflow_id, ArtifactType.PLAN)
             if not plan_content:
                 raise ValueError("plan.md not found for workflow")
 
-            # Get spec summary for context
-            spec_content = await self._storage.read_by_type(
-                workflow_id, ArtifactType.SPEC
-            )
-            spec_summary = self._extract_spec_summary(spec_content) if spec_content else ""
+            # Get optional context artifacts
+            spec_content = await self.get_artifact_content(workflow_id, ArtifactType.SPEC)
+            data_model_content = await self.get_artifact_content(workflow_id, ArtifactType.DATA_MODEL)
 
             # Generate tasks.md
             tasks_content = await self._generate_tasks(
-                workflow_id, plan_content, spec_summary
+                workflow_id=workflow_id,
+                plan_content=plan_content,
+                spec_content=spec_content,
+                data_model_content=data_model_content,
             )
 
             # Save artifact
-            artifact = await self._storage.save(
+            artifacts_dir = self.get_artifacts_path(workflow_id)
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
+            tasks_path = artifacts_dir / "tasks.md"
+            tasks_path.write_text(tasks_content)
+
+            # Register artifact
+            artifact = await self.register_artifact(
                 workflow_id=workflow_id,
                 artifact_type=ArtifactType.TASKS,
+                path=str(tasks_path),
                 content=tasks_content,
-                created_by=self.name,
             )
 
-            # Update workflow with artifact
-            workflow = await self.get_workflow_state(workflow_id)
-            if workflow:
-                workflow.artifacts.append(artifact)
-                workflow.status = WorkflowStatus.TASK_GENERATING
-                workflow.current_phase = WorkflowPhase.TASK_GENERATION
-                await self.save_workflow_state(workflow)
-
-            # Publish success status
+            # Update workflow status
             await self.publish_status_update(
                 workflow_id=workflow_id,
                 status=WorkflowStatus.TASK_GENERATING,
                 phase=WorkflowPhase.TASK_GENERATION,
                 progress_percent=75,
+            )
+
+            # Publish phase completion
+            await self.publish_phase_complete(
+                workflow_id=workflow_id,
+                phase=WorkflowPhase.TASK_GENERATION,
+                result={
+                    "artifact": artifact.model_dump(),
+                    "tasks_path": str(tasks_path),
+                },
             )
 
             logger.info(f"TaskGenerator completed task for workflow {workflow_id}")
@@ -157,165 +166,151 @@ class TaskGeneratorAgent(BaseAgent):
                 "error": str(e),
             }
 
-    async def _get_plan_content(
-        self,
-        workflow_id: UUID,
-        context: dict[str, Any],
-    ) -> Optional[str]:
-        """Get plan.md content from storage or context.
-
-        Args:
-            workflow_id: The workflow ID
-            context: Context that may contain plan content
-
-        Returns:
-            Plan.md content or None
-        """
-        # Try to read from storage first
-        content = await self._storage.read_by_type(workflow_id, ArtifactType.PLAN)
-        if content:
-            return content
-
-        # Fall back to context
-        return context.get("plan_content")
-
-    def _extract_spec_summary(self, spec_content: str) -> str:
-        """Extract a summary from spec.md for context.
-
-        Args:
-            spec_content: Full spec.md content
-
-        Returns:
-            Summary string
-        """
-        # Extract Overview section if present
-        lines = spec_content.split("\n")
-        in_overview = False
-        overview_lines = []
-
-        for line in lines:
-            if line.strip().lower().startswith("## overview"):
-                in_overview = True
-                continue
-            if in_overview:
-                if line.strip().startswith("##"):
-                    break
-                overview_lines.append(line)
-
-        if overview_lines:
-            return "\n".join(overview_lines).strip()
-
-        # Fallback: first 500 chars
-        return spec_content[:500] + "..."
-
     async def _generate_tasks(
         self,
         workflow_id: UUID,
         plan_content: str,
-        spec_summary: str,
+        spec_content: Optional[str],
+        data_model_content: Optional[str],
     ) -> str:
-        """Generate tasks.md content using LLM with Langfuse tracing (T012).
+        """Generate tasks.md content using Claude SDK.
 
         Args:
-            workflow_id: The workflow ID
+            workflow_id: Workflow ID
             plan_content: Content of plan.md
-            spec_summary: Summary from spec.md
+            spec_content: Optional spec.md content
+            data_model_content: Optional data-model.md content
 
         Returns:
             Generated tasks.md content
         """
-        start_time = time.time()
+        # Extract summaries for context
+        spec_summary = self._extract_summary(spec_content, "Overview") if spec_content else ""
+        data_model_summary = self._extract_summary(data_model_content, "Entity Definitions") if data_model_content else ""
 
-        # Format the prompt
-        prompt = format_tasks_prompt(plan_content, spec_summary)
+        # Build the prompt
+        prompt = format_tasks_prompt(
+            plan_content=plan_content,
+            spec_summary=spec_summary,
+            data_model_summary=data_model_summary,
+        )
 
-        # Build messages for LLM call
-        messages = [
-            {"role": "system", "content": self._system_prompt},
-            {"role": "user", "content": prompt},
-        ]
-        model = "claude-sonnet-4-20250514"
+        # Build Claude SDK options
+        options = self.get_claude_options(override_max_turns=5)
 
-        # Call Dapr conversation API
+        # Check if Claude SDK is available
+        if not CLAUDE_SDK_AVAILABLE:
+            logger.warning("Claude SDK not available, using fallback task generation")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
+
+        # Check for API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set, using fallback task generation")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
+
+        logger.info(f"Generating tasks with Claude SDK for workflow {workflow_id}")
+        logger.info(f"Model: {options.get('model', 'claude-opus-4-5-20251101')}")
+
+        # System prompt for task generation
+        system_prompt = get_system_prompt()
+
         try:
-            response = self.dapr_client.invoke_method(
-                app_id=self.config.conversation_component,
-                method_name="converse",
-                data={
-                    "messages": messages,
-                    "metadata": {
-                        "model": model,
-                        "max_tokens": 6000,
-                    },
-                },
-                http_verb="POST",
+            full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
+
+            # Collect response content
+            tasks_content = ""
+
+            # Build ClaudeCodeOptions for the query
+            sdk_options = ClaudeCodeOptions(
+                model=options.get("model", "claude-opus-4-5-20251101"),
+                max_turns=options.get("max_turns", 5),
+                cwd=str(self.get_artifacts_path(workflow_id)),
+                permission_mode="bypassPermissions",  # Allow autonomous execution
             )
 
-            # Extract content from response
-            if hasattr(response, "json"):
-                result = response.json()
-            else:
-                result = response
+            async for message in claude_query(
+                prompt=full_prompt,
+                options=sdk_options,
+            ):
+                if hasattr(message, "content"):
+                    content_str = str(message.content)
+                    # Look for tasks.md content in the response
+                    if "# Tasks" in content_str or "## Phase" in content_str:
+                        tasks_content = content_str
 
-            content = result.get("content", "")
-            if isinstance(content, list) and content:
-                content = content[0].get("text", "")
+            # If we got valid task content, return it
+            if tasks_content and len(tasks_content) > 200:
+                logger.info(f"Generated tasks via Claude SDK ({len(tasks_content)} chars)")
+                return tasks_content
 
-            # Extract usage if available
-            usage = result.get("usage")
+            # Fallback if Claude didn't return valid content
+            logger.warning("Claude SDK returned no valid tasks content, using fallback")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
 
-            # Log to Langfuse (T012) - graceful degradation if trace_id not set (T015)
-            if self._trace_id:
-                create_generation(
-                    trace_id=self._trace_id,
-                    name="generate_tasks",
-                    model=model,
-                    input_messages=messages,
-                    output=content,
-                    usage=usage,
-                    metadata={
-                        "agent": self.name,
-                        "latency_ms": int((time.time() - start_time) * 1000),
-                    },
-                )
-
-            return content
-
+        except ClaudeSDKError as e:
+            logger.error(f"Claude SDK error: {e}")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
         except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            # Log error to Langfuse (T014)
-            if self._trace_id:
-                create_generation(
-                    trace_id=self._trace_id,
-                    name="generate_tasks",
-                    model=model,
-                    input_messages=messages,
-                    output=None,
-                    metadata={
-                        "agent": self.name,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                        "latency_ms": int((time.time() - start_time) * 1000),
-                    },
-                )
-            # Fallback to basic template
-            return self._generate_fallback_tasks(plan_content)
+            logger.error(f"Error generating tasks with Claude SDK: {e}")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
 
-    def _generate_fallback_tasks(self, plan_content: str) -> str:
-        """Generate basic tasks when LLM is unavailable.
+    def _extract_summary(self, content: str, section_name: str) -> str:
+        """Extract a specific section from markdown content.
 
         Args:
-            plan_content: The plan.md content
+            content: Full markdown content
+            section_name: Name of section to extract
 
         Returns:
-            Basic tasks.md template
+            Section content or first 500 chars if not found
+        """
+        if not content:
+            return ""
+
+        lines = content.split("\n")
+        in_section = False
+        section_lines = []
+
+        for line in lines:
+            if line.strip().lower().startswith(f"## {section_name.lower()}"):
+                in_section = True
+                continue
+            if in_section:
+                if line.strip().startswith("##"):
+                    break
+                section_lines.append(line)
+
+        if section_lines:
+            return "\n".join(section_lines).strip()[:1000]
+
+        # Fallback to first 500 chars
+        return content[:500] + "..."
+
+    def _generate_fallback_tasks(
+        self,
+        plan_content: str,
+        spec_summary: str,
+    ) -> str:
+        """Generate basic tasks when Claude SDK is unavailable.
+
+        Args:
+            plan_content: Content of plan.md
+            spec_summary: Summary of spec.md
+
+        Returns:
+            Basic tasks.md content
         """
         date = datetime.utcnow().strftime("%Y-%m-%d")
 
-        return f"""# Tasks: Feature Implementation
+        # Extract title from plan
+        lines = plan_content.strip().split("\n")
+        title = lines[0].replace("#", "").strip() if lines else "Feature Implementation"
+
+        return f"""# Tasks: {title}
 
 **Generated**: {date}
-**Based On**: plan.md
+**Based On**: plan.md, spec.md, data-model.md
 
 **Organization**: Tasks grouped by phase for systematic implementation.
 
@@ -327,41 +322,66 @@ class TaskGeneratorAgent(BaseAgent):
 
 ## Phase 1: Setup
 
-- [ ] T001 [US1] Set up project structure
-- [ ] T002 [P] [US1] Create configuration files
-- [ ] T003 [P] [US1] Add dependencies
+- [ ] T001 [US1] Set up project directory structure
+- [ ] T002 [P] [US1] Create configuration files (pyproject.toml, requirements.txt)
+- [ ] T003 [P] [US1] Create .gitignore and .dockerignore
+- [ ] T004 [US1] Initialize empty __init__.py files
 
 ---
 
-## Phase 2: Core Implementation
+## Phase 2: Core Models
 
-- [ ] T004 [US1] Implement core models
-- [ ] T005 [US1] Implement business logic
-- [ ] T006 [US2] Add API endpoints
-
----
-
-## Phase 3: Testing
-
-- [ ] T007 [P] [US1] Add unit tests for models
-- [ ] T008 [P] [US2] Add API integration tests
+- [ ] T005 [US1] Implement Pydantic models (entities, enums)
+- [ ] T006 [US1] Implement configuration management
+- [ ] T007 [P] [US1] Implement health check endpoints
 
 ---
 
-## Phase 4: Polish
+## Phase 3: Core Implementation
 
-- [ ] T009 [US1] Add error handling
-- [ ] T010 [US1] Add documentation
+- [ ] T008 [US2] Implement core business logic
+- [ ] T009 [US2] Implement service layer
+- [ ] T010 [US2] Implement API endpoints
 
 ---
 
-## Dependencies
+## Phase 4: Integration
 
-- T004 depends on T001-T003
-- T005 depends on T004
-- T006 depends on T005
-- T007-T008 depend on T004-T006
-- T009-T010 depend on T007-T008
+- [ ] T011 [US3] Wire up dependencies and routing
+- [ ] T012 [US3] Implement middleware and error handling
+- [ ] T013 [US3] Add logging and observability
+
+---
+
+## Phase 5: Testing
+
+- [ ] T014 [P] [US1] Add unit tests for models
+- [ ] T015 [P] [US2] Add unit tests for services
+- [ ] T016 [P] [US3] Add integration tests
+
+---
+
+## Phase 6: Polish
+
+- [ ] T017 [US1] Add type hints to all public functions
+- [ ] T018 [US1] Create Dockerfile
+- [ ] T019 [US1] Update documentation
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+- **Setup (Phase 1)**: No dependencies - start immediately
+- **Core Models (Phase 2)**: Depends on Phase 1
+- **Core Implementation (Phase 3)**: Depends on Phase 2
+- **Integration (Phase 4)**: Depends on Phase 3
+- **Testing (Phase 5)**: Depends on Phases 2-4
+- **Polish (Phase 6)**: Depends on all previous phases
+
+### Parallel Opportunities
+- T002, T003 can run in parallel (different files)
+- T014, T015, T016 can run in parallel (different test files)
 
 ---
 
@@ -370,6 +390,7 @@ class TaskGeneratorAgent(BaseAgent):
 - Tasks marked [P] can run in parallel
 - Complete each phase before moving to the next
 - Commit after each task or logical group
+- Run tests after each phase
 
 ---
 
@@ -377,21 +398,86 @@ class TaskGeneratorAgent(BaseAgent):
 
 | Phase | Description | Task Count |
 |-------|-------------|------------|
-| Setup | Project structure | 3 |
-| Core | Implementation | 3 |
-| Testing | Unit and integration | 2 |
-| Polish | Error handling, docs | 2 |
-| **Total** | | **10** |
+| Setup | Project structure | 4 |
+| Core Models | Entities and config | 3 |
+| Core Implementation | Business logic | 3 |
+| Integration | Wiring | 3 |
+| Testing | Unit and integration | 3 |
+| Polish | Types, Docker, docs | 3 |
+| **Total** | | **19** |
 """
 
 
-# Create singleton instance
-_agent: Optional[TaskGeneratorAgent] = None
+# ============================================================================
+# FastAPI Application Factory
+# ============================================================================
+
+_agent: Optional[ClaudeTaskGeneratorAgent] = None
 
 
-def get_agent() -> TaskGeneratorAgent:
+def get_agent() -> ClaudeTaskGeneratorAgent:
     """Get or create the Task Generator agent instance."""
     global _agent
     if _agent is None:
-        _agent = TaskGeneratorAgent()
+        _agent = ClaudeTaskGeneratorAgent()
     return _agent
+
+
+def create_task_generator_app() -> FastAPI:
+    """Create FastAPI app for the task generator agent.
+
+    Returns:
+        Configured FastAPI app with agent endpoints
+    """
+    app = FastAPI(
+        title="SpecKit Task Generator Agent",
+        version="2.0.0",
+        description="Claude SDK powered task breakdown specialist",
+    )
+
+    # Add health endpoints
+    app.include_router(health_router)
+
+    # Create agent router
+    router = APIRouter(tags=["TaskGenerator"])
+
+    @router.get("/dapr/subscribe")
+    async def dapr_subscribe():
+        """Dapr pub/sub subscription endpoint."""
+        settings = get_settings()
+        return [
+            {
+                "pubsubname": settings.pubsub_name,
+                "topic": f"{settings.team_name}.task-generator.requests",
+                "route": "/events/task",
+            }
+        ]
+
+    @router.post("/events/task")
+    async def handle_task_event(request: Request):
+        """Handle task events from orchestrator."""
+        agent = get_agent()
+
+        try:
+            body = await request.json()
+            data = body.get("data", body)
+
+            workflow_id = UUID(data.get("workflow_id"))
+            task = data.get("task", "")
+            context = data.get("context", {})
+
+            result = await agent.process_task(
+                workflow_id=workflow_id,
+                task=task,
+                context=context,
+            )
+
+            return {"success": True, "result": result}
+
+        except Exception as e:
+            logger.error(f"Error handling task event: {e}")
+            return {"success": False, "error": str(e)}
+
+    app.include_router(router)
+
+    return app

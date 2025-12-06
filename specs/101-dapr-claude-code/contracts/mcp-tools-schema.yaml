@@ -1,0 +1,360 @@
+# MCP Tools Schema for Dapr Integration
+# These tools are exposed to Claude Agent SDK via in-process MCP server
+
+openapi: 3.0.3
+info:
+  title: SpecKit MCP Tools Schema
+  description: |
+    Schema definitions for custom MCP tools that bridge Claude Agent SDK
+    with Dapr infrastructure services.
+
+    Tools are exposed to Claude as: mcp__<server_name>__<tool_name>
+  version: 1.0.0
+
+components:
+  schemas:
+    # ==========================================================================
+    # Dapr Tools (mcp__dapr__*)
+    # ==========================================================================
+
+    GetWorkflowStateTool:
+      type: object
+      description: |
+        Tool: mcp__dapr__get_workflow_state
+        Retrieves workflow state from Dapr state store.
+      properties:
+        name:
+          type: string
+          const: get_workflow_state
+        description:
+          type: string
+          const: Retrieve workflow state from Dapr state store
+        inputSchema:
+          type: object
+          properties:
+            workflow_id:
+              type: string
+              format: uuid
+              description: The workflow UUID to retrieve
+          required:
+            - workflow_id
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: JSON-encoded workflow state
+
+    SaveWorkflowStateTool:
+      type: object
+      description: |
+        Tool: mcp__dapr__save_workflow_state
+        Saves workflow state to Dapr state store.
+      properties:
+        name:
+          type: string
+          const: save_workflow_state
+        description:
+          type: string
+          const: Save workflow state to Dapr state store
+        inputSchema:
+          type: object
+          properties:
+            workflow_id:
+              type: string
+              format: uuid
+              description: The workflow UUID
+            state:
+              type: object
+              description: Workflow state object to persist
+              additionalProperties: true
+          required:
+            - workflow_id
+            - state
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: Confirmation message
+
+    PublishEventTool:
+      type: object
+      description: |
+        Tool: mcp__dapr__publish_event
+        Publishes message to Dapr pub/sub topic.
+      properties:
+        name:
+          type: string
+          const: publish_event
+        description:
+          type: string
+          const: Publish message to Dapr pub/sub topic
+        inputSchema:
+          type: object
+          properties:
+            topic:
+              type: string
+              description: Target topic name (e.g., speckit.orchestrator.requests)
+            data:
+              type: object
+              description: Message payload
+              additionalProperties: true
+          required:
+            - topic
+            - data
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: Confirmation of publish
+
+    GetArtifactTool:
+      type: object
+      description: |
+        Tool: mcp__dapr__get_artifact
+        Reads an artifact from previous workflow phase.
+      properties:
+        name:
+          type: string
+          const: get_artifact
+        description:
+          type: string
+          const: Read artifact from previous workflow phase
+        inputSchema:
+          type: object
+          properties:
+            workflow_id:
+              type: string
+              format: uuid
+              description: The workflow UUID
+            artifact_type:
+              type: string
+              enum:
+                - spec
+                - plan
+                - research
+                - data_model
+                - tasks
+              description: Type of artifact to retrieve
+          required:
+            - workflow_id
+            - artifact_type
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: Artifact content (markdown)
+
+    PublishPhaseCompleteTool:
+      type: object
+      description: |
+        Tool: mcp__dapr__publish_phase_complete
+        Signals workflow phase completion to orchestrator.
+      properties:
+        name:
+          type: string
+          const: publish_phase_complete
+        description:
+          type: string
+          const: Signal phase completion to orchestrator
+        inputSchema:
+          type: object
+          properties:
+            workflow_id:
+              type: string
+              format: uuid
+              description: The workflow UUID
+            phase:
+              type: string
+              enum:
+                - specification
+                - planning
+                - task_generation
+                - implementation
+              description: Completed phase name
+            result:
+              type: object
+              description: Result data from the phase
+              additionalProperties: true
+          required:
+            - workflow_id
+            - phase
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: Confirmation message
+
+    # ==========================================================================
+    # Test Tools (mcp__tests__*)
+    # ==========================================================================
+
+    RunTestsTool:
+      type: object
+      description: |
+        Tool: mcp__tests__run_tests
+        Executes test suite and returns results.
+        Used by implementer agent for TDD workflow.
+      properties:
+        name:
+          type: string
+          const: run_tests
+        description:
+          type: string
+          const: Execute test suite and return results
+        inputSchema:
+          type: object
+          properties:
+            test_path:
+              type: string
+              description: Path to test file or directory
+              example: tests/unit/test_models.py
+            coverage:
+              type: boolean
+              default: false
+              description: Include coverage report
+          required:
+            - test_path
+        outputSchema:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    const: text
+                  text:
+                    type: string
+                    description: |
+                      Test output including:
+                      - Exit code
+                      - STDOUT (test results)
+                      - STDERR (errors)
+                      - Coverage report (if requested)
+
+    # ==========================================================================
+    # MCP Server Definitions
+    # ==========================================================================
+
+    DaprMCPServer:
+      type: object
+      description: In-process MCP server for Dapr integration
+      properties:
+        name:
+          type: string
+          const: dapr
+        version:
+          type: string
+          example: "1.0.0"
+        tools:
+          type: array
+          items:
+            type: string
+            enum:
+              - get_workflow_state
+              - save_workflow_state
+              - publish_event
+              - get_artifact
+              - publish_phase_complete
+
+    TestsMCPServer:
+      type: object
+      description: In-process MCP server for test execution
+      properties:
+        name:
+          type: string
+          const: tests
+        version:
+          type: string
+          example: "1.0.0"
+        tools:
+          type: array
+          items:
+            type: string
+            enum:
+              - run_tests
+
+  # ============================================================================
+  # Tool Permissions by Agent
+  # ============================================================================
+
+  x-agent-tool-permissions:
+    specifier:
+      native_tools:
+        - Read
+        - Write
+      mcp_tools:
+        - mcp__dapr__get_workflow_state
+    planner:
+      native_tools:
+        - Read
+        - Write
+        - Glob
+        - WebSearch
+      mcp_tools:
+        - mcp__dapr__get_artifact
+    task-generator:
+      native_tools:
+        - Read
+        - Write
+      mcp_tools:
+        - mcp__dapr__get_artifact
+    implementer:
+      native_tools:
+        - Read
+        - Write
+        - Edit
+        - Bash
+        - Glob
+        - Grep
+      mcp_tools:
+        - mcp__dapr__get_artifact
+        - mcp__dapr__save_workflow_state
+        - mcp__tests__run_tests

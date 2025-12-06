@@ -36,7 +36,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/minimatch": "^5.1.2",
-    "@types/node": "^20",
+    "@types/node": "^20.19.25",
     "cdk8s-cli": "^2.200.136",
     "chokidar": "^4.0.3",
     "esbuild": "^0.25.8",

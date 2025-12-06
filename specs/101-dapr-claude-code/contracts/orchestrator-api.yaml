@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: SpecKit Orchestrator API
+  description: |
+    HTTP API for the SpecKit workflow orchestrator.
+    The orchestrator manages workflow lifecycle and routes tasks to specialized agents.
+    It does NOT use Claude Agent SDK - it's a pure Dapr router.
+  version: 2.0.0
+  contact:
+    name: SpecKit Team
+
+servers:
+  - url: http://speckit-orchestrator:8000
+    description: In-cluster service
+  - url: http://localhost:8000
+    description: Local development
+
+paths:
+  /run:
+    post:
+      summary: Start a new workflow
+      description: |
+        Creates a new workflow from a feature description and routes to the specifier agent.
+        Returns immediately with workflow ID - processing happens asynchronously.
+      operationId: startWorkflow
+      tags:
+        - Workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequest'
+            example:
+              task: "Add user authentication with OAuth2 support"
+      responses:
+        '200':
+          description: Workflow started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+              example:
+                instance_id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "specifying"
+                status_url: "/status/550e8400-e29b-41d4-a716-446655440000"
+        '500':
+          description: Failed to start workflow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /status/{workflow_id}:
+    get:
+      summary: Get workflow status
+      description: Returns current status, phase, progress, and artifacts for a workflow.
+      operationId: getWorkflowStatus
+      tags:
+        - Workflow
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workflow UUID
+      responses:
+        '200':
+          description: Workflow status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowStatusResponse'
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /healthz:
+    get:
+      summary: Liveness probe
+      description: Kubernetes liveness probe endpoint
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /ready:
+    get:
+      summary: Readiness probe
+      description: |
+        Kubernetes readiness probe. Checks:
+        - Dapr sidecar connectivity
+        - State store accessibility
+      operationId: readinessCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ready"
+                  dapr:
+                    type: string
+                    example: "connected"
+        '503':
+          description: Service not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "not_ready"
+                  error:
+                    type: string
+
+components:
+  schemas:
+    WorkflowRequest:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          type: string
+          description: Natural language feature description
+          minLength: 10
+          maxLength: 10000
+          example: "Add user authentication with OAuth2 support"
+
+    WorkflowResponse:
+      type: object
+      properties:
+        instance_id:
+          type: string
+          format: uuid
+          description: Unique workflow identifier
+        status:
+          $ref: '#/components/schemas/WorkflowStatus'
+        status_url:
+          type: string
+          description: URL to check workflow status
+          example: "/status/550e8400-e29b-41d4-a716-446655440000"
+
+    WorkflowStatusResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/WorkflowStatus'
+        current_phase:
+          $ref: '#/components/schemas/WorkflowPhase'
+        current_agent:
+          type: string
+          nullable: true
+          description: Currently processing agent
+          example: "planner"
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Workflow completion percentage
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        error:
+          type: string
+          nullable: true
+          description: Error message if workflow failed
+
+    WorkflowStatus:
+      type: string
+      enum:
+        - pending
+        - specifying
+        - planning
+        - task_generating
+        - implementing
+        - completed
+        - failed
+
+    WorkflowPhase:
+      type: string
+      enum:
+        - specification
+        - planning
+        - task_generation
+        - implementation
+
+    Artifact:
+      type: object
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - spec
+            - plan
+            - research
+            - data_model
+            - tasks
+            - contract
+            - code
+            - test
+        path:
+          type: string
+          description: Relative path to artifact file
+          example: "550e8400-e29b-41d4-a716-446655440000/spec.md"
+        content_hash:
+          type: string
+          description: SHA256 hash of content
+        created_by:
+          type: string
+          description: Agent that created the artifact
+          example: "specifier"
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+
+tags:
+  - name: Workflow
+    description: Workflow lifecycle management
+  - name: Health
+    description: Service health checks

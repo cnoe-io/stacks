@@ -4,7 +4,11 @@
  * This chart creates the Dapr components needed by SpecKit agents:
  * - State stores: workflowstatestore (with actor support), agentregistrystore, memorystore
  * - Pub/Sub: messagepubsub for agent communication
- * - Conversation: anthropic for Claude Opus 4.5 LLM integration
+ *
+ * Note: Conversation components (anthropic, openai) are now OPTIONAL.
+ * Claude Agent SDK reads ANTHROPIC_API_KEY directly from environment.
+ * The conversation components are kept for backward compatibility and
+ * potential use by other Dapr applications.
  *
  * All components use Redis as the backend, deployed by DaprAgentsRedisChart.
  */
@@ -160,10 +164,13 @@ export class DaprComponentsChart extends Chart {
     });
 
     // =========================================================================
-    // Conversation (LLM)
+    // Conversation (LLM) - OPTIONAL
     // =========================================================================
+    // Note: These components are optional for SpecKit agents.
+    // Claude Agent SDK reads ANTHROPIC_API_KEY directly from environment.
+    // Kept for backward compatibility and potential use by other Dapr apps.
 
-    // Conversation: anthropic (Claude Opus 4.5)
+    // Conversation: anthropic (Claude Opus 4.5) - OPTIONAL
     new ApiObject(this, 'anthropic', {
       apiVersion: 'dapr.io/v1alpha1',
       kind: 'Component',
