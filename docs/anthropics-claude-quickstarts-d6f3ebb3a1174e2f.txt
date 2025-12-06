@@ -1,0 +1,2422 @@
+Directory structure:
+└── autonomous-coding/
+    ├── README.md
+    ├── agent.py
+    ├── autonomous_agent_demo.py
+    ├── client.py
+    ├── progress.py
+    ├── prompts.py
+    ├── requirements.txt
+    ├── security.py
+    ├── test_security.py
+    └── prompts/
+        ├── app_spec.txt
+        ├── coding_prompt.md
+        └── initializer_prompt.md
+
+================================================
+FILE: autonomous-coding/README.md
+================================================
+# Autonomous Coding Agent Demo
+
+A minimal harness demonstrating long-running autonomous coding with the Claude Agent SDK. This demo implements a two-agent pattern (initializer + coding agent) that can build complete applications over multiple sessions.
+
+## Prerequisites
+
+**Required:** Install the latest versions of both Claude Code and the Claude Agent SDK:
+
+```bash
+# Install Claude Code CLI (latest version required)
+npm install -g @anthropic-ai/claude-code
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+Verify your installations:
+```bash
+claude --version  # Should be latest version
+pip show claude-code-sdk  # Check SDK is installed
+```
+
+**API Key:** Set your Anthropic API key:
+```bash
+export ANTHROPIC_API_KEY='your-api-key-here'
+```
+
+## Quick Start
+
+```bash
+python autonomous_agent_demo.py --project-dir ./my_project
+```
+
+For testing with limited iterations:
+```bash
+python autonomous_agent_demo.py --project-dir ./my_project --max-iterations 3
+```
+
+## Important Timing Expectations
+
+> **Warning: This demo takes a long time to run!**
+
+- **First session (initialization):** The agent generates a `feature_list.json` with 200 test cases. This takes several minutes and may appear to hang - this is normal. The agent is writing out all the features.
+
+- **Subsequent sessions:** Each coding iteration can take **5-15 minutes** depending on complexity.
+
+- **Full app:** Building all 200 features typically requires **many hours** of total runtime across multiple sessions.
+
+**Tip:** The 200 features parameter in the prompts is designed for comprehensive coverage. If you want faster demos, you can modify `prompts/initializer_prompt.md` to reduce the feature count (e.g., 20-50 features for a quicker demo).
+
+## How It Works
+
+### Two-Agent Pattern
+
+1. **Initializer Agent (Session 1):** Reads `app_spec.txt`, creates `feature_list.json` with 200 test cases, sets up project structure, and initializes git.
+
+2. **Coding Agent (Sessions 2+):** Picks up where the previous session left off, implements features one by one, and marks them as passing in `feature_list.json`.
+
+### Session Management
+
+- Each session runs with a fresh context window
+- Progress is persisted via `feature_list.json` and git commits
+- The agent auto-continues between sessions (3 second delay)
+- Press `Ctrl+C` to pause; run the same command to resume
+
+## Security Model
+
+This demo uses a defense-in-depth security approach (see `security.py` and `client.py`):
+
+1. **OS-level Sandbox:** Bash commands run in an isolated environment
+2. **Filesystem Restrictions:** File operations restricted to the project directory only
+3. **Bash Allowlist:** Only specific commands are permitted:
+   - File inspection: `ls`, `cat`, `head`, `tail`, `wc`, `grep`
+   - Node.js: `npm`, `node`
+   - Version control: `git`
+   - Process management: `ps`, `lsof`, `sleep`, `pkill` (dev processes only)
+
+Commands not in the allowlist are blocked by the security hook.
+
+## Project Structure
+
+```
+autonomous-coding/
+├── autonomous_agent_demo.py  # Main entry point
+├── agent.py                  # Agent session logic
+├── client.py                 # Claude SDK client configuration
+├── security.py               # Bash command allowlist and validation
+├── progress.py               # Progress tracking utilities
+├── prompts.py                # Prompt loading utilities
+├── prompts/
+│   ├── app_spec.txt          # Application specification
+│   ├── initializer_prompt.md # First session prompt
+│   └── coding_prompt.md      # Continuation session prompt
+└── requirements.txt          # Python dependencies
+```
+
+## Generated Project Structure
+
+After running, your project directory will contain:
+
+```
+my_project/
+├── feature_list.json         # Test cases (source of truth)
+├── app_spec.txt              # Copied specification
+├── init.sh                   # Environment setup script
+├── claude-progress.txt       # Session progress notes
+├── .claude_settings.json     # Security settings
+└── [application files]       # Generated application code
+```
+
+## Running the Generated Application
+
+After the agent completes (or pauses), you can run the generated application:
+
+```bash
+cd generations/my_project
+
+# Run the setup script created by the agent
+./init.sh
+
+# Or manually (typical for Node.js apps):
+npm install
+npm run dev
+```
+
+The application will typically be available at `http://localhost:3000` or similar (check the agent's output or `init.sh` for the exact URL).
+
+## Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--project-dir` | Directory for the project | `./autonomous_demo_project` |
+| `--max-iterations` | Max agent iterations | Unlimited |
+| `--model` | Claude model to use | `claude-sonnet-4-5-20250929` |
+
+## Customization
+
+### Changing the Application
+
+Edit `prompts/app_spec.txt` to specify a different application to build.
+
+### Adjusting Feature Count
+
+Edit `prompts/initializer_prompt.md` and change the "200 features" requirement to a smaller number for faster demos.
+
+### Modifying Allowed Commands
+
+Edit `security.py` to add or remove commands from `ALLOWED_COMMANDS`.
+
+## Troubleshooting
+
+**"Appears to hang on first run"**
+This is normal. The initializer agent is generating 200 detailed test cases, which takes significant time. Watch for `[Tool: ...]` output to confirm the agent is working.
+
+**"Command blocked by security hook"**
+The agent tried to run a command not in the allowlist. This is the security system working as intended. If needed, add the command to `ALLOWED_COMMANDS` in `security.py`.
+
+**"API key not set"**
+Ensure `ANTHROPIC_API_KEY` is exported in your shell environment.
+
+## License
+
+Internal Anthropic use.
+
+
+
+================================================
+FILE: autonomous-coding/agent.py
+================================================
+"""
+Agent Session Logic
+===================
+
+Core agent interaction functions for running autonomous coding sessions.
+"""
+
+import asyncio
+from pathlib import Path
+from typing import Optional
+
+from claude_code_sdk import ClaudeSDKClient
+
+from client import create_client
+from progress import print_session_header, print_progress_summary
+from prompts import get_initializer_prompt, get_coding_prompt, copy_spec_to_project
+
+
+# Configuration
+AUTO_CONTINUE_DELAY_SECONDS = 3
+
+
+async def run_agent_session(
+    client: ClaudeSDKClient,
+    message: str,
+    project_dir: Path,
+) -> tuple[str, str]:
+    """
+    Run a single agent session using Claude Agent SDK.
+
+    Args:
+        client: Claude SDK client
+        message: The prompt to send
+        project_dir: Project directory path
+
+    Returns:
+        (status, response_text) where status is:
+        - "continue" if agent should continue working
+        - "error" if an error occurred
+    """
+    print("Sending prompt to Claude Agent SDK...\n")
+
+    try:
+        # Send the query
+        await client.query(message)
+
+        # Collect response text and show tool use
+        response_text = ""
+        async for msg in client.receive_response():
+            msg_type = type(msg).__name__
+
+            # Handle AssistantMessage (text and tool use)
+            if msg_type == "AssistantMessage" and hasattr(msg, "content"):
+                for block in msg.content:
+                    block_type = type(block).__name__
+
+                    if block_type == "TextBlock" and hasattr(block, "text"):
+                        response_text += block.text
+                        print(block.text, end="", flush=True)
+                    elif block_type == "ToolUseBlock" and hasattr(block, "name"):
+                        print(f"\n[Tool: {block.name}]", flush=True)
+                        if hasattr(block, "input"):
+                            input_str = str(block.input)
+                            if len(input_str) > 200:
+                                print(f"   Input: {input_str[:200]}...", flush=True)
+                            else:
+                                print(f"   Input: {input_str}", flush=True)
+
+            # Handle UserMessage (tool results)
+            elif msg_type == "UserMessage" and hasattr(msg, "content"):
+                for block in msg.content:
+                    block_type = type(block).__name__
+
+                    if block_type == "ToolResultBlock":
+                        result_content = getattr(block, "content", "")
+                        is_error = getattr(block, "is_error", False)
+
+                        # Check if command was blocked by security hook
+                        if "blocked" in str(result_content).lower():
+                            print(f"   [BLOCKED] {result_content}", flush=True)
+                        elif is_error:
+                            # Show errors (truncated)
+                            error_str = str(result_content)[:500]
+                            print(f"   [Error] {error_str}", flush=True)
+                        else:
+                            # Tool succeeded - just show brief confirmation
+                            print("   [Done]", flush=True)
+
+        print("\n" + "-" * 70 + "\n")
+        return "continue", response_text
+
+    except Exception as e:
+        print(f"Error during agent session: {e}")
+        return "error", str(e)
+
+
+async def run_autonomous_agent(
+    project_dir: Path,
+    model: str,
+    max_iterations: Optional[int] = None,
+) -> None:
+    """
+    Run the autonomous agent loop.
+
+    Args:
+        project_dir: Directory for the project
+        model: Claude model to use
+        max_iterations: Maximum number of iterations (None for unlimited)
+    """
+    print("\n" + "=" * 70)
+    print("  AUTONOMOUS CODING AGENT DEMO")
+    print("=" * 70)
+    print(f"\nProject directory: {project_dir}")
+    print(f"Model: {model}")
+    if max_iterations:
+        print(f"Max iterations: {max_iterations}")
+    else:
+        print("Max iterations: Unlimited (will run until completion)")
+    print()
+
+    # Create project directory
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check if this is a fresh start or continuation
+    tests_file = project_dir / "feature_list.json"
+    is_first_run = not tests_file.exists()
+
+    if is_first_run:
+        print("Fresh start - will use initializer agent")
+        print()
+        print("=" * 70)
+        print("  NOTE: First session takes 10-20+ minutes!")
+        print("  The agent is generating 200 detailed test cases.")
+        print("  This may appear to hang - it's working. Watch for [Tool: ...] output.")
+        print("=" * 70)
+        print()
+        # Copy the app spec into the project directory for the agent to read
+        copy_spec_to_project(project_dir)
+    else:
+        print("Continuing existing project")
+        print_progress_summary(project_dir)
+
+    # Main loop
+    iteration = 0
+
+    while True:
+        iteration += 1
+
+        # Check max iterations
+        if max_iterations and iteration > max_iterations:
+            print(f"\nReached max iterations ({max_iterations})")
+            print("To continue, run the script again without --max-iterations")
+            break
+
+        # Print session header
+        print_session_header(iteration, is_first_run)
+
+        # Create client (fresh context)
+        client = create_client(project_dir, model)
+
+        # Choose prompt based on session type
+        if is_first_run:
+            prompt = get_initializer_prompt()
+            is_first_run = False  # Only use initializer once
+        else:
+            prompt = get_coding_prompt()
+
+        # Run session with async context manager
+        async with client:
+            status, response = await run_agent_session(client, prompt, project_dir)
+
+        # Handle status
+        if status == "continue":
+            print(f"\nAgent will auto-continue in {AUTO_CONTINUE_DELAY_SECONDS}s...")
+            print_progress_summary(project_dir)
+            await asyncio.sleep(AUTO_CONTINUE_DELAY_SECONDS)
+
+        elif status == "error":
+            print("\nSession encountered an error")
+            print("Will retry with a fresh session...")
+            await asyncio.sleep(AUTO_CONTINUE_DELAY_SECONDS)
+
+        # Small delay between sessions
+        if max_iterations is None or iteration < max_iterations:
+            print("\nPreparing next session...\n")
+            await asyncio.sleep(1)
+
+    # Final summary
+    print("\n" + "=" * 70)
+    print("  SESSION COMPLETE")
+    print("=" * 70)
+    print(f"\nProject directory: {project_dir}")
+    print_progress_summary(project_dir)
+
+    # Print instructions for running the generated application
+    print("\n" + "-" * 70)
+    print("  TO RUN THE GENERATED APPLICATION:")
+    print("-" * 70)
+    print(f"\n  cd {project_dir.resolve()}")
+    print("  ./init.sh           # Run the setup script")
+    print("  # Or manually:")
+    print("  npm install && npm run dev")
+    print("\n  Then open http://localhost:3000 (or check init.sh for the URL)")
+    print("-" * 70)
+
+    print("\nDone!")
+
+
+
+================================================
+FILE: autonomous-coding/autonomous_agent_demo.py
+================================================
+#!/usr/bin/env python3
+"""
+Autonomous Coding Agent Demo
+============================
+
+A minimal harness demonstrating long-running autonomous coding with Claude.
+This script implements the two-agent pattern (initializer + coding agent) and
+incorporates all the strategies from the long-running agents guide.
+
+Example Usage:
+    python autonomous_agent_demo.py --project-dir ./claude_clone_demo
+    python autonomous_agent_demo.py --project-dir ./claude_clone_demo --max-iterations 5
+"""
+
+import argparse
+import asyncio
+import os
+from pathlib import Path
+
+from agent import run_autonomous_agent
+
+
+# Configuration
+DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Autonomous Coding Agent Demo - Long-running agent harness",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Start fresh project
+  python autonomous_agent_demo.py --project-dir ./claude_clone
+
+  # Use a specific model
+  python autonomous_agent_demo.py --project-dir ./claude_clone --model claude-sonnet-4-5-20250929
+
+  # Limit iterations for testing
+  python autonomous_agent_demo.py --project-dir ./claude_clone --max-iterations 5
+
+  # Continue existing project
+  python autonomous_agent_demo.py --project-dir ./claude_clone
+
+Environment Variables:
+  ANTHROPIC_API_KEY    Your Anthropic API key (required)
+        """,
+    )
+
+    parser.add_argument(
+        "--project-dir",
+        type=Path,
+        default=Path("./autonomous_demo_project"),
+        help="Directory for the project (default: generations/autonomous_demo_project). Relative paths automatically placed in generations/ directory.",
+    )
+
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=None,
+        help="Maximum number of agent iterations (default: unlimited)",
+    )
+
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=DEFAULT_MODEL,
+        help=f"Claude model to use (default: {DEFAULT_MODEL})",
+    )
+
+    return parser.parse_args()
+
+
+def main() -> None:
+    """Main entry point."""
+    args = parse_args()
+
+    # Check for API key
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("Error: ANTHROPIC_API_KEY environment variable not set")
+        print("\nGet your API key from: https://console.anthropic.com/")
+        print("\nThen set it:")
+        print("  export ANTHROPIC_API_KEY='your-api-key-here'")
+        return
+
+    # Automatically place projects in generations/ directory unless already specified
+    project_dir = args.project_dir
+    if not str(project_dir).startswith("generations/"):
+        # Convert relative paths to be under generations/
+        if project_dir.is_absolute():
+            # If absolute path, use as-is
+            pass
+        else:
+            # Prepend generations/ to relative paths
+            project_dir = Path("generations") / project_dir
+
+    # Run the agent
+    try:
+        asyncio.run(
+            run_autonomous_agent(
+                project_dir=project_dir,
+                model=args.model,
+                max_iterations=args.max_iterations,
+            )
+        )
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        print("To resume, run the same command again")
+    except Exception as e:
+        print(f"\nFatal error: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+================================================
+FILE: autonomous-coding/client.py
+================================================
+"""
+Claude SDK Client Configuration
+===============================
+
+Functions for creating and configuring the Claude Agent SDK client.
+"""
+
+import json
+import os
+from pathlib import Path
+
+from claude_code_sdk import ClaudeCodeOptions, ClaudeSDKClient
+from claude_code_sdk.types import HookMatcher
+
+from security import bash_security_hook
+
+
+# Puppeteer MCP tools for browser automation
+PUPPETEER_TOOLS = [
+    "mcp__puppeteer__puppeteer_navigate",
+    "mcp__puppeteer__puppeteer_screenshot",
+    "mcp__puppeteer__puppeteer_click",
+    "mcp__puppeteer__puppeteer_fill",
+    "mcp__puppeteer__puppeteer_select",
+    "mcp__puppeteer__puppeteer_hover",
+    "mcp__puppeteer__puppeteer_evaluate",
+]
+
+# Built-in tools
+BUILTIN_TOOLS = [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+]
+
+
+def create_client(project_dir: Path, model: str) -> ClaudeSDKClient:
+    """
+    Create a Claude Agent SDK client with multi-layered security.
+
+    Args:
+        project_dir: Directory for the project
+        model: Claude model to use
+
+    Returns:
+        Configured ClaudeSDKClient
+
+    Security layers (defense in depth):
+    1. Sandbox - OS-level bash command isolation prevents filesystem escape
+    2. Permissions - File operations restricted to project_dir only
+    3. Security hooks - Bash commands validated against an allowlist
+       (see security.py for ALLOWED_COMMANDS)
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "ANTHROPIC_API_KEY environment variable not set.\n"
+            "Get your API key from: https://console.anthropic.com/"
+        )
+
+    # Create comprehensive security settings
+    # Note: Using relative paths ("./**") restricts access to project directory
+    # since cwd is set to project_dir
+    security_settings = {
+        "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True},
+        "permissions": {
+            "defaultMode": "acceptEdits",  # Auto-approve edits within allowed directories
+            "allow": [
+                # Allow all file operations within the project directory
+                "Read(./**)",
+                "Write(./**)",
+                "Edit(./**)",
+                "Glob(./**)",
+                "Grep(./**)",
+                # Bash permission granted here, but actual commands are validated
+                # by the bash_security_hook (see security.py for allowed commands)
+                "Bash(*)",
+                # Allow Puppeteer MCP tools for browser automation
+                *PUPPETEER_TOOLS,
+            ],
+        },
+    }
+
+    # Ensure project directory exists before creating settings file
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write settings to a file in the project directory
+    settings_file = project_dir / ".claude_settings.json"
+    with open(settings_file, "w") as f:
+        json.dump(security_settings, f, indent=2)
+
+    print(f"Created security settings at {settings_file}")
+    print("   - Sandbox enabled (OS-level bash isolation)")
+    print(f"   - Filesystem restricted to: {project_dir.resolve()}")
+    print("   - Bash commands restricted to allowlist (see security.py)")
+    print("   - MCP servers: puppeteer (browser automation)")
+    print()
+
+    return ClaudeSDKClient(
+        options=ClaudeCodeOptions(
+            model=model,
+            system_prompt="You are an expert full-stack developer building a production-quality web application.",
+            allowed_tools=[
+                *BUILTIN_TOOLS,
+                *PUPPETEER_TOOLS,
+            ],
+            mcp_servers={
+                "puppeteer": {"command": "npx", "args": ["puppeteer-mcp-server"]}
+            },
+            hooks={
+                "PreToolUse": [
+                    HookMatcher(matcher="Bash", hooks=[bash_security_hook]),
+                ],
+            },
+            max_turns=1000,
+            cwd=str(project_dir.resolve()),
+            settings=str(settings_file.resolve()),  # Use absolute path
+        )
+    )
+
+
+
+================================================
+FILE: autonomous-coding/progress.py
+================================================
+"""
+Progress Tracking Utilities
+===========================
+
+Functions for tracking and displaying progress of the autonomous coding agent.
+"""
+
+import json
+from pathlib import Path
+
+
+def count_passing_tests(project_dir: Path) -> tuple[int, int]:
+    """
+    Count passing and total tests in feature_list.json.
+
+    Args:
+        project_dir: Directory containing feature_list.json
+
+    Returns:
+        (passing_count, total_count)
+    """
+    tests_file = project_dir / "feature_list.json"
+
+    if not tests_file.exists():
+        return 0, 0
+
+    try:
+        with open(tests_file, "r") as f:
+            tests = json.load(f)
+
+        total = len(tests)
+        passing = sum(1 for test in tests if test.get("passes", False))
+
+        return passing, total
+    except (json.JSONDecodeError, IOError):
+        return 0, 0
+
+
+def print_session_header(session_num: int, is_initializer: bool) -> None:
+    """Print a formatted header for the session."""
+    session_type = "INITIALIZER" if is_initializer else "CODING AGENT"
+
+    print("\n" + "=" * 70)
+    print(f"  SESSION {session_num}: {session_type}")
+    print("=" * 70)
+    print()
+
+
+def print_progress_summary(project_dir: Path) -> None:
+    """Print a summary of current progress."""
+    passing, total = count_passing_tests(project_dir)
+
+    if total > 0:
+        percentage = (passing / total) * 100
+        print(f"\nProgress: {passing}/{total} tests passing ({percentage:.1f}%)")
+    else:
+        print("\nProgress: feature_list.json not yet created")
+
+
+
+================================================
+FILE: autonomous-coding/prompts.py
+================================================
+"""
+Prompt Loading Utilities
+========================
+
+Functions for loading prompt templates from the prompts directory.
+"""
+
+import shutil
+from pathlib import Path
+
+
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+
+def load_prompt(name: str) -> str:
+    """Load a prompt template from the prompts directory."""
+    prompt_path = PROMPTS_DIR / f"{name}.md"
+    return prompt_path.read_text()
+
+
+def get_initializer_prompt() -> str:
+    """Load the initializer prompt."""
+    return load_prompt("initializer_prompt")
+
+
+def get_coding_prompt() -> str:
+    """Load the coding agent prompt."""
+    return load_prompt("coding_prompt")
+
+
+def copy_spec_to_project(project_dir: Path) -> None:
+    """Copy the app spec file into the project directory for the agent to read."""
+    spec_source = PROMPTS_DIR / "app_spec.txt"
+    spec_dest = project_dir / "app_spec.txt"
+    if not spec_dest.exists():
+        shutil.copy(spec_source, spec_dest)
+        print("Copied app_spec.txt to project directory")
+
+
+
+================================================
+FILE: autonomous-coding/requirements.txt
+================================================
+claude-code-sdk>=0.0.25
+
+
+
+================================================
+FILE: autonomous-coding/security.py
+================================================
+"""
+Security Hooks for Autonomous Coding Agent
+==========================================
+
+Pre-tool-use hooks that validate bash commands for security.
+Uses an allowlist approach - only explicitly permitted commands can run.
+"""
+
+import os
+import shlex
+
+
+# Allowed commands for development tasks
+# Minimal set needed for the autonomous coding demo
+ALLOWED_COMMANDS = {
+    # File inspection
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "grep",
+    # File operations (agent uses SDK tools for most file ops, but cp/mkdir needed occasionally)
+    "cp",
+    "mkdir",
+    "chmod",  # For making scripts executable; validated separately
+    # Directory
+    "pwd",
+    # Node.js development
+    "npm",
+    "node",
+    # Version control
+    "git",
+    # Process management
+    "ps",
+    "lsof",
+    "sleep",
+    "pkill",  # For killing dev servers; validated separately
+    # Script execution
+    "init.sh",  # Init scripts; validated separately
+}
+
+# Commands that need additional validation even when in the allowlist
+COMMANDS_NEEDING_EXTRA_VALIDATION = {"pkill", "chmod", "init.sh"}
+
+
+def split_command_segments(command_string: str) -> list[str]:
+    """
+    Split a compound command into individual command segments.
+
+    Handles command chaining (&&, ||, ;) but not pipes (those are single commands).
+
+    Args:
+        command_string: The full shell command
+
+    Returns:
+        List of individual command segments
+    """
+    import re
+
+    # Split on && and || while preserving the ability to handle each segment
+    # This regex splits on && or || that aren't inside quotes
+    segments = re.split(r"\s*(?:&&|\|\|)\s*", command_string)
+
+    # Further split on semicolons
+    result = []
+    for segment in segments:
+        sub_segments = re.split(r'(?<!["\'])\s*;\s*(?!["\'])', segment)
+        for sub in sub_segments:
+            sub = sub.strip()
+            if sub:
+                result.append(sub)
+
+    return result
+
+
+def extract_commands(command_string: str) -> list[str]:
+    """
+    Extract command names from a shell command string.
+
+    Handles pipes, command chaining (&&, ||, ;), and subshells.
+    Returns the base command names (without paths).
+
+    Args:
+        command_string: The full shell command
+
+    Returns:
+        List of command names found in the string
+    """
+    commands = []
+
+    # shlex doesn't treat ; as a separator, so we need to pre-process
+    import re
+
+    # Split on semicolons that aren't inside quotes (simple heuristic)
+    # This handles common cases like "echo hello; ls"
+    segments = re.split(r'(?<!["\'])\s*;\s*(?!["\'])', command_string)
+
+    for segment in segments:
+        segment = segment.strip()
+        if not segment:
+            continue
+
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            # Malformed command (unclosed quotes, etc.)
+            # Return empty to trigger block (fail-safe)
+            return []
+
+        if not tokens:
+            continue
+
+        # Track when we expect a command vs arguments
+        expect_command = True
+
+        for token in tokens:
+            # Shell operators indicate a new command follows
+            if token in ("|", "||", "&&", "&"):
+                expect_command = True
+                continue
+
+            # Skip shell keywords that precede commands
+            if token in (
+                "if",
+                "then",
+                "else",
+                "elif",
+                "fi",
+                "for",
+                "while",
+                "until",
+                "do",
+                "done",
+                "case",
+                "esac",
+                "in",
+                "!",
+                "{",
+                "}",
+            ):
+                continue
+
+            # Skip flags/options
+            if token.startswith("-"):
+                continue
+
+            # Skip variable assignments (VAR=value)
+            if "=" in token and not token.startswith("="):
+                continue
+
+            if expect_command:
+                # Extract the base command name (handle paths like /usr/bin/python)
+                cmd = os.path.basename(token)
+                commands.append(cmd)
+                expect_command = False
+
+    return commands
+
+
+def validate_pkill_command(command_string: str) -> tuple[bool, str]:
+    """
+    Validate pkill commands - only allow killing dev-related processes.
+
+    Uses shlex to parse the command, avoiding regex bypass vulnerabilities.
+
+    Returns:
+        Tuple of (is_allowed, reason_if_blocked)
+    """
+    # Allowed process names for pkill
+    allowed_process_names = {
+        "node",
+        "npm",
+        "npx",
+        "vite",
+        "next",
+    }
+
+    try:
+        tokens = shlex.split(command_string)
+    except ValueError:
+        return False, "Could not parse pkill command"
+
+    if not tokens:
+        return False, "Empty pkill command"
+
+    # Separate flags from arguments
+    args = []
+    for token in tokens[1:]:
+        if not token.startswith("-"):
+            args.append(token)
+
+    if not args:
+        return False, "pkill requires a process name"
+
+    # The target is typically the last non-flag argument
+    target = args[-1]
+
+    # For -f flag (full command line match), extract the first word as process name
+    # e.g., "pkill -f 'node server.js'" -> target is "node server.js", process is "node"
+    if " " in target:
+        target = target.split()[0]
+
+    if target in allowed_process_names:
+        return True, ""
+    return False, f"pkill only allowed for dev processes: {allowed_process_names}"
+
+
+def validate_chmod_command(command_string: str) -> tuple[bool, str]:
+    """
+    Validate chmod commands - only allow making files executable with +x.
+
+    Returns:
+        Tuple of (is_allowed, reason_if_blocked)
+    """
+    try:
+        tokens = shlex.split(command_string)
+    except ValueError:
+        return False, "Could not parse chmod command"
+
+    if not tokens or tokens[0] != "chmod":
+        return False, "Not a chmod command"
+
+    # Look for the mode argument
+    # Valid modes: +x, u+x, a+x, etc. (anything ending with +x for execute permission)
+    mode = None
+    files = []
+
+    for token in tokens[1:]:
+        if token.startswith("-"):
+            # Skip flags like -R (we don't allow recursive chmod anyway)
+            return False, "chmod flags are not allowed"
+        elif mode is None:
+            mode = token
+        else:
+            files.append(token)
+
+    if mode is None:
+        return False, "chmod requires a mode"
+
+    if not files:
+        return False, "chmod requires at least one file"
+
+    # Only allow +x variants (making files executable)
+    # This matches: +x, u+x, g+x, o+x, a+x, ug+x, etc.
+    import re
+
+    if not re.match(r"^[ugoa]*\+x$", mode):
+        return False, f"chmod only allowed with +x mode, got: {mode}"
+
+    return True, ""
+
+
+def validate_init_script(command_string: str) -> tuple[bool, str]:
+    """
+    Validate init.sh script execution - only allow ./init.sh.
+
+    Returns:
+        Tuple of (is_allowed, reason_if_blocked)
+    """
+    try:
+        tokens = shlex.split(command_string)
+    except ValueError:
+        return False, "Could not parse init script command"
+
+    if not tokens:
+        return False, "Empty command"
+
+    # The command should be exactly ./init.sh (possibly with arguments)
+    script = tokens[0]
+
+    # Allow ./init.sh or paths ending in /init.sh
+    if script == "./init.sh" or script.endswith("/init.sh"):
+        return True, ""
+
+    return False, f"Only ./init.sh is allowed, got: {script}"
+
+
+def get_command_for_validation(cmd: str, segments: list[str]) -> str:
+    """
+    Find the specific command segment that contains the given command.
+
+    Args:
+        cmd: The command name to find
+        segments: List of command segments
+
+    Returns:
+        The segment containing the command, or empty string if not found
+    """
+    for segment in segments:
+        segment_commands = extract_commands(segment)
+        if cmd in segment_commands:
+            return segment
+    return ""
+
+
+async def bash_security_hook(input_data, tool_use_id=None, context=None):
+    """
+    Pre-tool-use hook that validates bash commands using an allowlist.
+
+    Only commands in ALLOWED_COMMANDS are permitted.
+
+    Args:
+        input_data: Dict containing tool_name and tool_input
+        tool_use_id: Optional tool use ID
+        context: Optional context
+
+    Returns:
+        Empty dict to allow, or {"decision": "block", "reason": "..."} to block
+    """
+    if input_data.get("tool_name") != "Bash":
+        return {}
+
+    command = input_data.get("tool_input", {}).get("command", "")
+    if not command:
+        return {}
+
+    # Extract all commands from the command string
+    commands = extract_commands(command)
+
+    if not commands:
+        # Could not parse - fail safe by blocking
+        return {
+            "decision": "block",
+            "reason": f"Could not parse command for security validation: {command}",
+        }
+
+    # Split into segments for per-command validation
+    segments = split_command_segments(command)
+
+    # Check each command against the allowlist
+    for cmd in commands:
+        if cmd not in ALLOWED_COMMANDS:
+            return {
+                "decision": "block",
+                "reason": f"Command '{cmd}' is not in the allowed commands list",
+            }
+
+        # Additional validation for sensitive commands
+        if cmd in COMMANDS_NEEDING_EXTRA_VALIDATION:
+            # Find the specific segment containing this command
+            cmd_segment = get_command_for_validation(cmd, segments)
+            if not cmd_segment:
+                cmd_segment = command  # Fallback to full command
+
+            if cmd == "pkill":
+                allowed, reason = validate_pkill_command(cmd_segment)
+                if not allowed:
+                    return {"decision": "block", "reason": reason}
+            elif cmd == "chmod":
+                allowed, reason = validate_chmod_command(cmd_segment)
+                if not allowed:
+                    return {"decision": "block", "reason": reason}
+            elif cmd == "init.sh":
+                allowed, reason = validate_init_script(cmd_segment)
+                if not allowed:
+                    return {"decision": "block", "reason": reason}
+
+    return {}
+
+
+
+================================================
+FILE: autonomous-coding/test_security.py
+================================================
+#!/usr/bin/env python3
+"""
+Security Hook Tests
+===================
+
+Tests for the bash command security validation logic.
+Run with: python test_security.py
+"""
+
+import asyncio
+import sys
+
+from security import (
+    bash_security_hook,
+    extract_commands,
+    validate_chmod_command,
+    validate_init_script,
+)
+
+
+def test_hook(command: str, should_block: bool) -> bool:
+    """Test a single command against the security hook."""
+    input_data = {"tool_name": "Bash", "tool_input": {"command": command}}
+    result = asyncio.run(bash_security_hook(input_data))
+    was_blocked = result.get("decision") == "block"
+
+    if was_blocked == should_block:
+        status = "PASS"
+    else:
+        status = "FAIL"
+        expected = "blocked" if should_block else "allowed"
+        actual = "blocked" if was_blocked else "allowed"
+        reason = result.get("reason", "")
+        print(f"  {status}: {command!r}")
+        print(f"         Expected: {expected}, Got: {actual}")
+        if reason:
+            print(f"         Reason: {reason}")
+        return False
+
+    print(f"  {status}: {command!r}")
+    return True
+
+
+def test_extract_commands():
+    """Test the command extraction logic."""
+    print("\nTesting command extraction:\n")
+    passed = 0
+    failed = 0
+
+    test_cases = [
+        ("ls -la", ["ls"]),
+        ("npm install && npm run build", ["npm", "npm"]),
+        ("cat file.txt | grep pattern", ["cat", "grep"]),
+        ("/usr/bin/node script.js", ["node"]),
+        ("VAR=value ls", ["ls"]),
+        ("git status || git init", ["git", "git"]),
+    ]
+
+    for cmd, expected in test_cases:
+        result = extract_commands(cmd)
+        if result == expected:
+            print(f"  PASS: {cmd!r} -> {result}")
+            passed += 1
+        else:
+            print(f"  FAIL: {cmd!r}")
+            print(f"         Expected: {expected}, Got: {result}")
+            failed += 1
+
+    return passed, failed
+
+
+def test_validate_chmod():
+    """Test chmod command validation."""
+    print("\nTesting chmod validation:\n")
+    passed = 0
+    failed = 0
+
+    # Test cases: (command, should_be_allowed, description)
+    test_cases = [
+        # Allowed cases
+        ("chmod +x init.sh", True, "basic +x"),
+        ("chmod +x script.sh", True, "+x on any script"),
+        ("chmod u+x init.sh", True, "user +x"),
+        ("chmod a+x init.sh", True, "all +x"),
+        ("chmod ug+x init.sh", True, "user+group +x"),
+        ("chmod +x file1.sh file2.sh", True, "multiple files"),
+        # Blocked cases
+        ("chmod 777 init.sh", False, "numeric mode"),
+        ("chmod 755 init.sh", False, "numeric mode 755"),
+        ("chmod +w init.sh", False, "write permission"),
+        ("chmod +r init.sh", False, "read permission"),
+        ("chmod -x init.sh", False, "remove execute"),
+        ("chmod -R +x dir/", False, "recursive flag"),
+        ("chmod --recursive +x dir/", False, "long recursive flag"),
+        ("chmod +x", False, "missing file"),
+    ]
+
+    for cmd, should_allow, description in test_cases:
+        allowed, reason = validate_chmod_command(cmd)
+        if allowed == should_allow:
+            print(f"  PASS: {cmd!r} ({description})")
+            passed += 1
+        else:
+            expected = "allowed" if should_allow else "blocked"
+            actual = "allowed" if allowed else "blocked"
+            print(f"  FAIL: {cmd!r} ({description})")
+            print(f"         Expected: {expected}, Got: {actual}")
+            if reason:
+                print(f"         Reason: {reason}")
+            failed += 1
+
+    return passed, failed
+
+
+def test_validate_init_script():
+    """Test init.sh script execution validation."""
+    print("\nTesting init.sh validation:\n")
+    passed = 0
+    failed = 0
+
+    # Test cases: (command, should_be_allowed, description)
+    test_cases = [
+        # Allowed cases
+        ("./init.sh", True, "basic ./init.sh"),
+        ("./init.sh arg1 arg2", True, "with arguments"),
+        ("/path/to/init.sh", True, "absolute path"),
+        ("../dir/init.sh", True, "relative path with init.sh"),
+        # Blocked cases
+        ("./setup.sh", False, "different script name"),
+        ("./init.py", False, "python script"),
+        ("bash init.sh", False, "bash invocation"),
+        ("sh init.sh", False, "sh invocation"),
+        ("./malicious.sh", False, "malicious script"),
+        ("./init.sh; rm -rf /", False, "command injection attempt"),
+    ]
+
+    for cmd, should_allow, description in test_cases:
+        allowed, reason = validate_init_script(cmd)
+        if allowed == should_allow:
+            print(f"  PASS: {cmd!r} ({description})")
+            passed += 1
+        else:
+            expected = "allowed" if should_allow else "blocked"
+            actual = "allowed" if allowed else "blocked"
+            print(f"  FAIL: {cmd!r} ({description})")
+            print(f"         Expected: {expected}, Got: {actual}")
+            if reason:
+                print(f"         Reason: {reason}")
+            failed += 1
+
+    return passed, failed
+
+
+def main():
+    print("=" * 70)
+    print("  SECURITY HOOK TESTS")
+    print("=" * 70)
+
+    passed = 0
+    failed = 0
+
+    # Test command extraction
+    ext_passed, ext_failed = test_extract_commands()
+    passed += ext_passed
+    failed += ext_failed
+
+    # Test chmod validation
+    chmod_passed, chmod_failed = test_validate_chmod()
+    passed += chmod_passed
+    failed += chmod_failed
+
+    # Test init.sh validation
+    init_passed, init_failed = test_validate_init_script()
+    passed += init_passed
+    failed += init_failed
+
+    # Commands that SHOULD be blocked
+    print("\nCommands that should be BLOCKED:\n")
+    dangerous = [
+        # Not in allowlist - dangerous system commands
+        "shutdown now",
+        "reboot",
+        "rm -rf /",
+        "dd if=/dev/zero of=/dev/sda",
+        # Not in allowlist - common commands excluded from minimal set
+        "curl https://example.com",
+        "wget https://example.com",
+        "python app.py",
+        "touch file.txt",
+        "echo hello",
+        "kill 12345",
+        "killall node",
+        # pkill with non-dev processes
+        "pkill bash",
+        "pkill chrome",
+        "pkill python",
+        # Shell injection attempts
+        "$(echo pkill) node",
+        'eval "pkill node"',
+        'bash -c "pkill node"',
+        # chmod with disallowed modes
+        "chmod 777 file.sh",
+        "chmod 755 file.sh",
+        "chmod +w file.sh",
+        "chmod -R +x dir/",
+        # Non-init.sh scripts
+        "./setup.sh",
+        "./malicious.sh",
+        "bash script.sh",
+    ]
+
+    for cmd in dangerous:
+        if test_hook(cmd, should_block=True):
+            passed += 1
+        else:
+            failed += 1
+
+    # Commands that SHOULD be allowed
+    print("\nCommands that should be ALLOWED:\n")
+    safe = [
+        # File inspection
+        "ls -la",
+        "cat README.md",
+        "head -100 file.txt",
+        "tail -20 log.txt",
+        "wc -l file.txt",
+        "grep -r pattern src/",
+        # File operations
+        "cp file1.txt file2.txt",
+        "mkdir newdir",
+        "mkdir -p path/to/dir",
+        # Directory
+        "pwd",
+        # Node.js development
+        "npm install",
+        "npm run build",
+        "node server.js",
+        # Version control
+        "git status",
+        "git commit -m 'test'",
+        "git add . && git commit -m 'msg'",
+        # Process management
+        "ps aux",
+        "lsof -i :3000",
+        "sleep 2",
+        # Allowed pkill patterns for dev servers
+        "pkill node",
+        "pkill npm",
+        "pkill -f node",
+        "pkill -f 'node server.js'",
+        "pkill vite",
+        # Chained commands
+        "npm install && npm run build",
+        "ls | grep test",
+        # Full paths
+        "/usr/local/bin/node app.js",
+        # chmod +x (allowed)
+        "chmod +x init.sh",
+        "chmod +x script.sh",
+        "chmod u+x init.sh",
+        "chmod a+x init.sh",
+        # init.sh execution (allowed)
+        "./init.sh",
+        "./init.sh --production",
+        "/path/to/init.sh",
+        # Combined chmod and init.sh
+        "chmod +x init.sh && ./init.sh",
+    ]
+
+    for cmd in safe:
+        if test_hook(cmd, should_block=False):
+            passed += 1
+        else:
+            failed += 1
+
+    # Summary
+    print("\n" + "-" * 70)
+    print(f"  Results: {passed} passed, {failed} failed")
+    print("-" * 70)
+
+    if failed == 0:
+        print("\n  ALL TESTS PASSED")
+        return 0
+    else:
+        print(f"\n  {failed} TEST(S) FAILED")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+
+================================================
+FILE: autonomous-coding/prompts/app_spec.txt
+================================================
+<project_specification>
+  <project_name>Claude.ai Clone - AI Chat Interface</project_name>
+
+  <overview>
+    Build a fully functional clone of claude.ai, Anthropic's conversational AI interface. The application should
+    provide a clean, modern chat interface for interacting with Claude via the API, including features like
+    conversation management, artifact rendering, project organization, multiple model selection, and advanced
+    settings. The UI should closely match claude.ai's design using Tailwind CSS with a focus on excellent
+    user experience and responsive design.
+  </overview>
+
+  <technology_stack>
+    <api_key>
+        You can use an API key located at /tmp/api-key for testing. You will not be allowed to read this file, but you can reference it in code.
+    </api_key>
+    <frontend>
+      <framework>React with Vite</framework>
+      <styling>Tailwind CSS (via CDN)</styling>
+      <state_management>React hooks and context</state_management>
+      <routing>React Router for navigation</routing>
+      <markdown>React Markdown for message rendering</markdown>
+      <code_highlighting>Syntax highlighting for code blocks</code_highlighting>
+      <port>Only launch on port {frontend_port}</port>
+    </frontend>
+    <backend>
+      <runtime>Node.js with Express</runtime>
+      <database>SQLite with better-sqlite3</database>
+      <api_integration>Claude API for chat completions</api_integration>
+      <streaming>Server-Sent Events for streaming responses</streaming>
+    </backend>
+    <communication>
+      <api>RESTful endpoints</api>
+      <streaming>SSE for real-time message streaming</streaming>
+      <claude_api>Integration with Claude API using Anthropic SDK</claude_api>
+    </communication>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      - Repository includes .env with VITE_ANTHROPIC_API_KEY configured
+      - Frontend dependencies pre-installed via pnpm
+      - Backend code goes in /server directory
+      - Install backend dependencies as needed
+    </environment_setup>
+  </prerequisites>
+
+  <core_features>
+    <chat_interface>
+      - Clean, centered chat layout with message bubbles
+      - Streaming message responses with typing indicator
+      - Markdown rendering with proper formatting
+      - Code blocks with syntax highlighting and copy button
+      - LaTeX/math equation rendering
+      - Image upload and display in messages
+      - Multi-turn conversations with context
+      - Message editing and regeneration
+      - Stop generation button during streaming
+      - Input field with auto-resize textarea
+      - Character count and token estimation
+      - Keyboard shortcuts (Enter to send, Shift+Enter for newline)
+    </chat_interface>
+
+    <artifacts>
+      - Artifact detection and rendering in side panel
+      - Code artifact viewer with syntax highlighting
+      - HTML/SVG preview with live rendering
+      - React component preview
+      - Mermaid diagram rendering
+      - Text document artifacts
+      - Artifact editing and re-prompting
+      - Full-screen artifact view
+      - Download artifact content
+      - Artifact versioning and history
+    </artifacts>
+
+    <conversation_management>
+      - Create new conversations
+      - Conversation list in sidebar
+      - Rename conversations
+      - Delete conversations
+      - Search conversations by title/content
+      - Pin important conversations
+      - Archive conversations
+      - Conversation folders/organization
+      - Duplicate conversation
+      - Export conversation (JSON, Markdown, PDF)
+      - Conversation timestamps (created, last updated)
+      - Unread message indicators
+    </conversation_management>
+
+    <projects>
+      - Create projects to group related conversations
+      - Project knowledge base (upload documents)
+      - Project-specific custom instructions
+      - Share projects with team (mock feature)
+      - Project settings and configuration
+      - Move conversations between projects
+      - Project templates
+      - Project analytics (usage stats)
+    </projects>
+
+    <model_selection>
+      - Model selector dropdown with the following models:
+        - Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) - default
+        - Claude Haiku 4.5 (claude-haiku-4-5-20251001)
+        - Claude Opus 4.1 (claude-opus-4-1-20250805)
+      - Model capabilities display
+      - Context window indicator
+      - Model-specific pricing info (display only)
+      - Switch models mid-conversation
+      - Model comparison view
+    </model_selection>
+
+    <custom_instructions>
+      - Global custom instructions
+      - Project-specific custom instructions
+      - Conversation-specific system prompts
+      - Custom instruction templates
+      - Preview how instructions affect responses
+    </custom_instructions>
+
+    <settings_preferences>
+      - Theme selection (Light, Dark, Auto)
+      - Font size adjustment
+      - Message density (compact, comfortable, spacious)
+      - Code theme selection
+      - Language preferences
+      - Accessibility options
+      - Keyboard shortcuts reference
+      - Data export options
+      - Privacy settings
+      - API key management
+    </settings_preferences>
+
+    <advanced_features>
+      - Temperature control slider
+      - Max tokens adjustment
+      - Top-p (nucleus sampling) control
+      - System prompt override
+      - Thinking/reasoning mode toggle
+      - Multi-modal input (text + images)
+      - Voice input (optional, mock UI)
+      - Response suggestions
+      - Related prompts
+      - Conversation branching
+    </advanced_features>
+
+    <collaboration>
+      - Share conversation via link (read-only)
+      - Export conversation formats
+      - Conversation templates
+      - Prompt library
+      - Share artifacts
+      - Team workspaces (mock UI)
+    </collaboration>
+
+    <search_discovery>
+      - Search across all conversations
+      - Filter by project, date, model
+      - Prompt library with categories
+      - Example conversations
+      - Quick actions menu
+      - Command palette (Cmd/Ctrl+K)
+    </search_discovery>
+
+    <usage_tracking>
+      - Token usage display per message
+      - Conversation cost estimation
+      - Daily/monthly usage dashboard
+      - Usage limits and warnings
+      - API quota tracking
+    </usage_tracking>
+
+    <onboarding>
+      - Welcome screen for new users
+      - Feature tour highlights
+      - Example prompts to get started
+      - Quick tips and best practices
+      - Keyboard shortcuts tutorial
+    </onboarding>
+
+    <accessibility>
+      - Full keyboard navigation
+      - Screen reader support
+      - ARIA labels and roles
+      - High contrast mode
+      - Focus management
+      - Reduced motion support
+    </accessibility>
+
+    <responsive_design>
+      - Mobile-first responsive layout
+      - Touch-optimized interface
+      - Collapsible sidebar on mobile
+      - Swipe gestures for navigation
+      - Adaptive artifact display
+      - Progressive Web App (PWA) support
+    </responsive_design>
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <users>
+        - id, email, name, avatar_url
+        - created_at, last_login
+        - preferences (JSON: theme, font_size, etc.)
+        - custom_instructions
+      </users>
+
+      <projects>
+        - id, user_id, name, description, color
+        - custom_instructions, knowledge_base_path
+        - created_at, updated_at
+        - is_archived, is_pinned
+      </projects>
+
+      <conversations>
+        - id, user_id, project_id, title
+        - model, created_at, updated_at, last_message_at
+        - is_archived, is_pinned, is_deleted
+        - settings (JSON: temperature, max_tokens, etc.)
+        - token_count, message_count
+      </conversations>
+
+      <messages>
+        - id, conversation_id, role (user/assistant/system)
+        - content, created_at, edited_at
+        - tokens, finish_reason
+        - images (JSON array of image data)
+        - parent_message_id (for branching)
+      </messages>
+
+      <artifacts>
+        - id, message_id, conversation_id
+        - type (code/html/svg/react/mermaid/text)
+        - title, identifier, language
+        - content, version
+        - created_at, updated_at
+      </artifacts>
+
+      <shared_conversations>
+        - id, conversation_id, share_token
+        - created_at, expires_at, view_count
+        - is_public
+      </shared_conversations>
+
+      <prompt_library>
+        - id, user_id, title, description
+        - prompt_template, category, tags (JSON)
+        - is_public, usage_count
+        - created_at, updated_at
+      </prompt_library>
+
+      <conversation_folders>
+        - id, user_id, project_id, name, parent_folder_id
+        - created_at, position
+      </conversation_folders>
+
+      <conversation_folder_items>
+        - id, folder_id, conversation_id
+      </conversation_folder_items>
+
+      <usage_tracking>
+        - id, user_id, conversation_id, message_id
+        - model, input_tokens, output_tokens
+        - cost_estimate, created_at
+      </usage_tracking>
+
+      <api_keys>
+        - id, user_id, key_name, api_key_hash
+        - created_at, last_used_at
+        - is_active
+      </api_keys>
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <authentication>
+      - POST /api/auth/login
+      - POST /api/auth/logout
+      - GET /api/auth/me
+      - PUT /api/auth/profile
+    </authentication>
+
+    <conversations>
+      - GET /api/conversations
+      - POST /api/conversations
+      - GET /api/conversations/:id
+      - PUT /api/conversations/:id
+      - DELETE /api/conversations/:id
+      - POST /api/conversations/:id/duplicate
+      - POST /api/conversations/:id/export
+      - PUT /api/conversations/:id/archive
+      - PUT /api/conversations/:id/pin
+      - POST /api/conversations/:id/branch
+    </conversations>
+
+    <messages>
+      - GET /api/conversations/:id/messages
+      - POST /api/conversations/:id/messages
+      - PUT /api/messages/:id
+      - DELETE /api/messages/:id
+      - POST /api/messages/:id/regenerate
+      - GET /api/messages/stream (SSE endpoint)
+    </messages>
+
+    <artifacts>
+      - GET /api/conversations/:id/artifacts
+      - GET /api/artifacts/:id
+      - PUT /api/artifacts/:id
+      - DELETE /api/artifacts/:id
+      - POST /api/artifacts/:id/fork
+      - GET /api/artifacts/:id/versions
+    </artifacts>
+
+    <projects>
+      - GET /api/projects
+      - POST /api/projects
+      - GET /api/projects/:id
+      - PUT /api/projects/:id
+      - DELETE /api/projects/:id
+      - POST /api/projects/:id/knowledge
+      - GET /api/projects/:id/conversations
+      - PUT /api/projects/:id/settings
+    </projects>
+
+    <sharing>
+      - POST /api/conversations/:id/share
+      - GET /api/share/:token
+      - DELETE /api/share/:token
+      - PUT /api/share/:token/settings
+    </sharing>
+
+    <prompts>
+      - GET /api/prompts/library
+      - POST /api/prompts/library
+      - GET /api/prompts/:id
+      - PUT /api/prompts/:id
+      - DELETE /api/prompts/:id
+      - GET /api/prompts/categories
+      - GET /api/prompts/examples
+    </prompts>
+
+    <search>
+      - GET /api/search/conversations?q=query
+      - GET /api/search/messages?q=query
+      - GET /api/search/artifacts?q=query
+      - GET /api/search/prompts?q=query
+    </search>
+
+    <folders>
+      - GET /api/folders
+      - POST /api/folders
+      - PUT /api/folders/:id
+      - DELETE /api/folders/:id
+      - POST /api/folders/:id/items
+      - DELETE /api/folders/:id/items/:conversationId
+    </folders>
+
+    <usage>
+      - GET /api/usage/daily
+      - GET /api/usage/monthly
+      - GET /api/usage/by-model
+      - GET /api/usage/conversations/:id
+    </usage>
+
+    <settings>
+      - GET /api/settings
+      - PUT /api/settings
+      - GET /api/settings/custom-instructions
+      - PUT /api/settings/custom-instructions
+    </settings>
+
+    <claude_api>
+      - POST /api/claude/chat (proxy to Claude API)
+      - POST /api/claude/chat/stream (streaming proxy)
+      - GET /api/claude/models
+      - POST /api/claude/images/upload
+    </claude_api>
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      - Three-column layout: sidebar (conversations), main (chat), panel (artifacts)
+      - Collapsible sidebar with resize handle
+      - Responsive breakpoints: mobile (single column), tablet (two column), desktop (three column)
+      - Persistent header with project/model selector
+      - Bottom input area with send button and options
+    </main_structure>
+
+    <sidebar_left>
+      - New chat button (prominent)
+      - Project selector dropdown
+      - Search conversations input
+      - Conversations list (grouped by date: Today, Yesterday, Previous 7 days, etc.)
+      - Folder tree view (collapsible)
+      - Settings gear icon at bottom
+      - User profile at bottom
+    </sidebar_left>
+
+    <main_chat_area>
+      - Conversation title (editable inline)
+      - Model selector badge
+      - Message history (scrollable)
+      - Welcome screen for new conversations
+      - Suggested prompts (empty state)
+      - Input area with formatting toolbar
+      - Attachment button for images
+      - Send button with loading state
+      - Stop generation button
+    </main_chat_area>
+
+    <artifacts_panel>
+      - Artifact header with title and type badge
+      - Code editor or preview pane
+      - Tabs for multiple artifacts
+      - Full-screen toggle
+      - Download button
+      - Edit/Re-prompt button
+      - Version selector
+      - Close panel button
+    </artifacts_panel>
+
+    <modals_overlays>
+      - Settings modal (tabbed interface)
+      - Share conversation modal
+      - Export options modal
+      - Project settings modal
+      - Prompt library modal
+      - Command palette overlay
+      - Keyboard shortcuts reference
+    </modals_overlays>
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      - Primary: Orange/amber accent (#CC785C claude-style)
+      - Background: White (light mode), Dark gray (#1A1A1A dark mode)
+      - Surface: Light gray (#F5F5F5 light), Darker gray (#2A2A2A dark)
+      - Text: Near black (#1A1A1A light), Off-white (#E5E5E5 dark)
+      - Borders: Light gray (#E5E5E5 light), Dark gray (#404040 dark)
+      - Code blocks: Monaco editor theme
+    </color_palette>
+
+    <typography>
+      - Sans-serif system font stack (Inter, SF Pro, Roboto, system-ui)
+      - Headings: font-semibold
+      - Body: font-normal, leading-relaxed
+      - Code: Monospace (JetBrains Mono, Consolas, Monaco)
+      - Message text: text-base (16px), comfortable line-height
+    </typography>
+
+    <components>
+      <message_bubble>
+        - User messages: Right-aligned, subtle background
+        - Assistant messages: Left-aligned, no background
+        - Markdown formatting with proper spacing
+        - Inline code with bg-gray-100 background
+        - Code blocks with syntax highlighting
+        - Copy button on code blocks
+      </message_bubble>
+
+      <buttons>
+        - Primary: Orange/amber background, white text, rounded
+        - Secondary: Border style with hover fill
+        - Icon buttons: Square with hover background
+        - Disabled state: Reduced opacity, no pointer events
+      </buttons>
+
+      <inputs>
+        - Rounded borders with focus ring
+        - Textarea auto-resize
+        - Placeholder text in gray
+        - Error states in red
+        - Character counter
+      </inputs>
+
+      <cards>
+        - Subtle border or shadow
+        - Rounded corners (8px)
+        - Padding: p-4 to p-6
+        - Hover state: slight shadow increase
+      </cards>
+    </components>
+
+    <animations>
+      - Smooth transitions (150-300ms)
+      - Fade in for new messages
+      - Slide in for sidebar
+      - Typing indicator animation
+      - Loading spinner for generation
+      - Skeleton loaders for content
+    </animations>
+  </design_system>
+
+  <key_interactions>
+    <message_flow>
+      1. User types message in input field
+      2. Optional: Attach images via button
+      3. Click send or press Enter
+      4. Message appears in chat immediately
+      5. Typing indicator shows while waiting
+      6. Response streams in word by word
+      7. Code blocks render with syntax highlighting
+      8. Artifacts detected and rendered in side panel
+      9. Message complete, enable regenerate option
+    </message_flow>
+
+    <artifact_flow>
+      1. Assistant generates artifact in response
+      2. Artifact panel slides in from right
+      3. Content renders (code with highlighting or live preview)
+      4. User can edit artifact inline
+      5. "Re-prompt" button to iterate with Claude
+      6. Download or copy artifact content
+      7. Full-screen mode for detailed work
+      8. Close panel to return to chat focus
+    </artifact_flow>
+
+    <conversation_management>
+      1. Click "New Chat" to start fresh conversation
+      2. Conversations auto-save with first message
+      3. Auto-generate title from first exchange
+      4. Click title to rename inline
+      5. Drag conversations into folders
+      6. Right-click for context menu (pin, archive, delete, export)
+      7. Search filters conversations in real-time
+      8. Click conversation to switch context
+    </conversation_management>
+  </key_interactions>
+
+  <implementation_steps>
+    <step number="1">
+      <title>Setup Project Foundation and Database</title>
+      <tasks>
+        - Initialize Express server with SQLite database
+        - Set up Claude API client with streaming support
+        - Create database schema with migrations
+        - Implement authentication endpoints
+        - Set up basic CORS and middleware
+        - Create health check endpoint
+      </tasks>
+    </step>
+
+    <step number="2">
+      <title>Build Core Chat Interface</title>
+      <tasks>
+        - Create main layout with sidebar and chat area
+        - Implement message display with markdown rendering
+        - Add streaming message support with SSE
+        - Build input area with auto-resize textarea
+        - Add code block syntax highlighting
+        - Implement stop generation functionality
+        - Add typing indicators and loading states
+      </tasks>
+    </step>
+
+    <step number="3">
+      <title>Conversation Management</title>
+      <tasks>
+        - Create conversation list in sidebar
+        - Implement new conversation creation
+        - Add conversation switching
+        - Build conversation rename functionality
+        - Implement delete with confirmation
+        - Add conversation search
+        - Create conversation grouping by date
+      </tasks>
+    </step>
+
+    <step number="4">
+      <title>Artifacts System</title>
+      <tasks>
+        - Build artifact detection from Claude responses
+        - Create artifact rendering panel
+        - Implement code artifact viewer
+        - Add HTML/SVG live preview
+        - Build artifact editing interface
+        - Add artifact versioning
+        - Implement full-screen artifact view
+      </tasks>
+    </step>
+
+    <step number="5">
+      <title>Projects and Organization</title>
+      <tasks>
+        - Create projects CRUD endpoints
+        - Build project selector UI
+        - Implement project-specific custom instructions
+        - Add folder system for conversations
+        - Create drag-and-drop organization
+        - Build project settings panel
+      </tasks>
+    </step>
+
+    <step number="6">
+      <title>Advanced Features</title>
+      <tasks>
+        - Add model selection dropdown
+        - Implement temperature and parameter controls
+        - Build image upload functionality
+        - Create message editing and regeneration
+        - Add conversation branching
+        - Implement export functionality
+      </tasks>
+    </step>
+
+    <step number="7">
+      <title>Settings and Customization</title>
+      <tasks>
+        - Build settings modal with tabs
+        - Implement theme switching (light/dark)
+        - Add custom instructions management
+        - Create keyboard shortcuts
+        - Build prompt library
+        - Add usage tracking dashboard
+      </tasks>
+    </step>
+
+    <step number="8">
+      <title>Sharing and Collaboration</title>
+      <tasks>
+        - Implement conversation sharing with tokens
+        - Create public share view
+        - Add export to multiple formats
+        - Build prompt templates
+        - Create example conversations
+      </tasks>
+    </step>
+
+    <step number="9">
+      <title>Polish and Optimization</title>
+      <tasks>
+        - Optimize for mobile responsiveness
+        - Add command palette (Cmd+K)
+        - Implement comprehensive keyboard navigation
+        - Add onboarding flow
+        - Create accessibility improvements
+        - Performance optimization and caching
+      </tasks>
+    </step>
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      - Streaming chat responses work smoothly
+      - Artifact detection and rendering accurate
+      - Conversation management intuitive and reliable
+      - Project organization clear and useful
+      - Image upload and display working
+      - All CRUD operations functional
+    </functionality>
+
+    <user_experience>
+      - Interface matches claude.ai design language
+      - Responsive on all device sizes
+      - Smooth animations and transitions
+      - Fast response times and minimal lag
+      - Intuitive navigation and workflows
+      - Clear feedback for all actions
+    </user_experience>
+
+    <technical_quality>
+      - Clean, maintainable code structure
+      - Proper error handling throughout
+      - Secure API key management
+      - Optimized database queries
+      - Efficient streaming implementation
+      - Comprehensive testing coverage
+    </technical_quality>
+
+    <design_polish>
+      - Consistent with claude.ai visual design
+      - Beautiful typography and spacing
+      - Smooth animations and micro-interactions
+      - Excellent contrast and accessibility
+      - Professional, polished appearance
+      - Dark mode fully implemented
+    </design_polish>
+  </success_criteria>
+</project_specification>
+
+
+
+================================================
+FILE: autonomous-coding/prompts/coding_prompt.md
+================================================
+## YOUR ROLE - CODING AGENT
+
+You are continuing work on a long-running autonomous development task.
+This is a FRESH context window - you have no memory of previous sessions.
+
+### STEP 1: GET YOUR BEARINGS (MANDATORY)
+
+Start by orienting yourself:
+
+```bash
+# 1. See your working directory
+pwd
+
+# 2. List files to understand project structure
+ls -la
+
+# 3. Read the project specification to understand what you're building
+cat app_spec.txt
+
+# 4. Read the feature list to see all work
+cat feature_list.json | head -50
+
+# 5. Read progress notes from previous sessions
+cat claude-progress.txt
+
+# 6. Check recent git history
+git log --oneline -20
+
+# 7. Count remaining tests
+cat feature_list.json | grep '"passes": false' | wc -l
+```
+
+Understanding the `app_spec.txt` is critical - it contains the full requirements
+for the application you're building.
+
+### STEP 2: START SERVERS (IF NOT RUNNING)
+
+If `init.sh` exists, run it:
+```bash
+chmod +x init.sh
+./init.sh
+```
+
+Otherwise, start servers manually and document the process.
+
+### STEP 3: VERIFICATION TEST (CRITICAL!)
+
+**MANDATORY BEFORE NEW WORK:**
+
+The previous session may have introduced bugs. Before implementing anything
+new, you MUST run verification tests.
+
+Run 1-2 of the feature tests marked as `"passes": true` that are most core to the app's functionality to verify they still work.
+For example, if this were a chat app, you should perform a test that logs into the app, sends a message, and gets a response.
+
+**If you find ANY issues (functional or visual):**
+- Mark that feature as "passes": false immediately
+- Add issues to a list
+- Fix all issues BEFORE moving to new features
+- This includes UI bugs like:
+  * White-on-white text or poor contrast
+  * Random characters displayed
+  * Incorrect timestamps
+  * Layout issues or overflow
+  * Buttons too close together
+  * Missing hover states
+  * Console errors
+
+### STEP 4: CHOOSE ONE FEATURE TO IMPLEMENT
+
+Look at feature_list.json and find the highest-priority feature with "passes": false.
+
+Focus on completing one feature perfectly and completing its testing steps in this session before moving on to other features.
+It's ok if you only complete one feature in this session, as there will be more sessions later that continue to make progress.
+
+### STEP 5: IMPLEMENT THE FEATURE
+
+Implement the chosen feature thoroughly:
+1. Write the code (frontend and/or backend as needed)
+2. Test manually using browser automation (see Step 6)
+3. Fix any issues discovered
+4. Verify the feature works end-to-end
+
+### STEP 6: VERIFY WITH BROWSER AUTOMATION
+
+**CRITICAL:** You MUST verify features through the actual UI.
+
+Use browser automation tools:
+- Navigate to the app in a real browser
+- Interact like a human user (click, type, scroll)
+- Take screenshots at each step
+- Verify both functionality AND visual appearance
+
+**DO:**
+- Test through the UI with clicks and keyboard input
+- Take screenshots to verify visual appearance
+- Check for console errors in browser
+- Verify complete user workflows end-to-end
+
+**DON'T:**
+- Only test with curl commands (backend testing alone is insufficient)
+- Use JavaScript evaluation to bypass UI (no shortcuts)
+- Skip visual verification
+- Mark tests passing without thorough verification
+
+### STEP 7: UPDATE feature_list.json (CAREFULLY!)
+
+**YOU CAN ONLY MODIFY ONE FIELD: "passes"**
+
+After thorough verification, change:
+```json
+"passes": false
+```
+to:
+```json
+"passes": true
+```
+
+**NEVER:**
+- Remove tests
+- Edit test descriptions
+- Modify test steps
+- Combine or consolidate tests
+- Reorder tests
+
+**ONLY CHANGE "passes" FIELD AFTER VERIFICATION WITH SCREENSHOTS.**
+
+### STEP 8: COMMIT YOUR PROGRESS
+
+Make a descriptive git commit:
+```bash
+git add .
+git commit -m "Implement [feature name] - verified end-to-end
+
+- Added [specific changes]
+- Tested with browser automation
+- Updated feature_list.json: marked test #X as passing
+- Screenshots in verification/ directory
+"
+```
+
+### STEP 9: UPDATE PROGRESS NOTES
+
+Update `claude-progress.txt` with:
+- What you accomplished this session
+- Which test(s) you completed
+- Any issues discovered or fixed
+- What should be worked on next
+- Current completion status (e.g., "45/200 tests passing")
+
+### STEP 10: END SESSION CLEANLY
+
+Before context fills up:
+1. Commit all working code
+2. Update claude-progress.txt
+3. Update feature_list.json if tests verified
+4. Ensure no uncommitted changes
+5. Leave app in working state (no broken features)
+
+---
+
+## TESTING REQUIREMENTS
+
+**ALL testing must use browser automation tools.**
+
+Available tools:
+- puppeteer_navigate - Start browser and go to URL
+- puppeteer_screenshot - Capture screenshot
+- puppeteer_click - Click elements
+- puppeteer_fill - Fill form inputs
+- puppeteer_evaluate - Execute JavaScript (use sparingly, only for debugging)
+
+Test like a human user with mouse and keyboard. Don't take shortcuts by using JavaScript evaluation.
+Don't use the puppeteer "active tab" tool.
+
+---
+
+## IMPORTANT REMINDERS
+
+**Your Goal:** Production-quality application with all 200+ tests passing
+
+**This Session's Goal:** Complete at least one feature perfectly
+
+**Priority:** Fix broken tests before implementing new features
+
+**Quality Bar:**
+- Zero console errors
+- Polished UI matching the design specified in app_spec.txt
+- All features work end-to-end through the UI
+- Fast, responsive, professional
+
+**You have unlimited time.** Take as long as needed to get it right. The most important thing is that you
+leave the code base in a clean state before terminating the session (Step 10).
+
+---
+
+Begin by running Step 1 (Get Your Bearings).
+
+
+
+================================================
+FILE: autonomous-coding/prompts/initializer_prompt.md
+================================================
+## YOUR ROLE - INITIALIZER AGENT (Session 1 of Many)
+
+You are the FIRST agent in a long-running autonomous development process.
+Your job is to set up the foundation for all future coding agents.
+
+### FIRST: Read the Project Specification
+
+Start by reading `app_spec.txt` in your working directory. This file contains
+the complete specification for what you need to build. Read it carefully
+before proceeding.
+
+### CRITICAL FIRST TASK: Create feature_list.json
+
+Based on `app_spec.txt`, create a file called `feature_list.json` with 200 detailed
+end-to-end test cases. This file is the single source of truth for what
+needs to be built.
+
+**Format:**
+```json
+[
+  {
+    "category": "functional",
+    "description": "Brief description of the feature and what this test verifies",
+    "steps": [
+      "Step 1: Navigate to relevant page",
+      "Step 2: Perform action",
+      "Step 3: Verify expected result"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Brief description of UI/UX requirement",
+    "steps": [
+      "Step 1: Navigate to page",
+      "Step 2: Take screenshot",
+      "Step 3: Verify visual requirements"
+    ],
+    "passes": false
+  }
+]
+```
+
+**Requirements for feature_list.json:**
+- Minimum 200 features total with testing steps for each
+- Both "functional" and "style" categories
+- Mix of narrow tests (2-5 steps) and comprehensive tests (10+ steps)
+- At least 25 tests MUST have 10+ steps each
+- Order features by priority: fundamental features first
+- ALL tests start with "passes": false
+- Cover every feature in the spec exhaustively
+
+**CRITICAL INSTRUCTION:**
+IT IS CATASTROPHIC TO REMOVE OR EDIT FEATURES IN FUTURE SESSIONS.
+Features can ONLY be marked as passing (change "passes": false to "passes": true).
+Never remove features, never edit descriptions, never modify testing steps.
+This ensures no functionality is missed.
+
+### SECOND TASK: Create init.sh
+
+Create a script called `init.sh` that future agents can use to quickly
+set up and run the development environment. The script should:
+
+1. Install any required dependencies
+2. Start any necessary servers or services
+3. Print helpful information about how to access the running application
+
+Base the script on the technology stack specified in `app_spec.txt`.
+
+### THIRD TASK: Initialize Git
+
+Create a git repository and make your first commit with:
+- feature_list.json (complete with all 200+ features)
+- init.sh (environment setup script)
+- README.md (project overview and setup instructions)
+
+Commit message: "Initial setup: feature_list.json, init.sh, and project structure"
+
+### FOURTH TASK: Create Project Structure
+
+Set up the basic project structure based on what's specified in `app_spec.txt`.
+This typically includes directories for frontend, backend, and any other
+components mentioned in the spec.
+
+### OPTIONAL: Start Implementation
+
+If you have time remaining in this session, you may begin implementing
+the highest-priority features from feature_list.json. Remember:
+- Work on ONE feature at a time
+- Test thoroughly before marking "passes": true
+- Commit your progress before session ends
+
+### ENDING THIS SESSION
+
+Before your context fills up:
+1. Commit all work with descriptive messages
+2. Create `claude-progress.txt` with a summary of what you accomplished
+3. Ensure feature_list.json is complete and saved
+4. Leave the environment in a clean, working state
+
+The next agent will continue from here with a fresh context window.
+
+---
+
+**Remember:** You have unlimited time across many sessions. Focus on
+quality over speed. Production-ready is the goal.
+
+
