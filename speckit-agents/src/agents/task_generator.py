@@ -215,6 +215,10 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
         # System prompt for task generation
         system_prompt = get_system_prompt()
 
+        # Ensure artifacts directory exists for Claude SDK cwd
+        artifacts_path = self.get_artifacts_path(workflow_id)
+        artifacts_path.mkdir(parents=True, exist_ok=True)
+
         try:
             full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
 
@@ -225,7 +229,7 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
             sdk_options = ClaudeCodeOptions(
                 model=options.get("model", "claude-opus-4-5-20251101"),
                 max_turns=options.get("max_turns", 5),
-                cwd=str(self.get_artifacts_path(workflow_id)),
+                cwd=str(artifacts_path),
                 permission_mode="bypassPermissions",  # Allow autonomous execution
             )
 

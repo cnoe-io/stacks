@@ -132,6 +132,7 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
 
             # Save report as artifact
             artifacts_dir = self.get_artifacts_path(workflow_id)
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
             report_path = artifacts_dir / "implementation-report.md"
             report_path.write_text(report)
 
@@ -233,7 +234,9 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
                 )
 
                 # Save updated tasks.md
-                tasks_path = self.get_artifacts_path(workflow_id) / "tasks.md"
+                tasks_dir = self.get_artifacts_path(workflow_id)
+                tasks_dir.mkdir(parents=True, exist_ok=True)
+                tasks_path = tasks_dir / "tasks.md"
                 tasks_path.write_text(current_tasks_content)
 
             # If task failed and not parallel, stop execution

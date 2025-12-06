@@ -337,11 +337,11 @@ export class SpecKitAgentsChart extends Chart {
                 resources: {
                   requests: {
                     cpu: k8s.Quantity.fromString('100m'),
-                    memory: k8s.Quantity.fromString('256Mi'),
+                    memory: k8s.Quantity.fromString('512Mi'),
                   },
                   limits: {
-                    cpu: k8s.Quantity.fromString('500m'),
-                    memory: k8s.Quantity.fromString('512Mi'),
+                    cpu: k8s.Quantity.fromString('1000m'),
+                    memory: k8s.Quantity.fromString('1536Mi'),
                   },
                 },
                 livenessProbe: {
