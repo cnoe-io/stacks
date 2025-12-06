@@ -93,6 +93,32 @@ export interface TailscaleServeChartProps extends ChartProps {
    * @default 'bitnami/kubectl:latest'
    */
   kubectlImage?: string;
+
+  /**
+   * Enable persistent storage for Tailscale state.
+   * When true, creates a PVC for /var/lib/tailscale to persist certificates
+   * across pod restarts, avoiding Let's Encrypt rate limits.
+   *
+   * @default false (uses emptyDir)
+   */
+  persistentStorage?: boolean;
+
+  /**
+   * Storage size for the persistent volume claim.
+   * Only used when persistentStorage is true.
+   *
+   * @default '1Gi'
+   */
+  storageSize?: string;
+
+  /**
+   * Storage class name for the persistent volume claim.
+   * Only used when persistentStorage is true.
+   * If not specified, uses the cluster default storage class.
+   *
+   * @default undefined (uses cluster default)
+   */
+  storageClassName?: string;
 }
 
 /**
@@ -109,6 +135,9 @@ export interface ResolvedTailscaleServeChartProps {
   backendInsecure: boolean;
   tailscaleImage: string;
   kubectlImage: string;
+  persistentStorage: boolean;
+  storageSize: string;
+  storageClassName?: string;
   /**
    * Computed backend URL scheme based on backendInsecure flag
    * 'http+insecure' when backendInsecure=true, 'https' otherwise
@@ -140,6 +169,9 @@ export function resolveProps(props: TailscaleServeChartProps): ResolvedTailscale
   const backendInsecure = props.backendInsecure ?? false;
   const tailscaleImage = props.tailscaleImage ?? 'tailscale/tailscale:latest';
   const kubectlImage = props.kubectlImage ?? 'bitnami/kubectl:latest';
+  const persistentStorage = props.persistentStorage ?? false;
+  const storageSize = props.storageSize ?? '1Gi';
+  const storageClassName = props.storageClassName;
 
   // Compute derived values
   const backendScheme = backendInsecure ? 'http+insecure' : 'https';
@@ -157,6 +189,9 @@ export function resolveProps(props: TailscaleServeChartProps): ResolvedTailscale
     backendInsecure,
     tailscaleImage,
     kubectlImage,
+    persistentStorage,
+    storageSize,
+    storageClassName,
     backendScheme,
     serviceRegistration,
     backendUrl,
@@ -225,47 +260,59 @@ exec tail -f /dev/null
 /**
  * Service configurations for all platform services
  *
+ * NOTE: Service names use "2" suffix to bypass Let's Encrypt rate limits.
+ * This can be reverted to base names (argocd, langfuse, etc.) once rate limits reset.
+ *
+ * URLs: https://<serviceName>.tail286401.ts.net
+ *
+ * Let's Encrypt Rate Limits (Tailscale hardcodes production endpoint):
+ * - 5 certificates per domain per 168 hours (7 days)
+ * - 10 new registrations per IP per 3 hours
+ * - Solution: Use PVC for /var/lib/tailscale to persist certificates across restarts
+ * - No paid Tailscale plan exemption (limits from Let's Encrypt, not Tailscale)
+ *
  * @see data-model.md Service Configuration Matrix
+ * @see applications.ts for actual deployment configuration
  */
 export const PLATFORM_SERVICES: Record<string, Omit<TailscaleServeChartProps, keyof ChartProps>> = {
   argocd: {
-    serviceName: 'argocd',
+    serviceName: 'argocd2',  // Using argocd2 to bypass Let's Encrypt rate limit
     backendHost: 'argocd-server.argocd.svc.cluster.local',
     backendPort: 443,
     backendInsecure: true,
   },
   langfuse: {
-    serviceName: 'langfuse',
+    serviceName: 'langfuse2',  // Using langfuse2 to bypass Let's Encrypt rate limit
     backendHost: 'langfuse.observability.svc.cluster.local',
     backendPort: 3000,
     backendInsecure: false,
   },
   gitea: {
-    serviceName: 'gitea',
+    serviceName: 'gitea2',  // Using gitea2 to bypass Let's Encrypt rate limit
     backendHost: 'my-gitea-http.gitea.svc.cluster.local',
     backendPort: 3000,
     backendInsecure: false,
   },
   kagent: {
-    serviceName: 'kagent',
-    backendHost: 'kagent-dashboard.kagent.svc.cluster.local',
+    serviceName: 'kagent2',  // Using kagent2 to bypass Let's Encrypt rate limit
+    backendHost: 'kagent-ui.kagent.svc.cluster.local',
     backendPort: 8080,
     backendInsecure: false,
   },
   kargo: {
-    serviceName: 'kargo',
+    serviceName: 'kargo2',  // Using kargo2 to bypass Let's Encrypt rate limit
     backendHost: 'kargo-api.kargo.svc.cluster.local',
-    backendPort: 443,
-    backendInsecure: true,
+    backendPort: 80,
+    backendInsecure: false,
   },
   headlamp: {
-    serviceName: 'headlamp',
+    serviceName: 'headlamp2',  // Using headlamp2 to bypass Let's Encrypt rate limit
     backendHost: 'headlamp.headlamp.svc.cluster.local',
-    backendPort: 4466,
+    backendPort: 80,
     backendInsecure: false,
   },
   keycloak: {
-    serviceName: 'keycloak',
+    serviceName: 'keycloak2',  // Using keycloak2 to bypass Let's Encrypt rate limit
     backendHost: 'keycloak.keycloak.svc.cluster.local',
     backendPort: 8080,
     backendInsecure: false,

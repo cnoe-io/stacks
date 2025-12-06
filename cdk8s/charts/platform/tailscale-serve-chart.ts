@@ -8,8 +8,13 @@
  * Key features:
  * - Stable service URLs (svc-<name>.<tailnet>.ts.net)
  * - No hostname suffix drift (-1, -2, etc.)
- * - No Let's Encrypt rate limit issues
  * - ACL auto-approvers with tag:k8s-services
+ *
+ * Let's Encrypt Rate Limits:
+ * - 5 certificates per domain per 168 hours (7 days)
+ * - 10 new registrations per IP per 3 hours
+ * - Set persistentStorage: true to persist certificates across pod restarts
+ * - Without persistent storage, uses emptyDir (certificates lost on pod restart)
  *
  * Prerequisites:
  * - Auth key with tag:k8s-services in Azure Key Vault
@@ -51,6 +56,32 @@ export class TailscaleServeChart extends Chart {
     const resolved = resolveProps(props);
     const deploymentName = `${resolved.serviceName}-tailscale-serve`;
     const serviceAccountName = `${deploymentName}-sa`;
+    const pvcName = `${deploymentName}-state`;
+
+    // PersistentVolumeClaim for Tailscale state (when persistent storage is enabled)
+    // This persists certificates and state across pod restarts to avoid Let's Encrypt rate limits
+    if (resolved.persistentStorage) {
+      new k8s.KubePersistentVolumeClaim(this, 'pvc', {
+        metadata: {
+          name: pvcName,
+          namespace: resolved.namespace,
+          labels: {
+            'app.kubernetes.io/name': deploymentName,
+            'app.kubernetes.io/component': 'tailscale-serve',
+            'app.kubernetes.io/managed-by': 'cdk8s',
+          },
+        },
+        spec: {
+          accessModes: ['ReadWriteOnce'],
+          resources: {
+            requests: {
+              storage: k8s.Quantity.fromString(resolved.storageSize),
+            },
+          },
+          ...(resolved.storageClassName && { storageClassName: resolved.storageClassName }),
+        },
+      });
+    }
 
     // ServiceAccount for the deployment
     new k8s.KubeServiceAccount(this, 'service-account', {
@@ -201,7 +232,28 @@ echo "Secret ${resolved.authKeySecretName} found, proceeding..."
                     memory: k8s.Quantity.fromString('256Mi'),
                   },
                 },
+                volumeMounts: [
+                  {
+                    name: 'tailscale-state',
+                    mountPath: '/var/lib/tailscale',
+                  },
+                ],
               },
+            ],
+            // Volume for Tailscale state - uses PVC when persistentStorage is enabled
+            // otherwise uses emptyDir (state lost on pod restart)
+            volumes: [
+              resolved.persistentStorage
+                ? {
+                    name: 'tailscale-state',
+                    persistentVolumeClaim: {
+                      claimName: pvcName,
+                    },
+                  }
+                : {
+                    name: 'tailscale-state',
+                    emptyDir: {},
+                  },
             ],
           },
         },
