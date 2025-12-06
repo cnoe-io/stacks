@@ -125,12 +125,29 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
     await IdpBuilderChartFactory.createChart(app, appConfig);
 
     // Generate ArgoCD Application in the same synthesis pass
+    // For Talos, we use the Git repo URL directly from environment
+    const gitRepoUrl = process.env.GIT_REPO_URL || '';
+    const gitBranch = process.env.GIT_BRANCH || 'main';
+
+    // Extract org/repo from URL like https://github.com/org/repo.git
+    const gitMatch = gitRepoUrl.match(/github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?$/);
+    const github = gitMatch ? { org: gitMatch[1], repo: gitMatch[2] } : undefined;
+
     new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
       applicationName: appConfig.name,
       applicationNamespace: appConfig.namespace,
       manifestPath: 'manifests',
-      argoCdConfig: appConfig.argocd,
+      argoCdConfig: {
+        ...appConfig.argocd,
+        // Override source for Talos to point to Git repo
+        source: github ? {
+          repoURL: `https://github.com/${github.org}/${github.repo}.git`,
+          path: `cdk8s/dist/talos/${appConfig.name}/manifests`,
+          targetRevision: gitBranch,
+        } : undefined,
+      },
       environment: options.environment,
+      github,
     });
 
     // Synthesize all charts

@@ -136,12 +136,12 @@ This is an Infrastructure-as-Code project with:
 
 ### Implementation for User Story 4
 
-- [ ] T048 [P] [US4] Add Talos-specific npm script to package.json in `cdk8s/package.json`
-- [ ] T049 [US4] Implement synthesis logic in main-talos.ts using IdpBuilderChartFactory pattern in `cdk8s/main-talos.ts`
-- [ ] T050 [US4] Add FILE_PER_RESOURCE output mode to main-talos.ts synthesis in `cdk8s/main-talos.ts`
-- [ ] T051 [US4] Implement kustomization.yaml generation per application in `cdk8s/main-talos.ts`
-- [ ] T052 [P] [US4] Copy/adapt SYNC_WAVES constants from contracts to cdk8s lib in `cdk8s/lib/sync-waves.ts`
-- [ ] T053 [US4] Verify all charts registered in factory and synthesis produces valid YAML in `cdk8s/main-talos.ts`
+- [X] T048 [P] [US4] Add Talos-specific npm script to package.json in `cdk8s/package.json`
+- [X] T049 [US4] Implement synthesis logic in main-talos.ts using IdpBuilderChartFactory pattern in `cdk8s/main-talos.ts`
+- [X] T050 [US4] Add FILE_PER_RESOURCE output mode to main-talos.ts synthesis in `cdk8s/main-talos.ts`
+- [X] T051 [US4] Implement kustomization.yaml generation per application in `cdk8s/main-talos.ts`
+- [X] T052 [P] [US4] Copy/adapt SYNC_WAVES constants from contracts to cdk8s lib in `cdk8s/lib/sync-waves.ts`
+- [X] T053 [US4] Verify all charts registered in factory and synthesis produces valid YAML in `cdk8s/main-talos.ts`
 
 **Checkpoint**: CDK8s synthesis working for Talos - User Story 4 independently testable
 
@@ -155,14 +155,14 @@ This is an Infrastructure-as-Code project with:
 
 ### Implementation for User Story 5
 
-- [ ] T054 [US5] Add phase tracking to bootstrap-cluster.sh for idempotent re-runs in `scripts/bootstrap-cluster.sh`
-- [ ] T055 [US5] Add error handling and retry logic to bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
-- [ ] T056 [US5] Add completion output with access URLs to bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
-- [ ] T057 [US5] Add CNI readiness check before ArgoCD install in bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
-- [ ] T058 [US5] Create kubeconfig generation helper in `scripts/lib/talos.sh`
-- [ ] T059 [US5] Create Azure credential validation helper in `scripts/lib/azure.sh`
-- [ ] T060 [P] [US5] Create remote kubeconfig generation script in `scripts/generate-remote-kubeconfig.sh`
-- [ ] T061 [US5] Add --force flag to 02-sync-jwks.sh for cluster rebuild scenarios in `scripts/02-sync-jwks.sh`
+- [X] T054 [US5] Add phase tracking to bootstrap-cluster.sh for idempotent re-runs in `scripts/bootstrap-cluster.sh`
+- [X] T055 [US5] Add error handling and retry logic to bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
+- [X] T056 [US5] Add completion output with access URLs to bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
+- [X] T057 [US5] Add CNI readiness check before ArgoCD install in bootstrap-cluster.sh in `scripts/bootstrap-cluster.sh`
+- [X] T058 [US5] Create kubeconfig generation helper in `scripts/lib/talos.sh`
+- [X] T059 [US5] Create Azure credential validation helper in `scripts/lib/azure.sh`
+- [X] T060 [P] [US5] Create remote kubeconfig generation script in `scripts/generate-remote-kubeconfig.sh`
+- [X] T061 [US5] Add --force flag to 02-sync-jwks.sh for cluster rebuild scenarios in `scripts/02-sync-jwks.sh`
 
 **Checkpoint**: Full bootstrap automation complete - User Story 5 independently testable
 
@@ -173,7 +173,7 @@ This is an Infrastructure-as-Code project with:
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] T062 [P] Update CLAUDE.md with new Talos bootstrap commands in `CLAUDE.md`
-- [ ] T063 [P] Create README.md for scripts directory in `scripts/README.md`
+- [X] T063 [P] Create README.md for scripts directory in `scripts/README.md`
 - [ ] T064 Validate quickstart.md steps against actual bootstrap process in `specs/102-bootstrap-talos-argocd/quickstart.md`
 - [ ] T065 Add shellcheck validation to all scripts in `scripts/`
 - [ ] T066 Add TypeScript strict mode validation to CDK8s charts in `cdk8s/tsconfig.json`

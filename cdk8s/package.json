@@ -17,6 +17,8 @@
     "build": "npm run synth",
     "upgrade": "npm i cdk8s@latest cdk8s-cli@latest",
     "upgrade:next": "npm i cdk8s@next cdk8s-cli@next",
+    "synth:talos": "npx ts-node main-talos.ts",
+    "synth:talos:watch": "nodemon --watch charts --watch config --ext ts,json --exec 'npx ts-node main-talos.ts'",
     "update-env": "kubectl apply -f bootstrap/cdk8s-applications.yaml",
     "show-env": "kubectl get app -n argocd cdk8s-applications -o jsonpath='{.spec.source.plugin.env[*]}' | jq -s '.'",
     "refresh-app": "kubectl patch app -n argocd cdk8s-applications --type merge -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}'",

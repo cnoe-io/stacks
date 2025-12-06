@@ -18,21 +18,10 @@
  */
 
 import { ApplicationConfig } from '../lib/idpbuilder-types';
+import { SYNC_WAVES } from '../lib/sync-waves';
 
-/**
- * Sync wave constants for bootstrap ordering
- */
-export const SYNC_WAVES = {
-  FOUNDATION: '-110',
-  OPERATORS: '-100',
-  IDENTITY: '-94',
-  STORES: '-92',
-  SECRETS: '-85',
-  ACCESS: '-80',
-  SERVICES: '-60',
-  PLATFORM: '0',
-  APPLICATIONS: '10',
-} as const;
+// Re-export for backward compatibility
+export { SYNC_WAVES } from '../lib/sync-waves';
 
 /**
  * Environment variable helpers with defaults

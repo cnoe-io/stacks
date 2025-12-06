@@ -2,6 +2,40 @@
 
 Modular organization of utility scripts for the stacks project.
 
+## Talos Linux Cluster Bootstrap
+
+For Talos Linux cluster bootstrap with ArgoCD GitOps, see:
+
+### Quick Start
+```bash
+# 1. Copy and configure environment
+cp .env.template .env
+# Edit .env with your Azure and Git configuration
+
+# 2. Run the bootstrap
+./bootstrap-cluster.sh
+```
+
+### Bootstrap Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `bootstrap-cluster.sh` | Main orchestrator - runs all phases in order |
+| `01-install-argocd.sh` | Install ArgoCD via Helm chart |
+| `02-sync-jwks.sh` | Sync OIDC JWKS to Azure Storage for Workload Identity |
+| `03-apply-base-apps.sh` | Apply ArgoCD root application for GitOps takeover |
+| `generate-remote-kubeconfig.sh` | Generate kubeconfig for remote Tailscale access |
+
+### Helper Libraries (`lib/`)
+
+| Library | Functions |
+|---------|-----------|
+| `common.sh` | Logging, validation, wait helpers |
+| `azure.sh` | Azure CLI wrappers, Key Vault, Storage |
+| `talos.sh` | talosctl wrappers, kubeconfig, CNI checks |
+
+---
+
 ## Structure
 
 ```
