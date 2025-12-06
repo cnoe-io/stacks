@@ -1,17 +1,13 @@
-"""Agent implementations for SpecKit workflow."""
+"""Agent implementations using Claude Agent SDK."""
 
-from .base import BaseAgent
-from .orchestrator import OrchestratorAgent
-from .specifier import SpecifierAgent
-from .planner import PlannerAgent
-from .task_generator import TaskGeneratorAgent
-from .implementer import ImplementerAgent
+from .base import BaseClaudeAgent
+from .orchestrator import DaprOrchestrator, create_orchestrator_app
+from .specifier import ClaudeSpecifierAgent, create_specifier_app
 
 __all__ = [
-    "BaseAgent",
-    "OrchestratorAgent",
-    "SpecifierAgent",
-    "PlannerAgent",
-    "TaskGeneratorAgent",
-    "ImplementerAgent",
+    "BaseClaudeAgent",
+    "DaprOrchestrator",
+    "create_orchestrator_app",
+    "ClaudeSpecifierAgent",
+    "create_specifier_app",
 ]

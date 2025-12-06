@@ -1,137 +1,118 @@
-"""Base agent class with common Dapr configuration and DurableAgent factory."""
+"""Base agent class using Claude Agent SDK with Dapr integration.
+
+Provides:
+- Dapr client for state/pub/sub operations
+- Claude SDK options factory
+- Artifact management
+- Workflow state management
+- Langfuse observability integration
+"""
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Generator, Optional
 from uuid import UUID
 
 from dapr.clients import DaprClient
-from dapr_agents.agents.configs import (
-    AgentMemoryConfig,
-    AgentPubSubConfig,
-    AgentRegistryConfig,
-    AgentStateConfig,
-)
-from dapr_agents.agents.durable import DurableAgent
-from dapr_agents.agents.prompting import AgentProfileConfig
-from dapr_agents.llm.openai import OpenAIChatClient  # noqa: F401 - kept for type compatibility
-from dapr_agents.memory import ConversationDaprStateMemory
-from dapr_agents.storage.daprstores.stateservice import StateStoreService
-from dapr_agents.workflow.runners import AgentRunner
 
-from src.common.config import Config, get_config
+from src.common.config import Settings, get_settings
+from src.common.claude_config import AgentConfig, build_claude_options
 from src.common.models import (
-    TraceContext,
+    Artifact,
+    ArtifactType,
     Workflow,
     WorkflowMessage,
     WorkflowPhase,
     WorkflowStatus,
 )
-from src.common.observability import (
-    LangfuseOpenAIChatClient,
-    clear_session_id,
-    create_generation,
-    flush_langfuse,
-    get_langfuse,
-    observe_llm_call,
-    set_session_id,
-    shutdown_langfuse,
-)
 
 logger = logging.getLogger(__name__)
 
+# Langfuse client (lazy loaded, graceful degradation)
+_langfuse_client = None
+_langfuse_init_attempted = False
 
-class BaseAgent(ABC):
-    """Base class for all SpecKit agents with common Dapr configuration."""
+
+def get_langfuse_client():
+    """Get or create Langfuse client with graceful degradation.
+
+    Returns:
+        Langfuse client or None if not available
+    """
+    global _langfuse_client, _langfuse_init_attempted
+
+    if _langfuse_init_attempted:
+        return _langfuse_client
+
+    _langfuse_init_attempted = True
+    settings = get_settings()
+
+    if not settings.langfuse_enabled:
+        logger.info("Langfuse disabled by configuration")
+        return None
+
+    try:
+        from langfuse import Langfuse
+
+        _langfuse_client = Langfuse(
+            host=settings.langfuse_host,
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+        )
+        logger.info(f"Langfuse initialized: {settings.langfuse_host}")
+        return _langfuse_client
+
+    except ImportError:
+        logger.warning("Langfuse package not installed, observability disabled")
+        return None
+    except Exception as e:
+        logger.warning(f"Failed to initialize Langfuse: {e}")
+        return None
+
+
+class BaseClaudeAgent(ABC):
+    """Base class for Claude SDK powered agents with Dapr integration.
+
+    Provides:
+    - Dapr client for state/pub/sub operations
+    - Claude SDK options factory
+    - Artifact management
+    - Workflow state management
+    - Langfuse trace context propagation
+    """
 
     def __init__(
         self,
-        name: str,
-        role: str,
-        goal: str,
-        instructions: list[str],
-        config: Optional[Config] = None,
+        agent_config: AgentConfig,
+        settings: Optional[Settings] = None,
     ) -> None:
-        """Initialize base agent with Dapr configuration.
+        """Initialize Claude agent with Dapr configuration.
 
         Args:
-            name: Agent name (e.g., "specifier", "planner")
-            role: Agent role description
-            goal: Agent's primary goal
-            instructions: List of behavioral instructions
-            config: Optional config override (defaults to env config)
+            agent_config: Claude SDK agent configuration
+            settings: Optional settings override (defaults to env config)
         """
-        self.config = config or get_config()
-        self.name = name
-        self.role = role
-        self.goal = goal
-        self.instructions = instructions
+        self.settings = settings or get_settings()
+        self.agent_config = agent_config
+        self.name = agent_config.name
 
         # Dapr client (lazy initialized)
         self._dapr_client: Optional[DaprClient] = None
 
-        # Langfuse trace management (T006)
+        # Langfuse trace management
         self._trace_id: Optional[str] = None
         self._workflow_id: Optional[UUID] = None
 
-        # Build Dapr agent configurations
-        self.profile = self._build_profile()
-        self.pubsub = self._build_pubsub()
-        self.state = self._build_state()
-        self.registry = self._build_registry()
-        self.memory = self._build_memory()
-
-    def _build_profile(self) -> AgentProfileConfig:
-        """Build agent profile configuration."""
-        return AgentProfileConfig(
-            name=self.name,
-            role=self.role,
-            goal=self.goal,
-            instructions=self.instructions,
-            style_guidelines=[
-                "Be concise and focused on the task at hand.",
-                "Follow SpecKit template formats strictly.",
-                "Provide clear, actionable outputs.",
-            ],
-        )
-
-    def _build_pubsub(self) -> AgentPubSubConfig:
-        """Build pub/sub configuration."""
-        return AgentPubSubConfig(
-            pubsub_name=self.config.pubsub_name,
-            agent_topic=f"{self.config.team_name}.{self.name}.requests",
-            broadcast_topic=self.config.broadcast_topic,
-        )
-
-    def _build_state(self) -> AgentStateConfig:
-        """Build state store configuration."""
-        return AgentStateConfig(
-            store=StateStoreService(
-                store_name=self.config.workflow_state_store,
-                key_prefix=f"{self.name}:",
-            )
-        )
-
-    def _build_registry(self) -> AgentRegistryConfig:
-        """Build agent registry configuration."""
-        return AgentRegistryConfig(
-            store=StateStoreService(store_name=self.config.registry_state_store),
-            team_name=self.config.team_name,
-        )
-
-    def _build_memory(self) -> AgentMemoryConfig:
-        """Build conversation memory configuration."""
-        return AgentMemoryConfig(
-            store=ConversationDaprStateMemory(
-                store_name=self.config.memory_store,
-                session_id=f"{self.name}-session",
-            )
-        )
+        # MCP servers (to be registered by subclasses)
+        self._mcp_servers: dict[str, Any] = {}
 
     @property
     def dapr_client(self) -> DaprClient:
@@ -140,6 +121,49 @@ class BaseAgent(ABC):
             self._dapr_client = DaprClient()
         return self._dapr_client
 
+    def register_mcp_server(self, name: str, server: Any) -> None:
+        """Register an MCP server for use with Claude SDK.
+
+        Args:
+            name: Server name (e.g., "dapr", "tests")
+            server: MCP server instance
+        """
+        self._mcp_servers[name] = server
+        logger.debug(f"Registered MCP server: {name}")
+
+    def get_claude_options(
+        self,
+        additional_tools: list[str] | None = None,
+        override_model: str | None = None,
+        override_max_turns: int | None = None,
+    ) -> dict[str, Any]:
+        """Build Claude SDK options with registered MCP servers.
+
+        Args:
+            additional_tools: Extra tools to add
+            override_model: Override default model
+            override_max_turns: Override default max_turns
+
+        Returns:
+            Dictionary suitable for ClaudeAgentOptions
+        """
+        options = build_claude_options(
+            self.agent_config,
+            additional_tools=additional_tools,
+            override_model=override_model,
+            override_max_turns=override_max_turns,
+        )
+
+        # Add registered MCP servers
+        if self._mcp_servers:
+            options["mcp_servers"] = self._mcp_servers
+
+        return options
+
+    # =========================================================================
+    # Dapr State Operations
+    # =========================================================================
+
     async def save_workflow_state(self, workflow: Workflow) -> None:
         """Save workflow state to Dapr state store."""
         workflow.updated_at = datetime.utcnow()
@@ -147,10 +171,9 @@ class BaseAgent(ABC):
         value = workflow.model_dump_json()
 
         try:
-            # Wrap synchronous Dapr client call in thread pool for async compatibility
             await asyncio.to_thread(
                 self.dapr_client.save_state,
-                store_name=self.config.workflow_state_store,
+                store_name=self.settings.workflow_state_store,
                 key=key,
                 value=value,
             )
@@ -164,10 +187,9 @@ class BaseAgent(ABC):
         key = f"workflow:{workflow_id}"
 
         try:
-            # Wrap synchronous Dapr client call in thread pool for async compatibility
             state = await asyncio.to_thread(
                 self.dapr_client.get_state,
-                store_name=self.config.workflow_state_store,
+                store_name=self.settings.workflow_state_store,
                 key=key,
             )
             if state.data:
@@ -176,6 +198,43 @@ class BaseAgent(ABC):
             logger.error(f"Failed to get workflow state: {e}")
 
         return None
+
+    # =========================================================================
+    # Dapr Pub/Sub Operations
+    # =========================================================================
+
+    async def publish_phase_complete(
+        self,
+        workflow_id: UUID,
+        phase: WorkflowPhase,
+        result: dict[str, Any] | None = None,
+    ) -> None:
+        """Publish phase completion event to orchestrator."""
+        topic = f"{self.settings.team_name}.orchestrator.requests"
+
+        message = WorkflowMessage(
+            source=self.name,
+            workflow_id=workflow_id,
+            task=f"phase_complete:{phase.value}",
+            context={
+                "completed_phase": phase.value,
+                "result": result or {},
+                "langfuse_trace_id": self._trace_id,
+            },
+        )
+
+        try:
+            await asyncio.to_thread(
+                self.dapr_client.publish_event,
+                pubsub_name=self.settings.pubsub_name,
+                topic_name=topic,
+                data=message.model_dump_json(),
+                data_content_type="application/json",
+            )
+            logger.info(f"Published phase completion: {phase.value} for workflow {workflow_id}")
+        except Exception as e:
+            logger.error(f"Failed to publish phase completion: {e}")
+            raise
 
     async def publish_status_update(
         self,
@@ -197,11 +256,10 @@ class BaseAgent(ABC):
         }
 
         try:
-            # Wrap synchronous Dapr client call in thread pool for async compatibility
             await asyncio.to_thread(
                 self.dapr_client.publish_event,
-                pubsub_name=self.config.pubsub_name,
-                topic_name=self.config.workflow_status_topic,
+                pubsub_name=self.settings.pubsub_name,
+                topic_name=self.settings.workflow_status_topic,
                 data=json.dumps(message),
                 data_content_type="application/json",
             )
@@ -209,105 +267,269 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.error(f"Failed to publish status update: {e}")
 
-    async def route_to_agent(
+    # =========================================================================
+    # Artifact Management
+    # =========================================================================
+
+    def get_artifacts_path(self, workflow_id: UUID) -> Path:
+        """Get the artifacts directory path for a workflow."""
+        return Path(self.settings.artifacts_path) / str(workflow_id)
+
+    async def register_artifact(
         self,
-        target_agent: str,
         workflow_id: UUID,
-        task: str,
-        context: Optional[dict[str, Any]] = None,
-    ) -> None:
-        """Route a task to another agent via pub/sub with embedded trace context (T009)."""
-        topic = f"{self.config.team_name}.{target_agent}.requests"
-
-        # Embed trace_id in context for propagation to worker agents
-        enriched_context = context.copy() if context else {}
-        if self._trace_id:
-            enriched_context["langfuse_trace_id"] = self._trace_id
-
-        message = WorkflowMessage(
-            source=self.name,
-            workflow_id=workflow_id,
-            task=task,
-            context=enriched_context,
-        )
-
-        try:
-            # Wrap synchronous Dapr client call in thread pool for async compatibility
-            await asyncio.to_thread(
-                self.dapr_client.publish_event,
-                pubsub_name=self.config.pubsub_name,
-                topic_name=topic,
-                data=message.model_dump_json(),
-                data_content_type="application/json",
-                publish_metadata={"cloudevent.type": "AgentTask"},
-            )
-            logger.info(f"Routed task to {target_agent} for workflow {workflow_id} (trace_id: {self._trace_id})")
-        except Exception as e:
-            logger.error(f"Failed to route to {target_agent}: {e}")
-            raise
-
-    async def initialize_trace_for_workflow(self, workflow_id: UUID) -> None:
-        """Initialize Langfuse trace for this workflow (T007).
-
-        Called at the start of workflow execution (typically by Orchestrator).
-        Sets self._trace_id which is used by all subsequent LLM calls.
-        Also sets the session_id context variable for trace grouping.
+        artifact_type: ArtifactType,
+        path: str,
+        content: str,
+    ) -> Artifact:
+        """Register a generated artifact in workflow state.
 
         Args:
-            workflow_id: The workflow instance ID (used as session_id)
-        """
-        # Set session ID context variable for trace grouping
-        # This ensures all LLM calls in this async context are grouped together
-        self._workflow_id = workflow_id
-        set_session_id(str(workflow_id))
-        logger.debug(f"Set Langfuse session_id to workflow_id: {workflow_id}")
-
-        langfuse = get_langfuse()
-        if langfuse:
-            try:
-                trace = langfuse.trace(
-                    name=f"workflow_{workflow_id}",
-                    session_id=str(workflow_id),
-                    metadata={
-                        "workflow_id": str(workflow_id),
-                        "agent": self.name,
-                    },
-                )
-                self._trace_id = trace.id
-                logger.info(f"Initialized Langfuse trace: {self._trace_id} for workflow {workflow_id}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Langfuse trace: {e}")
-                # Continue without tracing - graceful degradation
-
-    def extract_trace_context_from_message(
-        self, context: dict[str, Any], workflow_id: Optional[UUID] = None
-    ) -> Optional[str]:
-        """Extract Langfuse trace ID from incoming workflow message context (T008).
-
-        Called by worker agents when receiving routed tasks. The trace_id
-        is embedded in the message context by the sender (Orchestrator).
-        Also sets the session ID for trace grouping using the workflow_id.
-
-        Args:
-            context: The context dict from WorkflowMessage
-            workflow_id: Optional workflow ID to use as session ID for trace grouping
+            workflow_id: Workflow ID
+            artifact_type: Type of artifact
+            path: Relative path from artifacts root
+            content: Artifact content (for hash calculation)
 
         Returns:
-            The trace_id if present, None otherwise
+            Created Artifact object
+        """
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
+
+        artifact = Artifact(
+            workflow_id=workflow_id,
+            type=artifact_type,
+            path=path,
+            content_hash=content_hash,
+            created_by=self.name,
+        )
+
+        # Update workflow state with new artifact
+        workflow = await self.get_workflow_state(workflow_id)
+        if workflow:
+            # Remove existing artifact of same type if present
+            workflow.artifacts = [a for a in workflow.artifacts if a.type != artifact_type]
+            workflow.artifacts.append(artifact)
+            await self.save_workflow_state(workflow)
+
+        logger.info(f"Registered artifact: {artifact_type.value} at {path}")
+        return artifact
+
+    async def get_artifact_content(
+        self,
+        workflow_id: UUID,
+        artifact_type: ArtifactType,
+    ) -> Optional[str]:
+        """Read artifact content from file system.
+
+        Args:
+            workflow_id: Workflow ID
+            artifact_type: Type of artifact to read
+
+        Returns:
+            Artifact content or None if not found
+        """
+        # Map artifact type to filename
+        filename_map = {
+            ArtifactType.SPEC: "spec.md",
+            ArtifactType.PLAN: "plan.md",
+            ArtifactType.RESEARCH: "research.md",
+            ArtifactType.DATA_MODEL: "data-model.md",
+            ArtifactType.TASKS: "tasks.md",
+        }
+
+        filename = filename_map.get(artifact_type)
+        if not filename:
+            logger.warning(f"Unknown artifact type: {artifact_type}")
+            return None
+
+        path = self.get_artifacts_path(workflow_id) / filename
+
+        try:
+            return path.read_text()
+        except FileNotFoundError:
+            logger.warning(f"Artifact not found: {path}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to read artifact: {e}")
+            return None
+
+    # =========================================================================
+    # Langfuse Trace Management
+    # =========================================================================
+
+    def set_trace_context(
+        self,
+        workflow_id: UUID,
+        trace_id: Optional[str] = None,
+    ) -> None:
+        """Set trace context for observability.
+
+        Args:
+            workflow_id: Workflow ID (used as session ID)
+            trace_id: Optional existing trace ID to continue
+        """
+        self._workflow_id = workflow_id
+        self._trace_id = trace_id
+        logger.debug(f"Set trace context: workflow={workflow_id}, trace={trace_id}")
+
+    def extract_trace_from_context(self, context: dict[str, Any]) -> Optional[str]:
+        """Extract Langfuse trace ID from message context.
+
+        Args:
+            context: Message context dict
+
+        Returns:
+            Trace ID if present
         """
         trace_id = context.get("langfuse_trace_id")
         if trace_id:
             self._trace_id = trace_id
             logger.debug(f"Extracted trace_id from context: {trace_id}")
-
-        # Set session ID for Langfuse trace grouping
-        # This ensures all LLM calls from this workflow are grouped together
-        if workflow_id:
-            self._workflow_id = workflow_id
-            set_session_id(str(workflow_id))
-            logger.debug(f"Set Langfuse session_id to workflow_id: {workflow_id}")
-
         return trace_id
+
+    def create_trace(
+        self,
+        name: Optional[str] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> Optional[Any]:
+        """Create a new Langfuse trace for this agent's execution.
+
+        Args:
+            name: Trace name (defaults to agent name)
+            metadata: Additional metadata to attach
+
+        Returns:
+            Langfuse trace object or None if unavailable
+        """
+        langfuse = get_langfuse_client()
+        if not langfuse:
+            return None
+
+        try:
+            trace_metadata = {
+                "agent": self.name,
+                "workflow_id": str(self._workflow_id) if self._workflow_id else None,
+                **(metadata or {}),
+            }
+
+            trace = langfuse.trace(
+                name=name or f"agent:{self.name}",
+                session_id=str(self._workflow_id) if self._workflow_id else None,
+                metadata=trace_metadata,
+            )
+
+            # Store trace ID for propagation
+            self._trace_id = trace.id
+            self._langfuse_trace = trace
+
+            logger.debug(f"Created Langfuse trace: {trace.id}")
+            return trace
+
+        except Exception as e:
+            logger.warning(f"Failed to create Langfuse trace: {e}")
+            return None
+
+    def create_generation_span(
+        self,
+        name: str,
+        input_text: str,
+        model: Optional[str] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> Optional[Any]:
+        """Create a generation span for an LLM call.
+
+        Args:
+            name: Span name
+            input_text: Input prompt text
+            model: Model name
+            metadata: Additional metadata
+
+        Returns:
+            Langfuse generation object or None
+        """
+        if not hasattr(self, "_langfuse_trace") or not self._langfuse_trace:
+            return None
+
+        try:
+            generation = self._langfuse_trace.generation(
+                name=name,
+                model=model or self.agent_config.model,
+                input=input_text[:1000],  # Truncate for storage
+                metadata={
+                    "agent": self.name,
+                    "max_turns": self.agent_config.max_turns,
+                    **(metadata or {}),
+                },
+            )
+            return generation
+
+        except Exception as e:
+            logger.warning(f"Failed to create generation span: {e}")
+            return None
+
+    def end_generation_span(
+        self,
+        generation: Any,
+        output_text: str,
+        usage: Optional[dict] = None,
+    ) -> None:
+        """End a generation span with output.
+
+        Args:
+            generation: Generation object from create_generation_span
+            output_text: Output text from LLM
+            usage: Token usage dict
+        """
+        if not generation:
+            return
+
+        try:
+            generation.end(
+                output=output_text[:1000],  # Truncate
+                usage=usage,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to end generation span: {e}")
+
+    def log_error_to_trace(
+        self,
+        error: str,
+        context: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Log an error to the current trace.
+
+        Args:
+            error: Error message
+            context: Additional context
+        """
+        if not hasattr(self, "_langfuse_trace") or not self._langfuse_trace:
+            return
+
+        try:
+            self._langfuse_trace.event(
+                name="error",
+                level="ERROR",
+                metadata={
+                    "agent": self.name,
+                    "error": error,
+                    **(context or {}),
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log error to trace: {e}")
+
+    def flush_traces(self) -> None:
+        """Flush any pending traces to Langfuse."""
+        langfuse = get_langfuse_client()
+        if langfuse:
+            try:
+                langfuse.flush()
+            except Exception as e:
+                logger.warning(f"Failed to flush traces: {e}")
+
+    # =========================================================================
+    # Abstract Methods
+    # =========================================================================
 
     @abstractmethod
     async def process_task(
@@ -328,10 +550,14 @@ class BaseAgent(ABC):
         """
         pass
 
+    # =========================================================================
+    # Lifecycle
+    # =========================================================================
+
     async def shutdown(self) -> None:
         """Graceful shutdown of agent resources."""
-        # Shutdown Langfuse client first to flush any pending traces
-        shutdown_langfuse()
+        # Flush any pending traces
+        self.flush_traces()
 
         if self._dapr_client:
             try:
@@ -339,92 +565,3 @@ class BaseAgent(ABC):
             except Exception as e:
                 logger.error(f"Error closing Dapr client: {e}")
             self._dapr_client = None
-
-
-def create_durable_agent(
-    name: str,
-    role: str,
-    goal: str,
-    instructions: list[str],
-    config: Optional[Config] = None,
-) -> tuple[DurableAgent, AgentRunner]:
-    """Factory function to create a DurableAgent with proper Dapr configuration.
-
-    This follows the dapr-agents SDK pattern for creating agents that can
-    receive and process pub/sub messages.
-
-    Args:
-        name: Agent name (e.g., "specifier", "planner")
-        role: Agent role description
-        goal: Agent's primary goal
-        instructions: List of behavioral instructions
-        config: Optional config override (defaults to env config)
-
-    Returns:
-        Tuple of (DurableAgent, AgentRunner) configured for the agent
-    """
-    config = config or get_config()
-
-    # Build agent profile
-    profile = AgentProfileConfig(
-        name=name,
-        role=role,
-        goal=goal,
-        instructions=instructions,
-        style_guidelines=[
-            "Be concise and focused on the task at hand.",
-            "Follow SpecKit template formats strictly.",
-            "Provide clear, actionable outputs.",
-        ],
-    )
-
-    # Build pub/sub configuration
-    pubsub = AgentPubSubConfig(
-        pubsub_name=config.pubsub_name,
-        agent_topic=f"{config.team_name}.{name}.requests",
-        broadcast_topic=config.broadcast_topic,
-    )
-
-    # Build state store configuration
-    state = AgentStateConfig(
-        store=StateStoreService(
-            store_name=config.workflow_state_store,
-            key_prefix=f"{name}:",
-        )
-    )
-
-    # Build agent registry configuration
-    registry = AgentRegistryConfig(
-        store=StateStoreService(store_name=config.registry_state_store),
-        team_name=config.team_name,
-    )
-
-    # Build conversation memory configuration
-    memory = AgentMemoryConfig(
-        store=ConversationDaprStateMemory(
-            store_name=config.memory_store,
-            session_id=f"{name}-session",
-        )
-    )
-
-    # Create LLM client with Langfuse instrumentation
-    # This wrapper automatically logs all LLM calls to Langfuse with token usage,
-    # latency, and error tracking. It delegates to OpenAIChatClient for actual API calls.
-    llm = LangfuseOpenAIChatClient(agent_name=name)
-
-    # Create the DurableAgent
-    agent = DurableAgent(
-        profile=profile,
-        pubsub=pubsub,
-        state=state,
-        registry=registry,
-        memory=memory,
-        llm=llm,
-    )
-
-    # Create runner - routes will be registered when runner.serve() is called
-    runner = AgentRunner()
-
-    logger.info(f"Created DurableAgent: {name} with topic {pubsub.agent_topic}")
-
-    return agent, runner

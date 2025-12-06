@@ -1,9 +1,9 @@
-"""Main entrypoint for SpecKit agents using DurableAgent pattern.
+"""Main entrypoint for SpecKit agents using Claude Agent SDK with Dapr orchestration.
 
-This module implements the dapr-agents SDK pattern for running agents:
-- Worker agents (specifier, planner, task-generator, implementer) use DurableAgent
-- Orchestrator uses LLMOrchestrator for workflow coordination
-- Follows the reference implementation from dapr-agents quickstart 05-multi-agent-workflows
+This module implements the hybrid pattern:
+- Claude Agent SDK handles all LLM-powered agent execution
+- Dapr handles distributed systems (pub/sub, state, durability)
+- Orchestrator is pure Dapr routing (no LLM)
 """
 
 from __future__ import annotations
@@ -11,15 +11,13 @@ from __future__ import annotations
 import logging
 import signal
 import sys
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from dapr_agents.agents.durable import DurableAgent
-from dapr_agents.workflow.runners import AgentRunner
+import uvicorn
+from fastapi import FastAPI
 
-from src.common.config import get_config
-from src.common.observability import LangfuseOpenAIChatClient
-from src.agents.base import create_durable_agent
+from src.common.config import get_settings
+from src.common.health import router as health_router
 
 if TYPE_CHECKING:
     pass
@@ -31,340 +29,116 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Agent configuration registry - contains role, goal, and instructions for each agent
-AGENT_CONFIGS = {
-    "specifier": {
-        "role": "Specification Writer",
-        "goal": "Transform natural language feature descriptions into comprehensive, actionable spec.md documents",
-        "instructions": [
-            "Analyze feature descriptions to extract core requirements",
-            "Generate user stories with clear acceptance criteria",
-            "Define explicit scope boundaries (in/out of scope)",
-            "Document assumptions and technical constraints",
-            "Ensure all requirements are testable and measurable",
-            "Follow the spec.md template format exactly",
-        ],
-    },
-    "planner": {
-        "role": "Implementation Planner",
-        "goal": "Transform specifications into comprehensive implementation plans with architecture, research, and data models",
-        "instructions": [
-            "Analyze spec.md to understand all requirements",
-            "Design a high-level architecture that addresses all user stories",
-            "Research and justify technology choices",
-            "Define clear data models with relationships",
-            "Create an implementation roadmap in dependency order",
-            "Identify risks and propose mitigations",
-        ],
-    },
-    "task-generator": {
-        "role": "Task Breakdown Specialist",
-        "goal": "Convert implementation plans into actionable, dependency-ordered task lists",
-        "instructions": [
-            "Analyze plan.md to identify all required work items",
-            "Order tasks by dependencies so they can be executed sequentially",
-            "Mark parallel-safe tasks with [P] indicator",
-            "Tag tasks with user story references for traceability",
-            "Include specific file paths for each task",
-            "Group tasks into logical phases (Setup, Core, Tests, etc.)",
-        ],
-    },
-    "implementer": {
-        "role": "Task Implementer",
-        "goal": "Execute tasks with TDD approach, writing tests before code",
-        "instructions": [
-            "Read and understand task requirements",
-            "Identify task dependencies",
-            "Write failing tests first",
-            "Implement minimum code to pass tests",
-            "Refactor for quality",
-            "Report completion status",
-        ],
-    },
-}
 
-
-def create_worker_agent(agent_name: str) -> tuple[DurableAgent, AgentRunner]:
-    """Create a worker agent (specifier, planner, task-generator, implementer).
+def create_app(agent_name: str) -> FastAPI:
+    """Create FastAPI app with health endpoints.
 
     Args:
-        agent_name: Name of the agent to create
+        agent_name: Name of the agent
 
     Returns:
-        Tuple of (DurableAgent, AgentRunner)
-
-    Raises:
-        ValueError: If agent_name is not a valid worker agent
-    """
-    if agent_name not in AGENT_CONFIGS:
-        raise ValueError(
-            f"Unknown worker agent: {agent_name}. "
-            f"Available agents: {list(AGENT_CONFIGS.keys())}"
-        )
-
-    config = AGENT_CONFIGS[agent_name]
-    return create_durable_agent(
-        name=agent_name,
-        role=config["role"],
-        goal=config["goal"],
-        instructions=config["instructions"],
-    )
-
-
-def create_orchestrator() -> tuple["LLMOrchestrator", AgentRunner]:
-    """Create the orchestrator using LLMOrchestrator pattern.
-
-    The orchestrator coordinates the workflow by routing tasks
-    to appropriate agents based on the current phase.
-
-    Returns:
-        Tuple of (LLMOrchestrator, AgentRunner)
-    """
-    import dapr.ext.workflow as wf
-    from dapr_agents.agents.configs import (
-        AgentExecutionConfig,
-        AgentPubSubConfig,
-        AgentRegistryConfig,
-        AgentStateConfig,
-    )
-    from dapr_agents.agents.orchestrators.llm import LLMOrchestrator
-    from dapr_agents.storage.daprstores.stateservice import StateStoreService
-
-    config = get_config()
-
-    # Configure pub/sub for orchestrator
-    pubsub = AgentPubSubConfig(
-        pubsub_name=config.pubsub_name,
-        agent_topic=f"{config.team_name}.orchestrator.requests",
-        broadcast_topic=config.broadcast_topic,
-    )
-
-    # State store for workflow state
-    state = AgentStateConfig(
-        store=StateStoreService(
-            store_name=config.workflow_state_store,
-            key_prefix="orchestrator:",
-        )
-    )
-
-    # Agent registry to track available agents
-    registry = AgentRegistryConfig(
-        store=StateStoreService(store_name=config.registry_state_store),
-        team_name=config.team_name,
-    )
-
-    # Execution configuration
-    execution = AgentExecutionConfig(
-        max_iterations=4,  # One per workflow phase
-    )
-
-    # Create LLM client with Langfuse instrumentation
-    # This wrapper automatically logs all LLM calls to Langfuse with token usage,
-    # latency, and error tracking. It delegates to OpenAIChatClient for actual API calls.
-    llm = LangfuseOpenAIChatClient(agent_name="orchestrator")
-
-    # Summary callback when workflow completes
-    def on_summary(summary: str):
-        logger.info(f"Workflow complete! Summary: {summary}")
-
-    # Create the LLM Orchestrator with Dapr workflow runtime
-    orchestrator = LLMOrchestrator(
-        name="SpecKitOrchestrator",
-        llm=llm,
-        pubsub=pubsub,
-        state=state,
-        registry=registry,
-        execution=execution,
-        agent_metadata={
-            "type": "LLMOrchestrator",
-            "description": "SpecKit workflow orchestrator - routes tasks through specification, planning, task generation, and implementation phases",
-        },
-        timeout_seconds=120,  # 2 minutes per agent interaction
-        runtime=wf.WorkflowRuntime(),
-        final_summary_callback=on_summary,
-    )
-
-    # Create runner
-    runner = AgentRunner()
-
-    logger.info(f"Created LLMOrchestrator with topic {pubsub.agent_topic}")
-
-    return orchestrator, runner
-
-
-def create_app_with_health(agent_name: str) -> FastAPI:
-    """Create a FastAPI app with health endpoints for Kubernetes probes.
-
-    Args:
-        agent_name: Name of the agent for health response
-
-    Returns:
-        FastAPI app with /healthz and /ready endpoints
+        Configured FastAPI app
     """
     app = FastAPI(
         title=f"SpecKit {agent_name} Agent",
-        version="1.0.0",
+        version="2.0.0",
+        description=f"Claude Agent SDK powered {agent_name} agent with Dapr orchestration",
     )
 
-    @app.get("/healthz")
-    async def health():
-        """Liveness probe - returns healthy if server is running."""
-        return {
-            "status": "healthy",
-            "agent": agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-    @app.get("/ready")
-    async def ready():
-        """Readiness probe - returns ready if agent is ready to accept work."""
-        return {
-            "ready": True,
-            "agent": agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    # Add health endpoints from common module
+    app.include_router(health_router)
 
     return app
 
 
-def handle_signal(signum: int, frame) -> None:
+def handle_signal(signum: int, frame: object) -> None:
     """Handle shutdown signals gracefully."""
     logger.info(f"Received signal {signum}, initiating shutdown...")
     sys.exit(0)
 
 
-def add_health_endpoints(app, agent_name: str) -> None:
-    """Add Kubernetes health probe endpoints to a FastAPI app.
+def run_orchestrator(port: int) -> None:
+    """Run the orchestrator (pure Dapr router - no LLM).
+
+    The orchestrator manages workflow lifecycle using only Dapr pub/sub
+    and state management. It does NOT use Claude SDK.
+    """
+    from src.agents.orchestrator import create_orchestrator_app
+
+    app = create_orchestrator_app()
+    logger.info("Starting orchestrator (pure Dapr routing, no LLM)...")
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+def run_claude_agent(agent_name: str, port: int) -> None:
+    """Run a Claude SDK powered agent.
+
+    Claude SDK agents:
+    - specifier: Generates spec.md from feature descriptions
+    - planner: Generates research.md, data-model.md, plan.md with parallel subagents
+    - task-generator: Generates tasks.md from planning artifacts
+    - implementer: Executes tasks with TDD workflow
 
     Args:
-        app: FastAPI application instance
-        agent_name: Name of the agent for health response
+        agent_name: Name of the agent
+        port: HTTP port
     """
-    from fastapi import FastAPI
-    from datetime import datetime
+    # Import agent-specific module based on name
+    if agent_name == "specifier":
+        from src.agents.specifier import create_specifier_app
+        app = create_specifier_app()
+    elif agent_name == "planner":
+        from src.agents.planner import create_planner_app
+        app = create_planner_app()
+    elif agent_name == "task-generator":
+        from src.agents.task_generator import create_task_generator_app
+        app = create_task_generator_app()
+    elif agent_name == "implementer":
+        from src.agents.implementer import create_implementer_app
+        app = create_implementer_app()
+    else:
+        raise ValueError(
+            f"Unknown agent: {agent_name}. "
+            f"Available agents: orchestrator, specifier, planner, task-generator, implementer"
+        )
 
-    @app.get("/healthz")
-    async def health():
-        """Liveness probe - returns healthy if server is running."""
-        return {
-            "status": "healthy",
-            "agent": agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-    @app.get("/ready")
-    async def ready():
-        """Readiness probe - returns ready if agent is ready to accept work."""
-        return {
-            "ready": True,
-            "agent": agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-
-def run_worker_agent(agent_name: str, port: int) -> None:
-    """Run a worker agent with HTTP endpoints for Kubernetes compatibility.
-
-    Uses runner.serve() which returns a FastAPI app with:
-    - /run endpoint for workflow entry
-    - /dapr/subscribe endpoint for pub/sub subscriptions
-    - /dapr/config endpoint for Dapr configuration
-
-    We add health endpoints to the same app for Kubernetes probes.
-    """
-    import uvicorn
-    from fastapi import FastAPI
-
-    agent, runner = create_worker_agent(agent_name)
-    logger.info(f"Running DurableAgent: {agent_name}...")
-
-    # CRITICAL: Start the agent's workflow runtime BEFORE serving
-    # This registers workflows/activities with Dapr and starts the runtime
-    # Without this, Dapr will not process the agent_workflow and broadcast_listener
-    # workflows, causing the orchestrator to time out waiting for agent responses
-    agent.start()
-    logger.info(f"Started {agent_name} workflow runtime")
-
-    # Create base FastAPI app with health endpoints
-    base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
-    add_health_endpoints(base_app, agent_name)
-
-    # runner.serve() adds agent routes (/run, /dapr/subscribe, etc.) to our app
-    # and returns the configured FastAPI app (does NOT start uvicorn)
-    app = runner.serve(agent, app=base_app, port=port)
-
-    try:
-        # Start uvicorn with the fully configured app
-        uvicorn.run(app, host="0.0.0.0", port=port)
-    finally:
-        # Graceful shutdown
-        agent.stop()
-        runner.shutdown()
+    logger.info(f"Starting Claude SDK agent: {agent_name}...")
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 def main() -> None:
-    """Main entrypoint for SpecKit agents using dapr-agents SDK pattern.
+    """Main entrypoint for SpecKit agents.
 
-    Follows the reference implementation from dapr-agents quickstart 05-multi-agent-workflows:
-    - Orchestrator: runner.serve(orchestrator, port=PORT) - blocking call with uvicorn
-    - Worker agents: runner.register_routes(agent) + wait_for_shutdown() - async pattern
-
-    Key fix: Let runner.serve() handle everything (including uvicorn startup) instead of
-    calling uvicorn.run() separately which was causing the double-startup issue.
+    Dispatches to the appropriate agent based on AGENT_NAME environment variable:
+    - orchestrator: Pure Dapr router (no Claude SDK)
+    - specifier, planner, task-generator, implementer: Claude SDK agents
     """
     # Register signal handlers
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
 
-    config = get_config()
+    settings = get_settings()
 
     # Validate configuration
-    errors = config.validate()
+    errors = settings.validate()
     if errors:
         logger.error(f"Configuration errors: {errors}")
         sys.exit(1)
 
-    agent_name = config.agent_name
-    port = config.agent_port
+    agent_name = settings.agent_name
+    port = settings.agent_port
 
     logger.info(f"Starting SpecKit agent: {agent_name}")
     logger.info(f"Listening on port: {port}")
-    logger.info(f"Team: {config.team_name}")
-    logger.info(f"Topic: {config.agent_topic}")
+    logger.info(f"Team: {settings.team_name}")
+    logger.info(f"Topic: {settings.agent_topic}")
 
     try:
         if agent_name == "orchestrator":
-            # Create orchestrator using runner.serve() pattern
-            import uvicorn
-            from fastapi import FastAPI
-
-            orchestrator, runner = create_orchestrator()
-            logger.info("Running LLMOrchestrator...")
-
-            # CRITICAL: Start the orchestrator's workflow runtime BEFORE serving
-            # This registers workflows/activities with Dapr and starts the runtime
-            # Without this, Dapr will report "DaprBuiltInActorNotFoundRetries"
-            # because the workflow actors are never registered
-            orchestrator.start()
-            logger.info("Started orchestrator workflow runtime")
-
-            # Create base FastAPI app with health endpoints
-            base_app = FastAPI(title=f"SpecKit {agent_name} Agent", version="1.0.0")
-            add_health_endpoints(base_app, agent_name)
-
-            # runner.serve() adds orchestrator routes (/run, /dapr/subscribe, etc.)
-            # and returns the configured FastAPI app (does NOT start uvicorn)
-            app = runner.serve(orchestrator, app=base_app, port=port)
-
-            try:
-                # Start uvicorn with the fully configured app
-                uvicorn.run(app, host="0.0.0.0", port=port)
-            finally:
-                runner.shutdown()
+            run_orchestrator(port)
         else:
-            # Run worker agent using serve() pattern for Kubernetes health probes
-            # All agents need HTTP endpoints for liveness/readiness probes
-            run_worker_agent(agent_name, port)
+            run_claude_agent(agent_name, port)
 
     except Exception as e:
         logger.error(f"Failed to start agent {agent_name}: {e}")
