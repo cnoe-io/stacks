@@ -497,7 +497,7 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 
 ### Tailscale Services (Stable Service URLs)
 
-**Purpose**: Provides stable URLs for web services (ArgoCD, Langfuse) that survive cluster recreation without hostname suffix drift (-1, -2, etc.).
+**Purpose**: Provides stable URLs for all platform services that survive cluster recreation without hostname suffix drift (-1, -2, etc.).
 
 **Service URLs** (replace `<tailnet>` with your tailnet, e.g., `tail286401`):
 
@@ -505,9 +505,14 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 |---------|-----|---------|
 | ArgoCD | `https://svc-argocd.<tailnet>.ts.net` | GitOps Dashboard |
 | Langfuse | `https://svc-langfuse.<tailnet>.ts.net` | LLM Observability |
+| Gitea | `https://svc-gitea.<tailnet>.ts.net` | Git Server |
+| kagent | `https://svc-kagent.<tailnet>.ts.net` | AI Agent Dashboard |
+| Kargo | `https://svc-kargo.<tailnet>.ts.net` | Progressive Delivery |
+| Headlamp | `https://svc-headlamp.<tailnet>.ts.net` | Kubernetes Dashboard |
+| Keycloak | `https://svc-keycloak.<tailnet>.ts.net` | Identity Provider |
 
 **How It Works**:
-- Uses Tailscale Services beta feature with `--service` flag
+- Uses Tailscale Services feature with `--service` flag
 - Devices register to stable service names instead of ephemeral hostnames
 - ACL auto-approvers automatically approve service registrations from tagged devices
 - Tag-based auth keys (`tag:k8s-services`) enable automatic approval
@@ -516,47 +521,51 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 ```typescript
 // In cdk8s/config/applications.ts
 {
+  name: 'argocd-tailscale-serve',
+  namespace: 'tailscale',
   chart: {
-    type: 'ArgoCdTailscaleServeChart',
+    type: 'TailscaleServeChart',  // Generic chart for all services
     props: {
       serviceName: 'argocd',          // → svc:argocd
       backendHost: 'argocd-server.argocd.svc.cluster.local',
       backendPort: 443,
       backendInsecure: true,
-      // Legacy mode (for backward compatibility):
-      // legacyHostnameMode: true,
-      // legacyHostname: 'argocd-ui-serve',
     }
-  }
+  },
+  argocd: { syncWave: '-60' }
 }
 ```
 
 **Key Files**:
-- Charts: `cdk8s/charts/platform/argocd-tailscale-serve-chart.ts`, `langfuse-tailscale-serve-chart.ts`
-- Helpers: `cdk8s/lib/tailscale-serve-helpers.ts`, `tailscale-serve-chart-props.ts`
-- Documentation: `docs/tailscale-services-migration.md`, `specs/101-improve-tailscale/quickstart.md`
+- Chart: `cdk8s/charts/platform/tailscale-serve-chart.ts` (generic chart for all services)
+- Helpers: `cdk8s/lib/tailscale-serve-helpers.ts`
+- Config: `cdk8s/config/applications.ts` (7 serve chart entries)
+- Spec: `specs/103-tailscale-services/` (implementation specification)
 
 **Verification**:
 ```bash
 # Check pod logs for service registration
-kubectl logs -n tailscale -l app.kubernetes.io/name=argocd-tailscale-serve --tail=10
-# Expected: "tailscale serve running for argocd service (svc:argocd)"
+kubectl logs -n tailscale -l app.kubernetes.io/component=tailscale-serve --tail=10
 
-# Test access (from Tailscale-connected device)
-curl -sI https://svc-argocd.<tailnet>.ts.net | head -5
+# Test all service URLs (from Tailscale-connected device)
+for svc in argocd langfuse gitea kagent kargo headlamp keycloak; do
+  echo "Testing svc-${svc}..."
+  curl -sI "https://svc-${svc}.<tailnet>.ts.net" | head -1
+done
 ```
 
 **Troubleshooting**:
 - **Service not appearing**: Check auth key has `tag:k8s-services` tag
 - **ACL denied**: Verify ACL auto-approver rules in Tailscale Admin Console
 - **Langfuse auth fails**: Ensure `nextAuthUrl` matches service URL exactly
+- **Pod stuck waiting**: Check `kubectl get externalsecret -n tailscale` for auth key sync status
 
 **Requirements**:
 - Tailscale v1.86.0+ (Services feature)
 - Tag-based auth key with `tag:k8s-services`
-- ACL auto-approvers for `svc:argocd`, `svc:langfuse`
+- ACL auto-approvers for all 7 services (`svc:argocd`, `svc:langfuse`, etc.)
 
-See `docs/tailscale-services-migration.md` for complete migration guide.
+See `specs/103-tailscale-services/quickstart.md` for complete setup and validation guide.
 
 ## Architecture
 
