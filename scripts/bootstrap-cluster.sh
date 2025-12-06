@@ -27,6 +27,42 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/azure.sh"
 source "${SCRIPT_DIR}/lib/talos.sh"
 
+# Error handling
+trap 'handle_error $? "$BASH_COMMAND"' ERR
+
+handle_error() {
+    local exit_code=$1
+    local command="$2"
+    log_error "Command failed with exit code $exit_code: $command"
+    log_info "Bootstrap can be resumed from current phase using: $0"
+    log_info "Current phase: $(get_current_phase)"
+    exit $exit_code
+}
+
+# Retry helper
+retry_with_backoff() {
+    local max_attempts="${1:-3}"
+    local delay="${2:-5}"
+    local cmd="${@:3}"
+
+    local attempt=1
+    while [[ $attempt -le $max_attempts ]]; do
+        if eval "$cmd"; then
+            return 0
+        fi
+
+        if [[ $attempt -lt $max_attempts ]]; then
+            log_warn "Attempt $attempt/$max_attempts failed, retrying in ${delay}s..."
+            sleep "$delay"
+            delay=$((delay * 2))  # Exponential backoff
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    log_error "All $max_attempts attempts failed"
+    return 1
+}
+
 # Configuration
 PHASE_FILE="${SCRIPT_DIR}/.bootstrap-phase"
 ARGOCD_NAMESPACE="argocd"

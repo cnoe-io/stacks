@@ -10,7 +10,10 @@
 
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
-import { ClusterSecretStore } from '../../imports/external-secrets.io';
+import {
+  ClusterSecretStore,
+  ClusterSecretStoreSpecProviderAzurekvAuthType,
+} from '../../imports/external-secrets.io';
 
 export interface ClusterSecretStoreChartProps extends ChartProps {
   /**
@@ -68,20 +71,13 @@ export class ClusterSecretStoreChart extends Chart {
         provider: {
           azurekv: {
             vaultUrl: vaultUrl,
-            authType: 'WorkloadIdentity',
+            authType: ClusterSecretStoreSpecProviderAzurekvAuthType.WORKLOAD_IDENTITY,
             serviceAccountRef: {
               name: serviceAccountRef.name,
               namespace: serviceAccountRef.namespace,
             },
           },
         },
-        // Refresh conditions for store health
-        conditions: [
-          {
-            type: 'Ready',
-            status: 'True',
-          },
-        ],
       },
     });
   }
