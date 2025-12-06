@@ -1411,8 +1411,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'docker.io/vpittamp23/speckit-agents',  // Public image on Docker Hub
-        imageTag: 'claude-sdk-v1',  // Claude Agent SDK implementation (replaces dapr-agents)
+        agentImage: 'vpittamp/speckit-agents',  // Local image loaded into kind
+        imageTag: 'claude-sdk-v2',  // Dapr state store artifact storage fix
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
         workflowStateStore: 'workflowstatestore',
