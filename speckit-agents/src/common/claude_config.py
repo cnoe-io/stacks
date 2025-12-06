@@ -8,6 +8,11 @@ from typing import Any
 from .config import get_settings
 
 
+# Default model: Claude Opus 4.5 for all agentic tasks
+# Dapr handles orchestration layer, Claude SDK handles agentic execution
+DEFAULT_MODEL = "claude-opus-4-5-20251101"
+
+
 @dataclass
 class SubagentConfig:
     """Configuration for a parallel subagent."""
@@ -15,7 +20,7 @@ class SubagentConfig:
     description: str
     prompt: str
     tools: list[str] = field(default_factory=list)
-    model: str = "sonnet"
+    model: str = DEFAULT_MODEL
 
 
 @dataclass
@@ -26,7 +31,7 @@ class AgentConfig:
     role: str
     system_prompt: str
     max_turns: int = 5
-    model: str = "claude-sonnet-4-20250514"
+    model: str = DEFAULT_MODEL
     allowed_tools: list[str] = field(default_factory=list)
     mcp_servers: dict[str, Any] = field(default_factory=dict)
     subagents: dict[str, SubagentConfig] = field(default_factory=dict)
@@ -98,7 +103,7 @@ Output format: Markdown specification with sections:
 
 Use the Write tool to save the specification to the workflow artifacts directory.""",
     max_turns=3,
-    model="claude-sonnet-4-20250514",
+    model=DEFAULT_MODEL,
     allowed_tools=["Read", "Write", "mcp__dapr__get_workflow_state"],
 )
 
@@ -113,26 +118,26 @@ PLANNER_CONFIG = AgentConfig(
 
 Delegate specialized work to subagents for parallel execution.""",
     max_turns=10,
-    model="claude-sonnet-4-20250514",
+    model=DEFAULT_MODEL,
     allowed_tools=["Read", "Write", "Glob", "mcp__dapr__get_artifact"],
     subagents={
         "research-agent": SubagentConfig(
             description="Research technology choices and best practices",
             prompt="You are a technology researcher. Analyze requirements and recommend technologies.",
             tools=["WebSearch", "Read"],
-            model="haiku",
+            model=DEFAULT_MODEL,
         ),
         "data-modeler": SubagentConfig(
             description="Design data models and entity relationships",
             prompt="You are a data modeling expert. Define entities, fields, and relationships.",
             tools=["Read", "Write"],
-            model="sonnet",
+            model=DEFAULT_MODEL,
         ),
         "architecture-agent": SubagentConfig(
             description="Design system architecture and implementation approach",
             prompt="You are a software architect. Create implementation plans with file structure.",
             tools=["Read", "Write", "Glob"],
-            model="sonnet",
+            model=DEFAULT_MODEL,
         ),
     },
 )
@@ -152,7 +157,7 @@ Output: tasks.md with phases:
 
 Mark parallel-safe tasks with [P]. Include file paths for each task.""",
     max_turns=5,
-    model="claude-sonnet-4-20250514",
+    model=DEFAULT_MODEL,
     allowed_tools=["Read", "Write", "mcp__dapr__get_artifact"],
 )
 
@@ -169,7 +174,7 @@ IMPLEMENTER_CONFIG = AgentConfig(
 
 Use Edit for precise file modifications. Use Bash for commands.""",
     max_turns=50,  # Many iterations for TDD workflow
-    model="claude-sonnet-4-20250514",
+    model=DEFAULT_MODEL,
     allowed_tools=[
         "Read",
         "Write",

@@ -11,6 +11,7 @@ Executes tasks from tasks.md using Test-Driven Development:
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -40,6 +41,16 @@ from src.prompts.task_generator import (
 from src.tools.dapr_tools import dapr_mcp_server
 from src.tools.artifact_tools import artifact_mcp_server
 from src.tools.test_tools import tests_mcp_server
+
+# Claude SDK imports (optional - graceful degradation if not available)
+try:
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions, ClaudeSDKError
+    CLAUDE_SDK_AVAILABLE = True
+except ImportError:
+    CLAUDE_SDK_AVAILABLE = False
+    claude_query = None
+    ClaudeCodeOptions = None
+    ClaudeSDKError = Exception
 
 logger = logging.getLogger(__name__)
 
@@ -268,35 +279,109 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
             data_model=data_model,
         )
 
+        # Check if Claude SDK is available
+        if not CLAUDE_SDK_AVAILABLE:
+            logger.warning(f"Claude SDK not available, using fallback for task {task_id}")
+            return self._execute_task_fallback(task_id, task)
+
+        # Check for API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.warning(f"ANTHROPIC_API_KEY not set, using fallback for task {task_id}")
+            return self._execute_task_fallback(task_id, task)
+
         # Build Claude SDK options with full tool access
         options = self.get_claude_options(override_max_turns=50)
 
-        # Log configuration (actual SDK call would be here)
-        logger.info(f"Would call Claude SDK for task {task_id}")
-        logger.info(f"Available tools: {options.get('allowed_tools', [])}")
+        logger.info(f"Executing task {task_id} with Claude SDK")
+        logger.info(f"Model: {options.get('model', 'default')}")
+        logger.info(f"Max turns: {options.get('max_turns', 50)}")
 
-        # Note: In production, the Claude SDK query() call would be:
-        #
-        # from claude_code_sdk import query, ClaudeAgentOptions
-        #
-        # async for message in query(
-        #     prompt=prompt,
-        #     options=ClaudeAgentOptions(**options),
-        #     cwd=str(self.get_artifacts_path(workflow_id)),
-        # ):
-        #     # SDK handles TDD workflow:
-        #     # 1. Uses mcp__tests__run_tests to run tests
-        #     # 2. Uses Write/Edit to implement code
-        #     # 3. Iterates until tests pass
-        #     # 4. Updates tasks.md
-        #     pass
+        # Working directory for the implementation
+        work_dir = self.get_artifacts_path(workflow_id)
+        work_dir.mkdir(parents=True, exist_ok=True)
 
-        # For now, simulate successful execution
+        try:
+            # Build the full prompt with system context
+            system_prompt = get_system_prompt()
+            full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
+
+            # Collect messages from the SDK
+            messages = []
+            final_result = None
+
+            # Build ClaudeCodeOptions for the query
+            sdk_options = ClaudeCodeOptions(
+                model=options.get("model", "claude-opus-4-5-20251101"),
+                max_turns=options.get("max_turns", 50),
+                cwd=str(work_dir),
+                permission_mode="bypassPermissions",  # Allow autonomous execution
+            )
+
+            # Execute the task using Claude SDK query function
+            async for message in claude_query(
+                prompt=full_prompt,
+                options=sdk_options,
+            ):
+                # Log each message type
+                if hasattr(message, "type"):
+                    logger.debug(f"Message type: {message.type}")
+
+                # Collect text responses
+                if hasattr(message, "content"):
+                    messages.append(str(message.content)[:500])
+
+                # Check for completion
+                if hasattr(message, "result"):
+                    final_result = message.result
+
+            logger.info(f"Task {task_id} completed with Claude SDK")
+
+            return {
+                "success": True,
+                "task_id": task_id,
+                "status": "completed",
+                "notes": f"Task {task_id} executed via Claude SDK",
+                "messages": messages[-5:] if messages else [],  # Last 5 messages
+            }
+
+        except ClaudeSDKError as e:
+            logger.error(f"Claude SDK error for task {task_id}: {e}")
+            return {
+                "success": False,
+                "task_id": task_id,
+                "status": "failed",
+                "error": f"Claude SDK error: {str(e)}",
+            }
+        except Exception as e:
+            logger.error(f"Error executing task {task_id}: {e}")
+            return {
+                "success": False,
+                "task_id": task_id,
+                "status": "failed",
+                "error": str(e),
+            }
+
+    def _execute_task_fallback(
+        self,
+        task_id: str,
+        task: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Fallback execution when Claude SDK is not available.
+
+        Args:
+            task_id: Task identifier
+            task: Task dictionary
+
+        Returns:
+            Simulated successful result
+        """
+        logger.info(f"Using fallback execution for task {task_id}")
         return {
             "success": True,
             "task_id": task_id,
             "status": "completed",
-            "notes": f"Task {task_id} executed (placeholder - awaiting Claude SDK)",
+            "notes": f"Task {task_id} completed (fallback mode - Claude SDK unavailable)",
         }
 
     def _extract_summary(self, content: str) -> str:

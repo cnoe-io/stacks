@@ -1412,7 +1412,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'dapr-agents',
         agentImage: 'vpittamp/speckit-agents',  // Local image loaded into kind
-        imageTag: 'claude-sdk-v2',  // Dapr state store artifact storage fix
+        imageTag: 'claude-sdk-v7',  // Fixed: model ID claude-opus-4-5-20251101
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
         workflowStateStore: 'workflowstatestore',

@@ -7,6 +7,7 @@ structured, dependency-ordered task lists in tasks.md format.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -15,6 +16,16 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, Request
 
 from src.agents.base import BaseClaudeAgent
+
+# Claude SDK imports (optional - graceful degradation if not available)
+try:
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions, ClaudeSDKError
+    CLAUDE_SDK_AVAILABLE = True
+except ImportError:
+    CLAUDE_SDK_AVAILABLE = False
+    claude_query = None
+    ClaudeCodeOptions = None
+    ClaudeSDKError = Exception
 from src.common.claude_config import TASK_GENERATOR_CONFIG
 from src.common.config import Settings, get_settings
 from src.common.health import router as health_router
@@ -187,29 +198,62 @@ class ClaudeTaskGeneratorAgent(BaseClaudeAgent):
         # Build Claude SDK options
         options = self.get_claude_options(override_max_turns=5)
 
-        # Log configuration (actual SDK call would be here)
-        logger.info(f"Would call Claude SDK with options: {options}")
-        logger.info(f"Prompt length: {len(prompt)} chars")
+        # Check if Claude SDK is available
+        if not CLAUDE_SDK_AVAILABLE:
+            logger.warning("Claude SDK not available, using fallback task generation")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
 
-        # Note: In production, the Claude SDK query() call would be:
-        #
-        # from claude_code_sdk import query, ClaudeAgentOptions
-        #
-        # result = ""
-        # async for message in query(
-        #     prompt=prompt,
-        #     options=ClaudeAgentOptions(**options),
-        #     cwd=str(self.get_artifacts_path(workflow_id)),
-        # ):
-        #     if isinstance(message, AssistantMessage):
-        #         for block in message.content:
-        #             if isinstance(block, TextBlock):
-        #                 result += block.text
-        #
-        # return result
+        # Check for API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set, using fallback task generation")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
 
-        # For now, generate structured tasks as fallback
-        return self._generate_fallback_tasks(plan_content, spec_summary)
+        logger.info(f"Generating tasks with Claude SDK for workflow {workflow_id}")
+        logger.info(f"Model: {options.get('model', 'claude-opus-4-5-20251101')}")
+
+        # System prompt for task generation
+        system_prompt = get_system_prompt()
+
+        try:
+            full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
+
+            # Collect response content
+            tasks_content = ""
+
+            # Build ClaudeCodeOptions for the query
+            sdk_options = ClaudeCodeOptions(
+                model=options.get("model", "claude-opus-4-5-20251101"),
+                max_turns=options.get("max_turns", 5),
+                cwd=str(self.get_artifacts_path(workflow_id)),
+                permission_mode="bypassPermissions",  # Allow autonomous execution
+            )
+
+            async for message in claude_query(
+                prompt=full_prompt,
+                options=sdk_options,
+            ):
+                if hasattr(message, "content"):
+                    content_str = str(message.content)
+                    # Look for tasks.md content in the response
+                    if "# Tasks" in content_str or "## Phase" in content_str:
+                        tasks_content = content_str
+
+            # If we got valid task content, return it
+            if tasks_content and len(tasks_content) > 200:
+                logger.info(f"Generated tasks via Claude SDK ({len(tasks_content)} chars)")
+                return tasks_content
+
+            # Fallback if Claude didn't return valid content
+            logger.warning("Claude SDK returned no valid tasks content, using fallback")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
+
+        except ClaudeSDKError as e:
+            logger.error(f"Claude SDK error: {e}")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
+        except Exception as e:
+            logger.error(f"Error generating tasks with Claude SDK: {e}")
+            return self._generate_fallback_tasks(plan_content, spec_summary)
 
     def _extract_summary(self, content: str, section_name: str) -> str:
         """Extract a specific section from markdown content.

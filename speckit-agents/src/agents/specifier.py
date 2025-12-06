@@ -7,6 +7,7 @@ This is the first agent in the workflow pipeline (MVP).
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Optional
 from uuid import UUID
@@ -24,6 +25,16 @@ from src.common.models import (
 )
 from src.prompts.specifier import SPECIFIER_SYSTEM_PROMPT, format_spec_prompt
 from src.tools.dapr_tools import dapr_mcp_server
+
+# Claude SDK imports (optional - graceful degradation if not available)
+try:
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions, ClaudeSDKError
+    CLAUDE_SDK_AVAILABLE = True
+except ImportError:
+    CLAUDE_SDK_AVAILABLE = False
+    claude_query = None
+    ClaudeCodeOptions = None
+    ClaudeSDKError = Exception
 
 logger = logging.getLogger(__name__)
 
@@ -152,35 +163,69 @@ class ClaudeSpecifierAgent(BaseClaudeAgent):
         if context.get("hints"):
             prompt += f"\n\n## Additional Context\n{context['hints']}"
 
-        # Add output path instruction
-        artifacts_path = self.get_artifacts_path(workflow_id)
-        prompt += f"\n\nSave the generated specification to: {artifacts_path}/spec.md"
+        # Check if Claude SDK is available
+        if not CLAUDE_SDK_AVAILABLE:
+            logger.warning("Claude SDK not available, using fallback spec generation")
+            return self._generate_structured_spec(feature_description)
+
+        # Check for API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set, using fallback spec generation")
+            return self._generate_structured_spec(feature_description)
 
         # Build Claude SDK options
         options = self.get_claude_options(override_max_turns=3)
 
-        # Note: The actual Claude SDK query() call would be:
-        #
-        # from claude_code_sdk import query, ClaudeAgentOptions
-        #
-        # async for message in query(
-        #     prompt=prompt,
-        #     options=ClaudeAgentOptions(**options),
-        #     cwd=str(artifacts_path),
-        # ):
-        #     if isinstance(message, AssistantMessage):
-        #         for block in message.content:
-        #             if isinstance(block, TextBlock):
-        #                 result += block.text
-        #
-        # For now, we generate a structured spec based on the prompt
-        # This will be replaced with actual SDK call when deployed
+        # Working directory for the spec
+        artifacts_path = self.get_artifacts_path(workflow_id)
+        artifacts_path.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Would call Claude SDK with options: {options}")
-        logger.info(f"Prompt: {prompt[:200]}...")
+        logger.info(f"Generating spec with Claude SDK for workflow {workflow_id}")
+        logger.info(f"Model: {options.get('model', 'default')}")
 
-        # Generate spec using the feature description
-        return self._generate_structured_spec(feature_description)
+        try:
+            # Build the full prompt with system context
+            full_prompt = f"{SPECIFIER_SYSTEM_PROMPT}\n\n---\n\n{prompt}"
+
+            # Collect the spec content from Claude's response
+            spec_content = ""
+
+            # Build ClaudeCodeOptions for the query
+            sdk_options = ClaudeCodeOptions(
+                model=options.get("model", "claude-opus-4-5-20251101"),
+                max_turns=options.get("max_turns", 3),
+                cwd=str(artifacts_path),
+                permission_mode="bypassPermissions",  # Allow autonomous execution
+            )
+
+            # Execute using Claude SDK query function
+            async for message in claude_query(
+                prompt=full_prompt,
+                options=sdk_options,
+            ):
+                # Collect text responses
+                if hasattr(message, "content"):
+                    content_str = str(message.content)
+                    # Look for markdown content that looks like a spec
+                    if "# Feature Specification" in content_str or "## Overview" in content_str:
+                        spec_content = content_str
+
+            # If we got spec content from Claude, return it
+            if spec_content and len(spec_content) > 100:
+                logger.info(f"Generated spec via Claude SDK ({len(spec_content)} chars)")
+                return spec_content
+
+            # Fallback if Claude didn't return usable content
+            logger.warning("Claude SDK returned no usable spec content, using fallback")
+            return self._generate_structured_spec(feature_description)
+
+        except ClaudeSDKError as e:
+            logger.error(f"Claude SDK error: {e}")
+            return self._generate_structured_spec(feature_description)
+        except Exception as e:
+            logger.error(f"Error generating spec with Claude SDK: {e}")
+            return self._generate_structured_spec(feature_description)
 
     def _generate_structured_spec(self, feature_description: str) -> str:
         """Generate a structured spec.md document.

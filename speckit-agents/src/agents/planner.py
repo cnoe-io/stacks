@@ -9,6 +9,7 @@ Transforms specifications into implementation artifacts:
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -17,6 +18,16 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, Request
 
 from src.agents.base import BaseClaudeAgent
+
+# Claude SDK imports (optional - graceful degradation if not available)
+try:
+    from claude_code_sdk import query as claude_query, ClaudeCodeOptions, ClaudeSDKError
+    CLAUDE_SDK_AVAILABLE = True
+except ImportError:
+    CLAUDE_SDK_AVAILABLE = False
+    claude_query = None
+    ClaudeCodeOptions = None
+    ClaudeSDKError = Exception
 from src.common.claude_config import PLANNER_CONFIG
 from src.common.config import Settings, get_settings
 from src.common.health import router as health_router
@@ -176,32 +187,22 @@ class ClaudePlannerAgent(BaseClaudeAgent):
         # Build Claude SDK options with subagents
         options = self.get_claude_options(override_max_turns=10)
 
-        # Log the configuration (actual SDK call would be here)
-        logger.info(f"Would call Claude SDK with options: {options}")
-        logger.info(f"Prompt length: {len(prompt)} chars")
-
-        # Note: In production, the Claude SDK query() call would be:
-        #
-        # from claude_code_sdk import query, ClaudeAgentOptions
-        #
-        # async for message in query(
-        #     prompt=prompt,
-        #     options=ClaudeAgentOptions(**options),
-        #     cwd=str(artifacts_dir),
-        # ):
-        #     # SDK handles subagent delegation automatically
-        #     # Subagents run in parallel based on configuration
-        #     pass
-        #
-        # The SDK will:
-        # 1. Execute the main planner prompt
-        # 2. Detect subagent delegation requests
-        # 3. Run research-agent, data-modeler, architecture-agent in parallel
-        # 4. Aggregate results back to the main planner
-        # 5. Save artifacts using Write tool
-
-        # For now, generate structured artifacts as fallback
-        artifact_contents = self._generate_fallback_artifacts(spec_content)
+        # Check if Claude SDK is available
+        if not CLAUDE_SDK_AVAILABLE:
+            logger.warning("Claude SDK not available, using fallback artifact generation")
+            artifact_contents = self._generate_fallback_artifacts(spec_content)
+        elif not os.environ.get("ANTHROPIC_API_KEY"):
+            logger.warning("ANTHROPIC_API_KEY not set, using fallback artifact generation")
+            artifact_contents = self._generate_fallback_artifacts(spec_content)
+        else:
+            # Generate artifacts using Claude SDK
+            artifact_contents = await self._generate_artifacts_with_claude(
+                workflow_id=workflow_id,
+                prompt=prompt,
+                spec_content=spec_content,
+                options=options,
+                artifacts_dir=artifacts_dir,
+            )
 
         # Save artifacts to filesystem
         artifacts = []
@@ -241,6 +242,136 @@ class ClaudePlannerAgent(BaseClaudeAgent):
                 content=artifact_contents["plan.md"],
             )
             artifacts.append(artifact)
+
+        return artifacts
+
+    async def _generate_artifacts_with_claude(
+        self,
+        workflow_id: UUID,
+        prompt: str,
+        spec_content: str,
+        options: dict[str, Any],
+        artifacts_dir: Path,
+    ) -> dict[str, str]:
+        """Generate planning artifacts using Claude SDK.
+
+        Args:
+            workflow_id: Workflow ID
+            prompt: Formatted planning prompt
+            spec_content: Spec content for fallback
+            options: Claude SDK options
+            artifacts_dir: Directory to save artifacts
+
+        Returns:
+            Dict of artifact names to content
+        """
+        logger.info(f"Generating planning artifacts with Claude SDK for workflow {workflow_id}")
+        logger.info(f"Model: {options.get('model', 'claude-opus-4-5-20251101')}")
+
+        # System prompt for comprehensive planning
+        system_prompt = """You are an expert software architect specializing in generating implementation artifacts.
+
+Your task is to generate three markdown files based on the provided specification:
+
+1. **research.md** - Technology research and decisions:
+   - Executive summary
+   - Technology choices with rationale
+   - Alternatives considered
+   - Performance and security considerations
+
+2. **data-model.md** - Data model design:
+   - Entity definitions with Pydantic models
+   - Relationships (mermaid ER diagram)
+   - Validation rules
+
+3. **plan.md** - Implementation plan:
+   - Architecture overview with ASCII diagram
+   - Technology stack
+   - Project structure
+   - Implementation phases
+   - API design
+   - Testing strategy
+
+Generate comprehensive, production-ready content for each file.
+Output each file's content clearly labeled with the filename."""
+
+        try:
+            full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
+
+            # Collect response content
+            response_content = ""
+
+            # Build ClaudeCodeOptions for the query
+            sdk_options = ClaudeCodeOptions(
+                model=options.get("model", "claude-opus-4-5-20251101"),
+                max_turns=options.get("max_turns", 10),
+                cwd=str(artifacts_dir),
+                permission_mode="bypassPermissions",  # Allow autonomous execution
+            )
+
+            async for message in claude_query(
+                prompt=full_prompt,
+                options=sdk_options,
+            ):
+                if hasattr(message, "content"):
+                    response_content += str(message.content)
+
+            # Parse the response to extract individual artifacts
+            artifacts = self._parse_claude_artifacts(response_content)
+
+            # If we got valid artifacts, return them
+            if artifacts and len(artifacts) >= 2:
+                logger.info(f"Generated {len(artifacts)} artifacts via Claude SDK")
+                return artifacts
+
+            # Fallback if parsing failed
+            logger.warning("Claude SDK response parsing failed, using fallback")
+            return self._generate_fallback_artifacts(spec_content)
+
+        except ClaudeSDKError as e:
+            logger.error(f"Claude SDK error: {e}")
+            return self._generate_fallback_artifacts(spec_content)
+        except Exception as e:
+            logger.error(f"Error generating artifacts with Claude SDK: {e}")
+            return self._generate_fallback_artifacts(spec_content)
+
+    def _parse_claude_artifacts(self, response: str) -> dict[str, str]:
+        """Parse Claude response to extract individual artifacts.
+
+        Args:
+            response: Full Claude response text
+
+        Returns:
+            Dict mapping artifact names to content
+        """
+        artifacts = {}
+
+        # Look for markdown file sections
+        artifact_markers = [
+            ("research.md", ["# Research", "## Executive Summary", "## Technology"]),
+            ("data-model.md", ["# Data Model", "## Entity", "## Overview"]),
+            ("plan.md", ["# Implementation Plan", "# Plan", "## Architecture"]),
+        ]
+
+        for filename, markers in artifact_markers:
+            for marker in markers:
+                if marker in response:
+                    # Extract content starting from the marker
+                    start_idx = response.find(marker)
+                    if start_idx >= 0:
+                        # Find the next major section or end
+                        end_markers = ["# Research", "# Data Model", "# Implementation Plan", "# Plan"]
+                        end_idx = len(response)
+                        for em in end_markers:
+                            if em != marker and em in response[start_idx + len(marker):]:
+                                candidate_idx = response.find(em, start_idx + len(marker))
+                                if candidate_idx < end_idx and candidate_idx > start_idx:
+                                    end_idx = candidate_idx
+
+                        content = response[start_idx:end_idx].strip()
+                        if len(content) > 100:  # Minimum valid content
+                            artifacts[filename] = content
+                            break
 
         return artifacts
 
