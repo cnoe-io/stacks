@@ -443,7 +443,7 @@ def create_orchestrator_app() -> FastAPI:
             error=workflow.error,
         )
 
-    @router.post("/dapr/subscribe")
+    @router.get("/dapr/subscribe")
     async def dapr_subscribe():
         """Dapr pub/sub subscription endpoint.
 

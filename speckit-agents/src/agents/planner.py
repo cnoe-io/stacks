@@ -555,7 +555,7 @@ def create_planner_app() -> FastAPI:
     # Create agent router
     router = APIRouter(tags=["Planner"])
 
-    @router.post("/dapr/subscribe")
+    @router.get("/dapr/subscribe")
     async def dapr_subscribe():
         """Dapr pub/sub subscription endpoint."""
         settings = get_settings()

@@ -412,7 +412,7 @@ def create_implementer_app() -> FastAPI:
     # Create agent router
     router = APIRouter(tags=["Implementer"])
 
-    @router.post("/dapr/subscribe")
+    @router.get("/dapr/subscribe")
     async def dapr_subscribe():
         """Dapr pub/sub subscription endpoint."""
         settings = get_settings()

@@ -397,7 +397,7 @@ def create_task_generator_app() -> FastAPI:
     # Create agent router
     router = APIRouter(tags=["TaskGenerator"])
 
-    @router.post("/dapr/subscribe")
+    @router.get("/dapr/subscribe")
     async def dapr_subscribe():
         """Dapr pub/sub subscription endpoint."""
         settings = get_settings()
