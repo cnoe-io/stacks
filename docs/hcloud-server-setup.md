@@ -28,7 +28,10 @@ helm version                 # >= 3.x
 ### Hetzner Cloud Authentication
 
 ```bash
-# Set up hcloud context
+# Set HCLOUD_TOKEN environment variable or use context
+export HCLOUD_TOKEN="your-api-token"
+
+# Or set up hcloud context
 hcloud context create talos-cluster
 # Enter your Hetzner API token when prompted
 
@@ -111,6 +114,9 @@ hcloud firewall add-rule talos-cluster-fw \
 ### Generate Cluster Secrets (One-Time)
 
 ```bash
+# Create directories if they don't exist
+mkdir -p secrets generated patches/controlplane patches/worker
+
 # Generate secrets (store securely with git-crypt)
 talosctl gen secrets --output-file secrets/secrets.yaml
 ```
@@ -192,8 +198,8 @@ hcloud server poweron talos-cp-1
 hcloud server poweron talos-cp-2
 hcloud server poweron talos-cp-3
 
-# Wait for nodes to boot (~30 seconds)
-sleep 30
+# Wait for nodes to boot (~30-45 seconds)
+sleep 45
 ```
 
 ### Get Public IPs
@@ -255,14 +261,20 @@ talosctl bootstrap \
   --nodes ${CP1_IP} \
   --talosconfig generated/talosconfig
 
-# Wait for etcd to form quorum
+# Wait for etcd to form quorum (~30-60 seconds)
 sleep 30
 
-# Verify etcd members (should show 3 members)
+# Verify etcd members (should show 3 members, may start as learners)
 TALOSCONFIG=generated/talosconfig talosctl etcd members \
   --endpoints ${CP1_IP} \
   --nodes ${CP1_IP}
 ```
+
+> **Note**: etcd members may initially show as "learners" (LEARNER=true). Wait 30-60 seconds for them to be promoted to full members. If a stale learner persists from a previous failed attempt, remove it:
+> ```bash
+> TALOSCONFIG=generated/talosconfig talosctl etcd remove-member <member-id> \
+>   --endpoints ${CP1_IP} --nodes ${CP1_IP}
+> ```
 
 ### Get Kubeconfig
 
@@ -274,6 +286,10 @@ talosctl kubeconfig \
   --talosconfig generated/talosconfig \
   generated/kubeconfig
 
+# IMPORTANT: The kubeconfig uses the private IP by default (10.0.1.1)
+# Update it to use a public IP for external access:
+sed -i 's|https://10.0.1.1:6443|https://'${CP1_IP}':6443|' generated/kubeconfig
+
 # Verify nodes (will show NotReady - no CNI yet)
 kubectl --kubeconfig generated/kubeconfig get nodes
 ```
@@ -284,7 +300,7 @@ kubectl --kubeconfig generated/kubeconfig get nodes
 
 ### Install Cilium with Talos-Compatible Settings
 
-**CRITICAL**: Talos requires specific security context capabilities for Cilium.
+**CRITICAL**: Talos requires specific security context capabilities for Cilium. Without these settings, the `clean-cilium-state` init container will crash with `unable to apply caps: operation not permitted`.
 
 ```bash
 # Add Cilium Helm repo
@@ -313,8 +329,9 @@ helm install cilium cilium/cilium --version 1.16.4 \
 ### Verify Cilium and Nodes
 
 ```bash
-# Wait for Cilium pods
-kubectl --kubeconfig generated/kubeconfig -n kube-system get pods -l app.kubernetes.io/part-of=cilium -w
+# Wait for Cilium pods (~30-60 seconds)
+sleep 30
+kubectl --kubeconfig generated/kubeconfig -n kube-system get pods -l app.kubernetes.io/part-of=cilium
 
 # Verify nodes are now Ready
 kubectl --kubeconfig generated/kubeconfig get nodes
@@ -363,8 +380,8 @@ hcloud server attach-iso talos-worker-2 ${TALOS_ISO_ID}
 hcloud server poweron talos-worker-1
 hcloud server poweron talos-worker-2
 
-# Wait for boot
-sleep 30
+# Wait for boot (~45 seconds for larger dedicated CPU servers)
+sleep 45
 
 # Get worker IPs
 WORKER1_IP=$(hcloud server describe talos-worker-1 -o format='{{.PublicNet.IPv4.IP}}')
@@ -391,7 +408,12 @@ talosctl apply-config --insecure \
 
 ### Detach ISO and Reset Workers
 
+> **IMPORTANT**: Wait at least 5 seconds after applying config before detaching ISO. The config apply triggers the installation process - detaching too early can result in the server booting back into Ubuntu instead of Talos.
+
 ```bash
+# Short delay to ensure install starts
+sleep 5
+
 # Detach ISO
 hcloud server detach-iso talos-worker-1
 hcloud server detach-iso talos-worker-2
@@ -400,18 +422,20 @@ hcloud server detach-iso talos-worker-2
 hcloud server reset talos-worker-1
 hcloud server reset talos-worker-2
 
-# Wait for workers to join cluster
-sleep 60
+# Wait for workers to join cluster (~90 seconds for dedicated CPU servers)
+sleep 90
 ```
 
 ### Label Worker Nodes
 
 ```bash
-# Workers get random hostnames - label them with worker role
+# Workers get random hostnames - list them first
 kubectl --kubeconfig generated/kubeconfig get nodes
 
-# For each worker node (replace <hostname> with actual hostname):
-kubectl --kubeconfig generated/kubeconfig label node <worker-hostname> node-role.kubernetes.io/worker=""
+# Label each worker node (replace <hostname> with actual hostname)
+# Example: talos-ofc-xhf, talos-zc8-e1s
+kubectl --kubeconfig generated/kubeconfig label node <worker-hostname-1> node-role.kubernetes.io/worker=""
+kubectl --kubeconfig generated/kubeconfig label node <worker-hostname-2> node-role.kubernetes.io/worker=""
 ```
 
 ---
@@ -451,15 +475,15 @@ kubectl --kubeconfig generated/kubeconfig delete deployment test-nginx
 
 ---
 
-## Current Cluster Details (2025-12-06)
+## Current Cluster Details (2025-12-07)
 
 | Node | Public IP | Private IP | K8s Hostname |
 |------|-----------|------------|--------------|
-| talos-cp-1 | 178.156.172.34 | 10.0.1.1 | talos-cp-1 |
-| talos-cp-2 | 5.161.48.192 | 10.0.1.2 | talos-cp-2 |
+| talos-cp-1 | 178.156.156.43 | 10.0.1.1 | talos-cp-1 |
+| talos-cp-2 | 5.161.219.173 | 10.0.1.2 | talos-cp-2 |
 | talos-cp-3 | 5.161.92.89 | 10.0.1.3 | talos-cp-3 |
-| talos-worker-1 | 5.161.219.173 | 10.0.1.10 | talos-zug-ygp |
-| talos-worker-2 | 178.156.156.43 | 10.0.1.4 | talos-iew-fwn |
+| talos-worker-1 | 5.161.48.192 | 10.0.1.4 | talos-ofc-xhf |
+| talos-worker-2 | 178.156.172.34 | 10.0.1.5 | talos-zc8-e1s |
 
 ---
 
@@ -513,15 +537,98 @@ Nodes show NotReady until Cilium CNI is deployed. This is expected behavior.
 
 1. Verify all 3 CP nodes are running
 2. Check private network connectivity
-3. Reset and re-bootstrap if needed:
+3. If stale learners exist, remove them:
+   ```bash
+   TALOSCONFIG=generated/talosconfig talosctl etcd members \
+     --endpoints ${CP1_IP} --nodes ${CP1_IP}
+   # Identify stale learner by missing hostname
+   TALOSCONFIG=generated/talosconfig talosctl etcd remove-member <stale-member-id> \
+     --endpoints ${CP1_IP} --nodes ${CP1_IP}
+   ```
+4. Reset and re-bootstrap if needed:
    ```bash
    talosctl reset --graceful=false --endpoints ${CP1_IP} --nodes ${CP1_IP}
    ```
+
+### "exec format error" on Worker Nodes
+
+This error indicates the Talos installation didn't complete properly. The server is booting from the Ubuntu image instead of the installed Talos system.
+
+**Cause**: ISO was detached before the installation completed, or the reset happened too quickly.
+
+**Solution**: Recreate the affected worker:
+```bash
+# Delete the problematic worker
+hcloud server delete talos-worker-X
+
+# Recreate with proper timing
+hcloud server create \
+  --name talos-worker-X \
+  --type ccxXX \
+  --image ubuntu-24.04 \
+  --location ash \
+  --network talos-cluster-net \
+  --firewall talos-cluster-fw \
+  --label role=worker \
+  --label cluster=talos-cluster \
+  --start-after-create=false
+
+# Attach ISO and start
+hcloud server attach-iso talos-worker-X ${TALOS_ISO_ID}
+hcloud server poweron talos-worker-X
+
+# Wait longer for boot (45s for dedicated CPU)
+sleep 45
+
+# Apply config
+WORKER_IP=$(hcloud server describe talos-worker-X -o format='{{.PublicNet.IPv4.IP}}')
+talosctl apply-config --insecure \
+  --endpoints ${WORKER_IP} --nodes ${WORKER_IP} \
+  --file generated/worker.yaml
+
+# Wait briefly for install to start
+sleep 5
+
+# Detach and reset
+hcloud server detach-iso talos-worker-X
+hcloud server reset talos-worker-X
+
+# Wait longer for join (90s for dedicated CPU)
+sleep 90
+```
+
+### Kubeconfig Uses Private IP
+
+The generated kubeconfig points to the private IP (10.0.1.1) by default, which isn't reachable from outside the Hetzner private network.
+
+**Solution**: Update the kubeconfig to use a public IP:
+```bash
+sed -i 's|https://10.0.1.1:6443|https://'${CP1_IP}':6443|' generated/kubeconfig
+```
+
+### Worker Boot Time
+
+Dedicated CPU servers (CCX series) take longer to boot than shared CPU servers (CPX series):
+- CPX (shared): ~30 seconds
+- CCX (dedicated): ~45-60 seconds
+
+Adjust sleep times accordingly to avoid timing issues.
+
+---
+
+## Timing Reference
+
+| Operation | CPX (Shared) | CCX (Dedicated) |
+|-----------|--------------|-----------------|
+| Boot to maintenance | 30s | 45s |
+| Boot from disk | 60s | 90s |
+| etcd quorum | 30s | 30-60s |
+| Cilium startup | 30s | 30s |
 
 ---
 
 ## References
 
-- [Talos Linux Documentation](https://www.talos.dev/v1.10/)
+- [Talos Linux Documentation](https://www.talos.dev/v1.11/)
 - [Deploying Cilium on Talos](https://docs.siderolabs.com/kubernetes-guides/cni/deploying-cilium)
 - [Hetzner Cloud CLI](https://github.com/hetznercloud/cli)
