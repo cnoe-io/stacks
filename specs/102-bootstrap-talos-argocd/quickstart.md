@@ -231,24 +231,46 @@ kubectl logs -n tailscale deploy/tailscale-operator | grep -i "registered"
 
 ## Step 5: Access via Tailscale
 
-Once bootstrap is complete, access services via Tailscale:
+Once bootstrap is complete, access services via Tailscale. Services use **legacy hostname mode** (pod hostnames) because Tailscale Services beta is not available for all tailnets.
+
+### Get Service URLs
+
+```bash
+# Get ArgoCD serve pod hostname
+kubectl exec -n tailscale deploy/argocd-tailscale-serve -- tailscale --socket=/run/tailscale/tailscaled.sock serve status
+# Example: https://argocd-tailscale-serve-7498bff76f-5ftlg.tail286401.ts.net
+
+# Get K8s-API serve pod hostname
+kubectl exec -n tailscale deploy/k8s-api-tailscale-serve -c tailscale-serve -- tailscale --socket=/run/tailscale/tailscaled.sock serve status
+# Example: https://k8s-api-tailscale-serve-78f695ff8b-tq2cc.tail286401.ts.net
+```
 
 ### ArgoCD UI
 
 ```bash
-# From any Tailscale-connected device
-open https://svc-argocd.${TAILSCALE_TAILNET}.ts.net
+# Get the ArgoCD URL
+ARGOCD_URL=$(kubectl exec -n tailscale deploy/argocd-tailscale-serve -- tailscale --socket=/run/tailscale/tailscaled.sock serve status 2>/dev/null | grep https:// | awk '{print $1}')
+echo "ArgoCD UI: $ARGOCD_URL"
+
+# Open from any Tailscale-connected device
+open "$ARGOCD_URL"
 ```
 
 ### kubectl Access
 
 ```bash
+# Get the K8s-API URL
+K8S_API_URL=$(kubectl exec -n tailscale deploy/k8s-api-tailscale-serve -c tailscale-serve -- tailscale --socket=/run/tailscale/tailscaled.sock serve status 2>/dev/null | grep https:// | awk '{print $1}')
+echo "K8s API: $K8S_API_URL"
+
 # Generate remote kubeconfig
 ./scripts/generate-remote-kubeconfig.sh > ~/.kube/talos-remote.yaml
 
 # Use from any Tailscale-connected device
 kubectl --kubeconfig ~/.kube/talos-remote.yaml get nodes
 ```
+
+**Note:** Pod hostnames change when pods restart. Check `tailscale serve status` for current URLs.
 
 ---
 
@@ -459,6 +481,25 @@ curl -s http://argocd-server.argocd.svc.cluster.local:80/healthz
 ```
 
 **Prevention**: The CDK8s chart defaults to `backendPort: 80` and `backendHttps: false`.
+
+### Issue 9: Tailscale Services Beta Not Available
+
+**Symptom**: Tailscale serve with `--service=svc:name` flag shows "approval from an admin is required" indefinitely, even with correct ACL auto-approvers.
+
+**Cause**: Tailscale Services is a beta feature that may not be enabled for all tailnets. The `--service` flag requires the Services feature to be active.
+
+**Fix**: Use legacy hostname mode instead of Tailscale Services:
+```bash
+# Instead of:
+tailscale serve --bg --service=svc:argocd --https=443 http://127.0.0.1:8080
+
+# Use legacy mode (no --service flag):
+tailscale serve --bg --https=443 http://127.0.0.1:8080
+```
+
+**Prevention**: The CDK8s charts now use legacy hostname mode by default. Services are accessible via pod hostname (e.g., `https://argocd-tailscale-serve-xxxxx.tailnet.ts.net`).
+
+**Trade-off**: Pod hostnames change when pods restart. Check `tailscale serve status` in the pod for current URLs.
 
 ### Recommended Bootstrap Order
 
