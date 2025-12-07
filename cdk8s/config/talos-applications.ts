@@ -489,6 +489,30 @@ export const talosApplications: ApplicationConfig[] = [
     },
   },
 
+  {
+    name: 'langfuse-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'LangfuseTailscaleServeChart',
+      props: {
+        serviceName: 'langfuse',
+        backendHost: 'langfuse.observability.svc.cluster.local',
+        backendPort: 3000,
+        authKeySecretName: 'tailscale-auth-key',
+      },
+    },
+    argocd: {
+      syncWave: '-44',  // Deploy right after Langfuse
+      labels: {
+        'app.kubernetes.io/component': 'access',
+        'app.kubernetes.io/part-of': 'observability',
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // SYNC WAVE -40 to -20: Dapr Runtime and Agents
   // ═══════════════════════════════════════════════════════════════════════════

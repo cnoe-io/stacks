@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - Deployment.langfuse-tailscale-serve.k8s.yaml
+  - Role.langfuse-tailscale-serve-secret-reader.k8s.yaml
+  - RoleBinding.langfuse-tailscale-serve-secret-reader.k8s.yaml
+  - ServiceAccount.langfuse-tailscale-serve.k8s.yaml
