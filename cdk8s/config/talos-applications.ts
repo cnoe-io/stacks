@@ -864,7 +864,7 @@ export const talosApplications: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'vpittamp/speckit-agents',
+        agentImage: 'vpittamp23/speckit-agents',
         imageTag: 'claude-sdk-v9',
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
