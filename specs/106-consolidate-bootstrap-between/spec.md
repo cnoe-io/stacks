@@ -3,175 +3,161 @@
 **Feature Branch**: `106-consolidate-bootstrap-between`
 **Created**: 2025-12-07
 **Status**: Draft
-**Input**: User description: "create a new feature that explores whether we can consolidate our scripting/configuration between our kind cluster setup and our talos cluster setup. this includes azure infrastructure setup, azure workload identity setup, cdk8s synthesis, applying manifests for cluster setup. we should consider parameterizing values by using our *.env files, using conditional logic in our cdk8s charts that correspond to the different environments, etc."
+**Input**: User description: "Consolidate scripting/configuration between KIND and Talos cluster setup. Fully replace legacy implementations. No backward compatibility required."
 
 ## User Scenarios & Testing
 
-### User Story 1 - Unified Bootstrap Experience (Priority: P1)
+### User Story 1 - Unified CDK8s Synthesis (Priority: P1)
 
-As a platform operator, I want a single bootstrap command that works across both KIND and Talos clusters, so that I don't need to learn and maintain two different bootstrap workflows.
+As a platform operator, I want a single CDK8s entry point (`main.ts`) that works for both KIND and Talos clusters, so that I can maintain one codebase instead of two separate synthesis files.
 
-**Why this priority**: This is the core value proposition - reducing cognitive overhead and maintenance burden by having one consistent experience regardless of cluster type.
+**Why this priority**: This is the core consolidation - eliminating duplicate code between `main-v2.ts` and `main-talos.ts`.
 
-**Independent Test**: Running `./scripts/bootstrap-cluster.sh` on either a KIND or Talos cluster successfully completes the bootstrap process with cluster-appropriate behavior.
+**Independent Test**: Running `npm run synth` with `CLUSTER_TYPE=kind` produces KIND-appropriate manifests with `cnoe://` URLs, and with `CLUSTER_TYPE=talos` produces Talos-appropriate manifests with GitHub URLs.
 
 **Acceptance Scenarios**:
 
-1. **Given** a KIND cluster is running and kubectl context is set, **When** I run `./scripts/bootstrap-cluster.sh --setup-azure`, **Then** the bootstrap detects KIND cluster type and executes KIND-appropriate steps (direnv environment loading, Azure AD app setup, CDK8s synthesis, ArgoCD installation via idpBuilder).
+1. **Given** `CLUSTER_TYPE=kind` is set, **When** I run `npm run synth`, **Then** ArgoCD Application sources use `cnoe://<app>/manifests` URLs and output goes to `cdk8s/dist/<app>/`.
 
-2. **Given** a Talos cluster is running and kubectl context is set, **When** I run `./scripts/bootstrap-cluster.sh --setup-azure`, **Then** the bootstrap detects Talos cluster type and executes Talos-appropriate steps (direnv environment loading, Azure AD app setup, CDK8s synthesis, ArgoCD installation via Helm, JWKS sync to Azure Storage).
+2. **Given** `CLUSTER_TYPE=talos` is set, **When** I run `npm run synth`, **Then** ArgoCD Application sources use GitHub repository URLs with paths like `cdk8s/dist/<app>/manifests` and output goes to `cdk8s/dist/<app>/`.
 
-3. **Given** an unsupported cluster type, **When** I run `./scripts/bootstrap-cluster.sh`, **Then** the script provides a clear error message listing supported cluster types.
+3. **Given** `CLUSTER_TYPE` is not set, **When** I run `npm run synth`, **Then** synthesis defaults to `kind` behavior with a warning message.
 
 ---
 
-### User Story 2 - Environment-Driven Configuration (Priority: P1)
+### User Story 2 - Unified Application Configuration (Priority: P1)
 
-As a platform operator, I want cluster-specific configuration to be loaded automatically from environment files, so that I can maintain cluster-specific values in one place without modifying scripts.
+As a platform operator, I want a single `applications.ts` configuration file with cluster-type filtering, so that I can see all applications in one place and understand which apply to which cluster.
 
-**Why this priority**: Environment-driven configuration is essential for making the unified bootstrap work - it's how the system knows what values to use for each cluster type.
+**Why this priority**: Eliminates confusion about which apps exist for which cluster and reduces file duplication.
 
-**Independent Test**: Switching between KIND and Talos clusters and verifying that the correct environment file is loaded automatically and values like `AZURE_CLIENT_ID`, `SERVICE_ACCOUNT_ISSUER`, and `CLUSTER_TYPE` are correct.
+**Independent Test**: The merged `applications.ts` contains all apps from both `applications.ts` and `talos-applications.ts` with a `clusterType` field that filters correctly during synthesis.
 
 **Acceptance Scenarios**:
 
-1. **Given** `.env-files/kind.env` contains KIND-specific configuration, **When** I navigate to the project directory with a KIND cluster context, **Then** direnv automatically loads the KIND configuration and `CLUSTER_TYPE` equals "kind".
+1. **Given** an application config with `clusterType: 'kind'`, **When** synthesizing with `CLUSTER_TYPE=talos`, **Then** that application is excluded from output.
 
-2. **Given** `.env-files/talos.env` contains Talos-specific configuration, **When** I navigate to the project directory with a Talos cluster context, **Then** direnv automatically loads the Talos configuration and `CLUSTER_TYPE` equals "talos".
+2. **Given** an application config with `clusterType: 'both'`, **When** synthesizing with either cluster type, **Then** that application is included with cluster-appropriate source URLs.
 
-3. **Given** required Azure variables are missing from the environment file, **When** I run the bootstrap, **Then** I receive clear validation errors listing which variables are missing.
+3. **Given** an application config with `clusterType: 'talos'`, **When** synthesizing with `CLUSTER_TYPE=kind`, **Then** that application is excluded from output.
 
 ---
 
-### User Story 3 - CDK8s Synthesis Across Cluster Types (Priority: P2)
+### User Story 3 - Environment-Driven Configuration (Priority: P1)
 
-As a platform operator, I want CDK8s synthesis to work for both KIND and Talos clusters with appropriate output, so that I can generate ArgoCD-ready manifests for either cluster type from a single codebase.
+As a platform operator, I want cluster-specific configuration loaded automatically from `.env-files/{cluster_type}.env`, so that I can switch between clusters by changing one environment variable.
 
-**Why this priority**: CDK8s synthesis is the core mechanism for generating Kubernetes manifests, but both clusters can share much of the logic with cluster-specific variations.
+**Why this priority**: Environment-driven configuration is the mechanism that makes unified synthesis work.
 
-**Independent Test**: Running CDK8s synthesis produces correctly configured manifests that work with either KIND (idpBuilder with cnoe:// URLs) or Talos (direct Git repository URLs).
+**Independent Test**: Setting `CLUSTER_TYPE=kind` loads `.env-files/kind.env` and setting `CLUSTER_TYPE=talos` loads `.env-files/talos.env`.
 
 **Acceptance Scenarios**:
 
-1. **Given** `ENVIRONMENT=dev` in `.env-files/kind.env`, **When** I run CDK8s synthesis, **Then** ArgoCD Application sources use `cnoe://` URLs appropriate for idpBuilder local development.
+1. **Given** `.env-files/kind.env` contains `CLUSTER_TYPE=kind` and KIND-specific Azure variables, **When** I source the environment, **Then** all required variables for KIND synthesis are available.
 
-2. **Given** `ENVIRONMENT=dev` in `.env-files/talos.env`, **When** I run CDK8s synthesis for Talos, **Then** ArgoCD Application sources use GitHub repository URLs appropriate for GitOps.
+2. **Given** `.env-files/talos.env` contains `CLUSTER_TYPE=talos` and Talos-specific Azure variables, **When** I source the environment, **Then** all required variables for Talos synthesis are available.
 
-3. **Given** `AZURE_CLIENT_ID` is set in the environment, **When** I run CDK8s synthesis, **Then** the workload identity ServiceAccount annotations include the correct client ID.
+3. **Given** a required Azure variable is missing, **When** I run synthesis, **Then** I receive a clear error message listing the missing variable.
 
 ---
 
-### User Story 4 - Shared Azure Infrastructure Setup (Priority: P2)
+### User Story 4 - Legacy Script Replacement (Priority: P2)
 
-As a platform operator, I want Azure AD app and federated credential setup to work identically for both cluster types, so that I can use the same Azure infrastructure patterns regardless of where my cluster runs.
+As a platform operator, I want the legacy KIND scripts (`wi-kind.sh`, `wi-kind-lib.sh`) marked as deprecated and eventually removed, so that there's one clear way to bootstrap each cluster type.
 
-**Why this priority**: Azure infrastructure (AD apps, federated credentials, Key Vault access) is fundamentally the same regardless of cluster type - this is a clear consolidation opportunity.
+**Why this priority**: Reduces confusion and maintenance burden by having clear, modern workflows.
 
-**Independent Test**: Running `--setup-azure` flag creates/reuses Azure AD app and federated credentials correctly for both KIND and Talos clusters.
+**Independent Test**: Legacy scripts display deprecation warnings when sourced, and `cluster-menu.sh` is the documented approach for KIND.
 
 **Acceptance Scenarios**:
 
-1. **Given** no existing Azure AD app exists, **When** I run bootstrap with `--setup-azure` on either cluster type, **Then** an Azure AD app is created with name pattern `gitops-{cluster_type}-{cluster_name}`.
+1. **Given** I source `scripts/wi-kind-lib.sh`, **When** the file loads, **Then** a deprecation warning is displayed directing me to use `cluster-menu.sh`.
 
-2. **Given** an Azure AD app already exists, **When** I run bootstrap with `--setup-azure` again, **Then** the existing app is reused and no duplicate is created (idempotent operation).
-
-3. **Given** federated credentials are configured in `WORKLOAD_IDENTITY_SERVICE_ACCOUNTS`, **When** I run `--setup-azure`, **Then** credentials are created for each namespace:serviceaccount pair with the correct OIDC issuer URL (including trailing slash).
+2. **Given** I want to bootstrap a KIND cluster, **When** I follow CLAUDE.md documentation, **Then** I'm directed to use `source deployment/scripts/cluster-menu.sh && cluster-deploy`.
 
 ---
 
-### User Story 5 - Cluster-Specific Deployment Strategies (Priority: P3)
+### User Story 5 - Cluster-Specific Deployment Orchestration (Priority: P2)
 
-As a platform operator, I want the bootstrap to use the appropriate deployment strategy for each cluster type, so that manifests are applied correctly (idpBuilder for KIND, Helm/kubectl for Talos).
+As a platform operator, I want clear separation between cluster orchestrators (cluster-menu.sh for KIND, bootstrap-cluster.sh for Talos), so that each cluster type has an appropriate deployment strategy.
 
-**Why this priority**: This is where architectural differences legitimately require different approaches - forcing consolidation here would add complexity rather than reduce it.
+**Why this priority**: KIND uses idpbuilder (package-based), Talos uses Helm/kubectl (direct apply) - these are legitimately different approaches.
 
-**Independent Test**: After bootstrap completes, ArgoCD is running and configured correctly using the cluster-appropriate deployment method.
+**Independent Test**: KIND deployment via `cluster-menu.sh` uses idpbuilder, Talos deployment via `bootstrap-cluster.sh` uses Helm.
 
 **Acceptance Scenarios**:
 
-1. **Given** a KIND cluster, **When** bootstrap completes the ArgoCD deployment phase, **Then** idpBuilder is used to deploy packages from `cdk8s/dist/`.
+1. **Given** a KIND cluster is running, **When** I run `cluster-deploy`, **Then** synthesis runs followed by `idpbuilder create --package cdk8s/dist/`.
 
-2. **Given** a Talos cluster, **When** bootstrap completes the ArgoCD deployment phase, **Then** Helm is used to install ArgoCD and kubectl applies the root ArgoCD Application.
-
-3. **Given** either cluster type, **When** bootstrap completes, **Then** ArgoCD is accessible and configured to sync from the Git repository.
+2. **Given** a Talos cluster is running, **When** I run `./scripts/bootstrap-cluster.sh`, **Then** synthesis runs followed by Helm ArgoCD installation and kubectl apply.
 
 ---
 
 ### Edge Cases
 
-- What happens when cluster type detection fails (no kubectl context, no talosctl config)?
-  - Bootstrap should fail with clear instructions on how to configure cluster access.
+- What happens when `CLUSTER_TYPE` is set to an unsupported value?
+  - Synthesis fails with error: "Unsupported CLUSTER_TYPE: {value}. Supported: kind, talos"
 
-- What happens when Azure CLI is not authenticated?
-  - Bootstrap should detect this early and prompt the user to run `az login`.
+- What happens when running synthesis without required Azure variables?
+  - Synthesis fails early with list of missing variables before any manifests are generated.
 
-- What happens when environment file is missing required variables?
-  - Bootstrap should validate required variables before proceeding and list all missing ones.
-
-- What happens when running bootstrap from a git worktree instead of main repo?
-  - Bootstrap should work correctly, detecting the repository root from the worktree.
-
-- What happens when CDK8s node_modules are outdated or missing?
-  - Bootstrap should detect this and run `npm install` automatically.
+- What happens when application config has invalid `clusterType` field?
+  - TypeScript compilation fails (type-safe enum prevents invalid values).
 
 ## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: Bootstrap script MUST detect cluster type (KIND or Talos) automatically based on kubectl context and available tools (talosctl, kind).
-- **FR-002**: Bootstrap script MUST load cluster-specific environment from `.env-files/{cluster_type}.env` using direnv or manual sourcing.
-- **FR-003**: Bootstrap script MUST validate required Azure variables (AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID, AZURE_CLIENT_ID) before proceeding.
-- **FR-004**: Bootstrap script MUST support `--setup-azure` flag for Azure AD app and federated credential setup.
-- **FR-005**: Azure AD app creation MUST be idempotent - existing apps are reused, not duplicated.
-- **FR-006**: Federated credentials MUST be created with trailing slash on OIDC issuer URL to match Kubernetes OIDC configuration.
-- **FR-007**: CDK8s synthesis MUST produce correct ArgoCD Application sources based on environment (`cnoe://` for KIND local dev, GitHub URLs for Talos).
-- **FR-008**: Bootstrap MUST use cluster-appropriate deployment strategy (idpBuilder for KIND, Helm for Talos).
-- **FR-009**: Shared libraries in `scripts/lib/` MUST be usable by both cluster-specific workflows.
-- **FR-010**: Bootstrap MUST provide clear error messages when prerequisites are not met (missing tools, authentication, configuration).
+- **FR-001**: Single `cdk8s/main.ts` MUST replace both `main-v2.ts` and `main-talos.ts`.
+- **FR-002**: `main.ts` MUST read `CLUSTER_TYPE` environment variable to determine synthesis behavior.
+- **FR-003**: For `CLUSTER_TYPE=kind`, ArgoCD Application sources MUST use `cnoe://<app>/manifests` format.
+- **FR-004**: For `CLUSTER_TYPE=talos`, ArgoCD Application sources MUST use GitHub repository URLs with manifest paths.
+- **FR-005**: Single `cdk8s/config/applications.ts` MUST replace both `applications.ts` and `talos-applications.ts`.
+- **FR-006**: Application config MUST support `clusterType: 'kind' | 'talos' | 'both'` field.
+- **FR-007**: Synthesis MUST filter applications based on `clusterType` field and current `CLUSTER_TYPE`.
+- **FR-008**: Environment files MUST follow `.env-files/{cluster_type}.env` naming convention.
+- **FR-009**: Legacy scripts `wi-kind.sh` and `wi-kind-lib.sh` MUST display deprecation warnings when sourced.
+- **FR-010**: `cdk8s/lib/source-url.ts` MUST provide centralized logic for ArgoCD source URL generation.
 
-### What Should Be Consolidated
+### What Gets Consolidated
 
-Based on analysis of existing scripts, these areas have high overlap and should be unified:
+| Component | Before | After |
+|-----------|--------|-------|
+| CDK8s entry point | `main-v2.ts`, `main-talos.ts` | `main.ts` |
+| App configuration | `applications.ts`, `talos-applications.ts` | `applications.ts` with `clusterType` field |
+| Environment files | `wi.env`, `talos.env` | `kind.env`, `talos.env` |
+| Source URL logic | Inline in each main file | `cdk8s/lib/source-url.ts` |
 
-- **Azure Infrastructure**: `scripts/lib/azure.sh` functions work identically for both clusters
-- **Common Utilities**: `scripts/lib/common.sh` logging and helper functions
-- **direnv Configuration**: Root `.envrc` with cluster detection and environment loading
-- **CDK8s Synthesis Core**: Most chart logic is cluster-agnostic, only ArgoCD source URLs differ
-- **Validation Logic**: Checking for required tools, Azure auth, environment variables
+### What Remains Distinct
 
-### What Should Remain Distinct
-
-Based on architectural differences, these areas should have cluster-specific implementations:
-
-- **Cluster Creation**: KIND uses `kind create cluster`, Talos uses different provisioning
-- **ArgoCD Installation**: KIND uses idpBuilder, Talos uses Helm
-- **OIDC/JWKS**: KIND may have different OIDC setup than Talos
-- **Manifest Application**: KIND uses idpBuilder packages, Talos uses kubectl/Helm
-- **Ingress Configuration**: KIND has idpBuilder ingress-nginx, Talos may use different ingress
+| Component | KIND | Talos | Reason |
+|-----------|------|-------|--------|
+| Orchestrator | `cluster-menu.sh` | `bootstrap-cluster.sh` | Different deployment strategies |
+| Deployment method | idpbuilder | Helm + kubectl | Architectural difference |
+| ArgoCD source URLs | `cnoe://` (rewritten to Gitea) | GitHub URLs | Different Git sources |
 
 ### Key Entities
 
-- **ClusterType**: Enumeration of supported cluster types (kind, talos) with associated configuration
-- **EnvironmentFile**: Cluster-specific configuration containing Azure IDs, OIDC issuer, service accounts
-- **AzureAdApp**: Azure AD application for workload identity with associated federated credentials
-- **BootstrapPhase**: Named phases of the bootstrap process (validate, azure-setup, synth, deploy, verify)
+- **ClusterType**: Enum `'kind' | 'talos'` determining synthesis and deployment behavior
+- **ApplicationConfig**: Configuration object with `name`, `namespace`, `chart`, `clusterType`, and ArgoCD settings
+- **SourceUrl**: Generated ArgoCD Application source URL based on cluster type
 
 ## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: A single bootstrap command successfully configures both KIND and Talos clusters without requiring cluster-specific script modifications.
-- **SC-002**: Operators can switch between KIND and Talos clusters by changing only the environment file, not the scripts or CDK8s code.
-- **SC-003**: Code duplication between KIND and Talos scripts is reduced by consolidating shared libraries (target: 50%+ reduction in duplicate lines of code).
-- **SC-004**: Bootstrap errors provide actionable messages that help operators resolve issues without consulting documentation (target: 95% of error cases have clear resolution steps).
-- **SC-005**: Adding a new cluster type requires only creating a new environment file and implementing cluster-specific deployment hooks, not modifying shared logic.
-- **SC-006**: Both cluster types can complete bootstrap in a single run without requiring manual intervention (excluding Azure AD consent if needed).
+- **SC-001**: A single `npm run synth` command produces correct manifests for both cluster types based on `CLUSTER_TYPE` environment variable.
+- **SC-002**: Line count reduction: Combined `main.ts` is smaller than sum of `main-v2.ts` + `main-talos.ts`.
+- **SC-003**: All existing applications for both cluster types continue to synthesize correctly (no regressions).
+- **SC-004**: KIND deployment via `cluster-menu.sh` completes successfully with unified synthesis.
+- **SC-005**: Talos deployment via `bootstrap-cluster.sh` completes successfully with unified synthesis.
+- **SC-006**: TypeScript compilation passes with merged application config (type safety maintained).
 
 ## Assumptions
 
-- Operators have kubectl configured with appropriate context for their target cluster
-- Azure CLI is installed and operators can authenticate with `az login`
-- Node.js 18+ is available for CDK8s synthesis
-- direnv is installed for automatic environment loading
-- Git is available for repository operations
-- Both KIND and Talos clusters support the same Kubernetes API version (1.29+)
+- Operators have Node.js 18+ installed for CDK8s synthesis
+- `CLUSTER_TYPE` environment variable will be set before synthesis (via direnv or manual export)
+- Both cluster types support Kubernetes API version 1.29+
+- GitHub repository URL format is consistent (`https://github.com/<org>/<repo>.git`)
+- KIND uses idpbuilder exclusively; no manual kubectl apply needed
+- Talos bootstrap continues to use existing 4-phase approach

@@ -1,224 +1,237 @@
 # Implementation Plan: Consolidate Bootstrap Between KIND and Talos Clusters
 
 **Branch**: `106-consolidate-bootstrap-between` | **Date**: 2025-12-07 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/106-consolidate-bootstrap-between/spec.md`
 
 ## Summary
 
-Consolidate shared scripting and configuration between KIND and Talos cluster bootstrap workflows while preserving cluster-specific deployment strategies. The unified bootstrap will use environment-driven configuration (`.env-files/{cluster_type}.env`) and shared libraries (`scripts/lib/`) with a common entry point (`scripts/bootstrap-cluster.sh`) that dispatches to cluster-appropriate implementations.
+Consolidate CDK8s synthesis and configuration between KIND and Talos clusters by merging entry points, application configs, and environment files. The unified approach uses `CLUSTER_TYPE` environment variable to determine synthesis behavior while keeping cluster-specific orchestrators (cluster-menu.sh for KIND, bootstrap-cluster.sh for Talos).
 
 ## Technical Context
 
-**Language/Version**: Bash 5.x, TypeScript 5.x (CDK8s)
-**Primary Dependencies**: Azure CLI, kubectl, direnv, Node.js 18+, npm
-**Storage**: Azure Key Vault (secrets), Azure Storage (OIDC static website)
-**Testing**: Manual validation via quickstart.md scenarios, shell script validation
-**Target Platform**: Linux/macOS (development), Kubernetes 1.29+ (runtime)
-**Project Type**: Infrastructure scripts + CDK8s TypeScript
-**Performance Goals**: Bootstrap completes in < 10 minutes for either cluster type
-**Constraints**: Must maintain backwards compatibility with existing KIND workflow
-**Scale/Scope**: 2 cluster types (KIND, Talos), 50+ ArgoCD applications
+| Aspect | Value |
+|--------|-------|
+| Language | TypeScript 5.x (CDK8s), Bash 5.x (scripts) |
+| Dependencies | Node.js 18+, npm, idpbuilder, Helm, kubectl |
+| Storage | Azure Key Vault (secrets), Azure Storage (OIDC) |
+| Testing | Manual validation via synthesis and deployment |
+| Target Platform | KIND (local dev), Talos (production) |
+| Constraints | No backward compatibility required |
 
-## Constitution Check
+## File Changes Overview
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+### Files to CREATE
 
-No constitution file exists for this project. Proceeding with best practices:
+| File | Purpose |
+|------|---------|
+| `cdk8s/main.ts` | Unified synthesis entry point |
+| `cdk8s/lib/source-url.ts` | Centralized ArgoCD source URL logic |
+| `.env-files/kind.env` | Renamed from wi.env |
 
-- [x] Keep implementation simple (shell scripts + TypeScript)
-- [x] Avoid over-abstraction (use strategy pattern only where needed)
-- [x] Maintain backwards compatibility (keep `wi-kind-lib.sh` as fallback)
-- [x] Prefer composition over inheritance in script design
+### Files to DELETE (after merge)
 
-## Project Structure
+| File | Replacement |
+|------|-------------|
+| `cdk8s/main-v2.ts` | `cdk8s/main.ts` |
+| `cdk8s/main-talos.ts` | `cdk8s/main.ts` |
+| `cdk8s/config/talos-applications.ts` | Merged into `cdk8s/config/applications.ts` |
+| `.env-files/wi.env` | Renamed to `.env-files/kind.env` |
 
-### Documentation (this feature)
+### Files to MODIFY
 
-```
-specs/106-consolidate-bootstrap-between/
-├── plan.md              # This file
-├── research.md          # Phase 0 output - completed
-├── data-model.md        # Phase 1 output - completed
-├── quickstart.md        # Phase 1 output - completed
-└── tasks.md             # Phase 2 output (via /speckit.tasks)
-```
+| File | Changes |
+|------|---------|
+| `cdk8s/config/applications.ts` | Add `clusterType` field, merge Talos apps |
+| `cdk8s/package.json` | Update `synth` script to use `main.ts` |
+| `scripts/wi-kind.sh` | Add deprecation warning |
+| `scripts/wi-kind-lib.sh` | Add deprecation warning |
+| `deployment/scripts/cluster-menu.sh` | Update synthesis command |
+| `scripts/bootstrap-cluster.sh` | Update synthesis command |
+| `CLAUDE.md` | Update documentation |
 
-### Source Code (repository root)
+### Files to KEEP (no changes)
 
-```
-# Shared Libraries (NEW/MODIFIED)
-scripts/
-├── lib/
-│   ├── common.sh        # Shared utilities (EXISTS - from Talos)
-│   ├── azure.sh         # Azure infrastructure (EXISTS - consolidate KIND functions)
-│   ├── kind.sh          # NEW: KIND-specific deployment
-│   └── talos.sh         # EXISTS: Talos-specific deployment
-├── bootstrap-cluster.sh # Unified entry point (MODIFY)
-└── .bootstrap-phase     # Phase tracking file
-
-# Environment Configuration (MODIFY)
-.env-files/
-├── kind.env             # RENAME from wi.env
-└── talos.env            # EXISTS
-
-# direnv Configuration (MODIFY)
-.envrc                   # Root direnv with cluster detection
-
-# CDK8s (MODIFY)
-cdk8s/
-├── config/
-│   └── applications.ts  # Add CLUSTER_TYPE checks
-└── lib/
-    └── source-url.ts    # NEW: Centralized source URL logic
-```
-
-**Structure Decision**: Infrastructure scripts in `scripts/lib/` with TypeScript CDK8s charts. No separate frontend/backend - this is infrastructure tooling.
-
-## Complexity Tracking
-
-*No constitution violations identified. Design follows simplicity principles.*
+| File | Reason |
+|------|--------|
+| `scripts/lib/common.sh` | Already shared |
+| `scripts/lib/azure.sh` | Already shared |
+| `scripts/lib/talos.sh` | Talos-specific functions |
 
 ## Implementation Phases
 
-### Phase 1: Environment Consolidation
+### Phase 1: Create Source URL Utility
 
-**Goal**: Unified environment file structure and direnv configuration
-
-**Deliverables**:
-1. Rename `.env-files/wi.env` to `.env-files/kind.env`
-2. Update root `.envrc` with unified `detect_cluster_type()` function
-3. Update `cdk8s/.envrc` to use new pattern
-4. Document environment variable requirements
-
-**Validation**:
-- `cd` into project with KIND context → `echo $CLUSTER_TYPE` returns "kind"
-- `cd` into project with Talos context → `echo $CLUSTER_TYPE` returns "talos"
-
-### Phase 2: Common Library Consolidation
-
-**Goal**: Single set of shared utilities
+**Goal**: Centralized logic for ArgoCD source URL generation
 
 **Deliverables**:
-1. Merge KIND `wi-kind-lib.sh` Azure functions into `scripts/lib/azure.sh`
-2. Add `detect_cluster_type()` to `scripts/lib/common.sh`
-3. Add `require_tool()` function for CLI validation
-4. Update logging to match Talos pattern (consistent colors)
+1. Create `cdk8s/lib/source-url.ts`
+2. Export `getSourceUrl(appName: string): ApplicationSource` function
+3. Handle KIND (`cnoe://`) vs Talos (GitHub) URL generation
 
-**Validation**:
-- Both KIND and Talos scripts can source `scripts/lib/common.sh`
-- Azure functions work for both cluster types
-
-### Phase 3: Bootstrap Unification
-
-**Goal**: Single entry point that works for both clusters
-
-**Deliverables**:
-1. Create `scripts/lib/kind.sh` with KIND-specific deployment functions
-2. Modify `scripts/bootstrap-cluster.sh` to dispatch based on `CLUSTER_TYPE`
-3. Add phase tracking for resumable bootstrap
-4. Implement common validation phase
-
-**Functions in unified bootstrap**:
-```
-bootstrap-cluster.sh
-├── load_environment()      # Load from .env-files/{type}.env
-├── validate_prerequisites() # Common validation
-├── setup_azure()           # Azure AD app + federated creds
-├── synthesize_manifests()  # CDK8s synthesis
-├── deploy_argocd()         # Dispatch to kind.sh or talos.sh
-└── verify_deployment()     # Common verification
-```
-
-**Validation**:
-- `./scripts/bootstrap-cluster.sh --setup-azure` works on KIND
-- `./scripts/bootstrap-cluster.sh --setup-azure` works on Talos
-- Running twice is idempotent for both clusters
-
-### Phase 4: CDK8s Source URL Logic
-
-**Goal**: Synthesis produces correct ArgoCD source URLs per cluster type
-
-**Deliverables**:
-1. Create `cdk8s/lib/source-url.ts` utility
-2. Update ArgoCD Application charts to use `getSourceUrl()`
-3. Test synthesis for both cluster types
-
-**Logic**:
+**Key Logic**:
 ```typescript
-export function getSourceUrl(appName: string): string {
-  const clusterType = process.env.CLUSTER_TYPE || 'kind';
-  const environment = process.env.ENVIRONMENT || 'dev';
+export type ClusterType = 'kind' | 'talos';
 
-  if (clusterType === 'kind' && environment === 'dev') {
-    return `cnoe://${appName}/manifests`;
+export interface ApplicationSource {
+  repoURL: string;
+  path?: string;
+  targetRevision?: string;
+}
+
+export function getSourceUrl(appName: string, clusterType: ClusterType): ApplicationSource {
+  if (clusterType === 'kind') {
+    return { repoURL: `cnoe://${appName}/manifests` };
   }
-  return process.env.GIT_REPO_URL || 'https://github.com/PittampalliOrg/stacks.git';
+  const gitUrl = process.env.GIT_REPO_URL || 'https://github.com/PittampalliOrg/stacks.git';
+  const gitBranch = process.env.GIT_BRANCH || 'main';
+  return {
+    repoURL: gitUrl,
+    path: `cdk8s/dist/${appName}/manifests`,
+    targetRevision: gitBranch,
+  };
 }
 ```
 
-**Validation**:
-- KIND synthesis produces `cnoe://` URLs
-- Talos synthesis produces GitHub URLs
+### Phase 2: Merge Application Configs
 
-### Phase 5: Cluster Menu Updates
-
-**Goal**: Consistent cluster menu experience
+**Goal**: Single applications.ts with clusterType field
 
 **Deliverables**:
-1. Update `deployment/scripts/cluster-menu.sh` to use shared libraries
-2. Ensure `cluster-menu-talos.sh` uses same patterns
-3. Add unified status commands
+1. Add `clusterType: 'kind' | 'talos' | 'both'` to ApplicationConfig interface
+2. Merge all apps from `talos-applications.ts` into `applications.ts`
+3. Add clusterType field to each app config
+4. Delete `talos-applications.ts`
 
-**Validation**:
-- `cluster-update` works for KIND
-- `tclu` works for Talos
-- Both use same underlying synthesis and git logic
+**Example Config**:
+```typescript
+export interface ApplicationConfig {
+  name: string;
+  namespace: string;
+  clusterType: 'kind' | 'talos' | 'both';
+  chart: { type: string; props?: Record<string, unknown> };
+  argocd?: { syncWave?: string; labels?: Record<string, string> };
+}
+```
 
-## Risk Mitigation
+### Phase 3: Create Unified main.ts
 
-### Backwards Compatibility
+**Goal**: Single synthesis entry point
 
-- Keep `scripts/wi-kind-lib.sh` unchanged during transition
-- Add deprecation warnings if old script is sourced directly
-- Document migration path in quickstart.md
+**Deliverables**:
+1. Create `cdk8s/main.ts` combining logic from both main files
+2. Filter apps by clusterType during synthesis
+3. Use `getSourceUrl()` for ArgoCD Application sources
+4. Update `package.json` synth script
+5. Delete `main-v2.ts` and `main-talos.ts`
 
-### Testing Strategy
+**Key Logic**:
+```typescript
+const clusterType = (process.env.CLUSTER_TYPE || 'kind') as ClusterType;
+const apps = applicationConfigs.filter(app =>
+  app.clusterType === 'both' || app.clusterType === clusterType
+);
 
-1. **Before merge**: Test bootstrap on existing KIND cluster
-2. **Before merge**: Test bootstrap on existing Talos cluster
-3. **Regression check**: Verify all ArgoCD applications sync successfully
-4. **Idempotency check**: Run bootstrap twice, verify no duplicates
+for (const appConfig of apps) {
+  const source = getSourceUrl(appConfig.name, clusterType);
+  // Generate ArgoCD Application with source
+}
+```
+
+### Phase 4: Environment File Consolidation
+
+**Goal**: Consistent naming convention
+
+**Deliverables**:
+1. Rename `.env-files/wi.env` to `.env-files/kind.env`
+2. Add `CLUSTER_TYPE=kind` to kind.env
+3. Verify `CLUSTER_TYPE=talos` exists in talos.env
+4. Update any scripts that reference wi.env
+
+### Phase 5: Script Updates
+
+**Goal**: Update orchestrators and deprecate legacy scripts
+
+**Deliverables**:
+1. Update `cluster-menu.sh` to use new synthesis
+2. Update `bootstrap-cluster.sh` to use new synthesis
+3. Add deprecation warnings to `wi-kind.sh` and `wi-kind-lib.sh`
+4. Update CLAUDE.md documentation
 
 ## Dependencies
 
+### Execution Order
+
+```
+Phase 1 (source-url.ts)
+    ↓
+Phase 2 (merge configs)
+    ↓
+Phase 3 (main.ts)
+    ↓
+Phase 4 (env files)
+    ↓
+Phase 5 (scripts)
+```
+
 ### External Dependencies
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| Azure CLI | 2.50+ | Azure infrastructure management |
-| kubectl | 1.29+ | Kubernetes cluster access |
-| direnv | 2.32+ | Environment auto-loading |
-| Node.js | 18+ | CDK8s synthesis |
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Node.js | 18+ | TypeScript compilation |
 | npm | 9+ | Package management |
+| idpbuilder | latest | KIND deployment |
+| Helm | 3+ | Talos ArgoCD installation |
 
-### Internal Dependencies
+## Validation Plan
 
-| File | Depends On |
-|------|------------|
-| `scripts/bootstrap-cluster.sh` | `scripts/lib/common.sh`, `scripts/lib/azure.sh` |
-| `scripts/lib/azure.sh` | `scripts/lib/common.sh` |
-| `scripts/lib/kind.sh` | `scripts/lib/common.sh` |
-| `scripts/lib/talos.sh` | `scripts/lib/common.sh` |
+### Per-Phase Validation
+
+| Phase | Validation Command |
+|-------|-------------------|
+| 1 | `npx tsc --noEmit` (compiles) |
+| 2 | `npx tsc --noEmit` (compiles) |
+| 3 | `CLUSTER_TYPE=kind npm run synth` (produces cnoe:// URLs) |
+| 3 | `CLUSTER_TYPE=talos npm run synth` (produces GitHub URLs) |
+| 4 | `source .env-files/kind.env && echo $CLUSTER_TYPE` (outputs "kind") |
+| 5 | `cluster-deploy` on KIND cluster works |
+
+### End-to-End Validation
+
+1. **KIND Synthesis Test**:
+   ```bash
+   cd cdk8s
+   CLUSTER_TYPE=kind npm run synth
+   grep -r "cnoe://" dist/*.yaml  # Should find cnoe:// URLs
+   ```
+
+2. **Talos Synthesis Test**:
+   ```bash
+   cd cdk8s
+   CLUSTER_TYPE=talos npm run synth
+   grep -r "github.com" dist/*.yaml  # Should find GitHub URLs
+   ```
+
+3. **KIND Deployment Test**:
+   ```bash
+   source deployment/scripts/cluster-menu.sh
+   cluster-deploy  # Full deployment on KIND
+   kubectl get applications -n argocd  # Verify apps synced
+   ```
+
+4. **Talos Deployment Test**:
+   ```bash
+   ./scripts/bootstrap-cluster.sh
+   kubectl get applications -n argocd  # Verify apps synced
+   ```
 
 ## Success Metrics
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Single bootstrap command | Works for both clusters | Manual test |
-| Code duplication reduction | 50%+ | Line count comparison |
-| Bootstrap time | < 10 minutes | Timed execution |
-| Azure AD app idempotency | No duplicates | `az ad app list` |
-| Error message clarity | 95% actionable | Review error outputs |
+| Files reduced | 3 files | main-v2.ts + main-talos.ts + talos-applications.ts → 0 |
+| Single synth command | Works for both | `npm run synth` with CLUSTER_TYPE |
+| TypeScript compiles | No errors | `npx tsc --noEmit` |
+| KIND deployment | Works | `cluster-deploy` succeeds |
+| Talos deployment | Works | `bootstrap-cluster.sh` succeeds |
 
 ## Next Steps
 

@@ -1,7 +1,8 @@
 # Specification Quality Checklist: Consolidate Bootstrap Between KIND and Talos Clusters
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Purpose**: Validate specification completeness and quality before proceeding to implementation
 **Created**: 2025-12-07
+**Updated**: 2025-12-07 (Revised)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -29,25 +30,41 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
-## Consolidation Analysis
+## Revision Summary (2025-12-07)
 
-The specification correctly identifies:
+The spec/plan/tasks have been revised based on user feedback:
 
-### Areas for Consolidation (High Value)
-- Azure infrastructure setup (identical across cluster types)
-- Common utilities (logging, validation, retry logic)
-- direnv configuration (same pattern, different env files)
-- CDK8s synthesis core (most charts are cluster-agnostic)
+### Key Changes
 
-### Areas to Keep Distinct (Architectural Necessity)
-- Cluster creation methods (KIND vs Talos)
-- ArgoCD installation (idpBuilder vs Helm)
-- Manifest application strategies
-- Ingress configuration
+1. **No backward compatibility** - Legacy scripts will be deprecated, not maintained
+2. **Single main.ts** - Merge `main-v2.ts` and `main-talos.ts` into unified entry point
+3. **Merged application configs** - Single `applications.ts` with `clusterType` field
+4. **Reduced task count** - 16 tasks (down from 33) due to consolidation
+
+### User Decisions
+
+| Question | Answer |
+|----------|--------|
+| Delete legacy scripts? | Keep as reference (deprecated) |
+| CDK8s entry point? | Single main.ts |
+| Application configs? | Merge configs |
+
+### Files Affected
+
+**DELETE (after merge):**
+- `cdk8s/main-v2.ts`
+- `cdk8s/main-talos.ts`
+- `cdk8s/config/talos-applications.ts`
+
+**CREATE:**
+- `cdk8s/main.ts`
+- `cdk8s/lib/source-url.ts`
+
+**RENAME:**
+- `.env-files/wi.env` → `.env-files/kind.env`
 
 ## Notes
 
-- Specification is ready for `/speckit.plan`
-- All items pass quality validation
-- Clear separation between consolidation opportunities and architectural differences
-- User stories are independently testable and prioritized
+- All items pass - specification is ready for implementation
+- Run `/speckit.implement` or start Phase 1 tasks manually
+- Critical path: Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 6
