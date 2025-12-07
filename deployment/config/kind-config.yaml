@@ -4,11 +4,11 @@ nodes:
 - role: control-plane
   extraMounts:
     # Mount Azure Workload Identity service account keys
-    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/ref-implementation/azure-workload-identity/keys
+    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/main/ref-implementation/azure-workload-identity/keys
       containerPath: /etc/kubernetes/pki/custom-keys
       readOnly: true
     # Mount Docker Hub registry config (with auth from 1Password)
-    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/101-improve-tailscale/deployment/config/containerd
+    - hostPath: /home/vpittamp/repos/PittampalliOrg/stacks/main/deployment/config/containerd
       containerPath: /etc/containerd/certs.d
       readOnly: true
 

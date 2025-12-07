@@ -35,12 +35,6 @@ export interface TailscaleSecretsChartProps extends ChartProps {
   authKeySecretName?: string;
 
   /**
-   * Target secret name for OAuth credentials
-   * @default 'operator-oauth'
-   */
-  oauthSecretName?: string;
-
-  /**
    * Refresh interval for secrets
    * @default '24h'
    */
@@ -61,7 +55,6 @@ export class TailscaleSecretsChart extends Chart {
       namespace = 'tailscale',
       secretStoreName = 'azure-keyvault-store',
       authKeySecretName = 'tailscale-auth-key',
-      oauthSecretName = 'operator-oauth',
       refreshInterval = '24h',
       syncWave = '-70',
     } = props;
@@ -108,53 +101,7 @@ export class TailscaleSecretsChart extends Chart {
       },
     });
 
-    // ExternalSecret for Tailscale OAuth credentials (used by Tailscale Operator)
-    new ExternalSecret(this, 'operator-oauth', {
-      metadata: {
-        name: oauthSecretName,
-        namespace,
-        annotations: {
-          'argocd.argoproj.io/sync-wave': syncWave,
-        },
-        labels: {
-          'app.kubernetes.io/managed-by': 'cdk8s',
-          'app.kubernetes.io/name': oauthSecretName,
-          'app.kubernetes.io/component': 'secrets',
-        },
-      },
-      spec: {
-        refreshInterval: refreshInterval,
-        secretStoreRef: {
-          name: secretStoreName,
-          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
-        },
-        target: {
-          name: oauthSecretName,
-          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
-          template: {
-            type: 'Opaque',
-            data: {
-              // Keys expected by Tailscale Operator Helm chart
-              'client_id': '{{ .oauth_client_id }}',
-              'client_secret': '{{ .oauth_client_secret }}',
-            },
-          },
-        },
-        data: [
-          {
-            secretKey: 'oauth_client_id',
-            remoteRef: {
-              key: 'TAILSCALE-OAUTH-CLIENT-ID',
-            },
-          },
-          {
-            secretKey: 'oauth_client_secret',
-            remoteRef: {
-              key: 'TAILSCALE-OAUTH-CLIENT-SECRET',
-            },
-          },
-        ],
-      },
-    });
+    // Note: OAuth credentials (operator-oauth) are managed by TailscaleOperatorSecretsChart
+    // to avoid duplicate resources
   }
 }
