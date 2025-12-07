@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    speckit.io/description: Claude SDK agent - generates spec.md from feature descriptions
+  labels:
+    app: speckit-specifier
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/name: speckit-specifier
+    app.kubernetes.io/part-of: speckit
+    speckit.io/agent-type: specifier
+  name: speckit-specifier
+  namespace: dapr-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: speckit-specifier
+  template:
+    metadata:
+      annotations:
+        dapr.io/app-id: speckit-specifier
+        dapr.io/app-port: "8001"
+        dapr.io/app-protocol: http
+        dapr.io/config: speckit-tracing
+        dapr.io/enable-api-logging: "true"
+        dapr.io/enable-metrics: "true"
+        dapr.io/enabled: "true"
+        dapr.io/log-level: info
+        dapr.io/sidecar-listen-addresses: 0.0.0.0
+      labels:
+        app: speckit-specifier
+        app.kubernetes.io/component: agent
+        app.kubernetes.io/name: speckit-specifier
+        app.kubernetes.io/part-of: speckit
+        speckit.io/agent-type: specifier
+    spec:
+      containers:
+        - env:
+            - name: AGENT_NAME
+              value: specifier
+            - name: AGENT_TOPIC
+              value: speckit.specifier.requests
+            - name: AGENT_APP_ID
+              value: speckit-specifier
+            - name: AGENT_PORT
+              value: "8001"
+            - name: TEAM_NAME
+              value: speckit
+            - name: BROADCAST_TOPIC
+              value: speckit.broadcast
+            - name: WORKFLOW_STATUS_TOPIC
+              value: speckit.workflow.status
+            - name: PUBSUB_NAME
+              value: messagepubsub
+            - name: WORKFLOW_STATE_STORE
+              value: workflowstatestore
+            - name: REGISTRY_STATE_STORE
+              value: agentregistrystore
+            - name: MEMORY_STORE
+              value: memorystore
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_GRPC_PORT
+              value: "50001"
+            - name: LANGFUSE_HOST
+              value: http://langfuse.observability.svc.cluster.local:3000
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_PUBLIC_KEY
+              value: pk-lf-37df8de0-fbee-4c38-a0cc-05ce1ceb22c0
+            - name: LANGFUSE_SECRET_KEY
+              value: sk-lf-76f23bdc-7782-4064-8ffd-c163c203a5b7
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+                optional: true
+          image: vpittamp/speckit-agents:claude-sdk-v9
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: specifier
+          ports:
+            - containerPort: 8001
+              name: http
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+      serviceAccountName: speckit-agents

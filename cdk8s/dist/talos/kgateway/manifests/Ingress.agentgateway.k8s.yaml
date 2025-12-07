@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  name: agentgateway
+  namespace: kgateway-system
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: agentgateway.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: agentgateway
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
