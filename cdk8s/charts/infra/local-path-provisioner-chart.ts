@@ -48,13 +48,17 @@ export class LocalPathProvisionerChart extends Chart {
     const image = props.image || 'rancher/local-path-provisioner:v0.0.26';
     const helperImage = props.helperImage || 'busybox:latest';
 
-    // Namespace
+    // Namespace - requires privileged PSS for hostPath helper pods
     new k8s.KubeNamespace(this, 'namespace', {
       metadata: {
         name: namespace,
         labels: {
           'app.kubernetes.io/name': 'local-path-provisioner',
           'app.kubernetes.io/component': 'storage',
+          // Pod Security Standards: provisioner needs hostPath volumes
+          'pod-security.kubernetes.io/enforce': 'privileged',
+          'pod-security.kubernetes.io/audit': 'privileged',
+          'pod-security.kubernetes.io/warn': 'privileged',
         },
       },
     });
