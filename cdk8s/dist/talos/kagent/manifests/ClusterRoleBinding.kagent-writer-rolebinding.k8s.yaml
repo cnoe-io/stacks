@@ -1,0 +1,19 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: kagent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kagent
+    app.kubernetes.io/part-of: kagent
+    app.kubernetes.io/version: 0.7.4
+    helm.sh/chart: kagent-0.7.4
+  name: kagent-writer-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kagent-writer-role
+subjects:
+  - kind: ServiceAccount
+    name: kagent-controller
+    namespace: kagent

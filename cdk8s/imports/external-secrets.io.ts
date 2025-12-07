@@ -13,7 +13,7 @@ export class ClusterExternalSecret extends ApiObject {
    * Returns the apiVersion and kind for "ClusterExternalSecret"
    */
   public static readonly GVK: GroupVersionKind = {
-    apiVersion: 'external-secrets.io/v1',
+    apiVersion: 'external-secrets.io/v1beta1',
     kind: 'ClusterExternalSecret',
   }
 
@@ -5113,7 +5113,7 @@ export class ClusterSecretStore extends ApiObject {
    * Returns the apiVersion and kind for "ClusterSecretStore"
    */
   public static readonly GVK: GroupVersionKind = {
-    apiVersion: 'external-secrets.io/v1',
+    apiVersion: 'external-secrets.io/v1beta1',
     kind: 'ClusterSecretStore',
   }
 
@@ -29369,7 +29369,7 @@ export class ExternalSecret extends ApiObject {
    * Returns the apiVersion and kind for "ExternalSecret"
    */
   public static readonly GVK: GroupVersionKind = {
-    apiVersion: 'external-secrets.io/v1',
+    apiVersion: 'external-secrets.io/v1beta1',
     kind: 'ExternalSecret',
   }
 
@@ -33698,7 +33698,7 @@ export class SecretStore extends ApiObject {
    * Returns the apiVersion and kind for "SecretStore"
    */
   public static readonly GVK: GroupVersionKind = {
-    apiVersion: 'external-secrets.io/v1',
+    apiVersion: 'external-secrets.io/v1beta1',
     kind: 'SecretStore',
   }
 

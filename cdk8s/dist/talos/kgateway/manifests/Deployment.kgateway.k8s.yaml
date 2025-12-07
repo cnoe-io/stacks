@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: kgateway
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kgateway
+    app.kubernetes.io/version: 1.16.0
+    helm.sh/chart: kgateway-v2.1.1
+    kgateway: kgateway
+  name: kgateway
+  namespace: kgateway-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: kgateway
+      app.kubernetes.io/name: kgateway
+      kgateway: kgateway
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9092"
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/instance: kgateway
+        app.kubernetes.io/name: kgateway
+        kgateway: kgateway
+    spec:
+      containers:
+        - env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  divisor: "1"
+                  resource: limits.memory
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  divisor: "1"
+                  resource: limits.cpu
+            - name: KGW_LOG_LEVEL
+              value: info
+            - name: KGW_XDS_SERVICE_NAME
+              value: kgateway
+            - name: KGW_XDS_SERVICE_PORT
+              value: "9977"
+            - name: KGW_AGENTGATEWAY_XDS_SERVICE_PORT
+              value: "9978"
+            - name: KGW_ENABLE_INFER_EXT
+              value: "true"
+            - name: KGW_DEFAULT_IMAGE_REGISTRY
+              value: cr.kgateway.dev/kgateway-dev
+            - name: KGW_DEFAULT_IMAGE_TAG
+              value: v2.1.1
+            - name: KGW_DEFAULT_IMAGE_PULL_POLICY
+              value: IfNotPresent
+            - name: KGW_DISCOVERY_NAMESPACE_SELECTORS
+              value: "[]"
+            - name: KGW_POLICY_MERGE
+              value: "{}"
+            - name: KGW_VALIDATION_MODE
+              value: standard
+            - name: KGW_ENABLE_AGENTGATEWAY
+              value: "true"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          image: cr.kgateway.dev/kgateway-dev/kgateway:v2.1.1
+          imagePullPolicy: IfNotPresent
+          name: kgateway
+          ports:
+            - containerPort: 9977
+              name: grpc-xds
+              protocol: TCP
+            - containerPort: 9978
+              name: grpc-xds-agw
+              protocol: TCP
+            - containerPort: 9093
+              name: health
+              protocol: TCP
+            - containerPort: 9092
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 9093
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources: {}
+      serviceAccountName: kgateway

@@ -1,0 +1,17 @@
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+  labels:
+    app.kubernetes.io/instance: kagent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kagent
+    app.kubernetes.io/part-of: kagent
+    app.kubernetes.io/version: 0.7.4
+    helm.sh/chart: kagent-0.7.4
+  name: kagent-tool-server
+  namespace: kagent
+spec:
+  description: Official KAgent tool server
+  sseReadTimeout: 5m0s
+  timeout: 30s
+  url: http://kagent-tools.kagent:8084/mcp
