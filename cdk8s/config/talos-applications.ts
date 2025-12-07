@@ -7,6 +7,7 @@
  *
  * Sync Wave Ordering:
  *   -110: Foundation (CNI, critical infra)
+ *   -105: Storage (local-path-provisioner)
  *   -100: Operators (ESO, Tailscale)
  *    -94: Identity (Workload Identity patches)
  *    -92: Stores (ClusterSecretStore)
@@ -44,6 +45,34 @@ const env = {
  * Ordered by sync wave for deployment sequencing
  */
 export const talosApplications: ApplicationConfig[] = [
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYNC WAVE -105: Storage Infrastructure
+  // Must deploy before anything requiring persistent storage
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    name: 'local-path-provisioner',
+    namespace: 'local-path-storage',
+    chart: {
+      type: 'LocalPathProvisionerChart',
+      props: {
+        storagePath: '/opt/local-path-provisioner',
+        isDefault: true,
+      },
+    },
+    argocd: {
+      syncWave: '-105',
+      labels: {
+        'app.kubernetes.io/component': 'storage',
+        'app.kubernetes.io/part-of': 'infrastructure',
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true'],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // SYNC WAVE -100: Operators
   // ═══════════════════════════════════════════════════════════════════════════

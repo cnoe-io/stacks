@@ -21,8 +21,8 @@ spec:
   project: default
   sources:
     - path: cdk8s/dist/talos/gateway-api-crds/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: 102-bootstrap-talos-argocd
+      repoURL: https://github.com/PittampalliOrg/stacks.git".git
+      targetRevision: '"102-bootstrap-talos-argocd"'
   syncPolicy:
     automated:
       prune: false
