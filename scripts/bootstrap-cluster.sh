@@ -4,13 +4,20 @@
 # Feature: 102-bootstrap-talos-argocd
 #
 # This script orchestrates the complete cluster bootstrap process:
+# 0. (Optional) Setup Azure infrastructure for Workload Identity
 # 1. Validate prerequisites (tools, cluster access, Azure)
 # 2. Install ArgoCD via Helm
 # 3. Sync JWKS to Azure Storage for Workload Identity
 # 4. Apply ArgoCD root application for GitOps takeover
 #
 # Usage:
-#   ./scripts/bootstrap-cluster.sh [--skip-jwks] [--force]
+#   ./scripts/bootstrap-cluster.sh [OPTIONS]
+#
+# Options:
+#   --setup-azure  Run Azure infrastructure setup first
+#   --skip-jwks    Skip JWKS sync to Azure Storage
+#   --force        Force reinstall even if already installed
+#   -h, --help     Show this help message
 #
 # Environment variables:
 #   See scripts/.env.template for required variables
@@ -72,9 +79,14 @@ ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.3.0}"
 # Parse command line arguments
 SKIP_JWKS=false
 FORCE_REINSTALL=false
+SETUP_AZURE=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --setup-azure)
+            SETUP_AZURE=true
+            shift
+            ;;
         --skip-jwks)
             SKIP_JWKS=true
             shift
@@ -84,12 +96,31 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo "Usage: $0 [--skip-jwks] [--force]"
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Bootstrap a Talos Linux cluster with ArgoCD GitOps and Azure Workload Identity"
             echo ""
             echo "Options:"
-            echo "  --skip-jwks  Skip JWKS sync to Azure Storage"
-            echo "  --force      Force reinstall even if already installed"
-            echo "  -h, --help   Show this help message"
+            echo "  --setup-azure  Run Azure infrastructure setup first (storage, AD app, federated creds)"
+            echo "  --skip-jwks    Skip JWKS sync to Azure Storage"
+            echo "  --force        Force reinstall even if already installed"
+            echo "  -h, --help     Show this help message"
+            echo ""
+            echo "Phases:"
+            echo "  0. Azure Infrastructure (if --setup-azure)"
+            echo "  1. Validate prerequisites"
+            echo "  2. Install ArgoCD via Helm"
+            echo "  3. Sync JWKS to Azure Storage"
+            echo "  4. Apply ArgoCD root application"
+            echo ""
+            echo "Environment Variables (see .env.template):"
+            echo "  AZURE_SUBSCRIPTION_ID  Azure subscription"
+            echo "  AZURE_TENANT_ID        Azure AD tenant"
+            echo "  AZURE_CLIENT_ID        Azure AD app client ID"
+            echo "  AZURE_KEYVAULT_NAME    Key Vault for secrets"
+            echo "  AZURE_STORAGE_ACCOUNT  Storage for OIDC"
+            echo "  GIT_REPO_URL           Git repo for ArgoCD"
+            echo "  GIT_BRANCH             Git branch for ArgoCD"
             exit 0
             ;;
         *)
@@ -114,6 +145,35 @@ set_phase() {
     local phase="$1"
     echo "$phase" > "$PHASE_FILE"
     log_info "Phase updated: $phase"
+}
+
+#
+# Phase 0: Azure Infrastructure Setup (optional)
+#
+setup_azure_infrastructure() {
+    print_header "Phase 0: Azure Infrastructure Setup"
+
+    if [[ -x "${SCRIPT_DIR}/00-bootstrap-azure-infra.sh" ]]; then
+        local azure_flags=""
+        if [[ "$FORCE_REINSTALL" == "true" ]]; then
+            azure_flags="--force"
+        fi
+        "${SCRIPT_DIR}/00-bootstrap-azure-infra.sh" $azure_flags
+
+        # Reload environment after Azure setup
+        if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+            log_info "Reloading environment from: ${SCRIPT_DIR}/.env"
+            set -a
+            source "${SCRIPT_DIR}/.env"
+            set +a
+        fi
+    else
+        log_error "Azure infrastructure script not found: ${SCRIPT_DIR}/00-bootstrap-azure-infra.sh"
+        return 1
+    fi
+
+    set_phase "azure-ready"
+    print_completion "Azure infrastructure" "success"
 }
 
 #
@@ -280,9 +340,15 @@ main() {
     current_phase=$(get_current_phase)
     log_info "Current phase: $current_phase"
 
+    # Handle Azure infrastructure setup if requested
+    if [[ "$SETUP_AZURE" == "true" ]] && [[ "$current_phase" == "init" ]]; then
+        setup_azure_infrastructure
+        current_phase="azure-ready"
+    fi
+
     # Execute bootstrap phases
     case "$current_phase" in
-        init)
+        init|azure-ready)
             validate_prerequisites
             install_argocd
             sync_jwks
@@ -295,8 +361,11 @@ main() {
         jwks-synced)
             apply_base_apps
             ;;
-        gitops-active)
+        gitops-active|complete)
             if [[ "$FORCE_REINSTALL" == "true" ]]; then
+                if [[ "$SETUP_AZURE" == "true" ]]; then
+                    setup_azure_infrastructure
+                fi
                 validate_prerequisites
                 install_argocd
                 sync_jwks

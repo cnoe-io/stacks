@@ -10,6 +10,9 @@ cdk8s/datree.tar.gz
 **/keys/sa.key
 **/keys/sa.pub
 **/jwks.json
+
+# Talos cluster configs (contain PKI secrets)
+talos-configs/
 node_modules/tsx/dist/
 
 node_modules/

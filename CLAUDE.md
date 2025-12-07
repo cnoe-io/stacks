@@ -47,9 +47,14 @@ idpBuilder simplifies spinning up a complete internal developer platform (IDP) o
 **Purpose**: Bootstrap a Talos Linux cluster with ArgoCD GitOps, External Secrets Operator with Azure Workload Identity, and Tailscale for secure remote access.
 
 ```bash
-# Quick start - full bootstrap
+# Quick start - fresh setup (creates Azure resources automatically)
 cd scripts
-cp .env.template .env  # Edit with your Azure and Git configuration
+cp .env.template .env  # Set AZURE_SUBSCRIPTION_ID and AZURE_TENANT_ID
+./bootstrap-cluster.sh --setup-azure
+
+# Quick start - existing Azure infrastructure
+cd scripts
+cp .env.template .env  # Fill in all Azure values
 ./bootstrap-cluster.sh
 
 # Resume after failure (idempotent)
@@ -60,17 +65,73 @@ cp .env.template .env  # Edit with your Azure and Git configuration
 
 # Skip JWKS sync (if Azure Storage already configured)
 ./bootstrap-cluster.sh --skip-jwks
+
+# Setup Azure infrastructure only (without cluster bootstrap)
+./00-bootstrap-azure-infra.sh
 ```
+
+**Bootstrap Phases**:
+
+0. **Azure Infrastructure** (optional, with `--setup-azure`)
+   - Create OIDC storage account for JWKS hosting
+   - Create Azure AD application for Workload Identity
+   - Create federated identity credentials
+   - Configure Key Vault access
+1. **Validate Prerequisites** - Check tools, cluster, Azure access
+2. **Install ArgoCD** - Deploy via Helm with custom values
+3. **Sync JWKS** - Upload OIDC discovery documents to Azure Storage
+4. **Apply GitOps** - Deploy ArgoCD root application (App-of-Apps)
 
 **Bootstrap Scripts**:
 
 | Script | Purpose |
 |--------|---------|
 | `scripts/bootstrap-cluster.sh` | Main orchestrator - runs all phases |
+| `scripts/00-bootstrap-azure-infra.sh` | Create Azure infrastructure (storage, AD app, federated creds) |
 | `scripts/01-install-argocd.sh` | Install ArgoCD via Helm chart |
 | `scripts/02-sync-jwks.sh` | Sync OIDC JWKS to Azure Storage |
 | `scripts/03-apply-base-apps.sh` | Apply ArgoCD root application |
 | `scripts/generate-remote-kubeconfig.sh` | Generate kubeconfig for Tailscale access |
+
+**Azure Workload Identity Architecture**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Kubernetes Cluster                               │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  ServiceAccount: external-secrets/external-secrets              │    │
+│  │  Labels: azure.workload.identity/use: "true"                    │    │
+│  │  Annotations:                                                    │    │
+│  │    azure.workload.identity/client-id: <AZURE_CLIENT_ID>         │    │
+│  │    azure.workload.identity/tenant-id: <AZURE_TENANT_ID>         │    │
+│  └──────────────────────────┬──────────────────────────────────────┘    │
+│                             │ JWT Token                                  │
+└─────────────────────────────┼───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Azure Storage (OIDC Issuer)                          │
+│  URL: https://oidcissuerXXXXXX.z13.web.core.windows.net/                │
+│  ├── .well-known/openid-configuration                                   │
+│  └── openid/v1/jwks  ◄── Contains cluster signing keys                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ Validates JWT against JWKS
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Azure AD Application                            │
+│  Client ID: <AZURE_CLIENT_ID>                                           │
+│  Federated Credentials:                                                  │
+│    - external-secrets-external-secrets                                   │
+│      Subject: system:serviceaccount:external-secrets:external-secrets   │
+└──────────────────────────────┬──────────────────────────────────────────┘
+                              │ Issues Azure token
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Azure Key Vault                                  │
+│  Role Assignment: Key Vault Secrets User → Azure AD App                 │
+│  Secrets: ANTHROPIC-API-KEY, OPENAI-API-KEY, LANGFUSE-*, etc.          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 **CDK8s for Talos**:
 ```bash
