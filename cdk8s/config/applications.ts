@@ -396,7 +396,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       ignoreDifferences: [
         // Only ignore status fields that are managed by controllers
         { group: 'kargo.akuity.io', kind: 'Project', jsonPointers: ['/status'] },
-        { group: 'kargo.akuity.io', kind: 'ProjectConfig', jsonPointers: ['/status'] }
+        { group: 'kargo.akuity.io', kind: 'ProjectConfig', jsonPointers: ['/status'] },
+        // Kargo controller adds system:authenticated group to RoleBinding subjects
+        { group: 'rbac.authorization.k8s.io', kind: 'RoleBinding', jsonPointers: ['/subjects'] }
       ]
     }
   },
