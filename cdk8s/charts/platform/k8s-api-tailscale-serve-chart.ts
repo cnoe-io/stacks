@@ -349,6 +349,10 @@ echo "Secret ${authKeySecretName} found, proceeding..."
  * Note: In userspace networking mode with Tailscale Services, netstack routes
  * incoming traffic to the exposed port (443), not the configured backend port.
  * We use socat to forward from 443 -> 8001 (kubectl-proxy).
+ *
+ * Tailscale CLI notes:
+ * - Use --bg flag to run serve in background mode (required when using --service)
+ * - The serve command defaults to --bg=true when --service is set
  */
 function generateK8sApiServeScript(serviceName: string): string {
   return `
@@ -386,10 +390,12 @@ socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
 
 # expose kubectl-proxy via tailscale serve on HTTPS 443
 # The serve command tells Tailscale to route traffic to localhost:443 (socat)
+# Use --bg flag to run in background mode
+echo "Starting Tailscale serve for service svc:${serviceName}..."
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:443
+  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:443
 
-echo "Kubernetes API proxy running at https://${serviceName}.<tailnet>.ts.net"
+echo "Kubernetes API proxy running at https://svc-${serviceName}.<tailnet>.ts.net"
 exec tail -f /dev/null
 `;
 }

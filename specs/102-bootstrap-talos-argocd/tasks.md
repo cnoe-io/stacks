@@ -177,7 +177,7 @@ This is an Infrastructure-as-Code project with:
 - [X] T064 Validate quickstart.md steps against actual bootstrap process in `specs/102-bootstrap-talos-argocd/quickstart.md`
 - [X] T065 Add shellcheck validation to all scripts in `scripts/`
 - [X] T066 Add TypeScript strict mode validation to CDK8s charts in `cdk8s/tsconfig.json`
-- [ ] T067 Run full bootstrap on fresh Talos cluster and document any issues in `specs/102-bootstrap-talos-argocd/quickstart.md`
+- [X] T067 Run full bootstrap on fresh Talos cluster and document any issues in `specs/102-bootstrap-talos-argocd/quickstart.md`
 
 ---
 

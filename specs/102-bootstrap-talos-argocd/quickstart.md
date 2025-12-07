@@ -318,6 +318,164 @@ kubectl logs -n tailscale deploy/argocd-tailscale-serve
 
 ---
 
+## Known Issues and Fixes (T067 Bootstrap Test)
+
+This section documents issues found during full bootstrap testing on December 7, 2025.
+
+### Issue 1: Talos API Server Service-Account-Issuer Mismatch
+
+**Symptom**: ClusterSecretStore shows `InvalidProviderConfig` with error:
+```
+AADSTS700211: No matching federated identity record found for presented assertion issuer 'https://10.0.1.1:6443'
+```
+
+**Cause**: Talos defaults `service-account-issuer` to the API server's internal IP, but Azure Workload Identity expects the OIDC issuer URL (`https://oidcissuer65846b7df97b.z13.web.core.windows.net/`).
+
+**Fix**: Patch Talos machine config to use the Azure Storage static website URL as the issuer:
+```bash
+# Via Tailscale SSH to Hetzner host, then to Talos nodes
+talosctl -n 10.0.1.1,10.0.1.2,10.0.1.3 patch mc --patch '[{
+  "op": "add",
+  "path": "/cluster/apiServer/extraArgs",
+  "value": {
+    "service-account-issuer": "https://oidcissuer65846b7df97b.z13.web.core.windows.net/"
+  }
+}]'
+```
+
+The API server will restart automatically. This patch is already included in `talos-cluster/main/patches/controlplane/all.yaml`.
+
+### Issue 2: Cilium CNI Pods Not Ready After API Server Restart
+
+**Symptom**: All Cilium pods show `0/1 Running` with logs showing:
+```
+Establishing connection to apiserver host="https://localhost:7445"
+```
+
+**Cause**: After patching the API server `service-account-issuer`, the API server restarts. Cilium pods fail to reconnect to the Talos API proxy.
+
+**Fix**: Restart the Cilium DaemonSet and operator:
+```bash
+kubectl rollout restart daemonset cilium -n kube-system
+kubectl rollout restart deployment cilium-operator -n kube-system
+```
+
+Wait ~45 seconds for pods to become ready.
+
+### Issue 3: ServiceAccount Missing Azure Annotations
+
+**Symptom**: ClusterSecretStore shows `InvalidProviderConfig` with error:
+```
+missing service account annotation: azure.workload.identity/client-id
+unable to resolve an endpoint: ... Tenant 'v2.0' not found
+```
+
+**Cause**: CDK8s synthesis used default empty values for `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` when environment variables weren't set.
+
+**Fix**: Patch the ServiceAccount with correct Azure credentials:
+```bash
+kubectl patch sa external-secrets -n external-secrets --type='merge' -p '{
+  "metadata": {
+    "annotations": {
+      "azure.workload.identity/client-id": "<YOUR_CLIENT_ID>",
+      "azure.workload.identity/tenant-id": "<YOUR_TENANT_ID>"
+    }
+  }
+}'
+kubectl rollout restart deployment -n external-secrets
+```
+
+**Prevention**: Always source environment variables before CDK8s synthesis:
+```bash
+set -a && source scripts/.env && set +a
+cd cdk8s && npm run synth:talos
+```
+
+### Issue 4: ClusterSecretStore Wrong Key Vault Name
+
+**Symptom**: ClusterSecretStore shows `Valid` but ExternalSecrets fail to sync.
+
+**Cause**: CDK8s config used default value `talos-keyvault` instead of actual vault name from `AZURE_KEYVAULT_NAME`.
+
+**Fix**: Patch the ClusterSecretStore:
+```bash
+kubectl patch clustersecretstore azure-keyvault-store --type='merge' -p '{
+  "spec": {
+    "provider": {
+      "azurekv": {
+        "vaultUrl": "https://<YOUR_KEYVAULT_NAME>.vault.azure.net"
+      }
+    }
+  }
+}'
+```
+
+**Prevention**: Verify environment variables are set during CDK8s synthesis.
+
+### Issue 5: ESO Controller Caching Stale SecretStore Status
+
+**Symptom**: ExternalSecrets show `SecretSyncedError: the desired SecretStore is not ready` even though `kubectl get clustersecretstore` shows `Valid`.
+
+**Cause**: ESO controller pods started before ClusterSecretStore was patched and cached the old invalid status.
+
+**Fix**: Restart the ESO controller:
+```bash
+kubectl rollout restart deployment external-secrets -n external-secrets
+```
+
+### Issue 6: Tailscale Serve CLI Flag Changes
+
+**Symptom**: Tailscale serve pods show `flag provided but not defined: -insecure` error.
+
+**Cause**: Tailscale CLI removed the `--insecure` flag. The new syntax uses URL prefixes like `https+insecure://` for self-signed backends.
+
+**Fix**: Updated in CDK8s charts. For ArgoCD serve, use HTTP backend since ArgoCD HA mode exposes HTTP on port 80.
+
+### Issue 7: Tailscale Serve Only Supports Localhost Proxies
+
+**Symptom**: Tailscale serve shows `only localhost or 127.0.0.1 proxies are currently supported`.
+
+**Cause**: Tailscale serve can only proxy to localhost, not remote Kubernetes services.
+
+**Fix**: Use socat to forward from localhost to the backend service:
+```bash
+# Example: Forward localhost:8080 to ArgoCD backend
+socat TCP-LISTEN:8080,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:80 &
+tailscale serve --bg --service=svc:argocd --https=443 http://127.0.0.1:8080
+```
+
+**Prevention**: The CDK8s charts now include socat proxy for Tailscale serve deployments.
+
+### Issue 8: ArgoCD HA Mode Uses HTTP Not HTTPS
+
+**Symptom**: Tailscale serve pod can't connect to ArgoCD on HTTPS port 443.
+
+**Cause**: ArgoCD in HA mode (with Redis HA and HAProxy) exposes HTTP on port 80, not HTTPS on 443. The HAProxy terminates TLS externally.
+
+**Fix**: Connect to ArgoCD backend on HTTP port 80:
+```bash
+curl -s http://argocd-server.argocd.svc.cluster.local:80/healthz
+# Returns: ok
+```
+
+**Prevention**: The CDK8s chart defaults to `backendPort: 80` and `backendHttps: false`.
+
+### Recommended Bootstrap Order
+
+After fixing these issues, the recommended order is:
+
+1. **Patch Talos** `service-account-issuer` in controlplane config
+2. **Sync JWKS** to Azure Storage (`02-sync-jwks.sh`)
+3. **Source environment** before CDK8s synthesis
+4. **Install ArgoCD** via Helm
+5. **Apply root application** (triggers ESO, Tailscale deployments)
+6. If needed, **patch ServiceAccount** and **ClusterSecretStore**
+7. **Restart Cilium** if pods are stuck after API server restart
+8. **Restart ESO** if ExternalSecrets don't sync
+9. **Approve Tailscale Services** in Tailscale Admin Console if required
+
+---
+
 ## Re-running Bootstrap
 
 The bootstrap script is idempotent. Safe to re-run:

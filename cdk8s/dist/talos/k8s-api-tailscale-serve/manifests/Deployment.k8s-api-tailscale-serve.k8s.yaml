@@ -55,10 +55,12 @@ spec:
 
               # expose kubectl-proxy via tailscale serve on HTTPS 443
               # The serve command tells Tailscale to route traffic to localhost:443 (socat)
+              # Use --bg flag to run in background mode
+              echo "Starting Tailscale serve for service svc:k8s-api..."
               tailscale --socket=/run/tailscale/tailscaled.sock \
-                serve --service=svc:k8s-api --https=443 http://127.0.0.1:443
+                serve --bg --service=svc:k8s-api --https=443 http://127.0.0.1:443
 
-              echo "Kubernetes API proxy running at https://k8s-api.<tailnet>.ts.net"
+              echo "Kubernetes API proxy running at https://svc-k8s-api.<tailnet>.ts.net"
               exec tail -f /dev/null
           command:
             - /bin/sh

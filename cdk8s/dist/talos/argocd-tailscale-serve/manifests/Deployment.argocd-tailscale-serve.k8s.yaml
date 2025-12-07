@@ -29,7 +29,7 @@ spec:
                 --socket=/run/tailscale/tailscaled.sock \
                 --state=/var/lib/tailscale/tailscaled.state &
 
-              # Install required tools
+              # Install required tools (socat for proxying, curl for health checks)
               apk add --no-cache socat curl >/dev/null
 
               # Wait for tailscaled to come up
@@ -44,20 +44,26 @@ spec:
                 --accept-dns=false --accept-routes=false --ssh=false
 
               # Wait for ArgoCD to be ready
-              echo "Waiting for ArgoCD backend at https://argocd-server.argocd.svc.cluster.local:443..."
+              echo "Waiting for ArgoCD backend at http://argocd-server.argocd.svc.cluster.local:443..."
               for i in $(seq 1 60); do
-                curl -k -s https://argocd-server.argocd.svc.cluster.local:443/healthz >/dev/null && break
+                curl -s http://argocd-server.argocd.svc.cluster.local:443/healthz >/dev/null && break
                 sleep 2
               done
+              echo "ArgoCD backend is ready"
 
-              # Start socat to forward from exposed port (443) to ArgoCD backend
-              # This handles the TLS passthrough/termination
-              socat TCP-LISTEN:443,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
+              # Start socat to forward from localhost:8080 to ArgoCD backend
+              # Tailscale serve only supports localhost proxies
+              echo "Starting socat proxy to argocd-server.argocd.svc.cluster.local:443..."
+              socat TCP-LISTEN:8080,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
 
-              # Expose ArgoCD via Tailscale Services
-              # The --insecure flag allows self-signed certs on the backend
+              # Wait for socat to be ready
+              sleep 1
+
+              # Expose via Tailscale Services
+              # Tailscale will handle TLS termination for external HTTPS access
+              echo "Starting Tailscale serve for service svc:argocd..."
               tailscale --socket=/run/tailscale/tailscaled.sock \
-                serve --service=svc:argocd --insecure --https=443 http://127.0.0.1:443
+                serve --bg --service=svc:argocd --https=443 http://127.0.0.1:8080
 
               echo "ArgoCD UI available at https://svc-argocd.<tailnet>.ts.net"
               exec tail -f /dev/null
