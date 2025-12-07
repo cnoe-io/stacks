@@ -116,12 +116,12 @@ check_jwks_synced() {
 extract_jwks() {
     local output_file="${1:-/tmp/jwks.json}"
 
-    log_info "Extracting JWKS from cluster..."
+    log_info "Extracting JWKS from cluster..." >&2
 
     # Extract JWKS from Kubernetes OIDC endpoint
     if ! kubectl get --raw /openid/v1/jwks > "$output_file" 2>/dev/null; then
         log_error "Failed to extract JWKS from cluster"
-        log_info "Ensure kubectl is configured and cluster is accessible"
+        log_info "Ensure kubectl is configured and cluster is accessible" >&2
         return 1
     fi
 
@@ -133,7 +133,7 @@ extract_jwks() {
 
     local key_count
     key_count=$(jq -r '.keys | length' "$output_file")
-    log_success "Extracted JWKS with $key_count keys"
+    log_success "Extracted JWKS with $key_count keys" >&2
 
     register_cleanup "$output_file"
     echo "$output_file"
@@ -146,7 +146,7 @@ generate_openid_config() {
     local issuer_url="$1"
     local output_file="${2:-/tmp/openid-configuration.json}"
 
-    log_info "Generating OpenID configuration..."
+    log_info "Generating OpenID configuration..." >&2
 
     cat > "$output_file" <<EOF
 {
@@ -164,7 +164,7 @@ generate_openid_config() {
 }
 EOF
 
-    log_success "OpenID configuration generated"
+    log_success "OpenID configuration generated" >&2
     register_cleanup "$output_file"
     echo "$output_file"
 }

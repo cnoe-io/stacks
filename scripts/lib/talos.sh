@@ -6,9 +6,11 @@
 
 set -euo pipefail
 
-# Source common functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/common.sh"
+# Source common functions (only if not already loaded)
+if [[ -z "${_COMMON_SH_LOADED:-}" ]]; then
+    _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "${_LIB_DIR}/common.sh"
+fi
 
 # Default Talos configuration
 export TALOSCONFIG="${TALOSCONFIG:-$HOME/.talos/config}"
@@ -36,17 +38,31 @@ get_control_plane_endpoint() {
     }
 }
 
-# Check cluster health via talosctl
+# Check cluster health via talosctl or kubectl
 check_cluster_health() {
     log_info "Checking Talos cluster health..."
 
-    if ! talosctl health --wait-timeout 30s &>/dev/null; then
-        log_error "Talos cluster health check failed"
-        log_info "Run: talosctl health for details"
-        return 1
+    # Try talosctl health first, but fall back to kubectl if talosctl fails
+    # (talosctl health requires port 50000 access to all nodes which may not be available)
+    if talosctl health --wait-timeout 30s &>/dev/null; then
+        log_success "Talos cluster is healthy (via talosctl)"
+        return 0
     fi
 
-    log_success "Talos cluster is healthy"
+    log_warn "talosctl health check failed, falling back to kubectl..."
+
+    # Check cluster via kubectl as fallback
+    if kubectl cluster-info &>/dev/null; then
+        local ready_nodes
+        ready_nodes=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready " || true)
+        if [[ "$ready_nodes" -gt 0 ]]; then
+            log_success "Cluster is healthy via kubectl ($ready_nodes nodes ready)"
+            return 0
+        fi
+    fi
+
+    log_error "Cluster health check failed"
+    return 1
 }
 
 # Generate kubeconfig from Talos
@@ -69,8 +85,24 @@ generate_kubeconfig() {
 setup_kubeconfig() {
     local kubeconfig_path="${1:-$HOME/.kube/talos-cluster.yaml}"
 
-    generate_kubeconfig "$kubeconfig_path"
+    # Quick check with short timeout - if current kubectl works, use it
+    if timeout 5 kubectl get nodes --no-headers &>/dev/null; then
+        log_info "Using existing kubeconfig (kubectl access confirmed)"
+        return 0
+    fi
 
+    # Try the specified path with short timeout
+    if [[ -f "$kubeconfig_path" ]]; then
+        if KUBECONFIG="$kubeconfig_path" timeout 5 kubectl get nodes --no-headers &>/dev/null; then
+            export KUBECONFIG="$kubeconfig_path"
+            log_info "Using existing kubeconfig: $KUBECONFIG"
+            return 0
+        fi
+    fi
+
+    # Generate new kubeconfig as last resort
+    log_warn "No working kubeconfig found, generating new one..."
+    generate_kubeconfig "$kubeconfig_path"
     export KUBECONFIG="$kubeconfig_path"
     log_info "KUBECONFIG set to: $KUBECONFIG"
 }
@@ -106,7 +138,7 @@ check_nodes_ready() {
     log_info "Checking node readiness..."
 
     local not_ready
-    not_ready=$(kubectl get nodes --no-headers 2>/dev/null | grep -v " Ready " | wc -l)
+    not_ready=$(kubectl get nodes --no-headers 2>/dev/null | grep -cv " Ready " || true)
 
     if [[ "$not_ready" -gt 0 ]]; then
         log_error "$not_ready nodes are not ready"
@@ -145,10 +177,6 @@ generate_remote_kubeconfig() {
     local api_server="https://svc-k8s-api.${tailnet}.ts.net"
 
     log_info "Generating remote kubeconfig for: $api_server"
-
-    # Get the current kubeconfig as a base
-    local current_kubeconfig
-    current_kubeconfig="${KUBECONFIG:-$HOME/.kube/talos-cluster.yaml}"
 
     # Extract user credentials from existing kubeconfig
     local client_cert client_key

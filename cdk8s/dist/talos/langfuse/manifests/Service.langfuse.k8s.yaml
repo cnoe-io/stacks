@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+  labels:
+    app: langfuse
+    app.kubernetes.io/component: llm-observability
+    app.kubernetes.io/name: langfuse
+    app.kubernetes.io/part-of: observability
+  name: langfuse
+  namespace: observability
+spec:
+  ports:
+    - name: http
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+  selector:
+    app: langfuse
+  type: ClusterIP

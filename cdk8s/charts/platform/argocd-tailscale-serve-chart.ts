@@ -35,15 +35,15 @@ export interface ArgoCDTailscaleServeChartProps extends ChartProps {
 
   /**
    * Backend port for ArgoCD server
-   * @default 443
+   * @default 80 (HTTP) - ArgoCD server in HA mode exposes HTTP on 80
    */
   backendPort?: number;
 
   /**
-   * Skip TLS verification for backend (ArgoCD uses self-signed by default)
-   * @default true
+   * Use HTTPS for backend connection (ArgoCD HA mode uses HTTP on port 80)
+   * @default false
    */
-  backendInsecure?: boolean;
+  backendHttps?: boolean;
 
   /**
    * Name of the secret containing the Tailscale auth key
@@ -72,8 +72,8 @@ export class ArgoCDTailscaleServeChart extends Chart {
       serviceName = 'argocd',
       namespace = 'tailscale',
       backendHost = 'argocd-server.argocd.svc.cluster.local',
-      backendPort = 443,
-      backendInsecure = true,
+      backendPort = 80,  // ArgoCD HA mode uses HTTP on port 80
+      backendHttps = false,
       authKeySecretName = 'tailscale-auth-key',
       tailscaleImage = 'tailscale/tailscale:latest',
       kubectlImage = 'bitnami/kubectl:latest',
@@ -92,6 +92,49 @@ export class ArgoCDTailscaleServeChart extends Chart {
           'app.kubernetes.io/component': 'proxy',
         },
       },
+    });
+
+    // Role to allow reading secrets (needed by init container)
+    new k8s.KubeRole(this, 'secret-reader-role', {
+      metadata: {
+        name: `${deploymentName}-secret-reader`,
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': deploymentName,
+          'app.kubernetes.io/component': 'rbac',
+        },
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'list', 'watch'],
+        },
+      ],
+    });
+
+    // RoleBinding to bind the Role to the ServiceAccount
+    new k8s.KubeRoleBinding(this, 'secret-reader-binding', {
+      metadata: {
+        name: `${deploymentName}-secret-reader`,
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': deploymentName,
+          'app.kubernetes.io/component': 'rbac',
+        },
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'Role',
+        name: `${deploymentName}-secret-reader`,
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: serviceAccountName,
+          namespace,
+        },
+      ],
     });
 
     // Deployment with Tailscale serve
@@ -150,7 +193,7 @@ echo "Secret ${authKeySecretName} found, proceeding..."
                   },
                 ],
                 command: ['/bin/sh', '-c'],
-                args: [generateArgoCDServeScript(serviceName, backendHost, backendPort, backendInsecure)],
+                args: [generateArgoCDServeScript(serviceName, backendHost, backendPort, backendHttps)],
                 ports: [
                   { name: 'https', containerPort: 443 },
                 ],
@@ -175,15 +218,24 @@ echo "Secret ${authKeySecretName} found, proceeding..."
 
 /**
  * Generate the shell script for the ArgoCD Tailscale serve container.
+ *
+ * Notes:
+ * - Uses legacy hostname mode (without --service flag) because Tailscale
+ *   Services beta is not available for all tailnets
+ * - Tailscale serve can only proxy to localhost, not remote hosts
+ * - We use socat to forward from localhost to the ArgoCD backend
+ * - ArgoCD in HA mode (with HAProxy) exposes HTTP on port 80
  */
 function generateArgoCDServeScript(
   serviceName: string,
   backendHost: string,
   backendPort: number,
-  backendInsecure: boolean
+  backendHttps: boolean
 ): string {
-  const insecureFlag = backendInsecure ? '--insecure' : '';
-  const backendUrl = `https://${backendHost}:${backendPort}`;
+  // Construct backend URL for health check
+  const protocol = backendHttps ? 'https' : 'http';
+  const healthCheckUrl = `${protocol}://${backendHost}:${backendPort}`;
+  const curlOpts = backendHttps ? '-k -s' : '-s';
 
   return `
 set -euo pipefail
@@ -194,7 +246,7 @@ tailscaled --tun=userspace-networking \\
   --socket=/run/tailscale/tailscaled.sock \\
   --state=/var/lib/tailscale/tailscaled.state &
 
-# Install required tools
+# Install required tools (socat for proxying, curl for health checks)
 apk add --no-cache socat curl >/dev/null
 
 # Wait for tailscaled to come up
@@ -209,22 +261,28 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --accept-dns=false --accept-routes=false --ssh=false
 
 # Wait for ArgoCD to be ready
-echo "Waiting for ArgoCD backend at ${backendUrl}..."
+echo "Waiting for ArgoCD backend at ${healthCheckUrl}..."
 for i in $(seq 1 60); do
-  curl -k -s ${backendUrl}/healthz >/dev/null && break
+  curl ${curlOpts} ${healthCheckUrl}/healthz >/dev/null && break
   sleep 2
 done
+echo "ArgoCD backend is ready"
 
-# Start socat to forward from exposed port (443) to ArgoCD backend
-# This handles the TLS passthrough/termination
-socat TCP-LISTEN:443,fork,reuseaddr TCP:${backendHost}:${backendPort} &
+# Start socat to forward from localhost:8080 to ArgoCD backend
+# Tailscale serve only supports localhost proxies
+echo "Starting socat proxy to ${backendHost}:${backendPort}..."
+socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 
-# Expose ArgoCD via Tailscale Services
-# The --insecure flag allows self-signed certs on the backend
+# Wait for socat to be ready
+sleep 1
+
+# Expose via Tailscale serve (legacy hostname mode)
+# Using legacy hostname mode (no --service flag) - accessible via pod hostname
+echo "Starting Tailscale serve for ${serviceName}..."
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} ${insecureFlag} --https=443 http://127.0.0.1:443
+  serve --bg --https=443 http://127.0.0.1:8080
 
-echo "ArgoCD UI available at https://svc-${serviceName}.<tailnet>.ts.net"
+echo "ArgoCD UI available - check Tailscale admin for hostname"
 exec tail -f /dev/null
 `;
 }

@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-40"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: crds
+    app.kubernetes.io/environment: talos
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: dapr-crds
+    app.kubernetes.io/part-of: dapr-agents
+    example: basic
+  name: dapr-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/talos/dapr-crds/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: 102-bootstrap-talos-argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - Replace=true

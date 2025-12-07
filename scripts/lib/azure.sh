@@ -6,9 +6,11 @@
 
 set -euo pipefail
 
-# Source common functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/common.sh"
+# Source common functions (only if not already loaded)
+if [[ -z "${_COMMON_SH_LOADED:-}" ]]; then
+    _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "${_LIB_DIR}/common.sh"
+fi
 
 # Validate Azure CLI is logged in
 validate_azure_login() {

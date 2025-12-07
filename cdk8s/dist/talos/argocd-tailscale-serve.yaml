@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: access
+    app.kubernetes.io/environment: talos
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: argocd-tailscale-serve
+    app.kubernetes.io/part-of: tailscale
+    example: basic
+  name: argocd-tailscale-serve
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/talos/argocd-tailscale-serve/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: 102-bootstrap-talos-argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,19 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  labels:
+    app.kubernetes.io/component: conversation
+    app.kubernetes.io/name: openai
+    app.kubernetes.io/part-of: dapr-agents
+  name: openai
+  namespace: dapr-agents
+spec:
+  metadata:
+    - name: key
+      secretKeyRef:
+        key: OPENAI_API_KEY
+        name: dapr-agents-llm-providers
+    - name: model
+      value: gpt-4o
+  type: conversation.openai
+  version: v1

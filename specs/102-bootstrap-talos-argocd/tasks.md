@@ -172,12 +172,12 @@ This is an Infrastructure-as-Code project with:
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T062 [P] Update CLAUDE.md with new Talos bootstrap commands in `CLAUDE.md`
+- [X] T062 [P] Update CLAUDE.md with new Talos bootstrap commands in `CLAUDE.md`
 - [X] T063 [P] Create README.md for scripts directory in `scripts/README.md`
-- [ ] T064 Validate quickstart.md steps against actual bootstrap process in `specs/102-bootstrap-talos-argocd/quickstart.md`
-- [ ] T065 Add shellcheck validation to all scripts in `scripts/`
-- [ ] T066 Add TypeScript strict mode validation to CDK8s charts in `cdk8s/tsconfig.json`
-- [ ] T067 Run full bootstrap on fresh Talos cluster and document any issues in `specs/102-bootstrap-talos-argocd/quickstart.md`
+- [X] T064 Validate quickstart.md steps against actual bootstrap process in `specs/102-bootstrap-talos-argocd/quickstart.md`
+- [X] T065 Add shellcheck validation to all scripts in `scripts/`
+- [X] T066 Add TypeScript strict mode validation to CDK8s charts in `cdk8s/tsconfig.json`
+- [X] T067 Run full bootstrap on fresh Talos cluster and document any issues in `specs/102-bootstrap-talos-argocd/quickstart.md`
 
 ---
 

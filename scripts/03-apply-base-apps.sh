@@ -21,7 +21,8 @@ set -euo pipefail
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# REPO_ROOT available for future use if needed
+# REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source helper libraries
 source "${SCRIPT_DIR}/lib/common.sh"
@@ -101,7 +102,7 @@ get_app_health_status() {
 generate_root_app_manifest() {
     local manifest_file="${1:-/tmp/argocd-root-application.yaml}"
 
-    log_info "Generating root application manifest..."
+    log_info "Generating root application manifest..." >&2
 
     cat > "$manifest_file" <<EOF
 apiVersion: argoproj.io/v1alpha1
@@ -123,7 +124,7 @@ spec:
     path: ${GIT_PATH}
     targetRevision: ${GIT_BRANCH}
     directory:
-      recurse: true
+      recurse: false
       include: '*.yaml'
   destination:
     server: https://kubernetes.default.svc
@@ -143,7 +144,7 @@ spec:
         - /status
 EOF
 
-    log_success "Root application manifest generated: $manifest_file"
+    log_success "Root application manifest generated: $manifest_file" >&2
     register_cleanup "$manifest_file"
     echo "$manifest_file"
 }
@@ -246,11 +247,10 @@ wait_for_all_apps() {
     local elapsed=0
     while [[ $elapsed -lt $timeout ]]; do
         # Count applications
-        local total synced out_of_sync
+        local total synced
         total=$(kubectl get applications -n "$ARGOCD_NAMESPACE" --no-headers 2>/dev/null | wc -l)
         synced=$(kubectl get applications -n "$ARGOCD_NAMESPACE" --no-headers 2>/dev/null | \
             grep -c "Synced" || true)
-        out_of_sync=$((total - synced))
 
         log_info "Applications: $synced/$total synced"
 

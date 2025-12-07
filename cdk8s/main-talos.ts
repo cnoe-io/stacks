@@ -45,7 +45,12 @@ function loadEnvFile(filePath: string): void {
       const idx = line.indexOf('=');
       if (idx <= 0) continue;
       const key = line.slice(0, idx).trim();
-      const value = line.slice(idx + 1).trim();
+      let value = line.slice(idx + 1).trim();
+      // Strip surrounding quotes (single or double)
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
       if (key && !(key in process.env)) {
         process.env[key] = value;
       }
@@ -139,12 +144,12 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       manifestPath: 'manifests',
       argoCdConfig: {
         ...appConfig.argocd,
-        // Override source for Talos to point to Git repo
-        source: github ? {
+        // Override sources for Talos to point to Git repo (uses multi-source mode)
+        sources: github ? [{
           repoURL: `https://github.com/${github.org}/${github.repo}.git`,
           path: `cdk8s/dist/talos/${appConfig.name}/manifests`,
           targetRevision: gitBranch,
-        } : undefined,
+        }] : undefined,
       },
       environment: options.environment,
       github,
