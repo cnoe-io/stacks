@@ -94,6 +94,49 @@ export class ArgoCDTailscaleServeChart extends Chart {
       },
     });
 
+    // Role to allow reading secrets (needed by init container)
+    new k8s.KubeRole(this, 'secret-reader-role', {
+      metadata: {
+        name: `${deploymentName}-secret-reader`,
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': deploymentName,
+          'app.kubernetes.io/component': 'rbac',
+        },
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'list', 'watch'],
+        },
+      ],
+    });
+
+    // RoleBinding to bind the Role to the ServiceAccount
+    new k8s.KubeRoleBinding(this, 'secret-reader-binding', {
+      metadata: {
+        name: `${deploymentName}-secret-reader`,
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': deploymentName,
+          'app.kubernetes.io/component': 'rbac',
+        },
+      },
+      roleRef: {
+        apiGroup: 'rbac.authorization.k8s.io',
+        kind: 'Role',
+        name: `${deploymentName}-secret-reader`,
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: serviceAccountName,
+          namespace,
+        },
+      ],
+    });
+
     // Deployment with Tailscale serve
     new k8s.KubeDeployment(this, 'deployment', {
       metadata: {
