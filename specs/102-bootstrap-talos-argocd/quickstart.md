@@ -75,6 +75,26 @@ kubectl get pods -n kube-system -l k8s-app=cilium
 
 ## Step 2: Set Environment Variables
 
+Create a `.env` file from the template:
+
+```bash
+# Copy template and configure
+cp scripts/.env.template scripts/.env
+
+# Edit with your values
+# Required variables:
+#   AZURE_SUBSCRIPTION_ID - Your Azure subscription
+#   AZURE_TENANT_ID - Your Azure AD tenant
+#   AZURE_CLIENT_ID - App registration for Workload Identity
+#   AZURE_KEYVAULT_NAME - Azure Key Vault name
+#   AZURE_STORAGE_ACCOUNT - Storage account for OIDC JWKS
+#   GIT_REPO_URL - Git repository URL for ArgoCD
+#   GIT_BRANCH - Git branch (default: main)
+#   TAILSCALE_TAILNET - Your tailnet suffix (e.g., tail286401)
+```
+
+Or set environment variables directly:
+
 ```bash
 # Azure configuration
 export AZURE_SUBSCRIPTION_ID="your-subscription-id"
@@ -97,27 +117,49 @@ export TAILSCALE_TAILNET="tail286401"  # Your tailnet suffix
 
 ```bash
 # From repository root
-cd stacks/main
-
-# Run the bootstrap
 ./scripts/bootstrap-cluster.sh
+
+# Options:
+#   --force       Force reinstall even if already installed
+#   --skip-jwks   Skip JWKS sync (if Azure Storage already configured)
+#   -h, --help    Show help message
 ```
 
 ### What the Script Does
 
-1. **Phase 1: Install ArgoCD via Helm**
+1. **Prerequisite Validation**
+   - Checks for required tools (talosctl, kubectl, helm, az, jq)
+   - Validates Talos cluster access
+   - Validates Azure login and storage account access
+
+2. **Phase 1: Install ArgoCD via Helm**
    - Adds argo Helm repository
-   - Installs ArgoCD in `argocd` namespace
-   - Waits for all pods to be ready
+   - Installs ArgoCD in `argocd` namespace using values from `cdk8s/values/argocd-values.yaml`
+   - Waits for all pods to be ready (argocd-server, argocd-repo-server, argocd-application-controller)
 
-2. **Phase 2: Sync JWKS to Azure Storage**
-   - Extracts OIDC keys from cluster
-   - Creates openid-configuration document
-   - Uploads to Azure Storage static website
+3. **Phase 2: Sync JWKS to Azure Storage**
+   - Extracts OIDC JWKS from cluster (`kubectl get --raw /openid/v1/jwks`)
+   - Generates OpenID Connect configuration document
+   - Uploads to Azure Storage static website (`$web` container)
+   - Verifies OIDC endpoint is accessible
 
-3. **Phase 3: Apply Root Application**
-   - Applies ArgoCD App-of-Apps root application
-   - Triggers cascading deployment of all platform services
+4. **Phase 3: Apply Root Application**
+   - Generates ArgoCD App-of-Apps root application manifest
+   - Applies root application to cluster
+   - Waits for initial sync and child applications to be created
+   - Verifies all applications reach Synced state
+
+### Idempotent Re-runs
+
+The bootstrap script tracks progress and can resume from any phase:
+
+```bash
+# Resume after failure (continues from last completed phase)
+./scripts/bootstrap-cluster.sh
+
+# Force full re-bootstrap (re-runs all phases)
+./scripts/bootstrap-cluster.sh --force
+```
 
 ---
 
@@ -237,8 +279,11 @@ az storage blob list \
   --container-name '$web' \
   --auth-mode login
 
-# Verify JWKS endpoint is accessible
+# Verify JWKS endpoint is accessible (replace .z13 with your storage region)
 curl https://${AZURE_STORAGE_ACCOUNT}.z13.web.core.windows.net/openid/v1/jwks
+
+# Force re-sync JWKS after cluster rebuild
+./scripts/02-sync-jwks.sh --force
 ```
 
 ### ClusterSecretStore Not Ready

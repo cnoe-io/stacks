@@ -282,11 +282,11 @@ export function validateChartTypes(registeredTypes: string[]): string[] {
   const requiredTypes = new Set(talosApplications.map((app) => app.chart.type));
   const missingTypes: string[] = [];
 
-  for (const type of requiredTypes) {
+  Array.from(requiredTypes).forEach((type) => {
     if (!registeredTypes.includes(type)) {
       missingTypes.push(type);
     }
-  }
+  });
 
   return missingTypes;
 }

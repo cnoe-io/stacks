@@ -42,6 +42,88 @@ idpBuilder simplifies spinning up a complete internal developer platform (IDP) o
 
 ## Common Commands
 
+### Talos Linux Cluster Bootstrap
+
+**Purpose**: Bootstrap a Talos Linux cluster with ArgoCD GitOps, External Secrets Operator with Azure Workload Identity, and Tailscale for secure remote access.
+
+```bash
+# Quick start - full bootstrap
+cd scripts
+cp .env.template .env  # Edit with your Azure and Git configuration
+./bootstrap-cluster.sh
+
+# Resume after failure (idempotent)
+./bootstrap-cluster.sh
+
+# Force full re-bootstrap
+./bootstrap-cluster.sh --force
+
+# Skip JWKS sync (if Azure Storage already configured)
+./bootstrap-cluster.sh --skip-jwks
+```
+
+**Bootstrap Scripts**:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/bootstrap-cluster.sh` | Main orchestrator - runs all phases |
+| `scripts/01-install-argocd.sh` | Install ArgoCD via Helm chart |
+| `scripts/02-sync-jwks.sh` | Sync OIDC JWKS to Azure Storage |
+| `scripts/03-apply-base-apps.sh` | Apply ArgoCD root application |
+| `scripts/generate-remote-kubeconfig.sh` | Generate kubeconfig for Tailscale access |
+
+**CDK8s for Talos**:
+```bash
+# From cdk8s/ directory:
+npm run synth:talos              # Synthesize Talos-specific manifests
+npm run synth:talos:watch        # Watch mode for development
+npx ts-node main-talos.ts        # Direct synthesis
+
+# Output: cdk8s/dist-talos/<app>/manifests/
+```
+
+**Verify Deployment**:
+```bash
+# Check ArgoCD applications
+kubectl get applications -n argocd
+
+# Check External Secrets
+kubectl get clustersecretstore azure-keyvault-store
+kubectl get externalsecrets -A
+
+# Check Tailscale services
+kubectl get pods -n tailscale
+
+# Access ArgoCD UI via Tailscale
+open https://svc-argocd.${TAILSCALE_TAILNET}.ts.net
+
+# Get ArgoCD admin password
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath="{.data.password}" | base64 -d
+```
+
+**Troubleshooting**:
+```bash
+# Re-sync JWKS after cluster rebuild
+./scripts/02-sync-jwks.sh --force
+
+# Check ClusterSecretStore status
+kubectl describe clustersecretstore azure-keyvault-store
+
+# Verify ServiceAccount annotations for Workload Identity
+kubectl get sa external-secrets -n external-secrets -o yaml | grep azure
+
+# Check Tailscale serve pod logs
+kubectl logs -n tailscale deploy/argocd-tailscale-serve
+```
+
+**Key Files**:
+- CDK8s entry point: `cdk8s/main-talos.ts`
+- Application config: `cdk8s/config/talos-applications.ts`
+- ArgoCD Helm values: `cdk8s/values/argocd-values.yaml`
+- Environment template: `scripts/.env.template`
+- Documentation: `specs/102-bootstrap-talos-argocd/quickstart.md`
+
 ### CDK8s Development
 
 ```bash

@@ -36,14 +36,15 @@ handle_error() {
     log_error "Command failed with exit code $exit_code: $command"
     log_info "Bootstrap can be resumed from current phase using: $0"
     log_info "Current phase: $(get_current_phase)"
-    exit $exit_code
+    exit "$exit_code"
 }
 
 # Retry helper
 retry_with_backoff() {
     local max_attempts="${1:-3}"
     local delay="${2:-5}"
-    local cmd="${@:3}"
+    shift 2
+    local cmd="$*"
 
     local attempt=1
     while [[ $attempt -le $max_attempts ]]; do

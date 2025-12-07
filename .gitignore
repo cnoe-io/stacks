@@ -29,8 +29,9 @@ scripts/certificates/system/
 **/kubeconfig.yaml
 **/.kube/
 
-# CDK8s build artifacts
-cdk8s/dist/
+# CDK8s build artifacts (except talos/ which is committed for ArgoCD)
+cdk8s/dist/*
+!cdk8s/dist/talos/
 cdk8s/imports/
 
 # NixOS VM images (large binary files, built from Nix configs)

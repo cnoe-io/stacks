@@ -20,15 +20,18 @@ redis:
 
 redis-ha:
   enabled: true
+  # Only 2 worker nodes available (3 CP nodes are tainted)
+  replicas: 2
   haproxy:
     enabled: true
+    replicas: 2
     metrics:
       enabled: true
 
 # ArgoCD Server Configuration
 server:
-  # HA configuration
-  replicas: 3
+  # HA configuration (2 replicas for 2 worker nodes)
+  replicas: 2
 
   # Autoscaling
   autoscaling:
@@ -153,7 +156,7 @@ configs:
   # CM configuration
   cm:
     # Enable status badge
-    statusbadge.enabled: "true"
+    statusbadge.enabled: true
 
     # Resource health customizations
     resource.customizations.health.argoproj.io_Application: |
