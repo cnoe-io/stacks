@@ -229,8 +229,8 @@ export const talosApplications: ApplicationConfig[] = [
       props: {
         serviceName: 'argocd',
         backendHost: 'argocd-server.argocd.svc.cluster.local',
-        backendPort: 443,
-        backendInsecure: true, // ArgoCD uses self-signed cert
+        backendPort: 80,  // ArgoCD HA mode exposes HTTP on port 80
+        backendHttps: false,  // Use HTTP, not HTTPS
         authKeySecretName: 'tailscale-auth-key',
       },
     },

@@ -44,17 +44,17 @@ spec:
                 --accept-dns=false --accept-routes=false --ssh=false
 
               # Wait for ArgoCD to be ready
-              echo "Waiting for ArgoCD backend at http://argocd-server.argocd.svc.cluster.local:443..."
+              echo "Waiting for ArgoCD backend at http://argocd-server.argocd.svc.cluster.local:80..."
               for i in $(seq 1 60); do
-                curl -s http://argocd-server.argocd.svc.cluster.local:443/healthz >/dev/null && break
+                curl -s http://argocd-server.argocd.svc.cluster.local:80/healthz >/dev/null && break
                 sleep 2
               done
               echo "ArgoCD backend is ready"
 
               # Start socat to forward from localhost:8080 to ArgoCD backend
               # Tailscale serve only supports localhost proxies
-              echo "Starting socat proxy to argocd-server.argocd.svc.cluster.local:443..."
-              socat TCP-LISTEN:8080,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
+              echo "Starting socat proxy to argocd-server.argocd.svc.cluster.local:80..."
+              socat TCP-LISTEN:8080,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:80 &
 
               # Wait for socat to be ready
               sleep 1
