@@ -346,13 +346,13 @@ echo "Secret ${authKeySecretName} found, proceeding..."
 /**
  * Generate the shell script for the K8s API Tailscale serve container.
  *
- * Note: In userspace networking mode with Tailscale Services, netstack routes
- * incoming traffic to the exposed port (443), not the configured backend port.
- * We use socat to forward from 443 -> 8001 (kubectl-proxy).
+ * Note: Uses legacy hostname mode (without --service flag) because Tailscale
+ * Services beta is not available for all tailnets. The pod will register with
+ * its hostname and be accessible via https://<pod-name>.<tailnet>.ts.net
  *
  * Tailscale CLI notes:
- * - Use --bg flag to run serve in background mode (required when using --service)
- * - The serve command defaults to --bg=true when --service is set
+ * - Use --bg flag to run serve in background mode
+ * - Legacy mode uses pod hostname instead of stable service names
  */
 function generateK8sApiServeScript(serviceName: string): string {
   return `
@@ -364,7 +364,7 @@ tailscaled --tun=userspace-networking \\
   --socket=/run/tailscale/tailscaled.sock \\
   --state=/var/lib/tailscale/tailscaled.state &
 
-# install socat for port forwarding (required for userspace networking + Services)
+# install socat for port forwarding
 apk add --no-cache socat >/dev/null
 
 # wait for tailscaled to come up
@@ -385,17 +385,17 @@ for i in $(seq 1 30); do
 done
 
 # Start socat to forward from exposed port (443) to kubectl-proxy (8001)
-# This is required because netstack in userspace mode routes to the exposed port
 socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
 
 # expose kubectl-proxy via tailscale serve on HTTPS 443
-# The serve command tells Tailscale to route traffic to localhost:443 (socat)
-# Use --bg flag to run in background mode
-echo "Starting Tailscale serve for service svc:${serviceName}..."
+# Using legacy hostname mode (no --service flag) - accessible via pod hostname
+echo "Starting Tailscale serve for ${serviceName}..."
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:443
+  serve --bg --https=443 http://127.0.0.1:443
 
-echo "Kubernetes API proxy running at https://svc-${serviceName}.<tailnet>.ts.net"
+# Get the hostname for logging
+HOSTNAME=$(tailscale --socket=/run/tailscale/tailscaled.sock status --json | grep -o '"Self":{"[^"]*' | head -1 || echo "unknown")
+echo "Kubernetes API proxy running - check Tailscale admin for hostname"
 exec tail -f /dev/null
 `;
 }

@@ -220,6 +220,8 @@ echo "Secret ${authKeySecretName} found, proceeding..."
  * Generate the shell script for the ArgoCD Tailscale serve container.
  *
  * Notes:
+ * - Uses legacy hostname mode (without --service flag) because Tailscale
+ *   Services beta is not available for all tailnets
  * - Tailscale serve can only proxy to localhost, not remote hosts
  * - We use socat to forward from localhost to the ArgoCD backend
  * - ArgoCD in HA mode (with HAProxy) exposes HTTP on port 80
@@ -274,13 +276,13 @@ socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 # Wait for socat to be ready
 sleep 1
 
-# Expose via Tailscale Services
-# Tailscale will handle TLS termination for external HTTPS access
-echo "Starting Tailscale serve for service svc:${serviceName}..."
+# Expose via Tailscale serve (legacy hostname mode)
+# Using legacy hostname mode (no --service flag) - accessible via pod hostname
+echo "Starting Tailscale serve for ${serviceName}..."
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
+  serve --bg --https=443 http://127.0.0.1:8080
 
-echo "ArgoCD UI available at https://svc-${serviceName}.<tailnet>.ts.net"
+echo "ArgoCD UI available - check Tailscale admin for hostname"
 exec tail -f /dev/null
 `;
 }
