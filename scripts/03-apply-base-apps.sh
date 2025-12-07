@@ -124,7 +124,7 @@ spec:
     path: ${GIT_PATH}
     targetRevision: ${GIT_BRANCH}
     directory:
-      recurse: true
+      recurse: false
       include: '*.yaml'
   destination:
     server: https://kubernetes.default.svc

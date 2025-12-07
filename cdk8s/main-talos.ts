@@ -139,12 +139,12 @@ async function synthesizeApplication(appConfig: any, options: SynthesisOptions):
       manifestPath: 'manifests',
       argoCdConfig: {
         ...appConfig.argocd,
-        // Override source for Talos to point to Git repo
-        source: github ? {
+        // Override sources for Talos to point to Git repo (uses multi-source mode)
+        sources: github ? [{
           repoURL: `https://github.com/${github.org}/${github.repo}.git`,
           path: `cdk8s/dist/talos/${appConfig.name}/manifests`,
           targetRevision: gitBranch,
-        } : undefined,
+        }] : undefined,
       },
       environment: options.environment,
       github,

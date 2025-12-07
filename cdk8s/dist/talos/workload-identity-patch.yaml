@@ -19,10 +19,10 @@ spec:
     namespace: external-secrets
     server: https://kubernetes.default.svc
   project: default
-  source:
-    path: packages/workload-identity-patch/manifests
-    repoURL: https://github.com/PittampalliOrg/stacks.git
-    targetRevision: HEAD
+  sources:
+    - path: cdk8s/dist/talos/workload-identity-patch/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: 102-bootstrap-talos-argocd
   syncPolicy:
     automated:
       prune: true
