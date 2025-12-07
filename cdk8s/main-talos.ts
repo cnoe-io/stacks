@@ -45,7 +45,12 @@ function loadEnvFile(filePath: string): void {
       const idx = line.indexOf('=');
       if (idx <= 0) continue;
       const key = line.slice(0, idx).trim();
-      const value = line.slice(idx + 1).trim();
+      let value = line.slice(idx + 1).trim();
+      // Strip surrounding quotes (single or double)
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
       if (key && !(key in process.env)) {
         process.env[key] = value;
       }
