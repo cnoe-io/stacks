@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: state-store
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: dapr-agents-redis
+    app.kubernetes.io/part-of: dapr-agents
+    example: basic
+  name: dapr-agents-redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-agents
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: "."
+    repoURL: cnoe://dapr-agents-redis/manifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

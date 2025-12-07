@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: tailscale-serve
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: headlamp2-tailscale-serve
+  name: headlamp2-tailscale-serve-role
+  namespace: tailscale
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/version: v1.7.1
+    helm.sh/chart: kargo-1.7.1
+  name: kargo-controller
+  namespace: kargo
+data:
+  ALLOW_CREDENTIALS_OVER_HTTP: "false"
+  API_SERVER_BASE_URL: http://kargo.talos.cnoe.localtest.me
+  ARGOCD_INTEGRATION_ENABLED: "true"
+  ARGOCD_NAMESPACE: argocd
+  ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY: "false"
+  CLUSTER_SECRETS_NAMESPACE: kargo-cluster-secrets
+  GITCLIENT_EMAIL: no-reply@kargo.io
+  GITCLIENT_NAME: Kargo
+  GITCLIENT_SIGNING_KEY_TYPE: gpg
+  GLOBAL_CREDENTIALS_NAMESPACES: ""
+  IS_DEFAULT_CONTROLLER: "true"
+  LOG_LEVEL: INFO
+  MAX_CONCURRENT_CONTROL_FLOW_RECONCILES: "4"
+  MAX_CONCURRENT_PROMOTION_RECONCILES: "4"
+  MAX_CONCURRENT_STAGE_RECONCILES: "4"
+  MAX_CONCURRENT_WAREHOUSE_RECONCILES: "4"
+  MIN_WAREHOUSE_RECONCILIATION_INTERVAL: 5m0s
+  ROLLOUTS_CONTROLLER_INSTANCE_ID: ""
+  ROLLOUTS_INTEGRATION_ENABLED: "true"

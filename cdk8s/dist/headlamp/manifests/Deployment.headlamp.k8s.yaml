@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: headlamp
+  name: headlamp
+  namespace: headlamp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: headlamp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: headlamp
+    spec:
+      containers:
+        - command:
+            - /headlamp/headlamp-server
+            - -in-cluster
+            - -html-static-dir
+            - /headlamp/frontend
+            - -plugins-dir
+            - /headlamp/plugins
+            - -watch-plugins-changes
+          env: []
+          image: ghcr.io/headlamp-k8s/headlamp:v0.33.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          name: headlamp
+          ports:
+            - containerPort: 4466
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 100
+          volumeMounts:
+            - mountPath: /headlamp/plugins
+              name: plugins
+        - args:
+            - -c
+            - |-
+              echo "Plugin manager initialized. Plugins configured: external-secrets-operator";
+                              # Download and extract plugins
+                              
+                              echo "Downloading plugin: external-secrets-operator...";
+                              curl -L "https://github.com/magohl/external-secrets-operator-headlamp-plugin/releases/download/0.1.0-beta7/external-secrets-operator-headlamp-plugin-0.1.0-beta7.tar.gz" -o /tmp/external-secrets-operator.tar.gz;
+                              echo "Extracting plugin: external-secrets-operator...";
+                              tar -xzf /tmp/external-secrets-operator.tar.gz -C /headlamp/plugins/;
+                              rm /tmp/external-secrets-operator.tar.gz;
+                              echo "Plugin external-secrets-operator installed successfully";
+                              
+                              # Copy plugin config
+                              cp /config/plugins.yaml /headlamp/plugins/plugins.yaml 2>/dev/null || true;
+                              echo "All plugins installed. Plugin manager ready.";
+                              # Keep container running
+                              while true; do sleep 3600; done
+          command:
+            - /bin/sh
+          image: curlimages/curl:8.9.1
+          imagePullPolicy: IfNotPresent
+          name: plugin-manager
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 100
+          volumeMounts:
+            - mountPath: /headlamp/plugins
+              name: plugins
+            - mountPath: /config
+              name: plugins-config
+      securityContext:
+        fsGroup: 101
+        runAsNonRoot: true
+        runAsUser: 100
+      serviceAccountName: headlamp
+      volumes:
+        - emptyDir: {}
+          name: plugins
+        - configMap:
+            name: headlamp-plugins
+          name: plugins-config

@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ClusterRoleBinding.headlamp-admin.k8s.yaml
+  - ConfigMap.headlamp-plugins.k8s.yaml
+  - Deployment.headlamp.k8s.yaml
+  - Ingress.headlamp.k8s.yaml
+  - Namespace.headlamp.k8s.yaml
+  - Service.headlamp.k8s.yaml
+  - ServiceAccount.headlamp.k8s.yaml

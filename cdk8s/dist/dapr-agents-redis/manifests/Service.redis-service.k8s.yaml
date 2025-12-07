@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dapr-agents-redis
+    app.kubernetes.io/component: state-store
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: dapr-agents
+  name: redis-service
+  namespace: dapr-agents
+spec:
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+  selector:
+    app: dapr-agents-redis

@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ExternalSecret.kargo-ghcr-backstage-credentials-external.k8s.yaml
+  - ExternalSecret.kargo-ghcr-chat-credentials-external.k8s.yaml
+  - ExternalSecret.kargo-git-credentials-external.k8s.yaml

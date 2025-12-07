@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+  labels:
+    app: langfuse-clickhouse
+    app.kubernetes.io/component: database
+    app.kubernetes.io/name: clickhouse
+    app.kubernetes.io/part-of: langfuse
+  name: langfuse-clickhouse
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-clickhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: langfuse-clickhouse
+        app.kubernetes.io/component: database
+        app.kubernetes.io/name: clickhouse
+        app.kubernetes.io/part-of: langfuse
+    spec:
+      containers:
+        - env:
+            - name: CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  key: CLICKHOUSE_USER
+                  name: langfuse-clickhouse-credentials
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: CLICKHOUSE_PASSWORD
+                  name: langfuse-clickhouse-credentials
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+              value: "1"
+          image: clickhouse/clickhouse-server:24.3
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          name: clickhouse
+          ports:
+            - containerPort: 8123
+              name: http
+              protocol: TCP
+            - containerPort: 9000
+              name: native
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /var/lib/clickhouse
+              name: data
+      securityContext:
+        fsGroup: 101
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: langfuse-clickhouse-pvc

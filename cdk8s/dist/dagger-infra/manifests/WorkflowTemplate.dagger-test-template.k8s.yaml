@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  labels:
+    app.kubernetes.io/component: workflow-template
+    app.kubernetes.io/name: dagger-test-template
+    app.kubernetes.io/part-of: dagger
+  name: dagger-test-template
+  namespace: argo
+spec:
+  entrypoint: dagger-test
+  serviceAccountName: argo-workflow
+  templates:
+    - container:
+        args:
+          - git clone {{inputs.parameters.repo-url}} /workspace &&                 cd /workspace &&                 git checkout {{inputs.parameters.branch}} &&                 dagger run {{inputs.parameters.test-command}}
+        command:
+          - sh
+          - -c
+        image: registry.dagger.io/dagger:latest
+        volumeMounts:
+          - mountPath: /var/run/docker.sock
+            name: dagger-engine
+      inputs:
+        parameters:
+          - description: Git repository URL
+            name: repo-url
+          - default: main
+            description: Git branch to test
+            name: branch
+          - default: test
+            description: Dagger command to run tests
+            name: test-command
+      name: dagger-test
+      volumes:
+        - hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+          name: dagger-engine

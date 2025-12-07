@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+  labels:
+    app: attic
+    app.kubernetes.io/component: nix-cache-server
+    app.kubernetes.io/name: attic
+  name: attic
+  namespace: nix-cache
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: attic
+  type: ClusterIP

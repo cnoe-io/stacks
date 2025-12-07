@@ -1,0 +1,24 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/component: project-config
+    app.kubernetes.io/name: kargo-pipelines-config
+    app.kubernetes.io/part-of: kargo
+  name: kargo-pipelines
+  namespace: kargo-pipelines
+spec:
+  promotionPolicies:
+    - autoPromotionEnabled: true
+      stageSelector:
+        name: glob:*-dev
+    - autoPromotionEnabled: false
+      stageSelector:
+        name: glob:*-prod
+  webhookReceivers:
+    - github:
+        secretRef:
+          name: kargo-gitea-webhook-secret
+      name: gitea-backstage

@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: kargo-project-admin-binding
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: kargo-project-admin
+  namespace: kargo-pipelines
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-project-admin
+subjects:
+  - kind: Group
+    name: system:authenticated
+  - kind: ServiceAccount
+    name: kargo-api
+    namespace: kargo
+  - kind: ServiceAccount
+    name: kargo-admin
+    namespace: kargo

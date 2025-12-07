@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: api-proxy
+    app.kubernetes.io/name: k8s-api-tailscale-serve
+    app.kubernetes.io/part-of: kubernetes
+  name: k8s-api-tailscale-serve
+  namespace: tailscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: k8s-api-tailscale-serve
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: k8s-api-tailscale-serve
+    spec:
+      containers:
+        - args:
+            - |
+              
+              set -euo pipefail
+
+              # start tailscaled in userspace mode (no TUN device needed)
+              mkdir -p /var/lib/tailscale
+              tailscaled --tun=userspace-networking \
+                --socket=/run/tailscale/tailscaled.sock \
+                --state=/var/lib/tailscale/tailscaled.state &
+
+              # install socat for port forwarding (required for userspace networking + Services)
+              apk add --no-cache socat >/dev/null
+
+              # wait for tailscaled to come up
+              for i in $(seq 1 40); do
+                tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1 && break
+                sleep 0.5
+              done
+
+              # bring the node up (no DNS/routes/ssh)
+              tailscale --socket=/run/tailscale/tailscaled.sock up \
+                --authkey="$TS_AUTHKEY" \
+                --accept-dns=false --accept-routes=false --ssh=false
+
+              # wait for kubectl-proxy to be ready
+              for i in $(seq 1 30); do
+                wget -q -O /dev/null http://127.0.0.1:8001/healthz && break
+                sleep 1
+              done
+
+              # Start socat to forward from exposed port (443) to kubectl-proxy (8001)
+              # This is required because netstack in userspace mode routes to the exposed port
+              socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
+
+              # expose kubectl-proxy via tailscale serve on HTTPS 443
+              # The serve command tells Tailscale to route traffic to localhost:443 (socat)
+              tailscale --socket=/run/tailscale/tailscaled.sock \
+                serve --service=svc:k8s-api --https=443 http://127.0.0.1:443
+
+              echo "Kubernetes API proxy running at https://k8s-api.<tailnet>.ts.net"
+              exec tail -f /dev/null
+          command:
+            - /bin/sh
+            - -c
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  key: authKey
+                  name: tailscale-auth-key
+          image: tailscale/tailscale:latest
+          name: tailscale-serve
+          ports:
+            - containerPort: 443
+              name: https
+          securityContext:
+            privileged: false
+            runAsNonRoot: false
+        - command:
+            - kubectl
+            - proxy
+            - --port=8001
+            - --address=0.0.0.0
+            - --accept-hosts=.*
+            - --reject-paths=^$
+          image: bitnami/kubectl:latest
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          name: kubectl-proxy
+          ports:
+            - containerPort: 8001
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      initContainers:
+        - args:
+            - |
+              
+              echo "Waiting for secret tailscale-auth-key to exist..."
+              while ! kubectl get secret tailscale-auth-key -n tailscale > /dev/null 2>&1; do
+                echo "Secret not found, waiting 5s..."
+                sleep 5
+              done
+              echo "Secret tailscale-auth-key found, proceeding..."
+          command:
+            - /bin/sh
+            - -c
+          image: bitnami/kubectl:latest
+          name: wait-for-secret
+      serviceAccountName: k8s-api-serve
