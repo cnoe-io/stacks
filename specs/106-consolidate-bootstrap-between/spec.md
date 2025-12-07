@@ -2,7 +2,9 @@
 
 **Feature Branch**: `106-consolidate-bootstrap-between`
 **Created**: 2025-12-07
+**Updated**: 2025-12-07
 **Status**: Draft
+**Constitution**: v1.3.0 (aligns with Principles I, II, IV, VII, IX)
 **Input**: User description: "Consolidate scripting/configuration between KIND and Talos cluster setup. Fully replace legacy implementations. No backward compatibility required."
 
 ## User Scenarios & Testing
@@ -161,3 +163,23 @@ As a platform operator, I want clear separation between cluster orchestrators (c
 - GitHub repository URL format is consistent (`https://github.com/<org>/<repo>.git`)
 - KIND uses idpbuilder exclusively; no manual kubectl apply needed
 - Talos bootstrap continues to use existing 4-phase approach
+
+## Constitution Alignment
+
+This feature directly implements **Principle IX: Unified Cluster Bootstrap** from the constitution v1.3.0:
+
+| Constitution Requirement | Spec Coverage |
+|-------------------------|---------------|
+| Single Synthesis Entry Point (`main.ts`) | FR-001, US1 |
+| `CLUSTER_TYPE` environment variable | FR-002, US3 |
+| Cluster-type-driven ArgoCD sources | FR-003, FR-004, US1 |
+| Unified `applications.ts` with `clusterType` field | FR-005, FR-006, FR-007, US2 |
+| Environment files naming convention | FR-008, US3 |
+| Legacy script deprecation | FR-009, US4 |
+| Centralized source URL utility | FR-010, US1 |
+
+**Additional Principles Enforced:**
+- **Principle I (Type-Safe IaC)**: Single `main.ts` per enforcement rule
+- **Principle II (GitOps-First)**: Cluster-type-driven source URLs
+- **Principle IV (Declarative Config)**: Unified `applications.ts`
+- **Principle VII (Security)**: ESO patterns for both cluster types

@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
 #  wi-kind.sh – run exactly one phase from wi-kind-lib.sh
+#
+#  ⚠️  DEPRECATED: This script is deprecated as of feature 106.
+#  Use: source deployment/scripts/cluster-menu.sh && cluster-deploy
+#  See CLAUDE.md for updated documentation.
 # ------------------------------------------------------------------
+
+echo "⚠️  DEPRECATED: This script (wi-kind.sh) is deprecated."
+echo "   Use: source deployment/scripts/cluster-menu.sh && cluster-deploy"
+echo "   See CLAUDE.md for updated documentation."
+echo ""
+
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

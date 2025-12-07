@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: kagent.talos.cnoe.localtest.me
+    - host: kagent.cnoe.localtest.me
       http:
         paths:
           - backend:

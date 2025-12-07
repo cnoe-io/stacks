@@ -133,14 +133,18 @@ cp .env.template .env  # Fill in all Azure values
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**CDK8s for Talos**:
+**CDK8s Synthesis** (Unified - Feature 106):
 ```bash
 # From cdk8s/ directory:
-npm run synth:talos              # Synthesize Talos-specific manifests
-npm run synth:talos:watch        # Watch mode for development
-npx ts-node main-talos.ts        # Direct synthesis
+npm run synth                    # Default synthesis (uses CLUSTER_TYPE from env or defaults to 'kind')
+npm run synth:kind               # Synthesize for KIND clusters (cnoe:// URLs)
+npm run synth:talos              # Synthesize for Talos clusters (GitHub URLs)
 
-# Output: cdk8s/dist-talos/<app>/manifests/
+# Environment-driven synthesis
+CLUSTER_TYPE=kind npm run synth   # Explicit KIND synthesis
+CLUSTER_TYPE=talos npm run synth  # Explicit Talos synthesis
+
+# Output: cdk8s/dist/<app>/manifests/
 ```
 
 **Verify Deployment**:
@@ -178,9 +182,10 @@ kubectl get sa external-secrets -n external-secrets -o yaml | grep azure
 kubectl logs -n tailscale deploy/argocd-tailscale-serve
 ```
 
-**Key Files**:
-- CDK8s entry point: `cdk8s/main-talos.ts`
-- Application config: `cdk8s/config/talos-applications.ts`
+**Key Files** (Unified - Feature 106):
+- CDK8s entry point: `cdk8s/main.ts` (unified for both KIND and Talos)
+- Application config: `cdk8s/config/applications.ts` (clusterType field filters apps)
+- Source URL utility: `cdk8s/lib/source-url.ts` (generates cnoe:// or GitHub URLs)
 - ArgoCD Helm values: `cdk8s/values/argocd-values.yaml`
 - Environment template: `scripts/.env.template`
 - Documentation: `specs/102-bootstrap-talos-argocd/quickstart.md`
@@ -195,7 +200,9 @@ cd cdk8s
 npm install
 
 # Synthesize all packages (generates dist/)
-npx ts-node main-v2.ts
+npm run synth         # Uses CLUSTER_TYPE from env (default: kind)
+npm run synth:kind    # Explicit KIND synthesis
+npm run synth:talos   # Explicit Talos synthesis
 
 # Type check
 npm run compile

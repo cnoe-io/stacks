@@ -1,6 +1,14 @@
 import { ChartProps } from 'cdk8s';
 
 /**
+ * Cluster type for filtering applications during synthesis
+ * - 'kind': Only deploy to KIND (local development) clusters
+ * - 'talos': Only deploy to Talos (production) clusters
+ * - 'both': Deploy to both cluster types
+ */
+export type AppClusterType = 'kind' | 'talos' | 'both';
+
+/**
  * Configuration for an IDPBuilder application package
  */
 export interface ApplicationConfig {
@@ -8,11 +16,20 @@ export interface ApplicationConfig {
    * Application name (used for package directory and ArgoCD app name)
    */
   name: string;
-  
+
   /**
    * Target Kubernetes namespace
    */
   namespace: string;
+
+  /**
+   * Cluster type filter - determines which clusters this app is synthesized for.
+   * - 'kind': Only KIND clusters (local development with idpBuilder)
+   * - 'talos': Only Talos clusters (production with GitHub source)
+   * - 'both': Both cluster types (shared infrastructure like ESO, Tailscale)
+   * @default 'kind' for backward compatibility
+   */
+  clusterType?: AppClusterType;
   
   /**
    * Chart configuration

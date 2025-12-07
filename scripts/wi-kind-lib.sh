@@ -2,7 +2,17 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
 #  wi-kind-lib.sh – helper library (NO side-effects when sourced)
+#
+#  ⚠️  DEPRECATED: This script is deprecated as of feature 106.
+#  Use: source deployment/scripts/cluster-menu.sh && cluster-deploy
+#  See CLAUDE.md for updated documentation.
 # ------------------------------------------------------------------
+
+echo "⚠️  DEPRECATED: This script (wi-kind-lib.sh) is deprecated."
+echo "   Use: source deployment/scripts/cluster-menu.sh && cluster-deploy"
+echo "   See CLAUDE.md for updated documentation."
+echo ""
+
 set -Eeuo pipefail
 log() { printf '[%(%T)T] %s\n' -1 "$*"; }
 
@@ -75,12 +85,12 @@ export VCLUSTER_NAME="${VCLUSTER_NAME:-dev}"
 export VCLUSTER_NAMESPACE="${VCLUSTER_NAMESPACE:-vcluster-${VCLUSTER_NAME}}"
 export VCLUSTER_VERSION="${VCLUSTER_VERSION:-0.19.5}"
 
-export WI_ENV="${PROJECT_ROOT}/.env-files/wi.env"
+export WI_ENV="${PROJECT_ROOT}/.env-files/kind.env"
 export DEPLOY_DIR="${DEPLOY_DIR:-${PROJECT_ROOT}/deployments}"
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-gitops}" # Default Kind cluster name
 export APP_NAME="${APP_NAME:-gitops-app}"  # AAD App display name for Workload Identity
 
-# Load wi.env if it exists to get AZURE_CLIENT_ID (previously APP_ID)
+# Load kind.env if it exists to get AZURE_CLIENT_ID (previously APP_ID)
 if [[ -f "$WI_ENV" ]]; then
   source <(grep -E '^(AZURE_CLIENT_ID|APP_ID|AZURE_STORAGE_ACCOUNT|AZURE_KEYVAULT_NAME|SERVICE_ACCOUNT_ISSUER|AZURE_SUBSCRIPTION_ID)=' "$WI_ENV" | sed 's/^/export /')
   # Handle legacy APP_ID variable
@@ -169,7 +179,7 @@ fi
 
 # Set default values for common Azure variables
 : "${AZURE_TENANT_ID:=0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38}"  # Default tenant from require_az_login
-# Get current subscription from Azure CLI if not set from wi.env
+# Get current subscription from Azure CLI if not set from kind.env
 if [[ -z "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
   AZURE_SUBSCRIPTION_ID=$(az account show --query "id" -o tsv 2>/dev/null || echo "")
   if [[ -z "$AZURE_SUBSCRIPTION_ID" ]]; then
@@ -357,7 +367,7 @@ create_azure_blob_storage_account() {
   # Ensure group exists
   az group show -n "$RESOURCE_GROUP" -o none 2>/dev/null || az group create --name "$RESOURCE_GROUP" --location "$LOCATION" -o none
 
-  # Check if a valid AZURE_STORAGE_ACCOUNT is already set (e.g., from wi.env)
+  # Check if a valid AZURE_STORAGE_ACCOUNT is already set (e.g., from kind.env)
   if [[ -n "${AZURE_STORAGE_ACCOUNT:-}" ]]; then
     log "ℹ️ AZURE_STORAGE_ACCOUNT is set to '${AZURE_STORAGE_ACCOUNT}'. Verifying its status..."
     if az storage account show -n "$AZURE_STORAGE_ACCOUNT" -g "$RESOURCE_GROUP" &>/dev/null; then
@@ -390,7 +400,7 @@ create_azure_blob_storage_account() {
       STG_ARGS=( --account-name "$AZURE_STORAGE_ACCOUNT" --auth-mode login )
       ensure_blob_contrib || return 1
       
-      # Persist to wi.env
+      # Persist to kind.env
       if grep -q '^AZURE_STORAGE_ACCOUNT=' "$WI_ENV" 2>/dev/null; then
         sed -i'.bak' "s|^AZURE_STORAGE_ACCOUNT=.*|AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}|" "$WI_ENV"
       else
@@ -936,7 +946,7 @@ resolve_keyvault() {
     fi
   fi
 
-  # 2. If AZURE_KEYVAULT_NAME is still not set (not in wi.env, or the one from wi.env was invalid/not found)
+  # 2. If AZURE_KEYVAULT_NAME is still not set (not in kind.env, or the one from kind.env was invalid/not found)
   if [[ -z "${AZURE_KEYVAULT_NAME:-}" ]]; then
     log "ℹ️ AZURE_KEYVAULT_NAME not resolved from '$WI_ENV' or was invalid. Attempting to discover a Key Vault in resource group '$RESOURCE_GROUP'..."
     # Discover the first Key Vault in the resource group
@@ -946,7 +956,7 @@ resolve_keyvault() {
         export AZURE_KEYVAULT_NAME="$discovered_kv_name"
     else
         log "❌ ERROR: No Key Vault name was provided, any value from '$WI_ENV' was invalid/not found, and no Key Vaults were discovered in RG '$RESOURCE_GROUP'."
-        log "           Please ensure a Key Vault exists in '$RESOURCE_GROUP' and is accessible, or set a correct AZURE_KEYVAULT_NAME environment variable/`wi.env` entry."
+        log "           Please ensure a Key Vault exists in '$RESOURCE_GROUP' and is accessible, or set a correct AZURE_KEYVAULT_NAME environment variable/`kind.env` entry."
         return 1
     fi
   fi
@@ -965,7 +975,7 @@ resolve_keyvault() {
   export VAULT_ID="$temp_vault_id"
   export VAULT_URL="https://${AZURE_KEYVAULT_NAME}.vault.azure.net"
 
-  # 4. Persist the successfully used/validated AZURE_KEYVAULT_NAME to wi.env
+  # 4. Persist the successfully used/validated AZURE_KEYVAULT_NAME to kind.env
   log "ℹ️ Persisting successfully resolved AZURE_KEYVAULT_NAME='${AZURE_KEYVAULT_NAME}' to '$WI_ENV'..."
   # Create WI_ENV directory if it doesn't exist (though it should)
   mkdir -p "$(dirname "$WI_ENV")"

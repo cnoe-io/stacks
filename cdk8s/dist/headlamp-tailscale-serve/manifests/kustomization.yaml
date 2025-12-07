@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - Deployment.headlamp2-tailscale-serve.k8s.yaml
-  - PersistentVolumeClaim.headlamp2-tailscale-serve-state.k8s.yaml
-  - Role.headlamp2-tailscale-serve-role.k8s.yaml
-  - RoleBinding.headlamp2-tailscale-serve-rolebinding.k8s.yaml
-  - ServiceAccount.headlamp2-tailscale-serve-sa.k8s.yaml

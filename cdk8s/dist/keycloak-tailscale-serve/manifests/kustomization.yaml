@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - Deployment.keycloak2-tailscale-serve.k8s.yaml
-  - PersistentVolumeClaim.keycloak2-tailscale-serve-state.k8s.yaml
-  - Role.keycloak2-tailscale-serve-role.k8s.yaml
-  - RoleBinding.keycloak2-tailscale-serve-rolebinding.k8s.yaml
-  - ServiceAccount.keycloak2-tailscale-serve-sa.k8s.yaml

@@ -47,6 +47,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'external-secrets-workload-identity',
     namespace: 'external-secrets',
+    clusterType: 'kind',
     chart: {
       type: 'ExternalSecretsWorkloadIdentityChart'
     },
@@ -64,6 +65,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'bootstrap-secrets',
     namespace: 'argocd',
+    clusterType: 'kind',
     chart: {
       type: 'BootstrapSecretsChart'
     },
@@ -146,6 +148,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'postgres',
     namespace: 'nextjs',
+    clusterType: 'kind',
     chart: {
       type: 'PostgresChart'
     },
@@ -163,6 +166,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'redis',
     namespace: 'nextjs',
+    clusterType: 'kind',
     chart: {
       type: 'RedisChart',
       props: {
@@ -184,6 +188,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'keycloak-headlamp-client',
     namespace: 'keycloak',
+    clusterType: 'kind',
     chart: {
       type: 'KeycloakHeadlampClientChart'
     },
@@ -208,6 +213,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'headlamp-keycloak-secrets',
     namespace: 'headlamp',
+    clusterType: 'kind',
     chart: {
       type: 'HeadlampKeycloakSecretsChart'
     },
@@ -232,6 +238,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'headlamp',
     namespace: 'headlamp',
+    clusterType: 'kind',
     chart: {
       type: 'HeadlampChart',
       props: {
@@ -263,6 +270,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
+    clusterType: 'kind',
     chart: {
       type: 'KargoSecretsChart'
     },
@@ -282,6 +290,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo',
     namespace: 'kargo',
+    clusterType: 'kind',
     chart: {
       type: 'KargoHelmChart'
     },
@@ -356,6 +365,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-project',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',
     chart: {
       type: 'KargoPipelinesProjectChart'
     },
@@ -393,6 +403,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-credentials',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',
     chart: {
       type: 'KargoPipelinesCredentialsChart'
     },
@@ -422,6 +433,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-ca-certificates',
     namespace: 'kargo',
+    clusterType: 'kind',
     chart: {
       type: 'KargoCACertificatesChart'
     },
@@ -444,6 +456,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-gitea-webhook-setup',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',
     chart: {
       type: 'KargoGiteaWebhookSetupChart'
     },
@@ -474,6 +487,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dagger-infra',
     namespace: 'argo',
+    clusterType: 'kind',
     chart: {
       type: 'DaggerInfraChart'
     },
@@ -525,6 +539,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'tailscale-crds',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleCrdsChart'
     },
@@ -550,6 +565,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'tailscale-operator-secrets',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleOperatorSecretsChart',
       props: {
@@ -574,6 +590,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'tailscale-operator',
     namespace: 'tailscale',
+    clusterType: 'both',
     chart: {
       type: 'TailscaleOperatorChart',
       props: {
@@ -602,6 +619,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'k8s-api-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'both',
     chart: {
       type: 'K8sApiTailscaleServeChart',
       props: {
@@ -629,6 +647,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'tailscale-secrets',
     namespace: 'tailscale',
+    clusterType: 'both',
     chart: {
       type: 'TailscaleSecretsChart',
       props: {
@@ -654,6 +673,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'tailscale-subnet-router',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleSubnetRouterChart',
       props: {
@@ -701,6 +721,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'argocd-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'both',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -730,6 +751,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'both',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -759,6 +781,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'gitea-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -788,6 +811,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kagent-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -817,6 +841,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -846,6 +871,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'headlamp-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -875,6 +901,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'keycloak-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -903,6 +930,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'gateway-api-crds',
     namespace: 'default',
+    clusterType: 'both',
     chart: {
       type: 'GatewayApiCrdsChart',
       props: {
@@ -930,6 +958,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kgateway-crds',
     namespace: 'kgateway-system',
+    clusterType: 'both',
     chart: {
       type: 'KgatewayCrdsChart',
       props: {
@@ -957,6 +986,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kgateway',
     namespace: 'kgateway-system',
+    clusterType: 'both',
     chart: {
       type: 'KgatewayChart',
       props: {
@@ -987,6 +1017,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kagent-crds',
     namespace: 'kagent',
+    clusterType: 'both',
     chart: {
       type: 'KagentCrdsChart',
       props: {
@@ -1014,6 +1045,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kagent',
     namespace: 'kagent',
+    clusterType: 'both',
     chart: {
       type: 'KagentChart',
       props: {
@@ -1044,6 +1076,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kagent-secrets',
     namespace: 'kagent',
+    clusterType: 'both',
     chart: {
       type: 'KagentSecretsChart',
       props: {
@@ -1071,6 +1104,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'nix-cache-namespace',
     namespace: 'nix-cache',
+    clusterType: 'kind',
     chart: {
       type: 'NixCacheNamespaceChart',
       props: {
@@ -1098,6 +1132,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'minio',
     namespace: 'nix-cache',
+    clusterType: 'kind',
     chart: {
       type: 'MinioChart',
       props: {
@@ -1126,6 +1161,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'attic',
     namespace: 'nix-cache',
+    clusterType: 'kind',
     chart: {
       type: 'AtticChart',
       props: {
@@ -1157,6 +1193,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'observability-namespace',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'ObservabilityNamespaceChart',
       props: {
@@ -1184,6 +1221,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'observability-secrets',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'ObservabilitySecretsChart',
       props: {
@@ -1210,6 +1248,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'jaeger',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'JaegerChart',
       props: {
@@ -1240,6 +1279,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse-postgres',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'LangfusePostgresChart',
       props: {
@@ -1270,6 +1310,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse-clickhouse',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'LangfuseClickhouseChart',
       props: {
@@ -1298,6 +1339,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse-redis',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'LangfuseRedisChart',
       props: {
@@ -1326,6 +1368,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse-minio',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'LangfuseMinioChart',
       props: {
@@ -1355,6 +1398,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'langfuse',
     namespace: 'observability',
+    clusterType: 'both',
     chart: {
       type: 'LangfuseChart',
       props: {
@@ -1401,6 +1445,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-tracing-config',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'DaprTracingConfigChart',
       props: {
@@ -1434,7 +1479,8 @@ export const applicationConfigs: ApplicationConfig[] = [
   // These CRDs are required for Dapr components, configurations, subscriptions, etc.
   {
     name: 'dapr-crds',
-    namespace: 'default',  // CRDs are cluster-scoped
+    namespace: 'default',
+    clusterType: 'both',  // CRDs are cluster-scoped
     chart: {
       type: 'DaprCrdsChart',
       props: {
@@ -1462,6 +1508,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-runtime',
     namespace: 'dapr-system',
+    clusterType: 'both',
     chart: {
       type: 'DaprRuntimeChart',
       props: {
@@ -1492,6 +1539,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-agents-redis',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'DaprAgentsRedisChart',
       props: {
@@ -1521,6 +1569,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-agents-secrets',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'DaprAgentsSecretsChart',
       props: {
@@ -1548,6 +1597,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-components',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'DaprComponentsChart',
       props: {
@@ -1578,6 +1628,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'speckit-agents-rbac',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'SpecKitAgentsRbacChart',
       props: {
@@ -1604,6 +1655,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'speckit-agents',
     namespace: 'dapr-agents',
+    clusterType: 'both',
     chart: {
       type: 'SpecKitAgentsChart',
       props: {
@@ -1631,6 +1683,119 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         }
+      }
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TALOS-ONLY APPLICATIONS
+  // These applications are specific to Talos Linux clusters
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Local Path Provisioner - Talos doesn't have built-in storage
+  {
+    name: 'local-path-provisioner',
+    namespace: 'local-path-storage',
+    clusterType: 'talos',
+    chart: {
+      type: 'LocalPathProvisionerChart',
+      props: {
+        storagePath: '/opt/local-path-provisioner',
+        isDefault: true
+      }
+    },
+    argocd: {
+      syncWave: '-105',
+      labels: {
+        'app.kubernetes.io/component': 'storage',
+        'app.kubernetes.io/part-of': 'infrastructure'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // External Secrets Operator - Talos installs via ArgoCD (KIND uses idpBuilder)
+  {
+    name: 'external-secrets-operator',
+    namespace: 'external-secrets',
+    clusterType: 'talos',
+    chart: {
+      type: 'EsoHelmChart',
+      props: {
+        version: '0.9.13',
+        installCrds: true,
+        enableWebhook: true,
+        replicaCount: 2
+      }
+    },
+    argocd: {
+      syncWave: '-100',
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Workload Identity Patch - Talos uses Azure Workload Identity
+  {
+    name: 'workload-identity-patch',
+    namespace: 'external-secrets',
+    clusterType: 'talos',
+    chart: {
+      type: 'WorkloadIdentityPatchChart',
+      props: {
+        // These values are loaded from environment variables at synthesis time
+        clientId: process.env.AZURE_CLIENT_ID || '',
+        tenantId: process.env.AZURE_TENANT_ID || '',
+        serviceAccountName: 'external-secrets',
+        serviceAccountNamespace: 'external-secrets'
+      }
+    },
+    argocd: {
+      syncWave: '-94',
+      labels: {
+        'app.kubernetes.io/component': 'identity',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['ServerSideApply=true']
+      }
+    }
+  },
+
+  // ClusterSecretStore - Talos uses Azure Key Vault
+  {
+    name: 'cluster-secret-store',
+    namespace: 'external-secrets',
+    clusterType: 'talos',
+    chart: {
+      type: 'ClusterSecretStoreChart',
+      props: {
+        storeName: 'azure-keyvault-store',
+        keyVaultName: process.env.AZURE_KEYVAULT_NAME || 'talos-keyvault',
+        serviceAccountRef: {
+          name: 'external-secrets',
+          namespace: 'external-secrets'
+        }
+      }
+    },
+    argocd: {
+      syncWave: '-92',
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'platform'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
       }
     }
   }

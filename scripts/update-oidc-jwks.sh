@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # PROJECT_ROOT is one level up from scripts/
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-WI_ENV="${PROJECT_ROOT}/.env-files/wi.env"
+WI_ENV="${PROJECT_ROOT}/.env-files/kind.env"
 
 # Source the environment file if it exists
 if [[ -f "$WI_ENV" ]]; then

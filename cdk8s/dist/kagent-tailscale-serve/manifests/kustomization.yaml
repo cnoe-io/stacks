@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - Deployment.kagent2-tailscale-serve.k8s.yaml
-  - PersistentVolumeClaim.kagent2-tailscale-serve-state.k8s.yaml
-  - Role.kagent2-tailscale-serve-role.k8s.yaml
-  - RoleBinding.kagent2-tailscale-serve-rolebinding.k8s.yaml
-  - ServiceAccount.kagent2-tailscale-serve-sa.k8s.yaml

@@ -29,7 +29,7 @@ spec:
                 --socket=/run/tailscale/tailscaled.sock \
                 --state=/var/lib/tailscale/tailscaled.state &
 
-              # install socat for port forwarding (required for userspace networking + Services)
+              # install socat for port forwarding
               apk add --no-cache socat >/dev/null
 
               # wait for tailscaled to come up
@@ -50,15 +50,17 @@ spec:
               done
 
               # Start socat to forward from exposed port (443) to kubectl-proxy (8001)
-              # This is required because netstack in userspace mode routes to the exposed port
               socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
 
               # expose kubectl-proxy via tailscale serve on HTTPS 443
-              # The serve command tells Tailscale to route traffic to localhost:443 (socat)
+              # Using legacy hostname mode (no --service flag) - accessible via pod hostname
+              echo "Starting Tailscale serve for k8s-api..."
               tailscale --socket=/run/tailscale/tailscaled.sock \
-                serve --service=svc:k8s-api --https=443 http://127.0.0.1:443
+                serve --bg --https=443 http://127.0.0.1:443
 
-              echo "Kubernetes API proxy running at https://k8s-api.<tailnet>.ts.net"
+              # Get the hostname for logging
+              HOSTNAME=$(tailscale --socket=/run/tailscale/tailscaled.sock status --json | grep -o '"Self":{"[^"]*' | head -1 || echo "unknown")
+              echo "Kubernetes API proxy running - check Tailscale admin for hostname"
               exec tail -f /dev/null
           command:
             - /bin/sh

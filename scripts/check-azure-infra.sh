@@ -15,8 +15,8 @@ elif [[ "${CLUSTER_TYPE:-}" = "aks" ]]; then
     # For AKS clusters, use production env file
     ENV_FILE="${PROJECT_ROOT}/.env-files/production.env"
 else
-    # Default to wi.env for KIND clusters
-    ENV_FILE="${PROJECT_ROOT}/.env-files/wi.env"
+    # Default to kind.env for KIND clusters
+    ENV_FILE="${PROJECT_ROOT}/.env-files/kind.env"
 fi
 
 # Source the environment file if it exists
