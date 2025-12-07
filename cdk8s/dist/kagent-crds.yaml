@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-115"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: crds
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: kagent-crds
+    app.kubernetes.io/part-of: kagent
+    example: basic
+  name: kagent-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: kagent
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: "."
+    repoURL: cnoe://kagent-crds/manifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

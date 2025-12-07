@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-110"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: kagent
+    app.kubernetes.io/part-of: kagent
+    example: basic
+  name: kagent
+  namespace: argocd
+spec:
+  destination:
+    namespace: kagent
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: "."
+    repoURL: cnoe://kagent/manifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

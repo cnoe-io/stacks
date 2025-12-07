@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - Deployment.jaeger.k8s.yaml
+  - Ingress.jaeger.k8s.yaml
+  - PersistentVolumeClaim.jaeger-badger-pvc.k8s.yaml
+  - Service.jaeger-collector.k8s.yaml
+  - Service.jaeger-query.k8s.yaml

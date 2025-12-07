@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: continuous-delivery
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/part-of: platform
+    app.kubernetes.io/version: 1.6.1
+    example: basic
+  name: kargo
+  namespace: argocd
+spec:
+  destination:
+    namespace: kargo
+    server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: cert-manager.io
+      kind: Certificate
+    - group: cert-manager.io
+      kind: Issuer
+    - group: batch
+      jsonPointers:
+        - /spec/podReplacementPolicy
+        - /status/terminating
+      kind: Job
+  project: default
+  source:
+    path: "."
+    repoURL: cnoe://kargo/manifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - Replace=true

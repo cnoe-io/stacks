@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/name: speckit-agents
+    app.kubernetes.io/part-of: speckit
+  name: speckit-webhook-reader
+  namespace: dapr-agents
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: speckit-webhook-reader
+subjects:
+  - kind: ServiceAccount
+    name: speckit-agents
+    namespace: dapr-agents

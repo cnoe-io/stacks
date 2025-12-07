@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: langfuse-redis
+    app.kubernetes.io/part-of: observability
+    example: basic
+  name: langfuse-redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: "."
+    repoURL: cnoe://langfuse-redis/manifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

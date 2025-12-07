@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: headlamp
+  name: headlamp-plugins
+  namespace: headlamp
+data:
+  plugins.yaml: |
+    plugins:
+      - name: external-secrets-operator
+        source: https://github.com/magohl/external-secrets-operator-headlamp-plugin/releases/download/0.1.0-beta7/external-secrets-operator-headlamp-plugin-0.1.0-beta7.tar.gz
+        version: 0.1.0-beta7

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    description: Headless service for Neon cloud PostgreSQL compatibility
+  name: postgres-service
+  namespace: nextjs
+spec:
+  externalName: ep-wispy-math-a8k8xapb-pooler.eastus2.azure.neon.tech
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+  type: ExternalName

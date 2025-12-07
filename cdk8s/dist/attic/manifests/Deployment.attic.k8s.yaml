@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+  labels:
+    app: attic
+    app.kubernetes.io/component: nix-cache-server
+    app.kubernetes.io/name: attic
+    app.kubernetes.io/part-of: nix-cache
+  name: attic
+  namespace: nix-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attic
+  template:
+    metadata:
+      labels:
+        app: attic
+        app.kubernetes.io/component: nix-cache-server
+        app.kubernetes.io/name: attic
+    spec:
+      containers:
+        - args:
+            - -f
+            - /etc/atticd/server.toml
+          command:
+            - atticd
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: access-key
+                  name: minio-credentials
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: secret-key
+                  name: minio-credentials
+          image: ghcr.io/zhaofengli/attic:latest
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          name: attic
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/atticd
+              name: config
+              readOnly: true
+            - mountPath: /var/lib/atticd
+              name: data
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsUser: 0
+      volumes:
+        - configMap:
+            name: attic-config
+          name: config
+        - emptyDir: {}
+          name: data

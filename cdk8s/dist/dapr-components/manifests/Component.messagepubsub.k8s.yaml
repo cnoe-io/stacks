@@ -1,0 +1,19 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  labels:
+    app.kubernetes.io/component: pubsub
+    app.kubernetes.io/name: messagepubsub
+    app.kubernetes.io/part-of: dapr-agents
+  name: messagepubsub
+  namespace: dapr-agents
+spec:
+  metadata:
+    - name: redisHost
+      value: redis-service.dapr-agents.svc.cluster.local:6379
+    - name: redisPassword
+      value: ""
+    - name: consumerID
+      value: speckit-agents
+  type: pubsub.redis
+  version: v1

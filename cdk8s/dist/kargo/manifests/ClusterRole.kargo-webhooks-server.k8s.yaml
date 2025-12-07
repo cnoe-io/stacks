@@ -1,0 +1,72 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: kubernetes-webhooks-server
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/version: v1.7.1
+    helm.sh/chart: kargo-1.7.1
+  name: kargo-webhooks-server
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - serviceaccounts
+    verbs:
+      - "*"
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+      - roles
+    verbs:
+      - "*"
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - clusterconfigs
+      - clusterpromotiontasks
+      - freights
+      - projects
+      - projectconfigs
+      - promotiontasks
+      - stages
+      - warehouses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - project/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create

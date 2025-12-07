@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    app.kubernetes.io/managed-by: cdk8s
+  labels:
+    app.kubernetes.io/component: management-controller
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/version: v1.7.1
+    helm.sh/chart: kargo-1.7.1
+  name: kargo-management-controller
+  namespace: kargo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: management-controller
+      app.kubernetes.io/instance: kargo
+      app.kubernetes.io/name: kargo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        configmap/checksum: 6f04eabba9531fed2e065cc601e4ddbe746eb581379816e526f417687af4ad5d
+      labels:
+        app.kubernetes.io/component: management-controller
+        app.kubernetes.io/instance: kargo
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kargo
+        app.kubernetes.io/version: v1.7.1
+        helm.sh/chart: kargo-1.7.1
+    spec:
+      containers:
+        - args:
+            - management-controller
+          command:
+            - /sbin/tini
+            - --
+            - /usr/local/bin/kargo
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: management-controller
+                  divisor: "1"
+                  resource: limits.memory
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: management-controller
+                  divisor: "1"
+                  resource: limits.cpu
+          envFrom:
+            - configMapRef:
+                name: kargo-management-controller
+          image: ghcr.io/akuity/kargo:v1.7.1
+          imagePullPolicy: IfNotPresent
+          name: management-controller
+          resources: {}
+      serviceAccount: kargo-management-controller

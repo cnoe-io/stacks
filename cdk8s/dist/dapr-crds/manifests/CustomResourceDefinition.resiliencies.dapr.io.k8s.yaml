@@ -1,0 +1,40 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  labels:
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.16.3
+  name: resiliencies.dapr.io
+spec:
+  group: dapr.io
+  names:
+    kind: Resiliency
+    listKind: ResiliencyList
+    plural: resiliencies
+    singular: resiliency
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            scopes:
+              items:
+                type: string
+              type: array
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+          type: object
+      served: true
+      storage: true

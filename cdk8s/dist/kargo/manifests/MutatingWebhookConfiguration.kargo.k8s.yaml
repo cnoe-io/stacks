@@ -1,0 +1,101 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations: {}
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/version: v1.7.1
+    helm.sh/chart: kargo-1.7.1
+  name: kargo
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: kargo-webhooks-server
+        namespace: kargo
+        path: /mutate-kargo-akuity-io-v1alpha1-freight
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQXJHZ0F3SUJBZ0lVR1pXU0xqYU5Cbkw1RHBuMFNhaVd5Q1F6aEJVd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZhMkZ5WjI4dGQyVmlhRzl2YTNNdGMyVnlkbVZ5TG10aGNtZHZMbk4yWXpBZQpGdzB5TlRBM01qZ3hOekl4TURGYUZ3MHpOVEEzTWpZeE56SXhNREZhTUNveEtEQW1CZ05WQkFNTUgydGhjbWR2CkxYZGxZbWh2YjJ0ekxYTmxjblpsY2k1cllYSm5ieTV6ZG1Nd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEbitkOVRqTkJBakdDOHN2alRBMWxIOExGRjAyYmw0ZjVIRCsyR2d2Qmk4WkRhcDd2Kwp4bm11cEpUVkhzdEk5L3Zmblc2eWdTU1lWWERpVUoxRUZQbUZiMTYyd2NzcW1idWNWN0N1N0JNUVlDVkFIbzZxCkZxem5TZ2lLU0VpUks2ZzYwdnV4SVF6Y21yaUpWNEhPQkFqSVhlWEJsZWZmL3VvMHNMaE9Jc3JVbFZzMnpCdmMKaHY3eDNoSXR6YWpFSldFTDBaa2l0ZjBsNDJDcmRvNHc2Nmd0eXJaNm93MEo4Ymh4UlZaekc5aTlLbWo2N0FDcgp5aFZnTWtGbmlhY2prUmVlUGF0ejBSM01ZVUk0YXBwRXlncXZ1eGpsQWNmSGJaRkxNVjJaVnlReW53VHl4SzdYClh6MVVuVjF6dVFiZUdUSENYNG5FWksxSzk2dmdOMndHWUMydkFnTUJBQUdqZ2VZd2dlTXdIUVlEVlIwT0JCWUUKRkg5bVpiS2I0RXA0b1gxVmozR1g1OGdNMjEwV01COEdBMVVkSXdRWU1CYUFGSDltWmJLYjRFcDRvWDFWajNHWAo1OGdNMjEwV01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d2dZOEdBMVVkRVFTQmh6Q0JoSUlWYTJGeVoyOHRkMlZpCmFHOXZhM010YzJWeWRtVnlnaHRyWVhKbmJ5MTNaV0pvYjI5cmN5MXpaWEoyWlhJdWEyRnlaMitDSDJ0aGNtZHYKTFhkbFltaHZiMnR6TFhObGNuWmxjaTVyWVhKbmJ5NXpkbU9DTFd0aGNtZHZMWGRsWW1odmIydHpMWE5sY25abApjaTVyWVhKbmJ5NXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUF6ZGJvClVRdVhyUEhUeFd3bVMzZXRRM09QQWFRcHhJb3JkdHhrSTdkVXhhNGJlaFI4ZWlidHJCUkdnaWtHZXZEL2NwWm8KeTJPUm5TQjRrMXBKWEhyUzdidUwzWHp4anRNN3FyQml5UzFGVzZMNFhkeHNnd3NhcGtVenF0VXFkZFIrZ3RuTgoycDh0TXJyZkZBQ1B0RjZwbEdsMTIwYkkxWkVYUGVDOGtqaEs3eGpyQm5wbDdRSUJIWkZjcjlWTmlXVHVMbVMxCmlqSW5Ib21rMWw4bDBuc1lKS0xRdUdpcjRwd1pRVWdTc0RCOUJjSllObjluYkw0emRhUzl5MHlEVFV1M3pVNWIKR0Q0Zi81U1FsaSt3TjhKTnZDL0pTUlhDV1pCMnpQQVdwcjV2ZXhJYy9iRHQ2MzA2d2E5SnU5czd6eTc1OWsrZwpacVExUU5KQVhuYUl2aTdCM2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    failurePolicy: Fail
+    name: freight.kargo.akuity.io
+    rules:
+      - apiGroups:
+          - kargo.akuity.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - freights
+        scope: Namespaced
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: kargo-webhooks-server
+        namespace: kargo
+        path: /mutate-kargo-akuity-io-v1alpha1-promotion
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQXJHZ0F3SUJBZ0lVR1pXU0xqYU5Cbkw1RHBuMFNhaVd5Q1F6aEJVd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZhMkZ5WjI4dGQyVmlhRzl2YTNNdGMyVnlkbVZ5TG10aGNtZHZMbk4yWXpBZQpGdzB5TlRBM01qZ3hOekl4TURGYUZ3MHpOVEEzTWpZeE56SXhNREZhTUNveEtEQW1CZ05WQkFNTUgydGhjbWR2CkxYZGxZbWh2YjJ0ekxYTmxjblpsY2k1cllYSm5ieTV6ZG1Nd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEbitkOVRqTkJBakdDOHN2alRBMWxIOExGRjAyYmw0ZjVIRCsyR2d2Qmk4WkRhcDd2Kwp4bm11cEpUVkhzdEk5L3Zmblc2eWdTU1lWWERpVUoxRUZQbUZiMTYyd2NzcW1idWNWN0N1N0JNUVlDVkFIbzZxCkZxem5TZ2lLU0VpUks2ZzYwdnV4SVF6Y21yaUpWNEhPQkFqSVhlWEJsZWZmL3VvMHNMaE9Jc3JVbFZzMnpCdmMKaHY3eDNoSXR6YWpFSldFTDBaa2l0ZjBsNDJDcmRvNHc2Nmd0eXJaNm93MEo4Ymh4UlZaekc5aTlLbWo2N0FDcgp5aFZnTWtGbmlhY2prUmVlUGF0ejBSM01ZVUk0YXBwRXlncXZ1eGpsQWNmSGJaRkxNVjJaVnlReW53VHl4SzdYClh6MVVuVjF6dVFiZUdUSENYNG5FWksxSzk2dmdOMndHWUMydkFnTUJBQUdqZ2VZd2dlTXdIUVlEVlIwT0JCWUUKRkg5bVpiS2I0RXA0b1gxVmozR1g1OGdNMjEwV01COEdBMVVkSXdRWU1CYUFGSDltWmJLYjRFcDRvWDFWajNHWAo1OGdNMjEwV01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d2dZOEdBMVVkRVFTQmh6Q0JoSUlWYTJGeVoyOHRkMlZpCmFHOXZhM010YzJWeWRtVnlnaHRyWVhKbmJ5MTNaV0pvYjI5cmN5MXpaWEoyWlhJdWEyRnlaMitDSDJ0aGNtZHYKTFhkbFltaHZiMnR6TFhObGNuWmxjaTVyWVhKbmJ5NXpkbU9DTFd0aGNtZHZMWGRsWW1odmIydHpMWE5sY25abApjaTVyWVhKbmJ5NXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUF6ZGJvClVRdVhyUEhUeFd3bVMzZXRRM09QQWFRcHhJb3JkdHhrSTdkVXhhNGJlaFI4ZWlidHJCUkdnaWtHZXZEL2NwWm8KeTJPUm5TQjRrMXBKWEhyUzdidUwzWHp4anRNN3FyQml5UzFGVzZMNFhkeHNnd3NhcGtVenF0VXFkZFIrZ3RuTgoycDh0TXJyZkZBQ1B0RjZwbEdsMTIwYkkxWkVYUGVDOGtqaEs3eGpyQm5wbDdRSUJIWkZjcjlWTmlXVHVMbVMxCmlqSW5Ib21rMWw4bDBuc1lKS0xRdUdpcjRwd1pRVWdTc0RCOUJjSllObjluYkw0emRhUzl5MHlEVFV1M3pVNWIKR0Q0Zi81U1FsaSt3TjhKTnZDL0pTUlhDV1pCMnpQQVdwcjV2ZXhJYy9iRHQ2MzA2d2E5SnU5czd6eTc1OWsrZwpacVExUU5KQVhuYUl2aTdCM2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    failurePolicy: Fail
+    name: promotion.kargo.akuity.io
+    rules:
+      - apiGroups:
+          - kargo.akuity.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - promotions
+        scope: Namespaced
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: kargo-webhooks-server
+        namespace: kargo
+        path: /mutate-kargo-akuity-io-v1alpha1-stage
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQXJHZ0F3SUJBZ0lVR1pXU0xqYU5Cbkw1RHBuMFNhaVd5Q1F6aEJVd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZhMkZ5WjI4dGQyVmlhRzl2YTNNdGMyVnlkbVZ5TG10aGNtZHZMbk4yWXpBZQpGdzB5TlRBM01qZ3hOekl4TURGYUZ3MHpOVEEzTWpZeE56SXhNREZhTUNveEtEQW1CZ05WQkFNTUgydGhjbWR2CkxYZGxZbWh2YjJ0ekxYTmxjblpsY2k1cllYSm5ieTV6ZG1Nd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEbitkOVRqTkJBakdDOHN2alRBMWxIOExGRjAyYmw0ZjVIRCsyR2d2Qmk4WkRhcDd2Kwp4bm11cEpUVkhzdEk5L3Zmblc2eWdTU1lWWERpVUoxRUZQbUZiMTYyd2NzcW1idWNWN0N1N0JNUVlDVkFIbzZxCkZxem5TZ2lLU0VpUks2ZzYwdnV4SVF6Y21yaUpWNEhPQkFqSVhlWEJsZWZmL3VvMHNMaE9Jc3JVbFZzMnpCdmMKaHY3eDNoSXR6YWpFSldFTDBaa2l0ZjBsNDJDcmRvNHc2Nmd0eXJaNm93MEo4Ymh4UlZaekc5aTlLbWo2N0FDcgp5aFZnTWtGbmlhY2prUmVlUGF0ejBSM01ZVUk0YXBwRXlncXZ1eGpsQWNmSGJaRkxNVjJaVnlReW53VHl4SzdYClh6MVVuVjF6dVFiZUdUSENYNG5FWksxSzk2dmdOMndHWUMydkFnTUJBQUdqZ2VZd2dlTXdIUVlEVlIwT0JCWUUKRkg5bVpiS2I0RXA0b1gxVmozR1g1OGdNMjEwV01COEdBMVVkSXdRWU1CYUFGSDltWmJLYjRFcDRvWDFWajNHWAo1OGdNMjEwV01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d2dZOEdBMVVkRVFTQmh6Q0JoSUlWYTJGeVoyOHRkMlZpCmFHOXZhM010YzJWeWRtVnlnaHRyWVhKbmJ5MTNaV0pvYjI5cmN5MXpaWEoyWlhJdWEyRnlaMitDSDJ0aGNtZHYKTFhkbFltaHZiMnR6TFhObGNuWmxjaTVyWVhKbmJ5NXpkbU9DTFd0aGNtZHZMWGRsWW1odmIydHpMWE5sY25abApjaTVyWVhKbmJ5NXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUF6ZGJvClVRdVhyUEhUeFd3bVMzZXRRM09QQWFRcHhJb3JkdHhrSTdkVXhhNGJlaFI4ZWlidHJCUkdnaWtHZXZEL2NwWm8KeTJPUm5TQjRrMXBKWEhyUzdidUwzWHp4anRNN3FyQml5UzFGVzZMNFhkeHNnd3NhcGtVenF0VXFkZFIrZ3RuTgoycDh0TXJyZkZBQ1B0RjZwbEdsMTIwYkkxWkVYUGVDOGtqaEs3eGpyQm5wbDdRSUJIWkZjcjlWTmlXVHVMbVMxCmlqSW5Ib21rMWw4bDBuc1lKS0xRdUdpcjRwd1pRVWdTc0RCOUJjSllObjluYkw0emRhUzl5MHlEVFV1M3pVNWIKR0Q0Zi81U1FsaSt3TjhKTnZDL0pTUlhDV1pCMnpQQVdwcjV2ZXhJYy9iRHQ2MzA2d2E5SnU5czd6eTc1OWsrZwpacVExUU5KQVhuYUl2aTdCM2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    failurePolicy: Fail
+    name: stage.kargo.akuity.io
+    rules:
+      - apiGroups:
+          - kargo.akuity.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - stages
+        scope: Namespaced
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: kargo-webhooks-server
+        namespace: kargo
+        path: /mutate-kargo-akuity-io-v1alpha1-warehouse
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQXJHZ0F3SUJBZ0lVR1pXU0xqYU5Cbkw1RHBuMFNhaVd5Q1F6aEJVd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZhMkZ5WjI4dGQyVmlhRzl2YTNNdGMyVnlkbVZ5TG10aGNtZHZMbk4yWXpBZQpGdzB5TlRBM01qZ3hOekl4TURGYUZ3MHpOVEEzTWpZeE56SXhNREZhTUNveEtEQW1CZ05WQkFNTUgydGhjbWR2CkxYZGxZbWh2YjJ0ekxYTmxjblpsY2k1cllYSm5ieTV6ZG1Nd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEbitkOVRqTkJBakdDOHN2alRBMWxIOExGRjAyYmw0ZjVIRCsyR2d2Qmk4WkRhcDd2Kwp4bm11cEpUVkhzdEk5L3Zmblc2eWdTU1lWWERpVUoxRUZQbUZiMTYyd2NzcW1idWNWN0N1N0JNUVlDVkFIbzZxCkZxem5TZ2lLU0VpUks2ZzYwdnV4SVF6Y21yaUpWNEhPQkFqSVhlWEJsZWZmL3VvMHNMaE9Jc3JVbFZzMnpCdmMKaHY3eDNoSXR6YWpFSldFTDBaa2l0ZjBsNDJDcmRvNHc2Nmd0eXJaNm93MEo4Ymh4UlZaekc5aTlLbWo2N0FDcgp5aFZnTWtGbmlhY2prUmVlUGF0ejBSM01ZVUk0YXBwRXlncXZ1eGpsQWNmSGJaRkxNVjJaVnlReW53VHl4SzdYClh6MVVuVjF6dVFiZUdUSENYNG5FWksxSzk2dmdOMndHWUMydkFnTUJBQUdqZ2VZd2dlTXdIUVlEVlIwT0JCWUUKRkg5bVpiS2I0RXA0b1gxVmozR1g1OGdNMjEwV01COEdBMVVkSXdRWU1CYUFGSDltWmJLYjRFcDRvWDFWajNHWAo1OGdNMjEwV01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d2dZOEdBMVVkRVFTQmh6Q0JoSUlWYTJGeVoyOHRkMlZpCmFHOXZhM010YzJWeWRtVnlnaHRyWVhKbmJ5MTNaV0pvYjI5cmN5MXpaWEoyWlhJdWEyRnlaMitDSDJ0aGNtZHYKTFhkbFltaHZiMnR6TFhObGNuWmxjaTVyWVhKbmJ5NXpkbU9DTFd0aGNtZHZMWGRsWW1odmIydHpMWE5sY25abApjaTVyWVhKbmJ5NXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUF6ZGJvClVRdVhyUEhUeFd3bVMzZXRRM09QQWFRcHhJb3JkdHhrSTdkVXhhNGJlaFI4ZWlidHJCUkdnaWtHZXZEL2NwWm8KeTJPUm5TQjRrMXBKWEhyUzdidUwzWHp4anRNN3FyQml5UzFGVzZMNFhkeHNnd3NhcGtVenF0VXFkZFIrZ3RuTgoycDh0TXJyZkZBQ1B0RjZwbEdsMTIwYkkxWkVYUGVDOGtqaEs3eGpyQm5wbDdRSUJIWkZjcjlWTmlXVHVMbVMxCmlqSW5Ib21rMWw4bDBuc1lKS0xRdUdpcjRwd1pRVWdTc0RCOUJjSllObjluYkw0emRhUzl5MHlEVFV1M3pVNWIKR0Q0Zi81U1FsaSt3TjhKTnZDL0pTUlhDV1pCMnpQQVdwcjV2ZXhJYy9iRHQ2MzA2d2E5SnU5czd6eTc1OWsrZwpacVExUU5KQVhuYUl2aTdCM2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    failurePolicy: Fail
+    name: warehouse.kargo.akuity.io
+    rules:
+      - apiGroups:
+          - kargo.akuity.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - warehouses
+        scope: Namespaced
+    sideEffects: None

@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    app.kubernetes.io/managed-by: cdk8s
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/grpc-backend: "true"
+  labels:
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: kargo
+    app.kubernetes.io/version: v1.7.1
+    helm.sh/chart: kargo-1.7.1
+  name: kargo-api
+  namespace: kargo
+spec:
+  rules:
+    - host: kargo.talos.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: kargo-api
+                port:
+                  number: 80
+            path: /
+            pathType: ImplementationSpecific
+          - backend:
+              service:
+                name: kargo-external-webhooks-server
+                port:
+                  number: 80
+            path: /webhooks
+            pathType: ImplementationSpecific

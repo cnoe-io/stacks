@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/component: tailscale-serve
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: headlamp2-tailscale-serve
+  name: headlamp2-tailscale-serve-state
+  namespace: tailscale
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

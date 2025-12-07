@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ConfigMap.gitea-webhook-setup-script.k8s.yaml
+  - CronJob.gitea-webhook-verify.k8s.yaml
+  - ExternalSecret.gitea-credentials-external.k8s.yaml
+  - Job.gitea-webhook-setup.k8s.yaml

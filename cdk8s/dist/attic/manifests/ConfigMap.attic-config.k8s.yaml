@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+  labels:
+    app: attic
+    app.kubernetes.io/component: nix-cache-server
+    app.kubernetes.io/name: attic
+  name: attic-config
+  namespace: nix-cache
+data:
+  server.toml: |
+    # Attic Server Configuration
+    # Listen address for HTTP API
+    listen = "[::]:8080"
+
+    # Database configuration (SQLite)
+    [database]
+    url = "sqlite:///var/lib/atticd/server.db?mode=rwc"
+
+    # S3 storage backend configuration
+    [storage]
+    type = "s3"
+    region = "us-east-1"
+    bucket = "attic-cache"
+    endpoint = "http://minio.nix-cache.svc.cluster.local:9000"
+
+    # JWT Configuration for authentication
+    # Using a simple HMAC secret for testing (insecure - should use proper RSA keys in production)
+    [jwt.signing]
+    token-hs256-secret-base64 = "dGVzdC1zZWNyZXQtZm9yLWF0dGljLWJpbmFyeS1jYWNoZS1zZXJ2ZXI="
+
+    # Chunking configuration for content-addressed storage
+    [chunking]
+    nar-size-threshold = 65536      # 64 KiB - files smaller than this are not chunked
+    min-size = 16384                # 16 KiB - minimum chunk size
+    avg-size = 65536                # 64 KiB - target average chunk size
+    max-size = 262144               # 256 KiB - maximum chunk size
+
+    # Compression configuration
+    [compression]
+    type = "zstd"
+    level = 8                       # Compression level (1-22, higher = better compression)

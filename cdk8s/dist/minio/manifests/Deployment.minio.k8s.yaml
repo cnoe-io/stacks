@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  labels:
+    app: minio
+    app.kubernetes.io/component: object-storage
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/part-of: nix-cache
+  name: minio
+  namespace: nix-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+        app.kubernetes.io/component: object-storage
+        app.kubernetes.io/name: minio
+    spec:
+      containers:
+        - args:
+            - server
+            - /data
+            - --console-address
+            - :9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  key: access-key
+                  name: minio-credentials
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: secret-key
+                  name: minio-credentials
+          image: quay.io/minio/minio:latest
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          name: minio
+          ports:
+            - containerPort: 9000
+              name: api
+              protocol: TCP
+            - containerPort: 9001
+              name: console
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-storage

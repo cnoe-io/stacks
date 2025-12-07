@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: kargo-admin-binding
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: kargo-admin-kargo-pipelines
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-admin
+subjects:
+  - kind: User
+    name: system:serviceaccount:kargo:kargo-api
+  - kind: Group
+    name: system:authenticated

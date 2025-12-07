@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - CustomResourceDefinition.connectors.tailscale.com.k8s.yaml
+  - CustomResourceDefinition.dnsconfigs.tailscale.com.k8s.yaml
+  - CustomResourceDefinition.proxyclasses.tailscale.com.k8s.yaml
+  - CustomResourceDefinition.proxygroups.tailscale.com.k8s.yaml
+  - CustomResourceDefinition.recorders.tailscale.com.k8s.yaml
