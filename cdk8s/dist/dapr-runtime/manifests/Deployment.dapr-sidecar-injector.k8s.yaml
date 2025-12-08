@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: dapr
     app.kubernetes.io/part-of: dapr
-    app.kubernetes.io/version: 1.16.3
+    app.kubernetes.io/version: 1.16.4
   name: dapr-sidecar-injector
   namespace: dapr-system
 spec:
@@ -28,7 +28,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: dapr
         app.kubernetes.io/part-of: dapr
-        app.kubernetes.io/version: 1.16.3
+        app.kubernetes.io/version: 1.16.4
     spec:
       affinity:
         nodeAffinity:
@@ -61,7 +61,7 @@ spec:
             - name: KUBE_CLUSTER_DOMAIN
               value: cluster.local
             - name: SIDECAR_IMAGE
-              value: ghcr.io/dapr/daprd:1.16.3
+              value: ghcr.io/dapr/daprd:1.16.4
             - name: SIDECAR_IMAGE_PULL_POLICY
               value: IfNotPresent
             - name: SIDECAR_RUN_AS_NON_ROOT
@@ -84,7 +84,7 @@ spec:
               value: placement
             - name: ACTORS_SERVICE_ADDRESS
               value: dapr-placement-server:50005
-          image: ghcr.io/dapr/injector:1.16.3
+          image: ghcr.io/dapr/injector:1.16.4
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 5

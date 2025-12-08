@@ -19,7 +19,6 @@ resources:
   - Deployment.dapr-operator.k8s.yaml
   - Deployment.dapr-sentry.k8s.yaml
   - Deployment.dapr-sidecar-injector.k8s.yaml
-  - Ingress.dapr-dashboard.k8s.yaml
   - MutatingWebhookConfiguration.dapr-sidecar-injector.k8s.yaml
   - Namespace.dapr-system.k8s.yaml
   - PodDisruptionBudget.dapr-scheduler-server-disruption-budget.k8s.yaml

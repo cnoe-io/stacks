@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: dapr
     app.kubernetes.io/part-of: dapr
-    app.kubernetes.io/version: 1.16.3
+    app.kubernetes.io/version: 1.16.4
   name: dapr-scheduler-server
   namespace: dapr-system
 spec:
@@ -30,7 +30,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: dapr
         app.kubernetes.io/part-of: dapr
-        app.kubernetes.io/version: 1.16.3
+        app.kubernetes.io/version: 1.16.4
     spec:
       affinity:
         nodeAffinity:
@@ -100,7 +100,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-          image: ghcr.io/dapr/scheduler:1.16.3
+          image: ghcr.io/dapr/scheduler:1.16.4
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 5
