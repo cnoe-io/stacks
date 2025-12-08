@@ -13,21 +13,59 @@ export TALOS_CONFIG_DIR=~/repos/PittampalliOrg/stacks/102-bootstrap-talos-argocd
 
 ## Version Compatibility Matrix
 
-> **CRITICAL**: The `--install-image` version must match your `talosctl` client version, NOT the Hetzner ISO version. The ISO just boots maintenance mode; the installer image is what gets written to disk.
+> **CRITICAL**: When generating Talos configs for amd64 servers (like Hetzner Cloud), you **MUST run `talosctl gen config` from an amd64 machine**. Running it from an ARM64 machine (M1/M2/M3 Mac) produces configs that cause "exec format error" on etcd/kubelet.
 
 | Component | Version | Notes |
 |-----------|---------|-------|
 | **Hetzner ISO** | 122630 (v1.11.2) | `hcloud-v1-11-2-amd64.iso` - boots to maintenance mode only |
-| **talosctl client** | v1.11.5 | Your local talosctl version |
+| **talosctl client** | v1.11.5 | Must be amd64 binary on amd64 machine |
 | **--install-image** | **v1.11.5** | **Must match talosctl client version** |
 | **--kubernetes-version** | **1.32.0** | Default K8s version for Talos v1.11.5 |
 
-**Key Insight from Previous Successful Setup:**
+### The Architecture Problem
 
-The Hetzner ISO (v1.11.2) only boots the node into maintenance mode. Once you apply the config with `talosctl apply-config`, the **installer image** is what gets installed to disk. The ISO version doesn't need to match the installer version.
+**The Problem**: `talosctl gen config` embeds architecture-specific image digests based on the host machine's architecture. When you run it from an ARM64 Mac, the generated configs contain ARM64 image references, which fail on amd64 servers with "exec format error".
 
-**What works:**
+**What You See:**
+- Talos services (apid, machined, containerd) run fine - they're from the ISO
+- etcd and kubelet crash immediately with exit code 255
+- No logs from etcd/kubelet (they never start)
+- `talosctl version` shows Talos server is `linux/amd64` (correct)
+- But container images are ARM64 (wrong)
+
+**Diagnosis:**
 ```bash
+# Check host architecture where you generated configs
+talosctl version --client
+# If it shows "linux/arm64" and your servers are amd64, that's the problem!
+
+# Check etcd service status
+talosctl service etcd -n <node-ip> -e <node-ip>
+# Shows: STATE=Waiting, HEALTH=Fail, exit code 255
+```
+
+**The Solution - Generate Configs from an amd64 Machine:**
+```bash
+# Option 1: SSH to an amd64 server (like nixos-hetzner)
+ssh nixos-hetzner
+cd ~/repos/PittampalliOrg/stacks/102-bootstrap-talos-argocd
+talosctl gen config ...  # Now uses amd64-native talosctl
+
+# Option 2: Run in a Docker container on ARM64
+docker run --rm -it -v $(pwd):/work -w /work \
+  --platform linux/amd64 \
+  ghcr.io/siderolabs/talosctl:v1.11.5 \
+  gen config talos-cluster https://10.0.1.1:6443 ...
+
+# Option 3: Use Nix with amd64 emulation
+nix-shell -p talosctl --argstr system x86_64-linux
+```
+
+**Key Insight**: The Hetzner ISO (v1.11.2) only boots the node into maintenance mode. The configs define which container images are pulled. If those configs have ARM64 digests, etcd/kubelet will fail.
+
+**What works (on amd64 machine):**
+```bash
+# Run FROM an amd64 machine!
 # talosctl v1.11.5 client + installer v1.11.5 + K8s 1.32.0 = SUCCESS
 talosctl gen config talos-cluster https://10.0.1.1:6443 \
   --kubernetes-version 1.32.0 \
@@ -36,22 +74,11 @@ talosctl gen config talos-cluster https://10.0.1.1:6443 \
 ```
 
 **What causes "exec format error":**
-1. Mismatched installer version with talosctl client
-2. Trying to use K8s version that doesn't have proper multi-arch image support
+1. **Running `talosctl gen config` from ARM64 machine for amd64 targets** (most common)
+2. Mismatched installer version with talosctl client
 3. Using Talos 1.11.2 installer (ISO version) with talosctl 1.11.5 client
 
-**The "exec format error" Root Cause:**
-- When talosctl (v1.11.5/ARM64) generates configs, it embeds image references
-- If installer version doesn't match talosctl version, image manifests may resolve differently
-- Containerd on amd64 server may pull ARM64 images due to manifest list ordering
-- Result: etcd/kubelet binaries are ARM64 on amd64 server
-
-**The Fix:**
-- Use `--install-image ghcr.io/siderolabs/installer:v1.11.5` (matching talosctl version)
-- Use `--kubernetes-version 1.32.0` (the version that works with v1.11.5)
-- The Hetzner ISO version (v1.11.2) doesn't matter - it's just the boot medium
-
-> **IMPORTANT - Architecture**: Hetzner Cloud servers are **amd64** (x86_64). When generating Talos configs from an ARM64 host (e.g., Apple M1/M2/M3 Mac via NixOS), version consistency is critical.
+> **IMPORTANT - Architecture**: Hetzner Cloud servers are **amd64** (x86_64). Always generate Talos configs from an amd64 machine, not from ARM64 (M1/M2/M3 Mac).
 
 ## Cluster Architecture
 
@@ -1059,20 +1086,40 @@ kubectl logs -n kube-system -l app=flannel --tail=20
 ### "exec format error" in etcd/kubelet (Architecture Mismatch)
 
 **Symptoms:**
-- etcd service shows "Fail" health state
-- Logs show: `exec /usr/local/bin/etcd: exec format error`
-- Talos services (apid, machined) work but etcd/kubelet fail
+- etcd service shows "Fail" health state with exit code 255
+- **No logs** from etcd (container fails to start)
+- Talos services (apid, machined, containerd, trustd) work fine
+- `talosctl version` shows server is `linux/amd64` (correct)
+- But `talosctl image list` shows small image sizes (22-75 MB instead of 100+ MB)
 
-**Cause**: Talos configs were generated on an ARM64 host (M1/M2/M3 Mac) and contain ARM64-specific image digests or the containerd pulled wrong architecture images.
+**Root Cause**: You ran `talosctl gen config` from an ARM64 machine (M1/M2/M3 Mac). The tool embeds architecture-specific image digests based on the host architecture.
 
-**Solution**: Regenerate configs with correct `--talos-version` matching the ISO:
+**Diagnosis:**
 ```bash
-# Regenerate with explicit Talos version matching ISO (v1.11.2)
+# Check where you generated configs
+talosctl version --client
+# If shows "linux/arm64" but servers are amd64 → PROBLEM!
+
+# Check etcd service - will show exit code 255, no logs
+TALOSCONFIG=generated/talosconfig talosctl service etcd -n <ip> -e <ip>
+
+# Check images - ARM64 images are smaller than amd64
+TALOSCONFIG=generated/talosconfig talosctl image list -n <ip> -e <ip>
+# ARM64 etcd: ~22 MB, ARM64 kubelet: ~75 MB
+# AMD64 etcd: ~60 MB, AMD64 kubelet: ~120 MB
+```
+
+**Solution - Regenerate configs from amd64 machine:**
+
+```bash
+# Option 1: SSH to Hetzner server (x86_64)
+ssh nixos-hetzner  # or any amd64 machine
 cd ~/repos/PittampalliOrg/stacks/102-bootstrap-talos-argocd
 
+# Regenerate configs
 talosctl gen config talos-cluster https://10.0.1.1:6443 \
   --kubernetes-version 1.32.0 \
-  --talos-version v1.11.2 \
+  --install-image ghcr.io/siderolabs/installer:v1.11.5 \
   --with-secrets secrets/secrets.yaml \
   --config-patch @patches/common.yaml \
   --config-patch-control-plane @patches/controlplane/all.yaml \
@@ -1080,19 +1127,48 @@ talosctl gen config talos-cluster https://10.0.1.1:6443 \
   --output generated/ \
   --force
 
-# Re-apply configs to all nodes (they will reinstall)
+# Option 2: Use Docker on ARM64 Mac
+docker run --rm -it -v $(pwd):/work -w /work \
+  --platform linux/amd64 \
+  ghcr.io/siderolabs/talosctl:v1.11.5 \
+  gen config talos-cluster https://10.0.1.1:6443 \
+  --kubernetes-version 1.32.0 \
+  --install-image ghcr.io/siderolabs/installer:v1.11.5 \
+  --output generated/ --force
+```
+
+**After regenerating, wipe and re-apply:**
+```bash
+# Wipe the nodes (removes all data, returns to maintenance mode)
+for IP in ${CP1_IP} ${CP2_IP} ${CP3_IP}; do
+  talosctl reset --graceful=false --reboot=true \
+    --endpoints ${IP} --nodes ${IP}
+done
+
+# Wait for reboot
+sleep 60
+
+# Apply new configs
 for IP in ${CP1_IP} ${CP2_IP} ${CP3_IP}; do
   talosctl apply-config --insecure \
     --endpoints ${IP} --nodes ${IP} \
     --file generated/controlplane.yaml
 done
 
-# Wait for reinstall, then bootstrap
-sleep 60
+# Wait, then bootstrap
+sleep 90
 talosctl bootstrap --endpoints ${CP1_IP} --nodes ${CP1_IP}
 ```
 
-**Prevention**: Always use `--talos-version v1.11.2` when generating configs, matching the Hetzner ISO version.
+**Prevention**: **Always generate Talos configs from an amd64 machine** when targeting amd64 servers. Add this check to your workflow:
+```bash
+# Verify architecture before generating configs
+if [ "$(uname -m)" != "x86_64" ]; then
+  echo "ERROR: Must run talosctl gen config from amd64 machine!"
+  echo "Current arch: $(uname -m)"
+  exit 1
+fi
+```
 
 ---
 
