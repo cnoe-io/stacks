@@ -60,6 +60,32 @@ check_argocd_installed() {
 }
 
 #
+# Check and remove control-plane taints if running CP-only cluster
+# This is critical for CP-only clusters where all nodes have the taint
+#
+handle_control_plane_taints() {
+    log_info "Checking control-plane taints..."
+
+    # Count nodes with control-plane taint
+    local tainted_nodes total_nodes
+    tainted_nodes=$(kubectl get nodes -o jsonpath='{.items[*].spec.taints[?(@.key=="node-role.kubernetes.io/control-plane")].key}' 2>/dev/null | wc -w || echo "0")
+    total_nodes=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
+
+    if [[ "$tainted_nodes" -eq "$total_nodes" ]] && [[ "$total_nodes" -gt 0 ]]; then
+        log_warn "All $total_nodes nodes have control-plane taint (CP-only cluster)"
+        log_info "Removing control-plane taints to allow workload scheduling..."
+
+        if kubectl taint nodes --all node-role.kubernetes.io/control-plane- 2>/dev/null; then
+            log_success "Control-plane taints removed from all nodes"
+        else
+            log_warn "Could not remove taints (may already be removed)"
+        fi
+    else
+        log_info "Cluster has dedicated worker nodes or taints already removed"
+    fi
+}
+
+#
 # Check if ArgoCD pods are healthy
 #
 check_argocd_health() {
@@ -233,6 +259,10 @@ main() {
     # Check prerequisites
     require_command "kubectl" "Install from https://kubernetes.io/docs/tasks/tools/"
     require_command "helm" "Install from https://helm.sh/docs/intro/install/"
+
+    # Handle control-plane taints for CP-only clusters
+    # This MUST happen before ArgoCD install or Helm will timeout waiting for pods
+    handle_control_plane_taints
 
     # Check if already installed (idempotency)
     if check_argocd_installed; then
