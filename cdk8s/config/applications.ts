@@ -10,31 +10,19 @@ import {
  * Add new applications here to have them automatically synthesized
  */
 export const applicationConfigs: ApplicationConfig[] = [
-  // ArgoCD Configuration - DISABLED
-  // IDPBuilder manages ArgoCD directly. To customize ArgoCD's ConfigMap, use:
-  // idpbuilder create -c argocd:/path/to/argocd-cm-override.yaml
-  // See: https://cnoe.io/docs/idpbuilder/override
-  //
-  // If we need custom health checks, create a file with:
-  // apiVersion: v1
-  // kind: ConfigMap
-  // metadata:
-  //   name: argocd-cm
-  // data:
-  //   resource.customizations.health.networking.k8s.io_Ingress: |
-  //     hs = {}
-  //     hs.status = "Healthy"
-  //     hs.message = "Ingress is always considered healthy"
-  //     return hs
-  /*
+  // ArgoCD Configuration - Talos only
+  // For KIND clusters, IDPBuilder manages ArgoCD directly.
+  // For Talos clusters, we need custom health checks (Ingress, PVC) since there's no ingress controller.
+  // The Ingress health check prevents sync deadlocks where apps wait forever for Ingress to get an address.
   {
     name: 'argocd-config',
     namespace: 'argocd',
+    clusterType: 'talos',  // Only for Talos - KIND uses idpBuilder's ArgoCD config
     chart: {
       type: 'ArgoCDConfigChart'
     },
     argocd: {
-      syncWave: '-110',  // Apply very early, before any applications
+      syncWave: '-150',  // Apply very early, before any applications that might have Ingress
       labels: {
         'app.kubernetes.io/component': 'config',
         'app.kubernetes.io/part-of': 'argocd',
@@ -43,7 +31,6 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
     }
   },
-  */
   {
     name: 'external-secrets-workload-identity',
     namespace: 'external-secrets',
@@ -1707,7 +1694,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       }
     },
     argocd: {
-      syncWave: '-105',
+      syncWave: '-150',  // Must deploy BEFORE dapr-runtime (-120) which needs PVCs
       labels: {
         'app.kubernetes.io/component': 'storage',
         'app.kubernetes.io/part-of': 'infrastructure'

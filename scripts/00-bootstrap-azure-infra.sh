@@ -39,6 +39,8 @@ APP_NAME="${APP_NAME:-gitops-talos}"
 SKIP_EXISTING=false
 FORCE_RECREATE=false
 VERBOSE=false
+CHECK_ONLY=false
+UPDATE_ISSUER=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -48,6 +50,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --force)
             FORCE_RECREATE=true
+            shift
+            ;;
+        --check)
+            CHECK_ONLY=true
+            shift
+            ;;
+        --update-issuer)
+            UPDATE_ISSUER=true
             shift
             ;;
         --verbose)
@@ -61,6 +71,8 @@ while [[ $# -gt 0 ]]; do
             echo "Bootstrap Azure infrastructure for Kubernetes Workload Identity"
             echo ""
             echo "Options:"
+            echo "  --check          Check if Azure infrastructure exists (no changes)"
+            echo "  --update-issuer  Update federated credentials with current issuer URL"
             echo "  --skip-existing  Skip resources that already exist"
             echo "  --force          Force recreation of resources"
             echo "  --verbose        Enable verbose output"
@@ -200,6 +212,108 @@ setup_oidc_storage() {
 }
 
 #
+# Check if Azure infrastructure exists (for --check mode)
+#
+check_infrastructure() {
+    print_header "Checking Azure Infrastructure"
+
+    local all_ok=true
+
+    # Check storage account
+    if [[ -n "${AZURE_STORAGE_ACCOUNT:-}" ]]; then
+        if az storage account show --name "$AZURE_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
+            log_success "Storage Account: $AZURE_STORAGE_ACCOUNT (exists)"
+        else
+            log_error "Storage Account: $AZURE_STORAGE_ACCOUNT (NOT FOUND)"
+            all_ok=false
+        fi
+    else
+        log_warn "Storage Account: Not configured in environment"
+        all_ok=false
+    fi
+
+    # Check Azure AD app
+    if [[ -n "${AZURE_CLIENT_ID:-}" ]]; then
+        if az ad app show --id "$AZURE_CLIENT_ID" &>/dev/null; then
+            log_success "Azure AD App: $AZURE_CLIENT_ID (exists)"
+
+            # Check service principal
+            if az ad sp show --id "$AZURE_CLIENT_ID" &>/dev/null; then
+                log_success "Service Principal: exists"
+            else
+                log_error "Service Principal: MISSING (run --update-issuer to create)"
+                all_ok=false
+            fi
+
+            # Check federated credentials
+            local fic_count
+            fic_count=$(az ad app federated-credential list --id "$AZURE_CLIENT_ID" --query "length(@)" -o tsv 2>/dev/null || echo "0")
+            if [[ "$fic_count" -gt 0 ]]; then
+                log_success "Federated Credentials: $fic_count configured"
+
+                # Check if issuer matches
+                local configured_issuer
+                configured_issuer=$(az ad app federated-credential list --id "$AZURE_CLIENT_ID" \
+                    --query "[0].issuer" -o tsv 2>/dev/null || echo "")
+                if [[ -n "${SERVICE_ACCOUNT_ISSUER:-}" ]]; then
+                    local expected_issuer="${SERVICE_ACCOUNT_ISSUER%/}"
+                    local actual_issuer="${configured_issuer%/}"
+                    if [[ "$expected_issuer" == "$actual_issuer" ]]; then
+                        log_success "OIDC Issuer: matches ($configured_issuer)"
+                    else
+                        log_warn "OIDC Issuer: MISMATCH"
+                        log_warn "  Expected: $expected_issuer"
+                        log_warn "  Actual:   $actual_issuer"
+                        log_warn "  Run with --update-issuer to fix"
+                        all_ok=false
+                    fi
+                fi
+            else
+                log_error "Federated Credentials: NONE configured"
+                all_ok=false
+            fi
+        else
+            log_error "Azure AD App: $AZURE_CLIENT_ID (NOT FOUND)"
+            all_ok=false
+        fi
+    else
+        log_warn "Azure AD App: Not configured in environment"
+        all_ok=false
+    fi
+
+    # Check Key Vault access
+    if [[ -n "${AZURE_KEYVAULT_NAME:-}" ]] && [[ -n "${AZURE_CLIENT_ID:-}" ]]; then
+        local vault_id
+        vault_id=$(az keyvault show --name "$AZURE_KEYVAULT_NAME" --query id -o tsv 2>/dev/null || echo "")
+        if [[ -n "$vault_id" ]]; then
+            local sp_object_id
+            sp_object_id=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv 2>/dev/null || echo "")
+            if [[ -n "$sp_object_id" ]]; then
+                local role_exists
+                role_exists=$(az role assignment list --assignee "$sp_object_id" --role "Key Vault Secrets User" \
+                    --scope "$vault_id" --query "[0].id" -o tsv 2>/dev/null || echo "")
+                if [[ -n "$role_exists" ]]; then
+                    log_success "Key Vault Access: Key Vault Secrets User role assigned"
+                else
+                    log_error "Key Vault Access: Role NOT assigned"
+                    all_ok=false
+                fi
+            fi
+        fi
+    fi
+
+    echo ""
+    if [[ "$all_ok" == "true" ]]; then
+        log_success "All Azure infrastructure checks passed!"
+        return 0
+    else
+        log_error "Some Azure infrastructure checks failed."
+        log_info "Run without --check to create/update infrastructure."
+        return 1
+    fi
+}
+
+#
 # Create or find Azure AD application
 #
 setup_azure_ad_app() {
@@ -231,15 +345,16 @@ setup_azure_ad_app() {
 
         # Wait for propagation
         sleep 5
+    fi
 
-        # Create service principal
-        log_info "Creating service principal..."
-        if ! az ad sp show --id "$AZURE_CLIENT_ID" &>/dev/null; then
-            az ad sp create --id "$AZURE_CLIENT_ID" --output none
-            log_success "Service principal created"
-        else
-            log_info "Service principal already exists"
-        fi
+    # ALWAYS ensure service principal exists (even for existing apps)
+    log_info "Ensuring service principal exists..."
+    if ! az ad sp show --id "$AZURE_CLIENT_ID" &>/dev/null; then
+        az ad sp create --id "$AZURE_CLIENT_ID" --output none
+        log_success "Service principal created"
+        sleep 3  # Wait for SP creation to propagate
+    else
+        log_info "Service principal already exists"
     fi
 
     # Get app object ID for federated credentials
@@ -255,7 +370,8 @@ setup_federated_credentials() {
     # Define service accounts that need federated credentials
     local -a SA_CONFIGS=(
         "external-secrets:external-secrets"    # ESO service account
-        "external-secrets:keyvault"            # Legacy ESO service account
+        "mcp-tools:acr-sa"                     # MCP tools ACR access
+        "kargo:acr-sa"                         # Kargo ACR access
     )
 
     # Remove trailing slash from issuer if present
@@ -269,22 +385,61 @@ setup_federated_credentials() {
 
         log_info "Checking federated credential: $fic_name"
 
-        # Check if credential exists
-        local existing
-        existing=$(az ad app federated-credential list --id "$APP_OBJECT_ID" \
-            --query "[?name=='${fic_name}'].name" -o tsv 2>/dev/null || echo "")
+        # Check if credential exists and get current issuer
+        local existing_issuer
+        existing_issuer=$(az ad app federated-credential list --id "$APP_OBJECT_ID" \
+            --query "[?name=='${fic_name}'].issuer | [0]" -o tsv 2>/dev/null || echo "")
 
-        if [[ -n "$existing" ]]; then
-            if [[ "$FORCE_RECREATE" == "true" ]]; then
+        if [[ -n "$existing_issuer" ]]; then
+            # Check if issuer needs updating
+            local existing_issuer_normalized="${existing_issuer%/}"
+            local new_issuer_normalized="${issuer%/}"
+
+            if [[ "$existing_issuer_normalized" != "$new_issuer_normalized" ]]; then
+                if [[ "$UPDATE_ISSUER" == "true" ]] || [[ "$FORCE_RECREATE" == "true" ]]; then
+                    log_warn "Updating federated credential issuer: $fic_name"
+                    log_info "  Old: $existing_issuer"
+                    log_info "  New: $issuer"
+                    az ad app federated-credential update \
+                        --id "$APP_OBJECT_ID" \
+                        --federated-credential-id "$fic_name" \
+                        --parameters "{
+                            \"name\": \"${fic_name}\",
+                            \"issuer\": \"${issuer}\",
+                            \"subject\": \"${subject}\",
+                            \"audiences\": [\"api://AzureADTokenExchange\"]
+                        }" \
+                        --output none
+                    log_success "Updated federated credential: $fic_name"
+                else
+                    log_warn "Federated credential issuer mismatch: $fic_name"
+                    log_warn "  Current: $existing_issuer"
+                    log_warn "  Expected: $issuer"
+                    log_warn "  Use --update-issuer to update"
+                fi
+            elif [[ "$FORCE_RECREATE" == "true" ]]; then
                 log_info "Deleting existing federated credential: $fic_name"
                 az ad app federated-credential delete \
                     --id "$APP_OBJECT_ID" \
                     --federated-credential-id "$fic_name" \
                     --output none
+                sleep 2
+
+                log_info "Recreating federated credential: $fic_name"
+                az ad app federated-credential create \
+                    --id "$APP_OBJECT_ID" \
+                    --parameters "{
+                        \"name\": \"${fic_name}\",
+                        \"issuer\": \"${issuer}\",
+                        \"subject\": \"${subject}\",
+                        \"audiences\": [\"api://AzureADTokenExchange\"]
+                    }" \
+                    --output none
+                log_success "Recreated federated credential: $fic_name"
             else
-                log_success "Federated credential exists: $fic_name"
-                continue
+                log_success "Federated credential exists with correct issuer: $fic_name"
             fi
+            continue
         fi
 
         # Create federated credential
@@ -465,7 +620,37 @@ main() {
         set +a
     fi
 
-    # Execute setup phases
+    # Handle check-only mode
+    if [[ "$CHECK_ONLY" == "true" ]]; then
+        validate_prerequisites
+        check_infrastructure
+        return $?
+    fi
+
+    # Handle update-issuer mode (only updates federated credentials)
+    if [[ "$UPDATE_ISSUER" == "true" ]]; then
+        validate_prerequisites
+
+        # Need OIDC storage account for issuer URL
+        if [[ -z "${SERVICE_ACCOUNT_ISSUER:-}" ]]; then
+            log_error "SERVICE_ACCOUNT_ISSUER not set. Run without flags first to discover storage account."
+            return 1
+        fi
+
+        # Need Azure AD app for federated credentials
+        if [[ -z "${AZURE_CLIENT_ID:-}" ]]; then
+            log_error "AZURE_CLIENT_ID not set. Run without flags first to create/discover Azure AD app."
+            return 1
+        fi
+
+        APP_OBJECT_ID=$(az ad app show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+        setup_federated_credentials
+        setup_keyvault
+        log_success "Issuer update complete!"
+        return 0
+    fi
+
+    # Execute full setup phases
     validate_prerequisites
     ensure_resource_group
     setup_oidc_storage

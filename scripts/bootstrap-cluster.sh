@@ -102,7 +102,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --setup-azure  Run Azure infrastructure setup first (storage, AD app, federated creds)"
-            echo "  --skip-jwks    Skip JWKS sync to Azure Storage"
+            echo "  --skip-jwks    Skip JWKS sync and OIDC verification"
             echo "  --force        Force reinstall even if already installed"
             echo "  -h, --help     Show this help message"
             echo ""
@@ -110,17 +110,19 @@ while [[ $# -gt 0 ]]; do
             echo "  0. Azure Infrastructure (if --setup-azure)"
             echo "  1. Validate prerequisites"
             echo "  2. Install ArgoCD via Helm"
-            echo "  3. Sync JWKS to Azure Storage"
-            echo "  4. Apply ArgoCD root application"
+            echo "  3. Verify OIDC issuer configuration"
+            echo "  4. Sync JWKS to Azure Storage"
+            echo "  5. Apply ArgoCD root application"
             echo ""
             echo "Environment Variables (see .env.template):"
-            echo "  AZURE_SUBSCRIPTION_ID  Azure subscription"
-            echo "  AZURE_TENANT_ID        Azure AD tenant"
-            echo "  AZURE_CLIENT_ID        Azure AD app client ID"
-            echo "  AZURE_KEYVAULT_NAME    Key Vault for secrets"
-            echo "  AZURE_STORAGE_ACCOUNT  Storage for OIDC"
-            echo "  GIT_REPO_URL           Git repo for ArgoCD"
-            echo "  GIT_BRANCH             Git branch for ArgoCD"
+            echo "  AZURE_SUBSCRIPTION_ID   Azure subscription"
+            echo "  AZURE_TENANT_ID         Azure AD tenant"
+            echo "  AZURE_CLIENT_ID         Azure AD app client ID"
+            echo "  AZURE_KEYVAULT_NAME     Key Vault for secrets"
+            echo "  AZURE_STORAGE_ACCOUNT   Storage for OIDC"
+            echo "  SERVICE_ACCOUNT_ISSUER  OIDC issuer URL (e.g., https://oidcXXX.z13.web.core.windows.net/)"
+            echo "  GIT_REPO_URL            Git repo for ArgoCD"
+            echo "  GIT_BRANCH              Git branch for ArgoCD"
             exit 0
             ;;
         *)
@@ -229,10 +231,80 @@ install_argocd() {
 }
 
 #
-# Phase 2: Sync JWKS to Azure Storage
+# Phase 2: Verify and Configure OIDC Issuer
+#
+verify_oidc_issuer() {
+    print_header "Phase 2: Verifying OIDC Issuer Configuration"
+
+    if [[ "$SKIP_JWKS" == "true" ]]; then
+        log_warn "Skipping OIDC verification (--skip-jwks flag)"
+        return 0
+    fi
+
+    # Check if SERVICE_ACCOUNT_ISSUER is set
+    if [[ -z "${SERVICE_ACCOUNT_ISSUER:-}" ]]; then
+        log_warn "SERVICE_ACCOUNT_ISSUER not set in environment"
+        log_info "Skipping OIDC issuer verification. Run ./00-bootstrap-azure-infra.sh to set up Azure infrastructure."
+        return 0
+    fi
+
+    # Get current cluster OIDC issuer
+    log_info "Checking cluster OIDC issuer..."
+    local cluster_issuer
+    cluster_issuer=$(kubectl get --raw /.well-known/openid-configuration 2>/dev/null | jq -r '.issuer' || echo "")
+
+    if [[ -z "$cluster_issuer" ]]; then
+        log_warn "Cannot retrieve cluster OIDC issuer. Skipping verification."
+        return 0
+    fi
+
+    # Normalize URLs (remove trailing slashes)
+    local expected_issuer="${SERVICE_ACCOUNT_ISSUER%/}"
+    local actual_issuer="${cluster_issuer%/}"
+
+    log_info "Expected OIDC issuer: $expected_issuer"
+    log_info "Actual OIDC issuer:   $actual_issuer"
+
+    if [[ "$expected_issuer" != "$actual_issuer" ]]; then
+        log_warn "OIDC issuer mismatch detected!"
+        log_warn "The cluster is presenting tokens with issuer: $actual_issuer"
+        log_warn "But Azure expects issuer: $expected_issuer"
+
+        # If this is a fresh cluster with default issuer (IP-based), warn strongly
+        if [[ "$actual_issuer" =~ ^https://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:6443$ ]]; then
+            log_error "Cluster is using default API server IP as OIDC issuer."
+            log_error "This MUST be changed for Azure Workload Identity to work."
+            log_info ""
+            log_info "Option 1: Patch the Talos cluster (recommended for new clusters):"
+            log_info "  talosctl patch mc --mode no-reboot \\"
+            log_info "    --patch '[{\"op\": \"add\", \"path\": \"/cluster/apiServer/extraArgs\", \"value\": {\"service-account-issuer\": \"${expected_issuer}/\"}}]'"
+            log_info ""
+            log_info "Option 2: Update Azure federated credentials to match cluster:"
+            log_info "  SERVICE_ACCOUNT_ISSUER=\"$actual_issuer\" ./00-bootstrap-azure-infra.sh --update-issuer"
+            log_info ""
+            log_info "See: docs/hcloud-server-setup.md Phase 8 for detailed instructions"
+            log_info ""
+            log_info "After patching, restart system pods:"
+            log_info "  kubectl rollout restart daemonset/kube-proxy -n kube-system"
+            return 1
+        fi
+
+        # Issuer mismatch but not default - could be intentional configuration
+        log_warn "Issuer mismatch may cause Azure Workload Identity authentication failures."
+        log_warn "Run: ./00-bootstrap-azure-infra.sh --update-issuer to fix"
+    else
+        log_success "OIDC issuer correctly configured: $actual_issuer"
+    fi
+
+    set_phase "oidc-verified"
+    print_completion "OIDC issuer verification" "success"
+}
+
+#
+# Phase 3: Sync JWKS to Azure Storage
 #
 sync_jwks() {
-    print_header "Phase 2: Syncing JWKS to Azure Storage"
+    print_header "Phase 3: Syncing JWKS to Azure Storage"
 
     if [[ "$SKIP_JWKS" == "true" ]]; then
         log_warn "Skipping JWKS sync (--skip-jwks flag)"
@@ -261,10 +333,10 @@ sync_jwks() {
 }
 
 #
-# Phase 3: Apply ArgoCD Root Application
+# Phase 4: Apply ArgoCD Root Application
 #
 apply_base_apps() {
-    print_header "Phase 3: Applying ArgoCD Applications"
+    print_header "Phase 4: Applying ArgoCD Applications"
 
     # Run base apps script
     if [[ -x "${SCRIPT_DIR}/03-apply-base-apps.sh" ]]; then
@@ -320,11 +392,20 @@ main() {
     log_info "Script directory: $SCRIPT_DIR"
 
     # Load environment
+    # Note: Using 'set -a' before source ensures all variables are exported to subprocesses
+    # This is critical because scripts like 02-sync-jwks.sh run as separate processes
     if [[ -f "${SCRIPT_DIR}/.env" ]]; then
         log_info "Loading environment from: ${SCRIPT_DIR}/.env"
         set -a
         source "${SCRIPT_DIR}/.env"
         set +a
+        # Verify critical variables are set
+        if [[ -z "${AZURE_STORAGE_ACCOUNT:-}" ]]; then
+            log_warn "AZURE_STORAGE_ACCOUNT not set in .env - JWKS sync will fail"
+        fi
+        if [[ -z "${GIT_REPO_URL:-}" ]]; then
+            log_warn "GIT_REPO_URL not set in .env - ArgoCD app will fail"
+        fi
     elif [[ -f "${REPO_ROOT}/.env" ]]; then
         log_info "Loading environment from: ${REPO_ROOT}/.env"
         set -a
@@ -333,6 +414,21 @@ main() {
     else
         log_warn "No .env file found. Using environment variables."
         log_info "Create from template: cp ${SCRIPT_DIR}/.env.template ${SCRIPT_DIR}/.env"
+    fi
+
+    # Debug: Show key environment variables (without sensitive values)
+    log_info "Environment check:"
+    log_info "  AZURE_STORAGE_ACCOUNT: ${AZURE_STORAGE_ACCOUNT:-(not set)}"
+    log_info "  AZURE_KEYVAULT_NAME: ${AZURE_KEYVAULT_NAME:-(not set)}"
+    log_info "  GIT_REPO_URL: ${GIT_REPO_URL:-(not set)}"
+    log_info "  GIT_BRANCH: ${GIT_BRANCH:-main}"
+    log_info "  GIT_PATH: ${GIT_PATH:-cdk8s/dist}"
+
+    # Validate GIT_PATH doesn't have branch prefix (common mistake)
+    if [[ "${GIT_PATH:-}" == *"consolidate-bootstrap"* ]] || [[ "${GIT_PATH:-}" == *"bootstrap-talos"* ]]; then
+        log_warn "GIT_PATH appears to contain branch name prefix: ${GIT_PATH}"
+        log_warn "This is likely incorrect. Path should be relative to repo root (e.g., 'cdk8s/dist')"
+        log_warn "The branch is specified via GIT_BRANCH, not in the path."
     fi
 
     # Resume from current phase
@@ -351,10 +447,16 @@ main() {
         init|azure-ready)
             validate_prerequisites
             install_argocd
+            verify_oidc_issuer
             sync_jwks
             apply_base_apps
             ;;
         argocd-installed)
+            verify_oidc_issuer
+            sync_jwks
+            apply_base_apps
+            ;;
+        oidc-verified)
             sync_jwks
             apply_base_apps
             ;;
@@ -368,6 +470,7 @@ main() {
                 fi
                 validate_prerequisites
                 install_argocd
+                verify_oidc_issuer
                 sync_jwks
                 apply_base_apps
             else

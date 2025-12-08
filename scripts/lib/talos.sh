@@ -116,21 +116,59 @@ wait_for_kubernetes_api() {
     wait_for "Kubernetes API" "kubectl cluster-info" "$timeout"
 }
 
-# Check if CNI (Cilium) is ready
+# Check if CNI is ready (supports Flannel or Cilium)
 check_cni_ready() {
-    log_info "Checking CNI (Cilium) readiness..."
+    log_info "Checking CNI readiness..."
 
-    # Wait for Cilium pods to be ready
-    if ! kubectl wait --for=condition=Ready pod \
-        -l k8s-app=cilium \
-        -n kube-system \
-        --timeout=60s &>/dev/null; then
-        log_error "Cilium CNI pods not ready"
-        log_info "Check: kubectl get pods -n kube-system -l k8s-app=cilium"
-        return 1
+    # Try Flannel first (default in Talos config)
+    if kubectl get pods -n kube-system -l app=flannel --no-headers 2>/dev/null | grep -q "Running"; then
+        log_info "Detected Flannel CNI, checking pods..."
+        if kubectl wait --for=condition=Ready pod \
+            -l app=flannel \
+            -n kube-system \
+            --timeout=60s &>/dev/null; then
+            log_success "Flannel CNI is ready"
+            return 0
+        fi
     fi
 
-    log_success "Cilium CNI is ready"
+    # Try kube-flannel label (alternative)
+    if kubectl get pods -n kube-system -l app.kubernetes.io/name=flannel --no-headers 2>/dev/null | grep -q "Running"; then
+        log_info "Detected Flannel CNI (alt label), checking pods..."
+        if kubectl wait --for=condition=Ready pod \
+            -l app.kubernetes.io/name=flannel \
+            -n kube-system \
+            --timeout=60s &>/dev/null; then
+            log_success "Flannel CNI is ready"
+            return 0
+        fi
+    fi
+
+    # Try Cilium (alternative CNI)
+    if kubectl get pods -n kube-system -l k8s-app=cilium --no-headers 2>/dev/null | grep -q "Running"; then
+        log_info "Detected Cilium CNI, checking pods..."
+        if kubectl wait --for=condition=Ready pod \
+            -l k8s-app=cilium \
+            -n kube-system \
+            --timeout=60s &>/dev/null; then
+            log_success "Cilium CNI is ready"
+            return 0
+        fi
+    fi
+
+    # Check if nodes are Ready (CNI is working even if we can't identify it)
+    local ready_nodes
+    ready_nodes=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready " || true)
+    if [[ "$ready_nodes" -gt 0 ]]; then
+        log_warn "Could not identify CNI type, but $ready_nodes nodes are Ready"
+        log_info "CNI appears to be functional"
+        return 0
+    fi
+
+    log_error "CNI not ready - no Flannel or Cilium pods found, and nodes are not Ready"
+    log_info "Check: kubectl get pods -n kube-system"
+    log_info "If using Flannel (built into Talos), check firewall allows port 4789/UDP between nodes"
+    return 1
 }
 
 # Verify all nodes are ready
