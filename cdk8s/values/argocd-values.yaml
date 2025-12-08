@@ -14,19 +14,21 @@ global:
   # Talos cluster domain
   domain: argocd.local
 
-# Redis (required for HA)
+# Redis (single replica - simpler and more reliable than HA for small clusters)
 redis:
   enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
+# Redis HA disabled - using single Redis replica for simplicity
+# Enable for production clusters with 3+ worker nodes
 redis-ha:
-  enabled: true
-  # Only 2 worker nodes available (3 CP nodes are tainted)
-  replicas: 2
-  haproxy:
-    enabled: true
-    replicas: 2
-    metrics:
-      enabled: true
+  enabled: false
 
 # ArgoCD Server Configuration
 server:
