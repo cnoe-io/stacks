@@ -1504,6 +1504,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         version: '1.16',
         enableHA: false,
         enableDashboard: true,
+        // Disable ingress by default - Talos uses Tailscale for access
+        // KIND clusters also use Tailscale, so ingress is not needed
+        enableDashboardIngress: false,
         logLevel: 'info'
       }
     },
@@ -1717,7 +1720,12 @@ export const applicationConfigs: ApplicationConfig[] = [
         version: '0.9.13',
         installCrds: true,
         enableWebhook: true,
-        replicaCount: 2
+        replicaCount: 2,
+        // Enable Azure Workload Identity for Talos (no webhook available)
+        // This configures env vars and projected token volumes directly on the deployment
+        enableAzureWorkloadIdentity: true,
+        azureClientId: process.env.AZURE_CLIENT_ID || '',
+        azureTenantId: process.env.AZURE_TENANT_ID || ''
       }
     },
     argocd: {
@@ -1770,7 +1778,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'ClusterSecretStoreChart',
       props: {
         storeName: 'azure-keyvault-store',
-        keyVaultName: process.env.AZURE_KEYVAULT_NAME || 'talos-keyvault',
+        // AZURE_KEYVAULT_NAME must be set in .env file for Talos synthesis
+        // Example: keyvault-thcmfmoo5oeow (without .vault.azure.net suffix)
+        keyVaultName: process.env.AZURE_KEYVAULT_NAME || '',
         serviceAccountRef: {
           name: 'external-secrets',
           namespace: 'external-secrets'

@@ -40,6 +40,14 @@ export interface DaprRuntimeChartProps extends ChartProps {
   enableDashboard?: boolean;
 
   /**
+   * Enable Dapr Dashboard Ingress
+   * For Talos clusters, this should be false since we use Tailscale for access.
+   * For KIND clusters with nginx-ingress, this can be true.
+   * @default false
+   */
+  enableDashboardIngress?: boolean;
+
+  /**
    * Log level for Dapr components
    * @default 'info'
    */
@@ -53,6 +61,7 @@ export class DaprRuntimeChart extends Chart {
     const version = props.version || '1.16';
     const enableHA = props.enableHA || false;
     const enableDashboard = props.enableDashboard !== false; // Default true
+    const enableDashboardIngress = props.enableDashboardIngress || false; // Default false (Talos uses Tailscale)
     const logLevel = props.logLevel || 'info';
 
     // Create dapr-system namespace
@@ -172,43 +181,56 @@ export class DaprRuntimeChart extends Chart {
 
     // Optionally deploy Dapr Dashboard
     if (enableDashboard) {
-      const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
-      const dashboardHost = `dapr.${baseHost}`;
+      // Build Helm values for dashboard
+      const dashboardValues: Record<string, unknown> = {
+        replicaCount: 1,
+        serviceType: 'ClusterIP',
+        resources: {
+          requests: {
+            cpu: '50m',
+            memory: '64Mi',
+          },
+          limits: {
+            cpu: '200m',
+            memory: '256Mi',
+          },
+        },
+      };
+
+      // Only add ingress configuration if explicitly enabled
+      // For Talos clusters, we use Tailscale for access instead of ingress
+      if (enableDashboardIngress) {
+        const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
+        const dashboardHost = `dapr.${baseHost}`;
+
+        dashboardValues.ingress = {
+          enabled: true,
+          className: 'nginx',
+          hosts: [
+            {
+              host: dashboardHost,
+              paths: [
+                {
+                  path: '/',
+                  pathType: 'Prefix',
+                },
+              ],
+            },
+          ],
+        };
+      } else {
+        // Explicitly disable ingress
+        dashboardValues.ingress = {
+          enabled: false,
+        };
+      }
 
       new Helm(this, 'dapr-dashboard', {
         chart: 'dapr-dashboard',
         repo: 'https://dapr.github.io/helm-charts/',
         namespace: 'dapr-system',
         releaseName: 'dapr-dashboard',
-        values: {
-          replicaCount: 1,
-          serviceType: 'ClusterIP',
-          ingress: {
-            enabled: true,
-            className: 'nginx',
-            hosts: [
-              {
-                host: dashboardHost,
-                paths: [
-                  {
-                    path: '/',
-                    pathType: 'Prefix',
-                  },
-                ],
-              },
-            ],
-          },
-          resources: {
-            requests: {
-              cpu: '50m',
-              memory: '64Mi',
-            },
-            limits: {
-              cpu: '200m',
-              memory: '256Mi',
-            },
-          },
-        },
+        values: dashboardValues,
       });
     }
   }

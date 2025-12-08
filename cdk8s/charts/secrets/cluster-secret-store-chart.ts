@@ -48,10 +48,15 @@ export class ClusterSecretStoreChart extends Chart {
 
     // Validate required props
     if (!keyVaultName) {
-      throw new Error('ClusterSecretStoreChart: keyVaultName is required');
+      throw new Error('ClusterSecretStoreChart: keyVaultName is required. Set AZURE_KEYVAULT_NAME in your .env file.');
     }
     if (!serviceAccountRef?.name || !serviceAccountRef?.namespace) {
       throw new Error('ClusterSecretStoreChart: serviceAccountRef.name and namespace are required');
+    }
+
+    // Warn if keyVaultName looks like a full URL (common mistake)
+    if (keyVaultName.includes('.vault.azure.net')) {
+      console.warn('ClusterSecretStoreChart: keyVaultName should be just the vault name, not the full URL');
     }
 
     // Build Key Vault URL
