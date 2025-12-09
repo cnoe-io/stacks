@@ -1717,7 +1717,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'EsoHelmChart',
       props: {
-        version: '0.20.4',  // Latest stable with v1 API support
+        version: '1.0.0',  // ESO 1.0.0 has stable v1 API
         installCrds: true,
         enableWebhook: true,
         replicaCount: 2,
