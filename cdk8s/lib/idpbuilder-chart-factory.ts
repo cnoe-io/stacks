@@ -16,31 +16,37 @@ export class IdpBuilderChartFactory {
   }
   
   /**
-   * Create a chart instance with resolved dependencies
+   * Create a chart instance with resolved dependencies.
+   * Returns undefined if the config has no chart (e.g., skipSynthesis apps).
    */
   static async createChart(
     app: App,
     config: ApplicationConfig
-  ): Promise<Chart> {
+  ): Promise<Chart | undefined> {
+    // Skip chart creation if no chart is defined (e.g., backstage-templates)
+    if (!config.chart) {
+      return undefined;
+    }
+
     // Clear dependency cache for each application
     this.dependencyCache.clear();
-    
+
     // Resolve dependencies first
     const dependencies = await this.resolveDependencies(config.dependencies);
-    
+
     // Get the chart constructor
     const ChartClass = this.chartConstructors.get(config.chart.type);
     if (!ChartClass) {
       throw new Error(`Chart type '${config.chart.type}' not registered. ` +
         `Available types: ${Array.from(this.chartConstructors.keys()).join(', ')}`);
     }
-    
+
     // Merge props with resolved dependencies
     const chartProps = {
       ...config.chart.props,
       ...dependencies
     };
-    
+
     // Create and return the chart instance
     // Use 'install' as the chart ID to generate install.yaml
     return new ChartClass(app, 'install', chartProps);

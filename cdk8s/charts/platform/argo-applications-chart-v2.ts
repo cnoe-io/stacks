@@ -31,7 +31,13 @@ export interface ArgoApplicationsChartV2Props extends ChartProps {
   /**
    * ArgoCD configuration from ApplicationConfig
    */
-  argoCdConfig?: ApplicationConfig['argocd'];
+  argoCdConfig?: ApplicationConfig['argocd'] & {
+    /**
+     * Directory exclude pattern for ArgoCD directory source.
+     * Used to exclude certain files from sync (e.g., 'catalog-info.yaml').
+     */
+    directoryExclude?: string;
+  };
 
   /**
    * Environment (dev, staging, production)
@@ -129,7 +135,7 @@ export class ArgoApplicationsChartV2 extends Chart {
     isLocal: boolean,
     manifestPath: string
   ): ApplicationSpec {
-    let source: ApplicationSpecSource;
+    let source: any;
 
     if (isLocal) {
       // Local development using cnoe://
@@ -150,7 +156,14 @@ export class ArgoApplicationsChartV2 extends Chart {
       };
     }
 
-    return this.buildBaseSpec(props, { source });
+    // Add directory exclude pattern if specified
+    if (props.argoCdConfig?.directoryExclude) {
+      source.directory = {
+        exclude: props.argoCdConfig.directoryExclude
+      };
+    }
+
+    return this.buildBaseSpec(props, { source: source as ApplicationSpecSource });
   }
 
   /**

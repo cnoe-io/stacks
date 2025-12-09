@@ -81,7 +81,10 @@ async function synthesizeApplication(
     });
 
     // Standard charts: use factory to create chart with dependencies
-    await IdpBuilderChartFactory.createChart(app, appConfig);
+    // Skip chart creation if skipSynthesis is true (e.g., backstage-templates)
+    if (!appConfig.skipSynthesis && appConfig.chart) {
+      await IdpBuilderChartFactory.createChart(app, appConfig);
+    }
 
     // Get source URL based on cluster type
     const source = getSourceUrl(appConfig.name, options.clusterType);
@@ -90,6 +93,11 @@ async function synthesizeApplication(
     const argoCdConfig = {
       ...appConfig.argocd,
     };
+
+    // Add directory exclude pattern if specified (e.g., for catalog-info.yaml)
+    if (appConfig.directoryExclude) {
+      argoCdConfig.directoryExclude = appConfig.directoryExclude;
+    }
 
     // For Talos, use multi-source mode with GitHub URLs
     if (options.clusterType === 'talos' && source.path) {
@@ -102,11 +110,14 @@ async function synthesizeApplication(
       ];
     }
 
+    // Determine manifest path (use sourcePath override if specified)
+    const manifestPath = appConfig.sourcePath || 'manifests';
+
     // Generate ArgoCD Application in the same synthesis pass
     new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
       applicationName: appConfig.name,
       applicationNamespace: appConfig.namespace,
-      manifestPath: 'manifests',
+      manifestPath,
       argoCdConfig,
       environment: options.environment,
     });
