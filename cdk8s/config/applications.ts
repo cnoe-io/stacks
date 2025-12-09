@@ -257,7 +257,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
-    clusterType: 'kind',
+    clusterType: 'both',  // Kargo needed on both KIND and Talos
     chart: {
       type: 'KargoSecretsChart'
     },
@@ -277,9 +277,13 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo',
     namespace: 'kargo',
-    clusterType: 'kind',
+    clusterType: 'both',  // Kargo needed on both KIND and Talos
     chart: {
-      type: 'KargoHelmChart'
+      type: 'KargoHelmChart',
+      props: {
+        // Skip Gitea CA certs on Talos (uses GitHub with valid SSL)
+        skipGiteaCACerts: process.env.CLUSTER_TYPE === 'talos'
+      }
     },
     dependencies: {
       kargoSecrets: {
@@ -352,7 +356,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-project',
     namespace: 'kargo-pipelines',
-    clusterType: 'kind',
+    clusterType: 'both',  // Kargo pipelines needed on both KIND and Talos
     chart: {
       type: 'KargoPipelinesProjectChart'
     },
@@ -392,7 +396,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-credentials',
     namespace: 'kargo-pipelines',
-    clusterType: 'kind',
+    clusterType: 'both',  // Credentials needed on both KIND and Talos (uses GITHUB-PAT)
     chart: {
       type: 'KargoPipelinesCredentialsChart'
     },
@@ -825,12 +829,12 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Kargo Tailscale Serve - Access: https://kargo2.tail286401.ts.net
-  // Note: Using 'kargo2' to bypass Let's Encrypt rate limit on 'kargo'
+  // Kargo Tailscale Serve - Access: https://svc-kargo.tail286401.ts.net
+  // Note: Using 'svc-kargo' for stable service URL
   {
     name: 'kargo-tailscale-serve',
     namespace: 'tailscale',
-    clusterType: 'kind',
+    clusterType: 'both',  // Kargo access needed on both KIND and Talos
     chart: {
       type: 'TailscaleServeChart',
       props: {

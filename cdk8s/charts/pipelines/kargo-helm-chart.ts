@@ -4,6 +4,12 @@ import { KubeNamespace, KubeSecret, KubeJob, KubeServiceAccount, KubeClusterRole
 
 export interface KargoHelmChartProps extends ChartProps {
   namespace?: string;
+  /**
+   * Skip mounting Gitea CA certificates.
+   * Set to true for Talos clusters that use GitHub (valid SSL certs).
+   * @default false
+   */
+  skipGiteaCACerts?: boolean;
 }
 
 export class KargoHelmChart extends Chart {
@@ -13,6 +19,7 @@ export class KargoHelmChart extends Chart {
     const namespace = props.namespace || 'kargo';
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const kargoHost = `kargo.${baseHost}`;
+    const skipGiteaCACerts = props.skipGiteaCACerts ?? false;
 
     // Create namespace
     new KubeNamespace(this, 'kargo-namespace', {
@@ -119,39 +126,42 @@ export class KargoHelmChart extends Chart {
               memory: '512Mi',
             },
           },
-          // Mount CA certificates for self-signed certificate trust
-          volumes: [
-            {
-              name: 'ca-certificates',
-              configMap: {
-                name: 'gitea-ca-cert',
-                items: [
-                  {
-                    key: 'ca.crt',
-                    path: 'gitea-ca.crt'
-                  }
-                ]
+          // Mount CA certificates for self-signed certificate trust (KIND/Gitea only)
+          // Talos clusters use GitHub with valid SSL certs, so this is skipped
+          ...(skipGiteaCACerts ? {} : {
+            volumes: [
+              {
+                name: 'ca-certificates',
+                configMap: {
+                  name: 'gitea-ca-cert',
+                  items: [
+                    {
+                      key: 'ca.crt',
+                      path: 'gitea-ca.crt'
+                    }
+                  ]
+                }
               }
-            }
-          ],
-          volumeMounts: [
-            {
-              name: 'ca-certificates',
-              mountPath: '/etc/ssl/certs/gitea-ca.crt',
-              subPath: 'gitea-ca.crt',
-              readOnly: true
-            }
-          ],
-          env: [
-            {
-              name: 'SSL_CERT_FILE',
-              value: '/etc/ssl/certs/gitea-ca.crt'
-            },
-            {
-              name: 'SSL_CERT_DIR',
-              value: '/etc/ssl/certs'
-            }
-          ],
+            ],
+            volumeMounts: [
+              {
+                name: 'ca-certificates',
+                mountPath: '/etc/ssl/certs/gitea-ca.crt',
+                subPath: 'gitea-ca.crt',
+                readOnly: true
+              }
+            ],
+            env: [
+              {
+                name: 'SSL_CERT_FILE',
+                value: '/etc/ssl/certs/gitea-ca.crt'
+              },
+              {
+                name: 'SSL_CERT_DIR',
+                value: '/etc/ssl/certs'
+              }
+            ],
+          }),
         },
         // Webhooks configuration - enable with custom certificates
         webhooksServer: {

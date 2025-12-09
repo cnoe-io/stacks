@@ -17,6 +17,40 @@ Creates a 5-node Talos Kubernetes cluster on Hetzner Cloud (3 control plane + 2 
 | talos-worker-2 | CCX33 | 8 | 32GB | worker | ~$50 |
 | **Total** | | **32** | **108GB** | 5 nodes | **~$177/mo** |
 
+## Critical: Node Naming Requirements
+
+**The Hetzner server name MUST match the Talos hostname for proper cluster networking.**
+
+Talos uses the server hostname as the Kubernetes node name. If there's a mismatch between:
+- Hetzner Cloud server name (e.g., `talos-cp-1`)
+- Talos machine hostname
+- Kubernetes node name
+
+...the cluster will experience networking issues including:
+- Flannel CNI unable to route pod traffic between nodes
+- Nodes appearing Ready but pods unable to communicate cross-node
+- Service discovery failures
+
+### Fixing Node Name Mismatches
+
+If you rename Hetzner servers or encounter naming issues:
+
+```bash
+# 1. Check current node names vs Hetzner server names
+kubectl get nodes -o wide
+hcloud server list
+
+# 2. If mismatched, rename Hetzner servers to match Talos hostnames
+# Example: If Talos shows "talos-cp-1" but Hetzner has "old-cp-1"
+hcloud server update old-cp-1 --name talos-cp-1
+
+# 3. Alternatively, set hostname explicitly in Talos config
+# Add to controlplane.yaml/worker.yaml before applying:
+machine:
+  network:
+    hostname: talos-cp-1  # Must match Hetzner server name
+```
+
 ## Quick Start
 
 ```bash
@@ -119,6 +153,8 @@ See [bootstrap-argocd.md](bootstrap-argocd.md) for details.
 | etcd won't form quorum | Firewall blocking 2379-2380 | Add firewall rules for CP IPs |
 | kubeconfig connection refused | Using private IP (10.0.1.1) | Replace with public CP IP |
 | Nodes NotReady | Flannel not started yet | Wait 60s, Flannel is built-in |
+| Pods can't communicate cross-node | Hetzner server name ≠ Talos hostname | See "Node Naming Requirements" above |
+| Flannel route errors | Node name mismatch in CNI config | Rename Hetzner servers to match K8s node names |
 
 ## Teardown
 
