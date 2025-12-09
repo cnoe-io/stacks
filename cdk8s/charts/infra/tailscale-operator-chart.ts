@@ -111,11 +111,11 @@ export class TailscaleOperatorChart extends Chart {
         },
 
         // API server proxy mode (for remote kubectl access)
-        // Mode: "auth" = OAuth identity impersonation (recommended)
-        // Mode: "true" = proxy without identity (legacy)
-        // Mode: "noauth" = disabled
+        // Mode: "true" = auth mode with OAuth identity impersonation (recommended)
+        // Mode: "noauth" = proxy without identity impersonation
+        // See: https://tailscale.com/kb/1437/kubernetes-operator-api-server-proxy
         apiServerProxyConfig: {
-          mode: enableApiServerProxy ? 'auth' : 'noauth',
+          mode: enableApiServerProxy ? 'true' : 'noauth',
         },
 
         // Operator deployment resources
