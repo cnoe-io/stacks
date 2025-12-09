@@ -12,12 +12,17 @@
  * - Principle II (GitOps-First): Cluster-type-driven ArgoCD sources
  * - Principle IX (Unified Bootstrap): CLUSTER_TYPE environment variable
  *
+ * Environment Setup:
+ * - Uses direnv (.envrc) to load environment variables before execution
+ * - Run `direnv allow` in cdk8s/ directory to enable
+ * - Set CLUSTER_TYPE=kind or CLUSTER_TYPE=talos before entering directory
+ *
  * Output: cdk8s/dist/<app>/manifests/ + ArgoCD Application YAMLs
  */
 
-import { App, YamlOutputType } from 'cdk8s';
 import * as fs from 'fs';
 import * as path from 'path';
+import { App, YamlOutputType } from 'cdk8s';
 import { ArgoApplicationsChartV2 } from './charts/platform/argo-applications-chart-v2';
 import { IdpBuilderChartFactory } from './lib/idpbuilder-chart-factory';
 import { applicationConfigs } from './config/applications';
@@ -37,40 +42,6 @@ interface SynthesisOptions {
   outputDir: string;
   environment: string;
   clusterType: ClusterType;
-}
-
-/**
- * Load environment variables from a simple KEY=VALUE file.
- */
-function loadEnvFile(filePath: string): void {
-  try {
-    const abs = path.resolve(filePath);
-    if (!fs.existsSync(abs)) {
-      console.warn(`⚠ Environment file not found: ${filePath}`);
-      return;
-    }
-    const content = fs.readFileSync(abs, 'utf-8');
-    for (const line of content.split(/\r?\n/)) {
-      if (!line || line.trim().startsWith('#')) continue;
-      const idx = line.indexOf('=');
-      if (idx <= 0) continue;
-      const key = line.slice(0, idx).trim();
-      let value = line.slice(idx + 1).trim();
-      // Strip surrounding quotes (single or double)
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-      if (key && !(key in process.env)) {
-        process.env[key] = value;
-      }
-    }
-    console.log(`✓ Loaded environment from: ${filePath}`);
-  } catch (e) {
-    console.warn('⚠ Could not load env file:', filePath, e);
-  }
 }
 
 /**
@@ -112,33 +83,39 @@ async function synthesizeApplication(
     // Standard charts: use factory to create chart with dependencies
     await IdpBuilderChartFactory.createChart(app, appConfig);
 
-    // Get source URL based on cluster type
-    const source = getSourceUrl(appConfig.name, options.clusterType);
+    // RefImplementationChart generates its own ArgoCD Application with correct source URLs
+    // Skip the wrapper ArgoCD Application for these charts
+    const isRefImplementationChart = appConfig.chart?.type === 'RefImplementationChart';
 
-    // Build ArgoCD config with appropriate source
-    const argoCdConfig = {
-      ...appConfig.argocd,
-    };
+    if (!isRefImplementationChart) {
+      // Get source URL based on cluster type
+      const source = getSourceUrl(appConfig.name, options.clusterType);
 
-    // For Talos, use multi-source mode with GitHub URLs
-    if (options.clusterType === 'talos' && source.path) {
-      argoCdConfig.sources = [
-        {
-          repoURL: source.repoURL,
-          path: source.path,
-          targetRevision: source.targetRevision || 'main',
-        },
-      ];
+      // Build ArgoCD config with appropriate source
+      const argoCdConfig = {
+        ...appConfig.argocd,
+      };
+
+      // For Talos, use multi-source mode with GitHub URLs
+      if (options.clusterType === 'talos' && source.path) {
+        argoCdConfig.sources = [
+          {
+            repoURL: source.repoURL,
+            path: source.path,
+            targetRevision: source.targetRevision || 'main',
+          },
+        ];
+      }
+
+      // Generate ArgoCD Application in the same synthesis pass
+      new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
+        applicationName: appConfig.name,
+        applicationNamespace: appConfig.namespace,
+        manifestPath: 'manifests',
+        argoCdConfig,
+        environment: options.environment,
+      });
     }
-
-    // Generate ArgoCD Application in the same synthesis pass
-    new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
-      applicationName: appConfig.name,
-      applicationNamespace: appConfig.namespace,
-      manifestPath: 'manifests',
-      argoCdConfig,
-      environment: options.environment,
-    });
 
     // Single synth call generates everything
     app.synth();
@@ -218,11 +195,8 @@ async function main() {
     clusterType,
   };
 
-  // Load environment configuration based on cluster type
-  const envFile =
-    process.env.ENV_FILE ||
-    (clusterType === 'kind' ? '../.env-files/kind.env' : '../.env-files/talos.env');
-  loadEnvFile(path.join(__dirname, envFile));
+  // Note: Environment variables are loaded via direnv (.envrc) before execution
+  // Run `direnv allow` in cdk8s/ directory to enable automatic env loading
 
   // Validate environment for cluster type (Talos has stricter requirements)
   try {

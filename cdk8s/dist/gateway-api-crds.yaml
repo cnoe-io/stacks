@@ -22,7 +22,7 @@ spec:
   sources:
     - path: cdk8s/dist/gateway-api-crds/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: 106-consolidate-bootstrap-between
+      targetRevision: main
   syncPolicy:
     automated:
       prune: false

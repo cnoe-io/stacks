@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: metric-server
+    app.kubernetes.io/part-of: ref-implementation
+    example: basic
+  name: metric-server
+  namespace: argocd
+spec:
+  destination:
+    namespace: kube-system
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    chart: metrics-server
+    helm:
+      values: |-
+        args:
+        - --kubelet-insecure-tls
+    repoURL: https://kubernetes-sigs.github.io/metrics-server
+    targetRevision: 3.12.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
