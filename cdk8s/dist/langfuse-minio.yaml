@@ -22,7 +22,7 @@ spec:
   sources:
     - path: cdk8s/dist/langfuse-minio/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: 106-consolidate-bootstrap-between
+      targetRevision: rendered/talos/main
   syncPolicy:
     automated:
       prune: true

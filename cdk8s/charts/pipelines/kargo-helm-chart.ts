@@ -73,8 +73,8 @@ export class KargoHelmChart extends Chart {
           host: kargoHost,
           // Admin account configuration - hardcoded for now, should use External Secrets
           adminAccount: {
-            passwordHash: '$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm',
-            tokenSigningKey: 'YvUGEEoD430TBHCfzrxVifl4RD6PkO',
+            passwordHash: '$2y$10$wvzqHozwu7ms8FdT7m2Q7eF0YWsLfJX491neGKwuiztq2hFDvGgPW',
+            tokenSigningKey: 'pw4J0w4L2sMcvsbdWNPgWSeOuBm1IK0b',
             tokenTTL: '24h',
           },
           // Service configuration

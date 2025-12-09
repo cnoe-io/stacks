@@ -9,15 +9,26 @@ resources:
   - ClusterRoleBinding.external-secrets-cert-controller.k8s.yaml
   - ClusterRoleBinding.external-secrets-controller.k8s.yaml
   - CustomResourceDefinition.acraccesstokens.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.cloudsmithaccesstokens.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.clusterexternalsecrets.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.clustergenerators.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.clusterpushsecrets.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.clustersecretstores.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.ecrauthorizationtokens.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.externalsecrets.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.fakes.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.gcraccesstokens.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.generatorstates.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.githubaccesstokens.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.grafanas.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.mfas.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.passwords.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.pushsecrets.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.quayaccesstokens.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.secretstores.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.sshkeys.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.stssessiontokens.generators.external-secrets.io.k8s.yaml
+  - CustomResourceDefinition.uuids.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.vaultdynamicsecrets.generators.external-secrets.io.k8s.yaml
   - CustomResourceDefinition.webhooks.generators.external-secrets.io.k8s.yaml
   - Deployment.external-secrets-cert-controller.k8s.yaml

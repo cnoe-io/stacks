@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: kagent.cnoe.localtest.me
+    - host: kagent.ai401kchat.com
       http:
         paths:
           - backend:
