@@ -1717,7 +1717,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'EsoHelmChart',
       props: {
-        version: '0.9.13',
+        version: '0.12.1',  // Upgraded from 0.9.13 - v1 API support
         installCrds: true,
         enableWebhook: true,
         replicaCount: 2,

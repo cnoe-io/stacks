@@ -16,7 +16,7 @@ import { Construct } from 'constructs';
 export interface EsoHelmChartProps extends ChartProps {
   /**
    * ESO Helm chart version
-   * @default '0.9.13'
+   * @default '0.12.1'
    */
   version?: string;
 
@@ -74,7 +74,7 @@ export class EsoHelmChart extends Chart {
     super(scope, id, props);
 
     const {
-      version = '0.9.13',
+      version = '0.12.1',
       namespace = 'external-secrets',
       installCrds = true,
       enableWebhook = true,
