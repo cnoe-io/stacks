@@ -134,7 +134,7 @@ jobs:
             echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
 
             # Ingress configuration (used by both cluster types)
-            echo "INGRESS_DOMAIN=${INGRESS_DOMAIN:-cnoe.localtest.me}" >> $GITHUB_ENV
+            echo "INGRESS_HOST=${INGRESS_HOST:-cnoe.localtest.me}" >> $GITHUB_ENV
 
             # Azure variables for Talos
             if [[ "${{ matrix.cluster-type }}" == "talos" ]]; then

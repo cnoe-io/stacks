@@ -19,6 +19,7 @@ export class KargoHelmChart extends Chart {
     const namespace = props.namespace || 'kargo';
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const kargoHost = `kargo.${baseHost}`;
+    const kargoWebhooksHost = `kargo-webhooks.${baseHost}`;
     const skipGiteaCACerts = props.skipGiteaCACerts ?? false;
 
     // Create namespace
@@ -63,7 +64,7 @@ export class KargoHelmChart extends Chart {
     // Deploy Kargo using Helm chart directly
     const kargoHelm = new Helm(this, 'kargo', {
       chart: 'oci://ghcr.io/akuity/kargo-charts/kargo',
-      version: '1.7.1',
+      version: '1.8.4',
       namespace: namespace,
       releaseName: 'kargo',
       values: {
@@ -260,13 +261,13 @@ export class KargoHelmChart extends Chart {
         ingressClassName: 'nginx',
         tls: [
           {
-            hosts: ['kargo-webhooks.cnoe.localtest.me'],
+            hosts: [kargoWebhooksHost],
             secretName: 'cnoe-tls-secret'
           }
         ],
         rules: [
           {
-            host: 'kargo-webhooks.cnoe.localtest.me',
+            host: kargoWebhooksHost,
             http: {
               paths: [
                 {
