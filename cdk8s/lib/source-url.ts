@@ -84,15 +84,19 @@ export function getSourceUrl(
     };
   }
 
-  // For Talos clusters, use GitHub repository
+  // For Talos clusters, use GitHub repository with rendered branch
+  // The rendered manifests workflow pushes to rendered/talos/<source-branch>
   const gitUrl =
     process.env.GIT_REPO_URL || 'https://github.com/PittampalliOrg/stacks.git';
-  const gitBranch = process.env.GIT_BRANCH || 'main';
+  const sourceBranch = process.env.GIT_BRANCH || 'main';
+
+  // Use rendered branch pattern: rendered/<cluster-type>/<source-branch>
+  const renderedBranch = `rendered/talos/${sourceBranch}`;
 
   return {
     repoURL: gitUrl,
     path: `cdk8s/dist/${appName}/manifests`,
-    targetRevision: gitBranch,
+    targetRevision: renderedBranch,
   };
 }
 
