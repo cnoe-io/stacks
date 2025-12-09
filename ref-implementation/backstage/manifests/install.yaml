@@ -108,7 +108,7 @@ spec:
     spec:
       containers:
         - name: backstage
-          image: vpittamp23/ubuntu-nix-backstage:v14
+          image: docker.io/vpittamp23/backstage:1.0.4
           env:
             - name: LOG_LEVEL
               value: debug
