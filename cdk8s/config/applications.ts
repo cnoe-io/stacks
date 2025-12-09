@@ -581,7 +581,10 @@ export const applicationConfigs: ApplicationConfig[] = [
         namespace: 'tailscale',
         operatorHostname: 'kind-operator',
         defaultTags: ['tag:k8s'],  // Use tag:k8s for ACL grants (system:masters impersonation)
-        enableApiServerProxy: true  // Enable kubectl access via kind-operator.tail286401.ts.net
+        enableApiServerProxy: true,  // Enable kubectl access via kind-operator.tail286401.ts.net
+        // OAuth identity impersonation: these tailnet identities get cluster-admin RBAC
+        // Required for API Server Proxy "auth" mode (spec/103-tailscale-services)
+        tailnetAdmins: ['vpittamp@github'],
         // Note: Uses default secret 'operator-oauth' created by tailscale-operator-secrets
       }
     },

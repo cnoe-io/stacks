@@ -1,9 +1,9 @@
-# Tasks: Tailscale Stale Device Cleanup and Services Migration
+# Tasks: Tailscale Architecture Optimization
 
 **Input**: Design documents from `/specs/103-tailscale-services/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/tailscale-serve-chart-props.ts, quickstart.md
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md
 
-**Tests**: No automated tests requested. Validation via quickstart.md manual verification.
+**Tests**: No automated tests for this infrastructure feature. Validation is via manual commands documented in quickstart.md.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -13,202 +13,229 @@
 - Include exact file paths in descriptions
 
 ## Path Conventions
-- **CDK8s Charts**: `cdk8s/charts/platform/`, `cdk8s/charts/secrets/`
-- **Helpers**: `cdk8s/lib/`
-- **Config**: `cdk8s/config/`
-- **Specs**: `specs/103-tailscale-services/`
+- **CDK8s charts**: `cdk8s/charts/` (infra, platform, secrets)
+- **Config**: `cdk8s/config/applications.ts`
+- **Libraries**: `cdk8s/lib/`
+- **Documentation**: `CLAUDE.md`, `specs/103-tailscale-services/`
 
 ---
 
-## Phase 1: Setup (Tailscale Admin Console)
+## Phase 1: Setup (Verify Prerequisites)
 
-**Purpose**: Manual prerequisite configuration in Tailscale Admin Console
+**Purpose**: Verify prerequisites before making changes
 
-**Note**: These are manual tasks in Tailscale Admin Console, not code tasks
-
-- [ ] T001 Remove stale offline devices via Tailscale Admin Console (https://login.tailscale.com/admin/machines) [MANUAL - User must complete]
-- [ ] T002 Verify auth key `TAILSCALE-AUTH-KEY` in Azure Key Vault has `tag:k8s-services` tag [MANUAL - User must complete]
-- [ ] T003 Add ACL auto-approvers for all 7 services in Tailscale Admin Console (https://login.tailscale.com/admin/acls) [MANUAL - User must complete]
-
-**ACL Configuration** (add to autoApprovers.services):
-```json
-{
-  "svc:argocd": ["tag:k8s-services"],
-  "svc:langfuse": ["tag:k8s-services"],
-  "svc:gitea": ["tag:k8s-services"],
-  "svc:kagent": ["tag:k8s-services"],
-  "svc:kargo": ["tag:k8s-services"],
-  "svc:headlamp": ["tag:k8s-services"],
-  "svc:keycloak": ["tag:k8s-services"]
-}
-```
-
-**Checkpoint**: Tailscale Admin Console configured - code implementation can begin
+- [X] T001 Verify Tailscale Admin Console access is available
+- [X] T002 Verify Azure Key Vault has required secrets (TAILSCALE-AUTH-KEY, TAILSCALE-OAUTH-CLIENT-ID, TAILSCALE-OAUTH-CLIENT-SECRET)
+- [X] T003 [P] Verify M1 Mac has Tailscale CLI installed (`tailscale version`)
+- [X] T004 [P] Verify cluster is running and accessible (`kubectl get nodes`)
+- [X] T005 [P] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
 
 ---
 
-## Phase 2: Foundational (Create Shared Helpers)
+## Phase 2: Foundational (Tailscale ACL Configuration)
 
-**Purpose**: Create shared helper library that ALL user stories depend on
+**Purpose**: Configure Tailscale ACL grants that MUST be complete before code changes
 
-**CRITICAL**: No service chart work can begin until this phase is complete
+**⚠️ CRITICAL**: User Story 1 (kubectl OAuth) requires ACL grants to be configured first
 
-- [X] T004 Create tailscale-serve-helpers.ts in cdk8s/lib/tailscale-serve-helpers.ts using pattern from contracts/tailscale-serve-chart-props.ts
-- [X] T005 Create generic TailscaleServeChart in cdk8s/charts/platform/tailscale-serve-chart.ts using helpers
-- [X] T006 Register TailscaleServeChart in cdk8s/main-v2.ts with IdpBuilderChartFactory (auto-registered via autoRegisterCharts)
+- [X] T006 Add tagOwner entry for `tag:k8s-operator` in Tailscale Admin Console → Access Controls
+- [X] T007 Add ACL grant for API Server Proxy impersonation with `tailscale.com/cap/kubernetes` capability
+- [X] T008 Add ACL rule allowing `vpittamp@github` to access `tag:k8s-operator:443`
+- [X] T009 Verify ACL changes saved and effective in Tailscale Admin Console
 
-**Helper functions to implement** (from contracts/tailscale-serve-chart-props.ts):
-- `resolveProps()`: Apply defaults to TailscaleServeChartProps
-- `generateServeScript()`: Generate shell script for Tailscale container
-
-**Checkpoint**: Foundation ready - user story implementation can now begin
+**Checkpoint**: ACL configuration ready - User Story 1 implementation can begin
 
 ---
 
-## Phase 3: User Story 1 - Remove Stale Devices to Reclaim Hostnames (Priority: P1)
+## Phase 3: User Story 1 - kubectl Access via OAuth Identity (Priority: P0) 🎯 MVP
 
-**Goal**: Clean up stale devices and verify hostname reclamation
+**Goal**: Enable kubectl access from M1 Mac using tailnet identity instead of static tokens
 
-**Independent Test**: Run `tailscale status` before/after, verify offline devices removed
+**Independent Test**: Run `kubectl get nodes` from M1 Mac, verify `kubectl auth whoami` shows tailnet identity
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Verify stale device cleanup completed (T001 prerequisite)
-- [ ] T008 [US1] Test new device registration without suffix by deploying test pod
-- [ ] T009 [US1] Document cleanup procedure in quickstart.md Phase 1 (already done - verify accuracy)
+- [ ] T010 [US1] Update Helm values in `cdk8s/charts/infra/tailscale-operator-chart.ts` to set `apiServerProxyConfig.mode: "auth"`
+- [ ] T011 [US1] Add ClusterRoleBinding for tailnet identity `vpittamp@github` → `cluster-admin` in `cdk8s/charts/infra/tailscale-operator-chart.ts`
+- [ ] T012 [US1] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [ ] T013 [US1] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+- [ ] T014 [US1] Deploy changes via ArgoCD (`source ~/stacks/deployment/scripts/cluster-menu.sh && cluster-update`)
+- [ ] T015 [US1] Wait for Tailscale Operator pod to restart and become ready
+- [ ] T016 [US1] From M1 Mac: Run `tailscale configure kubeconfig kind-operator` to generate kubeconfig
+- [ ] T017 [US1] From M1 Mac: Verify `kubectl get nodes` succeeds
+- [ ] T018 [US1] From M1 Mac: Verify `kubectl auth whoami` shows tailnet identity
 
-**Checkpoint**: Stale devices removed, hostnames can be reclaimed without suffix
+**Checkpoint**: kubectl OAuth access working - SC-001, SC-002, SC-003 validated
 
 ---
 
-## Phase 4: User Story 2 - Access ArgoCD via Stable Tailscale Service URL (Priority: P1)
+## Phase 4: User Story 2 - Remove Stale Devices (Priority: P1)
 
-**Goal**: ArgoCD accessible at `https://svc-argocd.<tailnet>.ts.net`
+**Goal**: Remove offline Tailscale devices blocking hostname reuse
 
-**Independent Test**: `curl -sI https://svc-argocd.tail286401.ts.net | head -5` returns HTTP/2 200
+**Independent Test**: Run `tailscale status` and verify no offline devices for cluster services
 
 ### Implementation for User Story 2
 
-- [X] T010 [US2] Add argocd-tailscale-serve entry to cdk8s/config/applications.ts with TailscaleServeChart props
-- [X] T011 [US2] Synthesize and verify ArgoCD serve chart manifest in cdk8s/dist/argocd-tailscale-serve/manifests/
-- [ ] T012 [US2] Deploy via idpbuilder and verify ArgoCD pod registration [PENDING DEPLOYMENT]
-- [ ] T013 [US2] Test ArgoCD access at https://svc-argocd.tail286401.ts.net from Tailscale-connected device [PENDING DEPLOYMENT]
+- [ ] T019 [US2] Run `tailscale status` to list all devices and identify offline ones
+- [ ] T020 [US2] In Tailscale Admin Console → Machines, delete offline device: argocd (if present)
+- [ ] T021 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: gitea (if present)
+- [ ] T022 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: kagent (if present)
+- [ ] T023 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: langfuse (if present)
+- [ ] T024 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: kargo (if present)
+- [ ] T025 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: headlamp (if present)
+- [ ] T026 [P] [US2] In Tailscale Admin Console → Machines, delete offline device: keycloak (if present)
+- [ ] T027 [US2] Verify cleanup: Run `tailscale status | grep -E "offline.*(argocd|gitea|kagent)"` - expect no output
 
-**applications.ts entry**:
-```typescript
-{
-  name: 'argocd-tailscale-serve',
-  namespace: 'tailscale',
-  chart: {
-    type: 'TailscaleServeChart',
-    props: {
-      serviceName: 'argocd',
-      backendHost: 'argocd-server.argocd.svc.cluster.local',
-      backendPort: 443,
-      backendInsecure: true,
-    }
-  },
-  argocd: { syncWave: '-60' }
-}
-```
-
-**Checkpoint**: ArgoCD accessible via stable service URL
+**Checkpoint**: Stale devices removed - SC-005 validated
 
 ---
 
-## Phase 5: User Story 3 - Access All Platform Services via Stable URLs (Priority: P2)
+## Phase 5: User Story 3 - Access ArgoCD via Stable URL (Priority: P1)
 
-**Goal**: All 6 remaining services (Langfuse, Gitea, kagent, Kargo, Headlamp, Keycloak) accessible via stable URLs
+**Goal**: ArgoCD accessible at `https://svc-argocd.<tailnet>.ts.net`
 
-**Independent Test**: Loop through all service URLs and verify HTTP 200 responses
+**Independent Test**: Access ArgoCD via stable URL from Tailscale-connected device
+
+### Prerequisites: ACL Auto-Approver
+
+- [ ] T028 [US3] Add ACL auto-approver for `svc:argocd` with `tag:k8s-services` in Tailscale Admin Console
 
 ### Implementation for User Story 3
 
-- [X] T014 [P] [US3] Add langfuse-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T015 [P] [US3] Add gitea-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T016 [P] [US3] Add kagent-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T017 [P] [US3] Add kargo-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T018 [P] [US3] Add headlamp-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T019 [P] [US3] Add keycloak-tailscale-serve entry to cdk8s/config/applications.ts
-- [X] T020 [US3] Synthesize all serve charts via `npx ts-node main-v2.ts`
-- [ ] T021 [US3] Deploy all serve charts via cluster-update [PENDING DEPLOYMENT]
-- [ ] T022 [US3] Test all service URLs from Tailscale-connected device [PENDING DEPLOYMENT]
+- [ ] T029 [US3] Update ArgoCD service name from `argocd2` to `argocd` in `cdk8s/config/applications.ts`
+- [ ] T030 [US3] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [ ] T031 [US3] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+- [ ] T032 [US3] Deploy changes (`cluster-update`)
+- [ ] T033 [US3] Wait for ArgoCD Tailscale serve pod to restart
+- [ ] T034 [US3] Verify ArgoCD accessible at `https://svc-argocd.<tailnet>.ts.net`
 
-**Service configurations** (from contracts/tailscale-serve-chart-props.ts PLATFORM_SERVICES):
-
-| Service | backendHost | backendPort | backendInsecure |
-|---------|-------------|-------------|-----------------|
-| langfuse | langfuse.langfuse.svc.cluster.local | 3000 | false |
-| gitea | gitea-http.gitea.svc.cluster.local | 3000 | false |
-| kagent | kagent-dashboard.kagent.svc.cluster.local | 8082 | false |
-| kargo | kargo-controller.kargo.svc.cluster.local | 443 | true |
-| headlamp | headlamp.headlamp.svc.cluster.local | 4466 | false |
-| keycloak | keycloak.keycloak.svc.cluster.local | 8080 | false |
-
-**Checkpoint**: All 7 platform services accessible via stable service URLs
+**Checkpoint**: ArgoCD stable URL working - SC-007 validated
 
 ---
 
-## Phase 6: User Story 4 - Charts Use Tailscale Serve Helpers (Priority: P2)
+## Phase 6: User Story 4 - All Platform Services Stable URLs (Priority: P2)
 
-**Goal**: Verify all charts use standardized helpers from shared library
+**Goal**: All 7 platform services accessible via stable URLs
 
-**Independent Test**: Verify all serve chart entries in applications.ts use TailscaleServeChart type
+**Independent Test**: Access each service via `https://svc-<name>.<tailnet>.ts.net`
+
+### Prerequisites: ACL Auto-Approvers
+
+- [ ] T035 [P] [US4] Add ACL auto-approver for `svc:langfuse` with `tag:k8s-services`
+- [ ] T036 [P] [US4] Add ACL auto-approver for `svc:gitea` with `tag:k8s-services`
+- [ ] T037 [P] [US4] Add ACL auto-approver for `svc:kagent` with `tag:k8s-services`
+- [ ] T038 [P] [US4] Add ACL auto-approver for `svc:kargo` with `tag:k8s-services`
+- [ ] T039 [P] [US4] Add ACL auto-approver for `svc:headlamp` with `tag:k8s-services`
+- [ ] T040 [P] [US4] Add ACL auto-approver for `svc:keycloak` with `tag:k8s-services`
 
 ### Implementation for User Story 4
 
-- [X] T023 [US4] Verify TailscaleServeChart in cdk8s/charts/platform/tailscale-serve-chart.ts imports from cdk8s/lib/tailscale-serve-helpers.ts
-- [X] T024 [US4] Run `npx tsc --noEmit` to verify TypeScript compilation passes
-- [X] T025 [US4] Verify all serve chart entries in applications.ts use type: 'TailscaleServeChart'
+- [ ] T041 [P] [US4] Update Langfuse service name from `langfuse2` to `langfuse` in `cdk8s/config/applications.ts`
+- [ ] T042 [P] [US4] Update Gitea service name from `gitea2` to `gitea` in `cdk8s/config/applications.ts`
+- [ ] T043 [P] [US4] Update kagent service name from `kagent2` to `kagent` in `cdk8s/config/applications.ts`
+- [ ] T044 [P] [US4] Update Kargo service name from `kargo2` to `kargo` in `cdk8s/config/applications.ts`
+- [ ] T045 [P] [US4] Update Headlamp service name from `headlamp2` to `headlamp` in `cdk8s/config/applications.ts`
+- [ ] T046 [P] [US4] Update Keycloak service name from `keycloak2` to `keycloak` in `cdk8s/config/applications.ts`
+- [ ] T047 [US4] Update Langfuse `nextAuthUrl` to use new service URL in `cdk8s/config/applications.ts`
+- [ ] T048 [US4] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [ ] T049 [US4] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+- [ ] T050 [US4] Deploy changes (`cluster-update`)
+- [ ] T051 [US4] Verify all services accessible via stable URLs (run validation loop from quickstart.md)
 
-**Checkpoint**: All charts using standardized helper pattern
+**Checkpoint**: All 7 services with stable URLs - SC-008 validated
 
 ---
 
-## Phase 7: User Story 5 - Auth Keys Managed via External Secrets (Priority: P2)
+## Phase 7: User Story 5 - Charts Use Helpers (Priority: P2)
 
-**Goal**: Auth keys sourced exclusively from Azure Key Vault via ESO
+**Goal**: All Tailscale serve charts use `TailscaleServeHelpers` from shared library
 
-**Independent Test**: Verify `kubectl get externalsecret -n tailscale tailscale-auth-key` shows Synced status
+**Independent Test**: Verify all serve charts import from `cdk8s/lib/tailscale-serve-helpers.ts`
 
 ### Implementation for User Story 5
 
-- [X] T026 [US5] Verify existing tailscale-secrets-chart.ts in cdk8s/charts/secrets/ syncs auth key
-- [X] T027 [US5] Verify TailscaleServeChart references authKeySecretName: 'tailscale-auth-key'
-- [ ] T028 [US5] Test ESO sync by checking `kubectl get secret -n tailscale tailscale-auth-key` [PENDING DEPLOYMENT]
+- [ ] T052 [US5] Verify `cdk8s/charts/platform/tailscale-serve-chart.ts` imports from `tailscale-serve-helpers.ts`
+- [ ] T053 [US5] Verify all serve chart entries in `cdk8s/config/applications.ts` use `TailscaleServeChart` type
+- [ ] T054 [US5] Run `grep -r "TailscaleServeHelpers" cdk8s/charts/` to confirm usage
 
-**Checkpoint**: Auth keys managed via ESO (Constitution Principle VI compliance)
+**Checkpoint**: Helper library compliance verified - SC-011 validated
 
 ---
 
-## Phase 8: User Story 6 - Legacy Hostname Mode Removed (Priority: P3)
+## Phase 8: User Story 6 - Auth Keys via External Secrets (Priority: P2)
 
-**Goal**: Complete removal of legacy `tailscale-ingress-chart.ts` and all references
+**Goal**: Auth keys sourced from Azure Key Vault via ESO
 
-**Independent Test**: `grep -r "TailscaleIngressChart" cdk8s/` returns no output
+**Independent Test**: Verify ExternalSecret resources sync auth keys from Azure Key Vault
 
 ### Implementation for User Story 6
 
-- [X] T029 [US6] DELETE cdk8s/charts/platform/tailscale-ingress-chart.ts
-- [X] T030 [US6] Remove tailscale-ingresses entry from cdk8s/config/applications.ts
-- [X] T031 [US6] Remove TailscaleIngressChart import and registration from cdk8s/main-v2.ts (auto-registration, no manual import)
-- [X] T032 [US6] Run `npx tsc --noEmit` to verify no broken references
-- [X] T033 [US6] Verify `grep -r "TailscaleIngressChart" cdk8s/` returns no output (only comment reference remains)
-- [X] T034 [US6] Verify `grep -r "tailscale-ingress" cdk8s/` returns no output
+- [ ] T055 [US6] Verify `TAILSCALE-AUTH-KEY` exists in Azure Key Vault with `tag:k8s-services` tag
+- [ ] T056 [US6] Verify ExternalSecret resource in `cdk8s/charts/secrets/tailscale-secrets-chart.ts` syncs auth key
+- [ ] T057 [US6] Run `kubectl get externalsecret -n tailscale` to verify sync status
+- [ ] T058 [US6] Run `kubectl get secret tailscale-auth-key -n tailscale -o yaml` to verify secret exists
 
-**Checkpoint**: Legacy code completely removed (Constitution Principle IX compliance)
+**Checkpoint**: Auth keys from ESO verified - SC-012 validated
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 9: User Story 7 - Deprecate kubectl-proxy Chart (Priority: P3)
 
-**Purpose**: Documentation and validation
+**Goal**: Remove redundant custom kubectl-proxy chart after Operator API Proxy validated
 
-- [X] T035 [P] Update CLAUDE.md Tailscale Services section with all 7 service URLs
-- [ ] T036 [P] Run complete quickstart.md validation checklist [PENDING DEPLOYMENT]
-- [X] T037 Re-synthesize and deploy all charts via cluster-update (synthesized, deployment pending)
-- [ ] T038 Verify ArgoCD shows all tailscale-serve apps as Synced/Healthy [PENDING DEPLOYMENT]
-- [ ] T039 Delete any remaining legacy Kubernetes resources: `kubectl delete ingress -A -l app.kubernetes.io/component=tailscale-ingress` [PENDING DEPLOYMENT]
+**Independent Test**: Verify kubectl works via Operator API Proxy, then remove custom chart
+
+**Prerequisites**: US1 validated for 48+ hours
+
+### Implementation for User Story 7
+
+- [ ] T059 [US7] Final verification: kubectl works via Operator API Proxy from M1 Mac
+- [ ] T060 [US7] Remove `k8s-api-tailscale-serve` entry from `cdk8s/config/applications.ts`
+- [ ] T061 [US7] Delete chart file: `rm cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts`
+- [ ] T062 [US7] Remove chart registration from `cdk8s/main-v2.ts` (if present)
+- [ ] T063 [US7] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [ ] T064 [US7] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+- [ ] T065 [US7] Deploy changes (`cluster-update`)
+- [ ] T066 [US7] Clean up Kubernetes resources: `kubectl delete deployment k8s-api-tailscale-serve -n tailscale`
+- [ ] T067 [US7] Clean up ClusterRoleBinding: `kubectl delete clusterrolebinding k8s-api-tailscale-serve`
+- [ ] T068 [US7] Verify no custom kubectl-proxy remains: `kubectl get deployment -n tailscale | grep k8s-api`
+
+**Checkpoint**: Custom kubectl-proxy removed - SC-014 validated
+
+---
+
+## Phase 10: User Story 8 - Remove Legacy Code (Priority: P3)
+
+**Goal**: Remove all legacy hostname mode code from charts
+
+**Independent Test**: Verify no `legacyHostnameMode` flags or hostname-based configurations remain
+
+### Implementation for User Story 8
+
+- [ ] T069 [US8] Search for legacy patterns: `grep -r "legacyHostnameMode\|hostname-based" cdk8s/`
+- [ ] T070 [US8] Remove any legacy hostname mode flags found in charts
+- [ ] T071 [US8] Verify all serve charts use `--service` flag pattern only
+- [ ] T072 [US8] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [ ] T073 [US8] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+
+**Checkpoint**: Legacy code removed - SC-013 validated
+
+---
+
+## Phase 11: Polish & Documentation
+
+**Purpose**: Update documentation with final architecture
+
+- [ ] T074 [P] Update CLAUDE.md Tailscale Operator section with auth mode configuration
+- [ ] T075 [P] Update CLAUDE.md with `tailscale configure kubeconfig` instructions
+- [ ] T076 Update CLAUDE.md Tailscale Services section with all 7 service URLs (remove `argocd2` references)
+- [ ] T077 Remove CLAUDE.md references to custom kubectl-proxy and token-based access
+- [ ] T078 Verify no old patterns remain: `grep -r "argocd2\|k8s-api-tailscale-serve" CLAUDE.md`
+- [ ] T079 Run full quickstart.md validation checklist
+- [ ] T080 Commit all changes with Constitution compliance notes
+
+**Checkpoint**: Documentation updated - SC-015 validated
 
 ---
 
@@ -216,96 +243,102 @@
 
 ### Phase Dependencies
 
-- **Phase 1 (Setup)**: No dependencies - manual Tailscale Admin Console tasks
-- **Phase 2 (Foundational)**: No code dependencies - creates shared helpers
-- **Phase 3 (US1)**: Depends on Phase 1 (stale device cleanup)
-- **Phase 4 (US2)**: Depends on Phase 2 (helpers) - ArgoCD serve chart
-- **Phase 5 (US3)**: Depends on Phase 2 (helpers) - remaining service charts
-- **Phase 6 (US4)**: Depends on Phase 4, 5 - verification only
-- **Phase 7 (US5)**: Depends on Phase 4, 5 - verification only
-- **Phase 8 (US6)**: Depends on Phase 4, 5 - legacy removal
-- **Phase 9 (Polish)**: Depends on all user stories complete
+- **Setup (Phase 1)**: No dependencies - can start immediately
+- **Foundational (Phase 2)**: Depends on Setup - BLOCKS User Story 1
+- **User Story 1 (Phase 3)**: Depends on Foundational - P0 priority, MVP
+- **User Story 2 (Phase 4)**: Depends on Setup only - can run parallel to US1
+- **User Story 3 (Phase 5)**: Depends on Setup + US2 cleanup - P1 priority
+- **User Story 4 (Phase 6)**: Depends on US3 pattern validation - P2 priority
+- **User Story 5 (Phase 7)**: Can verify in parallel with any phase - P2 priority
+- **User Story 6 (Phase 8)**: Can verify in parallel with any phase - P2 priority
+- **User Story 7 (Phase 9)**: Depends on US1 validated 48+ hours - P3 priority
+- **User Story 8 (Phase 10)**: Can run after US7 - P3 priority
+- **Polish (Phase 11)**: Depends on all user stories complete
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Independent - manual cleanup
-- **User Story 2 (P1)**: Depends on Phase 2 (helpers) only
-- **User Story 3 (P2)**: Depends on Phase 2 (helpers) only - can parallel with US2
-- **User Story 4 (P2)**: Verification after US2/US3
-- **User Story 5 (P2)**: Verification after US2/US3
-- **User Story 6 (P3)**: Can only start after US2/US3 deployed and working
-
-### Within Each User Story
-
-- Service entries can be added in parallel (T014-T019 all [P])
-- Synthesis must complete before deployment
-- Deployment must complete before testing
+- **US1 (P0)**: Foundational ACL setup required first
+- **US2 (P1)**: Independent - can start after Setup
+- **US3 (P1)**: Depends on US2 (stale devices must be removed first)
+- **US4 (P2)**: Depends on US3 pattern (extend ArgoCD pattern to all services)
+- **US5 (P2)**: Independent verification task
+- **US6 (P2)**: Independent verification task
+- **US7 (P3)**: Depends on US1 being validated for 48+ hours
+- **US8 (P3)**: Depends on US7 (remove kubectl-proxy first, then other legacy code)
 
 ### Parallel Opportunities
 
-- **Phase 1**: T001, T002, T003 can run in parallel (different admin console pages)
-- **Phase 5**: T014-T019 can run in parallel (different applications.ts entries)
-- **Phase 9**: T035, T036 can run in parallel (different files)
-- **US2 and US3**: Can run in parallel after Phase 2 complete
+- Phase 2 tasks T006-T008 can run in parallel (different ACL sections)
+- Phase 4 device deletions T020-T026 can all run in parallel
+- Phase 6 ACL auto-approvers T035-T040 can all run in parallel
+- Phase 6 service name updates T041-T046 can all run in parallel
+- Phase 11 documentation updates T074-T075 can run in parallel
 
 ---
 
-## Parallel Example: User Story 3
+## Parallel Example: Phase 6 Service Updates
 
 ```bash
-# Launch all service entries in parallel:
-Task: "Add langfuse-tailscale-serve entry to cdk8s/config/applications.ts"
-Task: "Add gitea-tailscale-serve entry to cdk8s/config/applications.ts"
-Task: "Add kagent-tailscale-serve entry to cdk8s/config/applications.ts"
-Task: "Add kargo-tailscale-serve entry to cdk8s/config/applications.ts"
-Task: "Add headlamp-tailscale-serve entry to cdk8s/config/applications.ts"
-Task: "Add keycloak-tailscale-serve entry to cdk8s/config/applications.ts"
+# Launch all ACL auto-approvers in parallel:
+Task: "Add ACL auto-approver for svc:langfuse"
+Task: "Add ACL auto-approver for svc:gitea"
+Task: "Add ACL auto-approver for svc:kagent"
+Task: "Add ACL auto-approver for svc:kargo"
+Task: "Add ACL auto-approver for svc:headlamp"
+Task: "Add ACL auto-approver for svc:keycloak"
 
-# Then synthesize and deploy sequentially:
-Task: "Synthesize all serve charts via npx ts-node main-v2.ts"
-Task: "Deploy all serve charts via cluster-update"
+# Launch all service name updates in parallel:
+Task: "Update Langfuse service name in applications.ts"
+Task: "Update Gitea service name in applications.ts"
+Task: "Update kagent service name in applications.ts"
+Task: "Update Kargo service name in applications.ts"
+Task: "Update Headlamp service name in applications.ts"
+Task: "Update Keycloak service name in applications.ts"
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (User Stories 1 + 2 Only)
+### MVP First (User Stories 1-3 Only)
 
-1. Complete Phase 1: Setup (Tailscale Admin Console)
-2. Complete Phase 2: Foundational (helpers + generic chart)
-3. Complete Phase 3: User Story 1 (stale device cleanup verification)
-4. Complete Phase 4: User Story 2 (ArgoCD service URL)
-5. **STOP and VALIDATE**: Test ArgoCD at stable URL independently
-6. Deploy/demo if ready
+1. Complete Phase 1: Setup verification
+2. Complete Phase 2: Foundational ACL configuration
+3. Complete Phase 3: User Story 1 (kubectl OAuth)
+4. **STOP and VALIDATE**: Test kubectl from M1 Mac
+5. Complete Phase 4: User Story 2 (stale device cleanup)
+6. Complete Phase 5: User Story 3 (ArgoCD stable URL)
+7. **DEPLOY MVP**: kubectl + ArgoCD working with stable access
 
 ### Incremental Delivery
 
-1. Setup + Foundational → Helpers and generic chart ready
-2. Add User Story 1 → Stale devices cleaned
-3. Add User Story 2 → ArgoCD accessible (MVP!)
-4. Add User Story 3 → All services accessible
-5. Add User Stories 4-5 → Verification tasks
-6. Add User Story 6 → Legacy removal
-7. Polish → Documentation complete
+1. Setup + Foundational → ACL ready
+2. Add US1 → Test independently → kubectl OAuth working (MVP!)
+3. Add US2 + US3 → Test independently → ArgoCD stable URL
+4. Add US4 → Test independently → All services stable URLs
+5. Add US5-US6 → Verify compliance
+6. Add US7-US8 → Cleanup legacy code
+7. Each story adds value without breaking previous stories
 
-### Single Developer Strategy
+### Recommended Execution Order
 
-Execute phases sequentially:
-1. Phase 1 (manual setup) → Phase 2 (helpers) → Phase 3 (US1)
-2. Phase 4 (US2 - ArgoCD) → Test and validate
-3. Phase 5 (US3 - remaining services) → Test all
-4. Phase 6-8 (verification and cleanup)
-5. Phase 9 (polish)
+For a single developer:
+1. **Day 1**: Phases 1-3 (Setup, Foundational, US1) - kubectl working
+2. **Day 2**: Phases 4-5 (US2, US3) - ArgoCD stable URL
+3. **Day 3**: Phase 6 (US4) - All services stable URLs
+4. **Wait 48h**: Let US1 run for validation period
+5. **Day 5**: Phases 7-10 (US5-US8) - Verification and cleanup
+6. **Day 5**: Phase 11 (Polish) - Documentation
 
 ---
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
+- [P] tasks = different files/resources, no dependencies
 - [Story] label maps task to specific user story for traceability
-- Each user story should be independently testable
-- Manual validation via quickstart.md (no automated tests)
-- Constitution Principle IX: DELETE legacy code, don't deprecate
-- Commit after each task or logical group
+- Each user story should be independently completable and testable
+- Manual Tailscale Admin Console tasks must be done in the browser
+- Commit after each phase or logical group
 - Stop at any checkpoint to validate story independently
+- US7 has a 48-hour waiting period (validation gate)
+- ACL changes take effect immediately but may need 60s propagation

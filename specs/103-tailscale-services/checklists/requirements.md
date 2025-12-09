@@ -1,9 +1,10 @@
-# Specification Quality Checklist: Tailscale Stale Device Cleanup and Services Migration
+# Specification Quality Checklist: Tailscale Architecture Optimization
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-12-06
+**Updated**: 2025-12-09
 **Feature**: [spec.md](../spec.md)
-**Last Validated**: 2025-12-06
+**Last Validated**: 2025-12-09
 
 ## Content Quality
 
@@ -32,13 +33,13 @@
 
 ## Constitution Alignment (v2.0.0)
 
-- [x] Principle I (CDK8s Typed Composition) addressed in FR-005, FR-011
-- [x] Principle III (Modular Chart Composition) addressed in FR-005, SC-007
-- [x] Principle IV (ArgoCD Sync Wave Discipline) addressed in FR-011
-- [x] Principle V (Tailscale Services Standards) addressed in FR-003, FR-004, FR-006
-- [x] Principle VI (External Secrets Management) addressed in FR-008, SC-008
-- [x] Principle IX (Forward-Only Development) addressed in FR-009, SC-009
-- [x] Principle X (Documentation as Code) addressed in FR-010, SC-010
+- [x] Principle I (CDK8s Typed Composition) addressed in FR-009, FR-016
+- [x] Principle III (Modular Chart Composition) addressed in FR-009, SC-011
+- [x] Principle IV (ArgoCD Sync Wave Discipline) addressed in FR-016
+- [x] Principle V (Tailscale Services Standards) addressed in FR-001, FR-007, FR-008, FR-010
+- [x] Principle VI (External Secrets Management) addressed in FR-012, SC-012
+- [x] Principle IX (Forward-Only Development) addressed in FR-013, FR-014, SC-013, SC-014
+- [x] Principle X (Documentation as Code) addressed in FR-015, SC-015
 
 ## Validation Summary
 
@@ -51,9 +52,14 @@
 
 ## Notes
 
-- Spec updated on 2025-12-06 to align with Constitution v2.0.0
-- Added User Stories 4-6 for constitution compliance requirements
-- Added Success Criteria SC-007 through SC-010 for compliance verification
-- Added FR-009 through FR-011 for constitution-mandated requirements
-- Added Constitution Alignment Summary table to spec
+- **2025-12-09**: Spec updated to add kubectl OAuth access (P0 priority)
+  - Added User Story 1 (kubectl via OAuth identity)
+  - Added User Stories 7-8 for legacy code removal
+  - Added FR-001 through FR-004 for OAuth kubectl requirements
+  - Added SC-001 through SC-004 for OAuth kubectl success criteria
+  - Added Research Sources section with Tailscale documentation links
+  - Renumbered all FRs and SCs to accommodate new P0 requirements
+- **2025-12-06**: Spec created with Tailscale Services migration focus
+  - Added User Stories 2-6 for constitution compliance requirements
+  - Added Constitution Alignment Summary table to spec
 - Items marked complete - ready for `/speckit.plan`
