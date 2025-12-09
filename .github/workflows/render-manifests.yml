@@ -223,15 +223,15 @@ jobs:
           cp -r "$TEMP_DIST"/* cdk8s/dist/
           rm -rf "$TEMP_DIST"
 
-          # Check for changes
-          if git diff --quiet && git diff --cached --quiet && [[ "${{ github.event.inputs.force_push }}" != "true" ]]; then
+          # Stage files first (required to detect untracked files on orphan branches)
+          git add cdk8s/dist
+
+          # Check for changes (after staging)
+          if git diff --cached --quiet && [[ "${{ github.event.inputs.force_push }}" != "true" ]]; then
             echo "::notice::No changes detected in rendered manifests"
             echo "changed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-
-          # Stage and commit
-          git add cdk8s/dist
 
           COMMIT_MSG="chore(rendered): Render ${{ matrix.cluster-type }} manifests from ${SOURCE_BRANCH}@${SHORT_SHA} [skip ci]"
           git commit -m "$COMMIT_MSG" || {
