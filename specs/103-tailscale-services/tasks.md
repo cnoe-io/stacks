@@ -55,12 +55,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Update Helm values in `cdk8s/charts/infra/tailscale-operator-chart.ts` to set `apiServerProxyConfig.mode: "auth"`
-- [ ] T011 [US1] Add ClusterRoleBinding for tailnet identity `vpittamp@github` → `cluster-admin` in `cdk8s/charts/infra/tailscale-operator-chart.ts`
-- [ ] T012 [US1] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
-- [ ] T013 [US1] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
-- [ ] T014 [US1] Deploy changes via ArgoCD (`source ~/stacks/deployment/scripts/cluster-menu.sh && cluster-update`)
-- [ ] T015 [US1] Wait for Tailscale Operator pod to restart and become ready
+- [X] T010 [US1] Update Helm values in `cdk8s/charts/infra/tailscale-operator-chart.ts` to set `apiServerProxyConfig.mode: "true"` (auth mode)
+- [X] T011 [US1] Add ClusterRoleBinding for tailnet identity `vpittamp@github` → `cluster-admin` in `cdk8s/charts/infra/tailscale-operator-chart.ts`
+- [X] T012 [US1] Run TypeScript type check (`cd cdk8s && npx tsc --noEmit`)
+- [X] T013 [US1] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
+- [X] T014 [US1] Deploy changes via ArgoCD (`source ~/stacks/deployment/scripts/cluster-menu.sh && cluster-update`)
+- [X] T015 [US1] Wait for Tailscale Operator pod to restart and become ready
 - [ ] T016 [US1] From M1 Mac: Run `tailscale configure kubeconfig kind-operator` to generate kubeconfig
 - [ ] T017 [US1] From M1 Mac: Verify `kubectl get nodes` succeeds
 - [ ] T018 [US1] From M1 Mac: Verify `kubectl auth whoami` shows tailnet identity
