@@ -287,9 +287,28 @@ export class KargoHelmChart extends Chart {
       }
     });
 
+    // Fix the kargo-api Ingress to add ingressClassName and TLS configuration
+    // The Helm chart doesn't properly set these fields
+    const kargoApiIngress = kargoHelm.apiObjects.find(obj =>
+      obj.kind === 'Ingress' && obj.name === 'kargo-api'
+    );
+
+    if (kargoApiIngress) {
+      // Add ingressClassName to spec
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/ingressClassName', 'nginx'));
+
+      // Add TLS configuration for HTTPS termination
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/tls', [
+        {
+          hosts: [kargoHost],
+          secretName: 'cnoe-tls-secret'
+        }
+      ]));
+    }
+
     // Fix webhook configurations by removing cert-manager annotations and adding CA bundle
     // Find the ValidatingWebhookConfiguration
-    const validatingWebhook = kargoHelm.apiObjects.find(obj => 
+    const validatingWebhook = kargoHelm.apiObjects.find(obj =>
       obj.kind === 'ValidatingWebhookConfiguration' && obj.name === 'kargo'
     );
     
