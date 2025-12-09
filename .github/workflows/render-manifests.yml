@@ -1,0 +1,294 @@
+# Rendered Manifests Pattern - GitHub Actions Workflow
+# Feature: 107-rendered-manifests-pattern
+#
+# Synthesizes CDK8s manifests for both KIND and Talos environments,
+# then commits the rendered output to dedicated branches.
+#
+# Branch naming: rendered/<cluster-type>/<source-branch>
+# Example: rendered/talos/main, rendered/kind/main
+#
+# Trigger:
+# - Push to any branch with changes in cdk8s/** or .env-files/**
+# - Manual workflow dispatch for re-rendering
+
+name: Render Manifests
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'cdk8s/**'
+      - '.env-files/**'
+      - '!cdk8s/dist/**'  # Never trigger on rendered output (defense-in-depth)
+  workflow_dispatch:
+    inputs:
+      cluster_type:
+        description: 'Cluster type to render (leave empty for both)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - kind
+          - talos
+      force_push:
+        description: 'Force push even without changes'
+        required: false
+        type: boolean
+        default: false
+
+# Permissions required for OIDC and pushing rendered manifests
+permissions:
+  id-token: write   # Required for Azure OIDC
+  contents: write   # Required for pushing rendered manifests
+
+# Prevent concurrent runs on the same branch
+concurrency:
+  group: render-manifests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Skip if triggered by github-actions bot (loop prevention)
+  check-actor:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "::notice::Skipping workflow - triggered by github-actions[bot]"
+          else
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          fi
+
+  render:
+    needs: check-actor
+    if: needs.check-actor.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cluster-type: [kind, talos]
+      fail-fast: false
+      max-parallel: 2
+
+    steps:
+      - name: Check if should run for this cluster type
+        id: should-run
+        run: |
+          INPUT_TYPE="${{ github.event.inputs.cluster_type }}"
+          MATRIX_TYPE="${{ matrix.cluster-type }}"
+
+          if [[ -z "$INPUT_TYPE" ]] || [[ "$INPUT_TYPE" == "$MATRIX_TYPE" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "::notice::Skipping $MATRIX_TYPE - only $INPUT_TYPE was requested"
+          fi
+
+      - name: Checkout repository
+        if: steps.should-run.outputs.run == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for branch operations
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        if: steps.should-run.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'cdk8s/package-lock.json'
+
+      - name: Install dependencies
+        if: steps.should-run.outputs.run == 'true'
+        working-directory: cdk8s
+        run: npm ci
+
+      # Azure OIDC login for Talos synthesis (required for Azure credentials)
+      - name: Azure Login (Talos only)
+        if: steps.should-run.outputs.run == 'true' && matrix.cluster-type == 'talos'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Load environment configuration
+        if: steps.should-run.outputs.run == 'true'
+        id: load-env
+        run: |
+          ENV_FILE=".env-files/${{ matrix.cluster-type }}.env"
+
+          if [[ -f "$ENV_FILE" ]]; then
+            echo "::notice::Loading environment from $ENV_FILE"
+            set -a
+            source "$ENV_FILE"
+            set +a
+
+            # Export key variables for subsequent steps
+            echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> $GITHUB_ENV
+            echo "GIT_REPO_URL=${GIT_REPO_URL:-https://github.com/${{ github.repository }}.git}" >> $GITHUB_ENV
+            echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+
+            # Ingress configuration (used by both cluster types)
+            echo "INGRESS_DOMAIN=${INGRESS_DOMAIN:-cnoe.localtest.me}" >> $GITHUB_ENV
+
+            # Azure variables for Talos
+            if [[ "${{ matrix.cluster-type }}" == "talos" ]]; then
+              echo "AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-${{ vars.AZURE_CLIENT_ID }}}" >> $GITHUB_ENV
+              echo "AZURE_TENANT_ID=${AZURE_TENANT_ID:-${{ vars.AZURE_TENANT_ID }}}" >> $GITHUB_ENV
+              echo "AZURE_KEYVAULT_NAME=$AZURE_KEYVAULT_NAME" >> $GITHUB_ENV
+              echo "AZURE_STORAGE_ACCOUNT=$AZURE_STORAGE_ACCOUNT" >> $GITHUB_ENV
+              echo "TAILSCALE_TAILNET=$TAILSCALE_TAILNET" >> $GITHUB_ENV
+            fi
+          else
+            echo "::error::Environment file not found: $ENV_FILE"
+            exit 1
+          fi
+
+      - name: Synthesize manifests
+        if: steps.should-run.outputs.run == 'true'
+        id: synth
+        working-directory: cdk8s
+        run: |
+          START_TIME=$(date +%s)
+
+          echo "::group::Synthesizing ${{ matrix.cluster-type }} manifests"
+          npm run synth 2>&1 | tee synth.log
+          SYNTH_EXIT_CODE=${PIPESTATUS[0]}
+          echo "::endgroup::"
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          # Count applications and manifests
+          APP_COUNT=$(find dist -maxdepth 1 -name "*.yaml" | wc -l)
+          MANIFEST_COUNT=$(find dist -name "*.yaml" -path "*/manifests/*" | wc -l)
+
+          echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
+          echo "manifest_count=$MANIFEST_COUNT" >> $GITHUB_OUTPUT
+          echo "duration=${DURATION}s" >> $GITHUB_OUTPUT
+          echo "exit_code=$SYNTH_EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [[ $SYNTH_EXIT_CODE -ne 0 ]]; then
+            echo "::error::Synthesis failed for ${{ matrix.cluster-type }}"
+            exit 1
+          fi
+
+          echo "::notice::Synthesized $APP_COUNT applications, $MANIFEST_COUNT manifest files in ${DURATION}s"
+
+      - name: Configure Git
+        if: steps.should-run.outputs.run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push to rendered branch
+        if: steps.should-run.outputs.run == 'true'
+        id: commit
+        run: |
+          SOURCE_BRANCH="${{ github.ref_name }}"
+          RENDERED_BRANCH="rendered/${{ matrix.cluster-type }}/${SOURCE_BRANCH}"
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+
+          echo "rendered_branch=$RENDERED_BRANCH" >> $GITHUB_OUTPUT
+
+          # Save the freshly synthesized dist folder to a location outside the repo
+          TEMP_DIST=$(mktemp -d)
+          cp -r cdk8s/dist/* "$TEMP_DIST/"
+
+          # Clean the working directory to allow branch switching
+          git checkout -- . 2>/dev/null || true
+          git clean -fd 2>/dev/null || true
+
+          # Create or switch to rendered branch
+          if git ls-remote --exit-code origin "$RENDERED_BRANCH" >/dev/null 2>&1; then
+            echo "::notice::Updating existing branch: $RENDERED_BRANCH"
+            git fetch origin "$RENDERED_BRANCH"
+            git checkout -B "$RENDERED_BRANCH" "origin/$RENDERED_BRANCH"
+          else
+            echo "::notice::Creating new branch: $RENDERED_BRANCH"
+            # Create orphan branch with just the dist folder
+            git checkout --orphan "$RENDERED_BRANCH"
+            git rm -rf . 2>/dev/null || true
+          fi
+
+          # Restore the freshly synthesized dist folder
+          mkdir -p cdk8s/dist
+          rm -rf cdk8s/dist/*
+          cp -r "$TEMP_DIST"/* cdk8s/dist/
+          rm -rf "$TEMP_DIST"
+
+          # Check for changes
+          if git diff --quiet && git diff --cached --quiet && [[ "${{ github.event.inputs.force_push }}" != "true" ]]; then
+            echo "::notice::No changes detected in rendered manifests"
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Stage and commit
+          git add cdk8s/dist
+
+          COMMIT_MSG="chore(rendered): Render ${{ matrix.cluster-type }} manifests from ${SOURCE_BRANCH}@${SHORT_SHA} [skip ci]"
+          git commit -m "$COMMIT_MSG" || {
+            echo "::notice::No changes to commit"
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          }
+
+          # Count changed files
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | wc -l || echo "0")
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+          # Force push to rendered branch
+          git push --force origin "$RENDERED_BRANCH"
+
+          echo "::notice::Pushed $CHANGED_FILES changed files to $RENDERED_BRANCH"
+
+      - name: Generate job summary
+        if: steps.should-run.outputs.run == 'true'
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Manifest Rendering Summary - ${{ matrix.cluster-type }}
+
+          | Property | Value |
+          |----------|-------|
+          | **Cluster Type** | \`${{ matrix.cluster-type }}\` |
+          | **Source Branch** | \`${{ github.ref_name }}\` |
+          | **Rendered Branch** | \`${{ steps.commit.outputs.rendered_branch }}\` |
+          | **Source Commit** | \`${{ github.sha }}\` |
+          | **Applications** | ${{ steps.synth.outputs.app_count }} |
+          | **Total Manifests** | ${{ steps.synth.outputs.manifest_count }} |
+          | **Changed Files** | ${{ steps.commit.outputs.changed_files || '0' }} |
+          | **Duration** | ${{ steps.synth.outputs.duration }} |
+          | **Status** | ${{ steps.commit.outputs.changed == 'true' && '✅ Pushed' || '⏭️ No changes' }} |
+          EOF
+
+  # Summary job to report overall status
+  summary:
+    needs: [check-actor, render]
+    if: always() && needs.check-actor.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Overall summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Overall Render Status
+
+          - **Workflow Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - **Triggered By**: ${{ github.actor }}
+          - **Source Branch**: \`${{ github.ref_name }}\`
+          - **Commit**: \`${{ github.sha }}\`
+
+          ### Rendered Branches
+
+          | Cluster Type | Branch |
+          |--------------|--------|
+          | KIND | \`rendered/kind/${{ github.ref_name }}\` |
+          | Talos | \`rendered/talos/${{ github.ref_name }}\` |
+          EOF
