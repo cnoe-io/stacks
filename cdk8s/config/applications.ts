@@ -1803,4 +1803,55 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // cert-manager secrets - Cloudflare API token for DNS-01 challenges
+  {
+    name: 'cert-manager-secrets',
+    namespace: 'cert-manager',
+    clusterType: 'talos',
+    chart: {
+      type: 'CertManagerSecretsChart',
+      props: {
+        namespace: 'cert-manager',
+        secretName: 'cloudflare-api-token-secret',
+        syncWave: '-85',
+      }
+    },
+    argocd: {
+      syncWave: '-85',
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'cert-manager'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Cloudflare ClusterIssuer - Let's Encrypt with DNS-01 challenge
+  {
+    name: 'cloudflare-issuer',
+    namespace: 'cert-manager',
+    clusterType: 'talos',
+    chart: {
+      type: 'CloudflareIssuerChart',
+      props: {
+        email: 'admin@ai401kchat.com',
+        issuerName: 'letsencrypt-cloudflare',
+        cloudflareSecretName: 'cloudflare-api-token-secret',
+        syncWave: '-80',
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-issuer',
+        'app.kubernetes.io/part-of': 'cert-manager'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
 ];

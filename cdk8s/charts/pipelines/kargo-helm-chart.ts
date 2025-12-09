@@ -250,7 +250,7 @@ export class KargoHelmChart extends Chart {
           'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
           'nginx.ingress.kubernetes.io/force-ssl-redirect': 'true',
           'nginx.ingress.kubernetes.io/ssl-protocols': 'TLSv1.2 TLSv1.3',
-          'cert-manager.io/cluster-issuer': 'letsencrypt-prod',
+          'cert-manager.io/cluster-issuer': 'letsencrypt-cloudflare',
         },
         labels: {
           'app.kubernetes.io/name': 'kargo-external-webhooks',
@@ -299,7 +299,8 @@ export class KargoHelmChart extends Chart {
       kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/ingressClassName', 'nginx'));
 
       // Add cert-manager annotation for automatic TLS certificate
-      kargoApiIngress.addJsonPatch(JsonPatch.add('/metadata/annotations/cert-manager.io~1cluster-issuer', 'letsencrypt-prod'));
+      // Uses letsencrypt-cloudflare (DNS-01 challenge) for Talos clusters
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/metadata/annotations/cert-manager.io~1cluster-issuer', 'letsencrypt-cloudflare'));
 
       // Add TLS configuration for HTTPS termination
       kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/tls', [
