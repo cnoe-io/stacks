@@ -22,7 +22,7 @@ spec:
   sources:
     - path: cdk8s/dist/langfuse-postgres/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: main
+      targetRevision: 106-consolidate-bootstrap-between
   syncPolicy:
     automated:
       prune: true

@@ -83,39 +83,33 @@ async function synthesizeApplication(
     // Standard charts: use factory to create chart with dependencies
     await IdpBuilderChartFactory.createChart(app, appConfig);
 
-    // RefImplementationChart generates its own ArgoCD Application with correct source URLs
-    // Skip the wrapper ArgoCD Application for these charts
-    const isRefImplementationChart = appConfig.chart?.type === 'RefImplementationChart';
+    // Get source URL based on cluster type
+    const source = getSourceUrl(appConfig.name, options.clusterType);
 
-    if (!isRefImplementationChart) {
-      // Get source URL based on cluster type
-      const source = getSourceUrl(appConfig.name, options.clusterType);
+    // Build ArgoCD config with appropriate source
+    const argoCdConfig = {
+      ...appConfig.argocd,
+    };
 
-      // Build ArgoCD config with appropriate source
-      const argoCdConfig = {
-        ...appConfig.argocd,
-      };
-
-      // For Talos, use multi-source mode with GitHub URLs
-      if (options.clusterType === 'talos' && source.path) {
-        argoCdConfig.sources = [
-          {
-            repoURL: source.repoURL,
-            path: source.path,
-            targetRevision: source.targetRevision || 'main',
-          },
-        ];
-      }
-
-      // Generate ArgoCD Application in the same synthesis pass
-      new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
-        applicationName: appConfig.name,
-        applicationNamespace: appConfig.namespace,
-        manifestPath: 'manifests',
-        argoCdConfig,
-        environment: options.environment,
-      });
+    // For Talos, use multi-source mode with GitHub URLs
+    if (options.clusterType === 'talos' && source.path) {
+      argoCdConfig.sources = [
+        {
+          repoURL: source.repoURL,
+          path: source.path,
+          targetRevision: source.targetRevision || 'main',
+        },
+      ];
     }
+
+    // Generate ArgoCD Application in the same synthesis pass
+    new ArgoApplicationsChartV2(app, `${appConfig.name}-argocd`, {
+      applicationName: appConfig.name,
+      applicationNamespace: appConfig.namespace,
+      manifestPath: 'manifests',
+      argoCdConfig,
+      environment: options.environment,
+    });
 
     // Single synth call generates everything
     app.synth();
