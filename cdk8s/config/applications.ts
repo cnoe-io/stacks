@@ -513,15 +513,44 @@ export const applicationConfigs: ApplicationConfig[] = [
   // Backstage Developer Portal
   // =========================================================================
 
-  // Backstage Secrets (External Secrets for OIDC, Gitea, GHCR, ArgoCD credentials)
+  // Backstage Secrets - KIND cluster (local development)
+  // Uses cnoe.localtest.me for OIDC and proxy URLs
   {
     name: 'backstage-secrets',
     namespace: 'backstage',
-    clusterType: 'both',  // Backstage needed on both KIND and Talos
+    clusterType: 'kind',
     chart: {
       type: 'BackstageSecretsChart',
       props: {
         namespace: 'backstage',
+        baseHost: 'cnoe.localtest.me',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-secrets'
+      },
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  // Backstage Secrets - Talos cluster (production with public domain)
+  // Uses ai401kchat.com for OIDC and proxy URLs
+  {
+    name: 'backstage-secrets',
+    namespace: 'backstage',
+    clusterType: 'talos',
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage',
+        baseHost: 'ai401kchat.com',
         syncWave: '-10'
       }
     },
@@ -566,6 +595,8 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   // Backstage Application - Talos cluster (production with public domain)
+  // Note: image v1.1.0+ uses environment variables for all URLs (OIDC, proxy, ArgoCD, etc.)
+  // These are set via BackstageSecretsChart based on baseHost
   {
     name: 'backstage',
     namespace: 'backstage',
@@ -579,7 +610,8 @@ export const applicationConfigs: ApplicationConfig[] = [
           enabled: true,
           secretName: 'backstage-tls',
           clusterIssuer: 'letsencrypt-cloudflare',
-        }
+        },
+        // proxyConfig removed - v1.1.0 image uses env vars from BackstageSecretsChart
       }
     },
     dependencies: {

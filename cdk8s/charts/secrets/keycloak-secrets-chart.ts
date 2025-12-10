@@ -177,18 +177,19 @@ export class KeycloakSecretsChart extends Chart {
     // Allows other namespaces to access secrets in keycloak namespace
     // ==========================================================================
 
-    // ServiceAccount for ESO store
+    // ServiceAccount for ESO store (keycloak namespace)
+    // Note: Using unique name 'eso-store-keycloak' to avoid CDK8s filename collision with gitea's eso-store
     new k8s.KubeServiceAccount(this, 'keycloak-eso-store-sa', {
       metadata: {
-        name: 'eso-store',
+        name: 'eso-store-keycloak',
         namespace,
       },
     });
 
-    // Role for accessing secrets
+    // Role for accessing secrets (keycloak namespace)
     new k8s.KubeRole(this, 'keycloak-eso-store-role', {
       metadata: {
-        name: 'eso-store',
+        name: 'eso-store-keycloak',
         namespace,
       },
       rules: [
@@ -205,27 +206,27 @@ export class KeycloakSecretsChart extends Chart {
       ],
     });
 
-    // RoleBinding
+    // RoleBinding (keycloak namespace)
     new k8s.KubeRoleBinding(this, 'keycloak-eso-store-rolebinding', {
       metadata: {
-        name: 'eso-store',
+        name: 'eso-store-keycloak',
         namespace,
       },
       subjects: [
         {
           kind: 'ServiceAccount',
-          name: 'eso-store',
+          name: 'eso-store-keycloak',
           namespace,
         },
       ],
       roleRef: {
         kind: 'Role',
-        name: 'eso-store',
+        name: 'eso-store-keycloak',
         apiGroup: 'rbac.authorization.k8s.io',
       },
     });
 
-    // ClusterSecretStore
+    // ClusterSecretStore (uses keycloak-specific ServiceAccount)
     new ClusterSecretStore(this, 'keycloak-clustersecretstore', {
       metadata: {
         name: 'keycloak',
@@ -244,7 +245,7 @@ export class KeycloakSecretsChart extends Chart {
             },
             auth: {
               serviceAccount: {
-                name: 'eso-store',
+                name: 'eso-store-keycloak',
                 namespace,
               },
             },
@@ -259,6 +260,15 @@ export class KeycloakSecretsChart extends Chart {
     // ==========================================================================
 
     const giteaNamespace = 'gitea';
+
+    // Create gitea namespace if it doesn't exist (needed for ClusterSecretStore RBAC)
+    // On KIND with idpbuilder, this namespace is created automatically
+    // On Talos/external clusters, we need to create it
+    new k8s.KubeNamespace(this, 'gitea-namespace', {
+      metadata: {
+        name: giteaNamespace,
+      },
+    });
 
     // ServiceAccount for ESO store in gitea namespace
     new k8s.KubeServiceAccount(this, 'gitea-eso-store-sa', {

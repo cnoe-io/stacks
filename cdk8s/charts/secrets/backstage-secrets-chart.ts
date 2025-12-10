@@ -84,6 +84,21 @@ export class BackstageSecretsChart extends Chart {
     // ExternalSecrets
     // ==========================================================================
 
+    // Determine Keycloak metadata URL based on baseHost
+    // KIND (cnoe.localtest.me): Use external URL - CoreDNS rewrites to ingress-nginx
+    // Talos (any other domain): Use internal cluster URL to avoid DNS issues
+    const isKind = baseHost === 'cnoe.localtest.me';
+    const keycloakMetadataUrl = isKind
+      ? `https://${baseHost}:8443/keycloak/realms/cnoe/.well-known/openid-configuration`
+      : 'http://keycloak.keycloak.svc.cluster.local:8080/keycloak/realms/cnoe/.well-known/openid-configuration';
+
+    // Compute environment-specific URLs
+    // For KIND: use external URLs with port 8443
+    // For Talos/other: use external URLs with proper domain
+    const portSuffix = isKind ? ':8443' : '';
+    const giteaHost = isKind ? `gitea.${baseHost}${portSuffix}` : `gitea.${baseHost}`;
+    const giteaHostNoPort = isKind ? `gitea.${baseHost}` : `gitea.${baseHost}`;
+
     // ExternalSecret: backstage-oidc → backstage-env-vars Secret
     // Uses keycloak ClusterSecretStore + Password generators
     new ExternalSecret(this, 'backstage-oidc', {
@@ -102,18 +117,32 @@ export class BackstageSecretsChart extends Chart {
           template: {
             engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
             data: {
-              'BACKSTAGE_FRONTEND_URL': `https://${baseHost}:8443/backstage`,
+              // Core Backstage URLs
+              'BACKSTAGE_FRONTEND_URL': `https://${baseHost}${portSuffix}/backstage`,
+              // PostgreSQL
               'POSTGRES_HOST': 'postgresql.backstage.svc.cluster.local',
               'POSTGRES_PORT': '5432',
               'POSTGRES_DB': 'backstage',
               'POSTGRES_USER': 'backstage',
               'POSTGRES_PASSWORD': '{{.POSTGRES_PASSWORD}}',
               'BACKSTAGE_SESSION_SECRET': '{{.SESSION_SECRET}}',
-              'ARGO_WORKFLOWS_URL': `https://${baseHost}:8443/argo-workflows`,
-              'KEYCLOAK_NAME_METADATA': `https://${baseHost}:8443/keycloak/realms/cnoe/.well-known/openid-configuration`,
-              'KEYCLOAK_CLIENT_SECRET': '{{.BACKSTAGE_CLIENT_SECRET}}',
+              // ArgoCD & Argo Workflows
+              'ARGO_WORKFLOWS_URL': `https://${baseHost}${portSuffix}/argo-workflows`,
+              'ARGO_CD_URL': `https://argocd.${baseHost}${portSuffix}`,
               'ARGOCD_AUTH_TOKEN': 'argocd.token={{.ARGOCD_SESSION_TOKEN}}',
-              'ARGO_CD_URL': 'https://argocd-server.argocd.svc.cluster.local/api/v1/',
+              // Keycloak OIDC
+              'KEYCLOAK_NAME_METADATA': keycloakMetadataUrl,
+              'KEYCLOAK_CLIENT_SECRET': '{{.BACKSTAGE_CLIENT_SECRET}}',
+              // Gitea integration
+              'GITEA_URL': `https://${giteaHost}`,
+              'GITEA_HOST': giteaHost,
+              'GITEA_URL_NO_PORT': `https://${giteaHostNoPort}`,
+              'GITEA_HOST_NO_PORT': giteaHostNoPort,
+              // Proxy targets
+              'AGENT_FORGE_URL': `https://ai-platform-engineering.${baseHost}${portSuffix}`,
+              'KARGO_URL': `https://kargo.${baseHost}${portSuffix}`,
+              // Catalog URL
+              'CATALOG_URL': `https://${giteaHost}/giteaAdmin/idpbuilder-localdev-backstage-templates-entities/src/branch/main/catalog-info.yaml`,
             },
           },
         },

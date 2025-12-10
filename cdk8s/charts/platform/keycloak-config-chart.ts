@@ -75,7 +75,7 @@ export class KeycloakConfigChart extends Chart {
 
     new k8s.KubeRole(this, 'keycloak-config-role-keycloak', {
       metadata: {
-        name: 'keycloak-config',
+        name: 'keycloak-config-secrets',  // Unique name for keycloak namespace
         namespace,
       },
       rules: [
@@ -89,7 +89,7 @@ export class KeycloakConfigChart extends Chart {
 
     new k8s.KubeRoleBinding(this, 'keycloak-config-rolebinding-keycloak', {
       metadata: {
-        name: 'keycloak-config',
+        name: 'keycloak-config-secrets',  // Unique name for keycloak namespace
         namespace,
       },
       subjects: [
@@ -101,7 +101,7 @@ export class KeycloakConfigChart extends Chart {
       ],
       roleRef: {
         kind: 'Role',
-        name: 'keycloak-config',
+        name: 'keycloak-config-secrets',  // Match the role name
         apiGroup: 'rbac.authorization.k8s.io',
       },
     });
@@ -112,7 +112,7 @@ export class KeycloakConfigChart extends Chart {
 
     new k8s.KubeRole(this, 'keycloak-config-role-argocd', {
       metadata: {
-        name: 'keycloak-config',
+        name: 'keycloak-config-argocd',  // Unique name for argocd namespace
         namespace: 'argocd',
       },
       rules: [
@@ -126,7 +126,7 @@ export class KeycloakConfigChart extends Chart {
 
     new k8s.KubeRoleBinding(this, 'keycloak-config-rolebinding-argocd', {
       metadata: {
-        name: 'keycloak-config',
+        name: 'keycloak-config-argocd',  // Unique name for argocd namespace
         namespace: 'argocd',
       },
       subjects: [
@@ -138,7 +138,7 @@ export class KeycloakConfigChart extends Chart {
       ],
       roleRef: {
         kind: 'Role',
-        name: 'keycloak-config',
+        name: 'keycloak-config-argocd',  // Match the role name
         apiGroup: 'rbac.authorization.k8s.io',
       },
     });
@@ -328,14 +328,71 @@ KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: applicatio
 
 set +e
 
+# Check if realm exists
 curl --fail-with-body -H "Authorization: bearer \${KEYCLOAK_TOKEN}"  "\${KEYCLOAK_URL}/admin/realms/cnoe"  &> /dev/null
-if [ $? -eq 0 ]; then
-  exit 0
-fi
+REALM_EXISTS=$?
 set -e
 
+# Always need kubectl for secret creation
 curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
 chmod +x kubectl
+
+# If realm exists, check if keycloak-clients secret exists
+if [ $REALM_EXISTS -eq 0 ]; then
+  # Check if secret already exists
+  if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
+    echo "Realm and secret already exist, nothing to do"
+    exit 0
+  fi
+  echo "Realm exists but secret missing, recreating secret..."
+
+  # Get existing client secrets from Keycloak
+  KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \\
+    --data-urlencode "username=cnoe-admin" \\
+    --data-urlencode "password=\${ADMIN_PASSWORD}" \\
+    --data-urlencode "grant_type=password" \\
+    --data-urlencode "client_id=admin-cli" \\
+    \${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token | jq -e -r '.access_token')
+
+  # Get Argo Workflows client secret
+  CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "argo-workflows") | .id')
+  ARGO_WORKFLOWS_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
+
+  # Get Backstage client secret
+  CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "backstage") | .id')
+  BACKSTAGE_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
+
+  # Get ArgoCD session token
+  ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
+  ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\\"username\\":\\"admin\\",\\"password\\":\\"\${ARGOCD_PASSWORD}\\"}" | jq -r .token)
+
+  # Create the secret
+  echo "
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-clients
+  namespace: keycloak
+type: Opaque
+stringData:
+  ARGO_WORKFLOWS_CLIENT_SECRET: \${ARGO_WORKFLOWS_CLIENT_SECRET}
+  ARGO_WORKFLOWS_CLIENT_ID: argo-workflows
+  ARGOCD_SESSION_TOKEN: \${ARGOCD_SESSION_TOKEN}
+  BACKSTAGE_CLIENT_SECRET: \${BACKSTAGE_CLIENT_SECRET}
+  BACKSTAGE_CLIENT_ID: backstage
+" > /tmp/secret.yaml
+
+  ./kubectl apply -f /tmp/secret.yaml
+  exit 0
+fi
 
 echo "creating cnoe realm and groups"
 
