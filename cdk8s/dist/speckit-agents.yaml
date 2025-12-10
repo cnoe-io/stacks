@@ -7,7 +7,7 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
   labels:
     app.kubernetes.io/component: agents
-    app.kubernetes.io/environment: talos
+    app.kubernetes.io/environment: dev
     app.kubernetes.io/managed-by: cdk8s
     app.kubernetes.io/name: speckit-agents
     app.kubernetes.io/part-of: speckit
@@ -19,10 +19,10 @@ spec:
     namespace: dapr-agents
     server: https://kubernetes.default.svc
   project: default
-  sources:
-    - path: cdk8s/dist/speckit-agents/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: rendered/talos/main
+  source:
+    path: "."
+    repoURL: cnoe://speckit-agents/manifests
+    targetRevision: HEAD
   syncPolicy:
     automated:
       prune: true

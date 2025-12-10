@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - ClusterRole.tailscale-auth-proxy.k8s.yaml
   - ClusterRole.tailscale-operator.k8s.yaml
+  - ClusterRoleBinding.tailnet-admin-vpittamp-github.k8s.yaml
   - ClusterRoleBinding.tailscale-auth-proxy.k8s.yaml
   - ClusterRoleBinding.tailscale-operator.k8s.yaml
   - Deployment.operator.k8s.yaml
