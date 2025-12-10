@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+  labels:
+    app.kubernetes.io/component: infrastructure
+    app.kubernetes.io/name: observability
+    app.kubernetes.io/part-of: observability
+  name: observability

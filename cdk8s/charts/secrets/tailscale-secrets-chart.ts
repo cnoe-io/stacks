@@ -23,6 +23,24 @@ export interface TailscaleSecretsChartProps extends ChartProps {
   namespace?: string;
 
   /**
+   * ClusterSecretStore name
+   * @default 'azure-keyvault-store'
+   */
+  secretStoreName?: string;
+
+  /**
+   * Target secret name for auth key
+   * @default 'tailscale-auth-key'
+   */
+  authKeySecretName?: string;
+
+  /**
+   * Refresh interval for secrets
+   * @default '24h'
+   */
+  refreshInterval?: string;
+
+  /**
    * ArgoCD sync wave for secret creation
    * @default "-70"
    */
@@ -35,26 +53,34 @@ export class TailscaleSecretsChart extends Chart {
 
     const {
       namespace = 'tailscale',
+      secretStoreName = 'azure-keyvault-store',
+      authKeySecretName = 'tailscale-auth-key',
+      refreshInterval = '24h',
       syncWave = '-70',
     } = props;
 
     // ExternalSecret for Tailscale Auth Key (used by Tailscale Serve pods)
     new ExternalSecret(this, 'tailscale-auth-key', {
       metadata: {
-        name: 'tailscale-auth-key',
+        name: authKeySecretName,
         namespace,
         annotations: {
           'argocd.argoproj.io/sync-wave': syncWave,
         },
+        labels: {
+          'app.kubernetes.io/managed-by': 'cdk8s',
+          'app.kubernetes.io/name': authKeySecretName,
+          'app.kubernetes.io/component': 'secrets',
+        },
       },
       spec: {
-        refreshInterval: '24h',  // Refresh daily
+        refreshInterval: refreshInterval,
         secretStoreRef: {
-          name: 'azure-keyvault-store',
+          name: secretStoreName,
           kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
         },
         target: {
-          name: 'tailscale-auth-key',
+          name: authKeySecretName,
           creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
           template: {
             type: 'Opaque',
@@ -74,5 +100,8 @@ export class TailscaleSecretsChart extends Chart {
         ],
       },
     });
+
+    // Note: OAuth credentials (operator-oauth) are managed by TailscaleOperatorSecretsChart
+    // to avoid duplicate resources
   }
 }

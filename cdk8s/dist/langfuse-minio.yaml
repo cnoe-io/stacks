@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: blob-storage
+    app.kubernetes.io/environment: talos
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: langfuse-minio
+    app.kubernetes.io/part-of: observability
+    example: basic
+  name: langfuse-minio
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/langfuse-minio/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

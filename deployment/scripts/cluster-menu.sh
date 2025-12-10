@@ -203,7 +203,8 @@ cluster-deploy() {
   local ORIG_DIR="$(pwd)"
 
   # Source environment files FIRST (before any operations that need them)
-  [ -f "$STACKS_DIR/.env-files/wi.env" ] && source "$STACKS_DIR/.env-files/wi.env"
+  # Use kind.env for KIND clusters (renamed from wi.env in feature 106)
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
 
   # Load 1Password service account token for automated secret access
   if command -v op &>/dev/null; then
@@ -345,7 +346,7 @@ cluster-synth() {
     export DOCKER_HOST=""
   fi
 
-  [ -f "$STACKS_DIR/.env-files/wi.env" ] && source "$STACKS_DIR/.env-files/wi.env"
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
 
   # Ensure CDK8s dependencies and imports are ready
   echo "🔍 Checking CDK8s dependencies..."
@@ -449,10 +450,10 @@ cluster-update-gum() {
     echo ""
   fi
 
-  # Source environment files FIRST
-  [ -f "$STACKS_DIR/.env-files/wi.env" ] && {
-    gum style --foreground 45 "📋 Loading environment from wi.env..."
-    source "$STACKS_DIR/.env-files/wi.env"
+  # Source environment files FIRST (kind.env for KIND clusters)
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
+    gum style --foreground 45 "📋 Loading environment from kind.env..."
+    source "$STACKS_DIR/.env-files/kind.env"
   }
 
   if command -v op &>/dev/null; then
@@ -558,10 +559,10 @@ cluster-update() {
     echo ""
   fi
 
-  # Source environment files FIRST (needed for CDK8s synthesis)
-  [ -f "$STACKS_DIR/.env-files/wi.env" ] && {
-    echo "📋 Loading environment from wi.env..."
-    source "$STACKS_DIR/.env-files/wi.env"
+  # Source environment files FIRST (kind.env for KIND clusters)
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
+    echo "📋 Loading environment from kind.env..."
+    source "$STACKS_DIR/.env-files/kind.env"
   }
 
   # Load 1Password service account token for automated secret access

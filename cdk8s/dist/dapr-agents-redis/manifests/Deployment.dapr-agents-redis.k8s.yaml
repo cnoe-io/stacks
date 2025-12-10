@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dapr-agents-redis
+    app.kubernetes.io/component: state-store
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: dapr-agents
+  name: dapr-agents-redis
+  namespace: dapr-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dapr-agents-redis
+  template:
+    metadata:
+      labels:
+        app: dapr-agents-redis
+        app.kubernetes.io/component: state-store
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: dapr-agents
+    spec:
+      containers:
+        - args:
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --maxmemory
+            - 200mb
+            - --maxmemory-policy
+            - allkeys-lru
+          command:
+            - redis-server
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            tcpSocket:
+              port: 6379
+            timeoutSeconds: 5
+          name: redis
+          ports:
+            - containerPort: 6379
+              name: redis
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 6379
+            timeoutSeconds: 5
+          volumeMounts:
+            - mountPath: /data
+              name: redis-data
+      volumes:
+        - emptyDir: {}
+          name: redis-data

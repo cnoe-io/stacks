@@ -99,6 +99,15 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
         self.extract_trace_from_context(context)
         self.set_trace_context(workflow_id, self._trace_id)
 
+        # Create Langfuse trace for this agent's execution
+        self.create_trace(
+            name=f"implementer:{workflow_id}",
+            metadata={"task": task[:200], "phase": "implementation"},
+        )
+
+        # Start OpenTelemetry span for distributed tracing
+        self.start_workflow_span(workflow_id, "implementation")
+
         # Update workflow status
         await self.publish_status_update(
             workflow_id=workflow_id,
@@ -161,6 +170,10 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
 
             logger.info(f"Implementer completed: {success_count} passed, {fail_count} failed")
 
+            # End spans and flush traces
+            self.end_workflow_span(success=(fail_count == 0))
+            self.flush_traces()
+
             return {
                 "success": fail_count == 0,
                 "tasks_completed": success_count,
@@ -170,6 +183,12 @@ class ClaudeImplementerAgent(BaseClaudeAgent):
 
         except Exception as e:
             logger.error(f"Implementer failed for workflow {workflow_id}: {e}")
+
+            # End spans with error and flush traces
+            self.log_error_to_trace(str(e), {"workflow_id": str(workflow_id)})
+            self.end_workflow_span(success=False, error=str(e))
+            self.flush_traces()
+
             await self.publish_status_update(
                 workflow_id=workflow_id,
                 status=WorkflowStatus.FAILED,

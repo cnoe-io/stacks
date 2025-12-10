@@ -4,6 +4,12 @@ import { KubeNamespace, KubeSecret, KubeJob, KubeServiceAccount, KubeClusterRole
 
 export interface KargoHelmChartProps extends ChartProps {
   namespace?: string;
+  /**
+   * Skip mounting Gitea CA certificates.
+   * Set to true for Talos clusters that use GitHub (valid SSL certs).
+   * @default false
+   */
+  skipGiteaCACerts?: boolean;
 }
 
 export class KargoHelmChart extends Chart {
@@ -13,6 +19,8 @@ export class KargoHelmChart extends Chart {
     const namespace = props.namespace || 'kargo';
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const kargoHost = `kargo.${baseHost}`;
+    const kargoWebhooksHost = `kargo-webhooks.${baseHost}`;
+    const skipGiteaCACerts = props.skipGiteaCACerts ?? false;
 
     // Create namespace
     new KubeNamespace(this, 'kargo-namespace', {
@@ -56,7 +64,7 @@ export class KargoHelmChart extends Chart {
     // Deploy Kargo using Helm chart directly
     const kargoHelm = new Helm(this, 'kargo', {
       chart: 'oci://ghcr.io/akuity/kargo-charts/kargo',
-      version: '1.7.1',
+      version: '1.8.4',
       namespace: namespace,
       releaseName: 'kargo',
       values: {
@@ -65,8 +73,9 @@ export class KargoHelmChart extends Chart {
           host: kargoHost,
           // Admin account configuration - hardcoded for now, should use External Secrets
           adminAccount: {
-            passwordHash: '$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm',
-            tokenSigningKey: 'YvUGEEoD430TBHCfzrxVifl4RD6PkO',
+            // Password: KargoAdmin2025
+            passwordHash: '$2b$10$bqVe5nszNR1eEt20jtNSle24cBsnhiiNcFHgZuMcv7HACZCD6a3IW',
+            tokenSigningKey: 'pw4J0w4L2sMcvsbdWNPgWSeOuBm1IK0b',
             tokenTTL: '24h',
           },
           // Service configuration
@@ -119,39 +128,42 @@ export class KargoHelmChart extends Chart {
               memory: '512Mi',
             },
           },
-          // Mount CA certificates for self-signed certificate trust
-          volumes: [
-            {
-              name: 'ca-certificates',
-              configMap: {
-                name: 'gitea-ca-cert',
-                items: [
-                  {
-                    key: 'ca.crt',
-                    path: 'gitea-ca.crt'
-                  }
-                ]
+          // Mount CA certificates for self-signed certificate trust (KIND/Gitea only)
+          // Talos clusters use GitHub with valid SSL certs, so this is skipped
+          ...(skipGiteaCACerts ? {} : {
+            volumes: [
+              {
+                name: 'ca-certificates',
+                configMap: {
+                  name: 'gitea-ca-cert',
+                  items: [
+                    {
+                      key: 'ca.crt',
+                      path: 'gitea-ca.crt'
+                    }
+                  ]
+                }
               }
-            }
-          ],
-          volumeMounts: [
-            {
-              name: 'ca-certificates',
-              mountPath: '/etc/ssl/certs/gitea-ca.crt',
-              subPath: 'gitea-ca.crt',
-              readOnly: true
-            }
-          ],
-          env: [
-            {
-              name: 'SSL_CERT_FILE',
-              value: '/etc/ssl/certs/gitea-ca.crt'
-            },
-            {
-              name: 'SSL_CERT_DIR',
-              value: '/etc/ssl/certs'
-            }
-          ],
+            ],
+            volumeMounts: [
+              {
+                name: 'ca-certificates',
+                mountPath: '/etc/ssl/certs/gitea-ca.crt',
+                subPath: 'gitea-ca.crt',
+                readOnly: true
+              }
+            ],
+            env: [
+              {
+                name: 'SSL_CERT_FILE',
+                value: '/etc/ssl/certs/gitea-ca.crt'
+              },
+              {
+                name: 'SSL_CERT_DIR',
+                value: '/etc/ssl/certs'
+              }
+            ],
+          }),
         },
         // Webhooks configuration - enable with custom certificates
         webhooksServer: {
@@ -239,6 +251,7 @@ export class KargoHelmChart extends Chart {
           'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
           'nginx.ingress.kubernetes.io/force-ssl-redirect': 'true',
           'nginx.ingress.kubernetes.io/ssl-protocols': 'TLSv1.2 TLSv1.3',
+          'cert-manager.io/cluster-issuer': 'letsencrypt-cloudflare',
         },
         labels: {
           'app.kubernetes.io/name': 'kargo-external-webhooks',
@@ -250,13 +263,13 @@ export class KargoHelmChart extends Chart {
         ingressClassName: 'nginx',
         tls: [
           {
-            hosts: ['kargo-webhooks.cnoe.localtest.me'],
-            secretName: 'cnoe-tls-secret'
+            hosts: [kargoWebhooksHost],
+            secretName: 'kargo-webhooks-tls'
           }
         ],
         rules: [
           {
-            host: 'kargo-webhooks.cnoe.localtest.me',
+            host: kargoWebhooksHost,
             http: {
               paths: [
                 {
@@ -276,9 +289,32 @@ export class KargoHelmChart extends Chart {
       }
     });
 
+    // Fix the kargo-api Ingress to add ingressClassName and TLS configuration
+    // The Helm chart doesn't properly set these fields
+    const kargoApiIngress = kargoHelm.apiObjects.find(obj =>
+      obj.kind === 'Ingress' && obj.name === 'kargo-api'
+    );
+
+    if (kargoApiIngress) {
+      // Add ingressClassName to spec
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/ingressClassName', 'nginx'));
+
+      // Add cert-manager annotation for automatic TLS certificate
+      // Uses letsencrypt-cloudflare (DNS-01 challenge) for Talos clusters
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/metadata/annotations/cert-manager.io~1cluster-issuer', 'letsencrypt-cloudflare'));
+
+      // Add TLS configuration for HTTPS termination
+      kargoApiIngress.addJsonPatch(JsonPatch.add('/spec/tls', [
+        {
+          hosts: [kargoHost],
+          secretName: 'kargo-api-tls'
+        }
+      ]));
+    }
+
     // Fix webhook configurations by removing cert-manager annotations and adding CA bundle
     // Find the ValidatingWebhookConfiguration
-    const validatingWebhook = kargoHelm.apiObjects.find(obj => 
+    const validatingWebhook = kargoHelm.apiObjects.find(obj =>
       obj.kind === 'ValidatingWebhookConfiguration' && obj.name === 'kargo'
     );
     

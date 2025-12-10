@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - Deployment.speckit-implementer.k8s.yaml
+  - Deployment.speckit-orchestrator.k8s.yaml
+  - Deployment.speckit-planner.k8s.yaml
+  - Deployment.speckit-specifier.k8s.yaml
+  - Deployment.speckit-task-generator.k8s.yaml
+  - Job.speckit-wait-for-dapr-injector.k8s.yaml
+  - Service.speckit-implementer.k8s.yaml
+  - Service.speckit-orchestrator.k8s.yaml
+  - Service.speckit-planner.k8s.yaml
+  - Service.speckit-specifier.k8s.yaml
+  - Service.speckit-task-generator.k8s.yaml

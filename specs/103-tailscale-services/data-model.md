@@ -1,98 +1,38 @@
-# Data Model: Tailscale Architecture Optimization
+# Data Model: Tailscale Stale Device Cleanup and Services Migration
 
 **Feature**: 103-tailscale-services
-**Date**: 2025-12-09
+**Date**: 2025-12-06
 
 ## Forward-Only Migration (Constitution Principle IX)
 
-This migration implements the recommended hybrid architecture. Legacy patterns are replaced completely.
+This migration completely replaces the legacy Tailscale Ingress pattern. There is no backward compatibility.
 
-### Files to MODIFY
-
-| File | Changes |
-|------|---------|
-| `cdk8s/charts/infra/tailscale-operator-chart.ts` | Set `apiServerProxyConfig.mode: "auth"`, add RBAC for tailnet identity |
-| `cdk8s/config/applications.ts` | Update service names (`argocd2` → `argocd`), remove `k8s-api-tailscale-serve` after validation |
-
-### Files to DELETE (After Validation)
+### Files to DELETE
 
 | File | Current Purpose | Replacement |
 |------|-----------------|-------------|
-| `cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts` | Custom kubectl-proxy via Tailscale Services | Operator API Proxy (built-in) |
+| `cdk8s/charts/platform/tailscale-ingress-chart.ts` | Legacy hostname-based ingress via Tailscale Operator | `tailscale-serve-chart.ts` |
+| `tailscale-ingresses` in `applications.ts` | Deploys 7 services via Ingress | 7 individual serve chart entries |
+
+### Files to CREATE
+
+| File | Purpose |
+|------|---------|
+| `cdk8s/lib/tailscale-serve-helpers.ts` | Extracted serve script from `k8s-api-tailscale-serve-chart.ts` |
+| `cdk8s/charts/platform/tailscale-serve-chart.ts` | Generic chart using helpers |
 
 ### Files to KEEP (No Changes)
 
 | File | Purpose |
 |------|---------|
-| `cdk8s/charts/platform/tailscale-serve-chart.ts` | Generic chart for service exposure |
-| `cdk8s/lib/tailscale-serve-helpers.ts` | Shared helpers for serve charts |
+| `cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts` | Reference implementation (already uses optimal pattern) |
 | `cdk8s/charts/secrets/tailscale-secrets-chart.ts` | Auth key ESO |
-| `cdk8s/charts/secrets/tailscale-operator-secrets-chart.ts` | OAuth credentials ESO |
+| `cdk8s/charts/infra/tailscale-operator-chart.ts` | Operator deployment |
 | `cdk8s/charts/infra/tailscale-crds-chart.ts` | CRDs |
-| `cdk8s/charts/infra/tailscale-subnet-router-chart.ts` | Subnet router |
 
 ---
 
 ## Key Entities
-
-### Entity: ApiServerProxyConfig
-
-**Purpose**: Configuration for Tailscale Operator API Server Proxy
-
-**Fields**:
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `mode` | string | Yes | `"true"` | Proxy mode: `"true"`, `"auth"`, or `"noauth"` |
-
-**Mode Values**:
-- `"true"`: Legacy mode (equivalent to `"noauth"`)
-- `"noauth"`: Proxy without identity impersonation
-- `"auth"`: Proxy with OAuth identity impersonation (RECOMMENDED)
-
-**Helm Values Integration**:
-```typescript
-// tailscale-operator-chart.ts
-apiServerProxyConfig: {
-  mode: "auth"  // Enable OAuth identity impersonation
-}
-```
-
----
-
-### Entity: TailnetIdentityRBAC
-
-**Purpose**: Kubernetes RBAC mapping tailnet identity to cluster roles
-
-**Fields**:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `identity` | string | Yes | Tailscale identity (e.g., `vpittamp@github`) |
-| `clusterRole` | string | Yes | Kubernetes ClusterRole to bind (e.g., `cluster-admin`) |
-| `bindingName` | string | Yes | ClusterRoleBinding name |
-
-**Kubernetes Resource**:
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: tailnet-admin-vpittamp
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: "vpittamp@github"
-```
-
-**Validation Rules**:
-- `identity` must match tailnet identity format exactly (case-sensitive)
-- `clusterRole` must exist in cluster
-
----
 
 ### Entity: TailscaleServeChartProps
 
@@ -161,39 +101,6 @@ active → pending (on pod restart)
 
 ---
 
-### Entity: ACLGrant (New for API Proxy)
-
-**Purpose**: Tailscale ACL grant for API Server Proxy impersonation
-
-**Fields**:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `src` | string[] | Source tags/users (e.g., ["tag:k8s-operator"]) |
-| `dst` | string[] | Destination tags/users (e.g., ["tag:k8s-operator"]) |
-| `app` | object | Application-specific capabilities |
-
-**Configuration**:
-```json
-{
-  "grants": [
-    {
-      "src": ["tag:k8s-operator"],
-      "dst": ["tag:k8s-operator"],
-      "app": {
-        "tailscale.com/cap/kubernetes": [{
-          "impersonate": {
-            "groups": ["system:masters"]
-          }
-        }]
-      }
-    }
-  ]
-}
-```
-
----
-
 ### Entity: StaleDevice
 
 **Purpose**: Represents an offline Tailscale device blocking hostname reuse
@@ -243,21 +150,19 @@ Format: `https://svc-<serviceName>.<tailnet>.ts.net`
 | Headlamp | `https://svc-headlamp.tail286401.ts.net` |
 | Keycloak | `https://svc-keycloak.tail286401.ts.net` |
 
-### Operator API Proxy URL
+### Legacy Hostname URLs (to be deprecated)
 
-Format: `https://<operator-hostname>.<tailnet>.ts.net`
+Format: `https://<hostname>.<tailnet>.ts.net`
 
-Example: `https://kind-operator.tail286401.ts.net`
+| Service | Legacy URL | Status |
+|---------|------------|--------|
+| ArgoCD | `https://argocd.tail286401.ts.net` | Blocked by rate limit |
+| Gitea | `https://gitea-1.tail286401.ts.net` | Active (suffixed) |
+| kagent | `https://kagent-1.tail286401.ts.net` | Active (suffixed) |
 
 ---
 
 ## Kubernetes Resources Created
-
-### By Tailscale Operator Chart
-
-1. **ClusterRoleBinding** (`tailnet-admin-vpittamp`)
-   - Binds tailnet identity `vpittamp@github` to `cluster-admin`
-   - Required for API Proxy auth mode
 
 ### Per Serve Chart
 
@@ -281,9 +186,7 @@ Example: `https://kind-operator.tail286401.ts.net`
 
 | Secret Name | Usage |
 |-------------|-------|
-| `TAILSCALE-AUTH-KEY` | Auth key with `tag:k8s-services` for serve charts |
-| `TAILSCALE-OAUTH-CLIENT-ID` | OAuth client ID for Operator |
-| `TAILSCALE-OAUTH-CLIENT-SECRET` | OAuth client secret for Operator |
+| `TAILSCALE-AUTH-KEY` | Auth key with `tag:k8s-services` |
 
 ### Tailscale Admin Console
 
@@ -291,5 +194,4 @@ Example: `https://kind-operator.tail286401.ts.net`
 |---------------|----------------------|
 | Service definitions | Yes (once per service) |
 | ACL auto-approvers | Yes (once per service) |
-| ACL grants for API Proxy | Yes (once for Operator) |
-| Tag creation | Yes (`tag:k8s-services`, `tag:k8s-operator`) |
+| Tag creation | Yes (`tag:k8s-services`) |

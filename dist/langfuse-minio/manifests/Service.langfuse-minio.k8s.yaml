@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+  labels:
+    app: langfuse-minio
+    app.kubernetes.io/component: blob-storage
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/part-of: langfuse
+  name: langfuse-minio
+  namespace: observability
+spec:
+  ports:
+    - name: api
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+    - name: console
+      port: 9001
+      protocol: TCP
+      targetPort: 9001
+  selector:
+    app: langfuse-minio
+  type: ClusterIP

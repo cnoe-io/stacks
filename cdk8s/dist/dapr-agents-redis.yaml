@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: state-store
+    app.kubernetes.io/environment: talos
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: dapr-agents-redis
+    app.kubernetes.io/part-of: dapr-agents
+    example: basic
+  name: dapr-agents-redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-agents
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/dapr-agents-redis/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

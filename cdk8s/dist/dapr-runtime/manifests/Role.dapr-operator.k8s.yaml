@@ -1,0 +1,51 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.16.4
+  name: dapr-operator
+  namespace: dapr-system
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resourceNames:
+      - operator.dapr.io
+      - webhooks.dapr.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - create
+  - apiGroups:
+      - ""
+    resourceNames:
+      - operator.dapr.io
+      - webhooks.dapr.io
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - create
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - events
+    verbs:
+      - create

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: speckit-specifier
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/name: speckit-specifier
+    app.kubernetes.io/part-of: speckit
+    speckit.io/agent-type: specifier
+  name: speckit-specifier
+  namespace: dapr-agents
+spec:
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+  selector:
+    app: speckit-specifier

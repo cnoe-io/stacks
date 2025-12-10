@@ -89,6 +89,10 @@ export class TailscaleOperatorChart extends Chart {
       namespace: namespace,
       releaseName: 'tailscale-operator',
       values: {
+        // CRDs are managed separately by tailscale-crds app (sync wave -120)
+        // This avoids version drift between Helm chart CRDs and latest CRDs
+        installCRDs: false,
+
         // Operator configuration
         operatorConfig: {
           hostname: operatorHostname,

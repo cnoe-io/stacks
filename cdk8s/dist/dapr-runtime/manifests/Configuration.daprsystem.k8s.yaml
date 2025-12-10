@@ -1,0 +1,18 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  labels:
+    app.kubernetes.io/component: config
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.16.4
+  name: daprsystem
+  namespace: dapr-system
+spec:
+  mtls:
+    allowedClockSkew: 15m
+    controlPlaneTrustDomain: cluster.local
+    enabled: true
+    sentryAddress: dapr-sentry.dapr-system.svc.cluster.local:443
+    workloadCertTTL: 24h

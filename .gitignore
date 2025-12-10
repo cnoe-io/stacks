@@ -10,6 +10,9 @@ cdk8s/datree.tar.gz
 **/keys/sa.key
 **/keys/sa.pub
 **/jwks.json
+
+# Talos cluster configs (contain PKI secrets)
+talos-configs/
 node_modules/tsx/dist/
 
 node_modules/
@@ -29,8 +32,9 @@ scripts/certificates/system/
 **/kubeconfig.yaml
 **/.kube/
 
-# CDK8s build artifacts
-cdk8s/dist/
+# CDK8s build artifacts (except talos/ which is committed for ArgoCD)
+cdk8s/dist/*
+!cdk8s/dist/talos/
 cdk8s/imports/
 
 # NixOS VM images (large binary files, built from Nix configs)

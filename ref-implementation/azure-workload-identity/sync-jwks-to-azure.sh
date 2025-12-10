@@ -6,16 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REF_DIR="$(dirname "${SCRIPT_DIR}")"
 STACKS_DIR="$(dirname "${REF_DIR}")"
 
-# Source environment variables from wi.env if it exists
-if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then
-    echo "Loading environment from ${STACKS_DIR}/.env-files/wi.env"
-    source "${STACKS_DIR}/.env-files/wi.env"
+# Source environment variables from kind.env if it exists
+if [ -f "${STACKS_DIR}/.env-files/kind.env" ]; then
+    echo "Loading environment from ${STACKS_DIR}/.env-files/kind.env"
+    source "${STACKS_DIR}/.env-files/kind.env"
 fi
 
-# Configuration from environment or defaults (wi.env takes precedence)
+# Configuration from environment or defaults (kind.env takes precedence)
 AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT:-oidcissuer65846b7df97b}"
 SERVICE_ACCOUNT_ISSUER="${SERVICE_ACCOUNT_ISSUER:-https://${AZURE_STORAGE_ACCOUNT}.z13.web.core.windows.net/}"
-# Use AZURE_SUBSCRIPTION_ID from wi.env, fallback to subscription name
+# Use AZURE_SUBSCRIPTION_ID from kind.env, fallback to subscription name
 if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
     AZURE_SUBSCRIPTION="${AZURE_SUBSCRIPTION_ID}"
 else

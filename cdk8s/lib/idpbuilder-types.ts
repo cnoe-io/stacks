@@ -1,6 +1,14 @@
 import { ChartProps } from 'cdk8s';
 
 /**
+ * Cluster type for filtering applications during synthesis
+ * - 'kind': Only deploy to KIND (local development) clusters
+ * - 'talos': Only deploy to Talos (production) clusters
+ * - 'both': Deploy to both cluster types
+ */
+export type AppClusterType = 'kind' | 'talos' | 'both';
+
+/**
  * Configuration for an IDPBuilder application package
  */
 export interface ApplicationConfig {
@@ -8,16 +16,46 @@ export interface ApplicationConfig {
    * Application name (used for package directory and ArgoCD app name)
    */
   name: string;
-  
+
   /**
    * Target Kubernetes namespace
    */
   namespace: string;
-  
+
+  /**
+   * Cluster type filter - determines which clusters this app is synthesized for.
+   * - 'kind': Only KIND clusters (local development with idpBuilder)
+   * - 'talos': Only Talos clusters (production with GitHub source)
+   * - 'both': Both cluster types (shared infrastructure like ESO, Tailscale)
+   * @default 'kind' for backward compatibility
+   */
+  clusterType?: AppClusterType;
+
+  /**
+   * Source path override for ArgoCD Application.
+   * Use this for applications that reference existing directories (like 'entities')
+   * instead of CDK8s-synthesized 'manifests'.
+   * @default 'manifests'
+   */
+  sourcePath?: string;
+
+  /**
+   * Skip chart synthesis. Set to true for applications that reference
+   * existing directories (like backstage-templates) rather than synthesized manifests.
+   * @default false
+   */
+  skipSynthesis?: boolean;
+
+  /**
+   * Directory exclude pattern for ArgoCD directory source.
+   * Used to exclude certain files from sync (e.g., 'catalog-info.yaml').
+   */
+  directoryExclude?: string;
+
   /**
    * Chart configuration
    */
-  chart: {
+  chart?: {
     /**
      * Chart class name (must be registered with factory)
      */

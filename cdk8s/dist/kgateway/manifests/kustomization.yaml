@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ClusterRole.kgateway-inference-extension-kgateway-system.k8s.yaml
+  - ClusterRole.kgateway-kgateway-system.k8s.yaml
+  - ClusterRoleBinding.kgateway-inference-extension-role-kgateway-system.k8s.yaml
+  - ClusterRoleBinding.kgateway-role-kgateway-system.k8s.yaml
+  - Deployment.kgateway.k8s.yaml
+  - Gateway.agentgateway.k8s.yaml
+  - GatewayClass.agentgateway.k8s.yaml
+  - Ingress.agentgateway.k8s.yaml
+  - Namespace.kgateway-system.k8s.yaml
+  - Service.kgateway.k8s.yaml
+  - ServiceAccount.kgateway.k8s.yaml

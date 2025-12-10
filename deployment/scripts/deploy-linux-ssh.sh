@@ -26,10 +26,10 @@ DEPLOYMENT_DIR="$(dirname "${SCRIPT_DIR}")"
 STACKS_DIR="$(dirname "${DEPLOYMENT_DIR}")"
 KEYS_DIR="${STACKS_DIR}/ref-implementation/azure-workload-identity/keys"
 
-# Source environment variables from wi.env if it exists
-if [ -f "${STACKS_DIR}/.env-files/wi.env" ]; then
-    echo -e "${GREEN}Loading environment from ${STACKS_DIR}/.env-files/wi.env${NC}"
-    source "${STACKS_DIR}/.env-files/wi.env"
+# Source environment variables from kind.env if it exists
+if [ -f "${STACKS_DIR}/.env-files/kind.env" ]; then
+    echo -e "${GREEN}Loading environment from ${STACKS_DIR}/.env-files/kind.env${NC}"
+    source "${STACKS_DIR}/.env-files/kind.env"
 fi
 
 # Show help if requested
@@ -130,7 +130,7 @@ echo -e "${GREEN}Generating Kind configuration with Azure Workload Identity...${
 # Ensure config directory exists
 mkdir -p "${DEPLOYMENT_DIR}/config"
 
-# Use SERVICE_ACCOUNT_ISSUER from wi.env, or fall back to default
+# Use SERVICE_ACCOUNT_ISSUER from kind.env, or fall back to default
 SERVICE_ACCOUNT_ISSUER="${SERVICE_ACCOUNT_ISSUER:-https://oidcissuer65846b7df97b.z13.web.core.windows.net/}"
 
 # Generate Docker Hub registry config from 1Password (avoids rate limiting)

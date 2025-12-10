@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: kagent
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: grafana-mcp
+    helm.sh/chart: grafana-mcp-0.7.4
+  name: kagent-grafana-mcp
+  namespace: kagent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: kagent
+      app.kubernetes.io/name: grafana-mcp
+  template:
+    metadata:
+      annotations:
+        checksum/configmap: 6db5bf8790566b9f7e37abaa238a9c4fa99c51f77dcf36b7b5bcbedc8c078b3d
+        checksum/secret: aa2d0ed9c8c5e2d402f604ff08aa0e78ee139aca2d9b23af8c028beb540f9239
+      labels:
+        app.kubernetes.io/instance: kagent
+        app.kubernetes.io/name: grafana-mcp
+    spec:
+      containers:
+        - args:
+            - --transport
+            - streamable-http
+          envFrom:
+            - configMapRef:
+                name: kagent-grafana-mcp
+            - secretRef:
+                name: kagent-grafana-mcp
+          image: mcp/grafana:latest
+          imagePullPolicy: Always
+          name: grafana-mcp
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext: {}
+      serviceAccountName: kagent-grafana-mcp

@@ -126,6 +126,8 @@ export class JaegerChart extends Chart {
                   { name: 'BADGER_DIRECTORY_VALUE', value: '/badger/value' },
                   { name: 'BADGER_SPAN_STORAGE_TTL', value: spanStorageTtl },
                   { name: 'BADGER_DEPENDENCY_STORAGE_TTL', value: spanStorageTtl },
+                  // Enable Zipkin HTTP endpoint for Dapr traces
+                  { name: 'COLLECTOR_ZIPKIN_HOST_PORT', value: ':9411' },
                 ],
                 volumeMounts: [
                   {
@@ -139,16 +141,26 @@ export class JaegerChart extends Chart {
                     cpu: k8s.Quantity.fromString('200m'),
                   },
                   limits: {
-                    memory: k8s.Quantity.fromString('1Gi'),
-                    cpu: k8s.Quantity.fromString('500m'),
+                    memory: k8s.Quantity.fromString('2Gi'),
+                    cpu: k8s.Quantity.fromString('1'),
                   },
+                },
+                // Use startup probe for slow-starting containers
+                startupProbe: {
+                  httpGet: {
+                    path: '/',
+                    port: k8s.IntOrString.fromNumber(16686),
+                  },
+                  initialDelaySeconds: 10,
+                  periodSeconds: 10,
+                  failureThreshold: 30,  // Allow up to 5 minutes to start
                 },
                 readinessProbe: {
                   httpGet: {
                     path: '/',
                     port: k8s.IntOrString.fromNumber(16686),
                   },
-                  initialDelaySeconds: 10,
+                  initialDelaySeconds: 5,
                   periodSeconds: 5,
                 },
                 livenessProbe: {
@@ -156,8 +168,9 @@ export class JaegerChart extends Chart {
                     path: '/',
                     port: k8s.IntOrString.fromNumber(16686),
                   },
-                  initialDelaySeconds: 30,
+                  initialDelaySeconds: 5,
                   periodSeconds: 10,
+                  failureThreshold: 3,
                 },
               },
             ],
