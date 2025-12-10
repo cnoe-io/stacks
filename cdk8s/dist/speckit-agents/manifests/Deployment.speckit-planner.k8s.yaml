@@ -75,7 +75,7 @@ spec:
             - secretRef:
                 name: dapr-agents-llm-providers
                 optional: true
-          image: vpittamp23/speckit-agents:v1.0.1
+          image: vpittamp/speckit-agents:claude-sdk-v9
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3

@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - Deployment.langfuse2-tailscale-serve.k8s.yaml
-  - PersistentVolumeClaim.langfuse2-tailscale-serve-state.k8s.yaml
-  - Role.langfuse2-tailscale-serve-role.k8s.yaml
-  - RoleBinding.langfuse2-tailscale-serve-rolebinding.k8s.yaml
-  - ServiceAccount.langfuse2-tailscale-serve-sa.k8s.yaml
+  - Deployment.langfuse-tailscale-serve.k8s.yaml
+  - PersistentVolumeClaim.langfuse-tailscale-serve-state.k8s.yaml
+  - Role.langfuse-tailscale-serve-role.k8s.yaml
+  - RoleBinding.langfuse-tailscale-serve-rolebinding.k8s.yaml
+  - ServiceAccount.langfuse-tailscale-serve-sa.k8s.yaml

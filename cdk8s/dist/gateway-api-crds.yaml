@@ -7,7 +7,7 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
   labels:
     app.kubernetes.io/component: crds
-    app.kubernetes.io/environment: talos
+    app.kubernetes.io/environment: dev
     app.kubernetes.io/managed-by: cdk8s
     app.kubernetes.io/name: gateway-api-crds
     app.kubernetes.io/part-of: kgateway
@@ -19,10 +19,10 @@ spec:
     namespace: default
     server: https://kubernetes.default.svc
   project: default
-  sources:
-    - path: cdk8s/dist/gateway-api-crds/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: rendered/talos/main
+  source:
+    path: "."
+    repoURL: cnoe://gateway-api-crds/manifests
+    targetRevision: HEAD
   syncPolicy:
     automated:
       prune: false

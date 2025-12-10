@@ -181,11 +181,144 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   // Removed kargo-pipelines-namespace - namespace is created by kargo-pipelines-project chart
+
+  // =========================================================================
+  // Keycloak Identity Provider
+  // Provides SSO/OIDC for Backstage, Argo Workflows, ArgoCD, Headlamp
+  // =========================================================================
+
+  // Keycloak Secrets - Creates ClusterSecretStores and password generators
+  // This chart creates the 'keycloak' and 'gitea' ClusterSecretStores that allow
+  // other namespaces to access secrets via ESO.
+  {
+    name: 'keycloak-secrets',
+    namespace: 'keycloak',
+    clusterType: 'both',  // Keycloak needed on both KIND and Talos
+    chart: {
+      type: 'KeycloakSecretsChart',
+      props: {
+        namespace: 'keycloak',
+        syncWave: '-50'
+      }
+    },
+    argocd: {
+      syncWave: '-50',  // Before Keycloak deployment
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'keycloak',
+        'app.kubernetes.io/name': 'keycloak-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Keycloak - KIND cluster (local development)
+  {
+    name: 'keycloak',
+    namespace: 'keycloak',
+    clusterType: 'kind',  // KIND uses local ingress
+    chart: {
+      type: 'KeycloakChart',
+      props: {
+        namespace: 'keycloak',
+        hostname: 'cnoe.localtest.me',
+        hostnamePort: 8443,
+        ingressHosts: ['localhost', 'cnoe.localtest.me']
+      }
+    },
+    dependencies: {
+      keycloakSecrets: {
+        type: 'KeycloakSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '-45',  // After keycloak-secrets
+      labels: {
+        'app.kubernetes.io/component': 'identity-provider',
+        'app.kubernetes.io/part-of': 'keycloak',
+        'app.kubernetes.io/name': 'keycloak'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Keycloak - Talos cluster (production with TLS)
+  {
+    name: 'keycloak',
+    namespace: 'keycloak',
+    clusterType: 'talos',  // Talos uses public domain with TLS
+    chart: {
+      type: 'KeycloakChart',
+      props: {
+        namespace: 'keycloak',
+        hostname: 'ai401kchat.com',
+        hostnamePort: 443,
+        httpRelativePath: '/keycloak',
+        ingressHosts: ['ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'keycloak-tls',
+          clusterIssuer: 'letsencrypt-cloudflare'
+        }
+      }
+    },
+    dependencies: {
+      keycloakSecrets: {
+        type: 'KeycloakSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '-45',  // After keycloak-secrets
+      labels: {
+        'app.kubernetes.io/component': 'identity-provider',
+        'app.kubernetes.io/part-of': 'keycloak',
+        'app.kubernetes.io/name': 'keycloak'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Keycloak Config - OIDC client configuration Job
+  // Creates CNOE realm, users, and OIDC clients for Backstage/ArgoWF
+  {
+    name: 'keycloak-config',
+    namespace: 'keycloak',
+    clusterType: 'both',  // Config needed on both clusters
+    chart: {
+      type: 'KeycloakConfigChart',
+      props: {
+        namespace: 'keycloak',
+        hostname: process.env.CLUSTER_TYPE === 'talos' ? 'ai401kchat.com' : 'cnoe.localtest.me',
+        hostnamePort: process.env.CLUSTER_TYPE === 'talos' ? 443 : 8443
+      }
+    },
+    dependencies: {
+      keycloak: {
+        type: 'KeycloakChart'
+      }
+    },
+    argocd: {
+      syncWave: '-40',  // After Keycloak deployment
+      labels: {
+        'app.kubernetes.io/component': 'configuration',
+        'app.kubernetes.io/part-of': 'keycloak',
+        'app.kubernetes.io/name': 'keycloak-config'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+    }
+  },
+
   {
     name: 'keycloak-headlamp-client',
     namespace: 'keycloak',
     chart: {
       type: 'KeycloakHeadlampClientChart'
+    },
+    dependencies: {
+      keycloakConfig: {
+        type: 'KeycloakConfigChart'
+      }
     },
     argocd: {
       syncWave: '40',  // Before headlamp-keycloak-secrets
@@ -1001,6 +1134,35 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '-55',
       labels: {
         'app.kubernetes.io/name': 'keycloak-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Backstage Tailscale Serve - Access: https://backstage.tail286401.ts.net
+  // Primary developer portal access via Tailscale
+  {
+    name: 'backstage-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'backstage',  // Uses svc:backstage
+        backendHost: 'backstage.backstage.svc.cluster.local',
+        backendPort: 7007,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'backstage-tailscale-serve',
         'app.kubernetes.io/component': 'tailscale-serve',
         'app.kubernetes.io/part-of': 'tailscale'
       },
