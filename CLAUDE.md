@@ -499,17 +499,24 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 
 **Purpose**: Provides stable URLs for all platform services that survive cluster recreation without hostname suffix drift (-1, -2, etc.).
 
-**Service URLs** (replace `<tailnet>` with your tailnet, e.g., `tail286401`):
+**Service URLs** (tailnet: `tail286401`):
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| ArgoCD | `https://svc-argocd.<tailnet>.ts.net` | GitOps Dashboard |
-| Langfuse | `https://svc-langfuse.<tailnet>.ts.net` | LLM Observability |
-| Gitea | `https://svc-gitea.<tailnet>.ts.net` | Git Server |
-| kagent | `https://svc-kagent.<tailnet>.ts.net` | AI Agent Dashboard |
-| Kargo | `https://svc-kargo.<tailnet>.ts.net` | Progressive Delivery |
-| Headlamp | `https://svc-headlamp.<tailnet>.ts.net` | Kubernetes Dashboard |
-| Keycloak | `https://svc-keycloak.<tailnet>.ts.net` | Identity Provider |
+| ArgoCD | `https://argocd.tail286401.ts.net` | GitOps Dashboard |
+| Langfuse | `https://langfuse.tail286401.ts.net` | LLM Observability |
+| Gitea | `https://gitea.tail286401.ts.net` | Git Server |
+| kagent | `https://kagent.tail286401.ts.net` | AI Agent Dashboard |
+| Kargo | `https://kargo.tail286401.ts.net` | Progressive Delivery |
+| Headlamp | `https://headlamp.tail286401.ts.net` | Kubernetes Dashboard |
+| Keycloak | `https://keycloak.tail286401.ts.net` | Identity Provider |
+
+**kubectl Access** (via Tailscale Operator API Proxy):
+```bash
+# Remote kubectl access with OAuth identity
+export KUBECONFIG=/tmp/tailscale-kubeconfig.yaml
+kubectl auth whoami  # Returns: vpittamp@github
+```
 
 **How It Works**:
 - Uses Tailscale Services feature with `--service` flag
@@ -548,10 +555,13 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 kubectl logs -n tailscale -l app.kubernetes.io/component=tailscale-serve --tail=10
 
 # Test all service URLs (from Tailscale-connected device)
-for svc in argocd langfuse gitea kagent kargo headlamp keycloak; do
-  echo "Testing svc-${svc}..."
-  curl -sI "https://svc-${svc}.<tailnet>.ts.net" | head -1
-done
+curl -sI https://argocd.tail286401.ts.net | head -1    # HTTP/2 200
+curl -sI https://langfuse.tail286401.ts.net | head -1  # HTTP/2 200
+curl -sI https://gitea.tail286401.ts.net | head -1     # HTTP/2 200
+curl -sI https://kagent.tail286401.ts.net | head -1    # HTTP/2 200
+curl -sI https://kargo.tail286401.ts.net | head -1     # HTTP/2 405 (API)
+curl -sI https://headlamp.tail286401.ts.net | head -1  # HTTP/2 200
+curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200
 ```
 
 **Troubleshooting**:

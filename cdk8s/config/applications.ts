@@ -736,7 +736,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'langfuse2',
+        serviceName: 'langfuse',  // Migrated from 'langfuse2' - uses svc:langfuse
         backendHost: 'langfuse.observability.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -765,7 +765,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'gitea2',
+        serviceName: 'gitea',  // Migrated from 'gitea2' - uses svc:gitea
         backendHost: 'my-gitea-http.gitea.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -794,7 +794,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'kagent2',
+        serviceName: 'kagent',  // Migrated from 'kagent2' - uses svc:kagent
         backendHost: 'kagent-ui.kagent.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
@@ -823,7 +823,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'kargo2',
+        serviceName: 'kargo',  // Migrated from 'kargo2' - uses svc:kargo
         backendHost: 'kargo-api.kargo.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -852,7 +852,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'headlamp2',
+        serviceName: 'headlamp',  // Migrated from 'headlamp2' - uses svc:headlamp
         backendHost: 'headlamp.headlamp.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -881,7 +881,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'keycloak2',
+        serviceName: 'keycloak',  // Migrated from 'keycloak2' - uses svc:keycloak
         backendHost: 'keycloak.keycloak.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
