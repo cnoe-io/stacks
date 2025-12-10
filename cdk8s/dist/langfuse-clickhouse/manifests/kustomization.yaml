@@ -1,7 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - Deployment.langfuse-clickhouse.k8s.yaml
-  - PersistentVolumeClaim.langfuse-clickhouse-pvc.k8s.yaml
-  - Secret.langfuse-clickhouse-credentials.k8s.yaml
-  - Service.langfuse-clickhouse.k8s.yaml

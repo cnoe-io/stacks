@@ -1,7 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - Deployment.langfuse-minio.k8s.yaml
-  - PersistentVolumeClaim.langfuse-minio-pvc.k8s.yaml
-  - Secret.langfuse-minio-credentials.k8s.yaml
-  - Service.langfuse-minio.k8s.yaml

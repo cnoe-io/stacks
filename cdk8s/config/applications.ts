@@ -85,6 +85,121 @@ export const applicationConfigs: ApplicationConfig[] = [
       ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
+
+  // =========================================================================
+  // Talos Infrastructure - TLS Certificate Management
+  // These apps are required for Let's Encrypt TLS certificates on Talos cluster
+  // Dependency chain: eso-workload-identity → cluster-secret-store → cert-manager-secrets → cloudflare-issuer
+  // =========================================================================
+
+  // ESO Workload Identity Patch - Azure AD federation for external-secrets ServiceAccount
+  // Required by: cluster-secret-store (ClusterSecretStore needs annotated ServiceAccount)
+  {
+    name: 'eso-workload-identity',
+    namespace: 'external-secrets',
+    clusterType: 'talos',  // Only needed on Talos for Azure Workload Identity
+    chart: {
+      type: 'WorkloadIdentityPatchChart',
+      props: {
+        clientId: process.env.AZURE_CLIENT_ID || '',
+        tenantId: process.env.AZURE_TENANT_ID || '',
+        serviceAccountName: 'external-secrets',
+        serviceAccountNamespace: 'external-secrets'
+      }
+    },
+    argocd: {
+      syncWave: '-90',  // Before cluster-secret-store (-88)
+      labels: {
+        'app.kubernetes.io/component': 'workload-identity',
+        'app.kubernetes.io/part-of': 'external-secrets',
+        'app.kubernetes.io/name': 'eso-workload-identity'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])  // Merge with existing SA
+    }
+  },
+
+  // ClusterSecretStore - Azure Key Vault access (cluster-scoped)
+  // Required by: cert-manager-secrets, keycloak-secrets, backstage-secrets
+  {
+    name: 'cluster-secret-store',
+    namespace: 'external-secrets',  // ESO namespace
+    clusterType: 'talos',  // Only needed on Talos (KIND uses localtest.me without TLS)
+    chart: {
+      type: 'ClusterSecretStoreChart',
+      props: {
+        storeName: 'azure-keyvault-store',
+        keyVaultName: process.env.AZURE_KEYVAULT_NAME || 'idp-kv',
+        serviceAccountRef: {
+          name: 'external-secrets',  // Default SA name from ESO Helm chart
+          namespace: 'external-secrets'
+        }
+      }
+    },
+    argocd: {
+      syncWave: '-88',  // After ESO workload identity (-90), before secrets that use it
+      labels: {
+        'app.kubernetes.io/component': 'secret-store',
+        'app.kubernetes.io/part-of': 'external-secrets',
+        'app.kubernetes.io/name': 'cluster-secret-store'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Cert-Manager Secrets - Cloudflare API token from Azure Key Vault
+  // Required by: cloudflare-issuer (ClusterIssuer)
+  {
+    name: 'cert-manager-secrets',
+    namespace: 'cert-manager',
+    clusterType: 'talos',  // Only needed on Talos for DNS-01 TLS challenges
+    chart: {
+      type: 'CertManagerSecretsChart',
+      props: {
+        namespace: 'cert-manager',
+        syncWave: '-85',
+        secretName: 'cloudflare-api-token-secret'
+      }
+    },
+    argocd: {
+      syncWave: '-85',  // After cluster-secret-store (-88), before cloudflare-issuer (-80)
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'cert-manager',
+        'app.kubernetes.io/name': 'cert-manager-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Cloudflare ClusterIssuer - DNS-01 challenge for Let's Encrypt
+  // Used by: Keycloak ingress (letsencrypt-cloudflare), Backstage ingress
+  {
+    name: 'cloudflare-issuer',
+    namespace: 'cert-manager',
+    clusterType: 'talos',  // Only needed on Talos for DNS-01 TLS challenges
+    chart: {
+      type: 'CloudflareIssuerChart',
+      props: {
+        email: 'admin@ai401kchat.com',
+        issuerName: 'letsencrypt-cloudflare',
+        cloudflareSecretName: 'cloudflare-api-token-secret',
+        cloudflareSecretKey: 'api-token',
+        syncWave: '-80',
+        staging: false  // Use production Let's Encrypt
+      }
+    },
+    argocd: {
+      syncWave: '-80',  // After cert-manager-secrets (-85), before apps that need TLS
+      labels: {
+        'app.kubernetes.io/component': 'cluster-issuer',
+        'app.kubernetes.io/part-of': 'cert-manager',
+        'app.kubernetes.io/name': 'cloudflare-issuer'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
   // Replaced with multi-env version below
   // {
   //   name: 'nextjs',
