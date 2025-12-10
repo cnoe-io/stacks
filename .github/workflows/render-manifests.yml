@@ -223,8 +223,8 @@ jobs:
           cp -r "$TEMP_DIST"/* cdk8s/dist/
           rm -rf "$TEMP_DIST"
 
-          # Stage files first (required to detect untracked files on orphan branches)
-          git add cdk8s/dist
+          # Stage all changes including deletions (required to properly sync rendered branch)
+          git add -A cdk8s/dist
 
           # Check for changes (after staging)
           if git diff --cached --quiet && [[ "${{ github.event.inputs.force_push }}" != "true" ]]; then
