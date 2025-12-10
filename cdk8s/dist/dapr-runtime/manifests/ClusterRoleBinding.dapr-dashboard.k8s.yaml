@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/name: dapr-dashboard
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 0.15.0
+  name: dapr-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dapr-dashboard
+subjects:
+  - kind: ServiceAccount
+    name: dapr-dashboard
+    namespace: dapr-system

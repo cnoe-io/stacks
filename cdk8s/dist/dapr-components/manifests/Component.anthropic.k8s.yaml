@@ -1,0 +1,21 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  labels:
+    app.kubernetes.io/component: conversation
+    app.kubernetes.io/name: anthropic
+    app.kubernetes.io/part-of: dapr-agents
+  name: anthropic
+  namespace: dapr-agents
+spec:
+  metadata:
+    - name: key
+      secretKeyRef:
+        key: ANTHROPIC_API_KEY
+        name: dapr-agents-llm-providers
+    - name: model
+      value: claude-opus-4-5-20251101
+    - name: cacheTTL
+      value: 10m
+  type: conversation.anthropic
+  version: v1

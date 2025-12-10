@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/path: /
+    prometheus.io/port: "9090"
+    prometheus.io/scrape: "true"
+  labels:
+    app: dapr-scheduler-server
+    app.kubernetes.io/component: scheduler
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.16.4
+  name: dapr-scheduler-server-a
+  namespace: dapr-system
+spec:
+  ports:
+    - name: api
+      port: 443
+      targetPort: 50006
+    - name: etcd-client
+      port: 2379
+    - name: etcd-peer
+      port: 2380
+    - name: metrics
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+  publishNotReadyAddresses: true
+  selector:
+    app: dapr-scheduler-server
+  type: ClusterIP

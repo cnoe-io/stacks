@@ -1573,10 +1573,11 @@ export const applicationConfigs: ApplicationConfig[] = [
   // Observability Stack - Jaeger + Langfuse
   // =========================================================================
 
-  // Observability Namespace
+  // Observability Namespace - Both clusters
   {
     name: 'observability-namespace',
     namespace: 'observability',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'ObservabilityNamespaceChart',
       props: {
@@ -1600,10 +1601,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Observability Secrets (from Azure Key Vault)
+  // Observability Secrets (from Azure Key Vault) - Both clusters
   {
     name: 'observability-secrets',
     namespace: 'observability',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'ObservabilitySecretsChart',
       props: {
@@ -1626,10 +1628,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Jaeger Distributed Tracing
+  // Jaeger Distributed Tracing - KIND cluster (local development)
   {
     name: 'jaeger',
     namespace: 'observability',
+    clusterType: 'kind',  // KIND uses cnoe.localtest.me
     chart: {
       type: 'JaegerChart',
       props: {
@@ -1638,6 +1641,37 @@ export const applicationConfigs: ApplicationConfig[] = [
         storageSize: '10Gi',
         spanStorageTtl: '168h',
         ingressHost: 'jaeger.cnoe.localtest.me'
+      }
+    },
+    argocd: {
+      syncWave: '-65',
+      labels: {
+        'app.kubernetes.io/name': 'jaeger',
+        'app.kubernetes.io/component': 'tracing',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Jaeger Distributed Tracing - Talos cluster (production)
+  {
+    name: 'jaeger',
+    namespace: 'observability',
+    clusterType: 'talos',  // Talos uses public domain
+    chart: {
+      type: 'JaegerChart',
+      props: {
+        namespace: 'observability',
+        imageVersion: '1.66.0',
+        storageSize: '10Gi',
+        spanStorageTtl: '168h',
+        ingressHost: 'jaeger.ai401kchat.com'
       }
     },
     argocd: {
@@ -1817,10 +1851,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Dapr Tracing Configuration (for SpecKit agents)
+  // Dapr Tracing Configuration (for SpecKit agents) - Both clusters
   {
     name: 'dapr-tracing-config',
     namespace: 'dapr-agents',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprTracingConfigChart',
       props: {
@@ -1855,6 +1890,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'dapr-crds',
     namespace: 'default',  // CRDs are cluster-scoped
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprCrdsChart',
       props: {
@@ -1878,16 +1914,18 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Dapr Runtime (Control Plane)
+  // Dapr Runtime (Control Plane) - Both clusters
   {
     name: 'dapr-runtime',
     namespace: 'dapr-system',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprRuntimeChart',
       props: {
         version: '1.16',
         enableHA: false,
         enableDashboard: true,
+        enableDashboardIngress: false,  // Use Tailscale for access on Talos
         logLevel: 'info'
       }
     },
@@ -1908,10 +1946,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Dapr Agents Redis (State and Pub/Sub backend)
+  // Dapr Agents Redis (State and Pub/Sub backend) - Both clusters
   {
     name: 'dapr-agents-redis',
     namespace: 'dapr-agents',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprAgentsRedisChart',
       props: {
@@ -1937,10 +1976,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Dapr Agents Secrets (LLM API keys from Azure Key Vault)
+  // Dapr Agents Secrets (LLM API keys from Azure Key Vault) - Both clusters
   {
     name: 'dapr-agents-secrets',
     namespace: 'dapr-agents',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprAgentsSecretsChart',
       props: {
@@ -1964,10 +2004,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Dapr Components (State stores, Pub/Sub, Conversation)
+  // Dapr Components (State stores, Pub/Sub, Conversation) - Both clusters
   {
     name: 'dapr-components',
     namespace: 'dapr-agents',
+    clusterType: 'both',  // Deploy to both KIND and Talos
     chart: {
       type: 'DaprComponentsChart',
       props: {

@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-120"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: control-plane
+    app.kubernetes.io/environment: talos
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: dapr-runtime
+    app.kubernetes.io/part-of: dapr-agents
+    example: basic
+  name: dapr-runtime
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-system
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/dapr-runtime/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/103-tailscale-services
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

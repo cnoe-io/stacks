@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.16.4
+  name: dapr-injector
+  namespace: dapr-system
+rules:
+  - apiGroups:
+      - ""
+    resourceNames:
+      - dapr-trust-bundle
+    resources:
+      - secrets
+    verbs:
+      - get
+  - apiGroups:
+      - dapr.io
+    resources:
+      - configurations
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - get
