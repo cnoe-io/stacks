@@ -69,17 +69,17 @@ spec:
             periodSeconds: 5
           resources:
             limits:
-              cpu: "1"
+              cpu: "2"
               memory: 2Gi
             requests:
-              cpu: 200m
+              cpu: 500m
               memory: 512Mi
           startupProbe:
-            failureThreshold: 30
+            failureThreshold: 60
             httpGet:
               path: /
-              port: 16686
-            initialDelaySeconds: 10
+              port: 14269
+            initialDelaySeconds: 30
             periodSeconds: 10
           volumeMounts:
             - mountPath: /badger

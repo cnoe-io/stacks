@@ -138,22 +138,23 @@ export class JaegerChart extends Chart {
                 resources: {
                   requests: {
                     memory: k8s.Quantity.fromString('512Mi'),
-                    cpu: k8s.Quantity.fromString('200m'),
+                    cpu: k8s.Quantity.fromString('500m'),
                   },
                   limits: {
                     memory: k8s.Quantity.fromString('2Gi'),
-                    cpu: k8s.Quantity.fromString('1'),
+                    cpu: k8s.Quantity.fromString('2'),
                   },
                 },
                 // Use startup probe for slow-starting containers
+                // Use admin health endpoint (14269) which starts earlier than UI (16686)
                 startupProbe: {
                   httpGet: {
                     path: '/',
-                    port: k8s.IntOrString.fromNumber(16686),
+                    port: k8s.IntOrString.fromNumber(14269),
                   },
-                  initialDelaySeconds: 10,
+                  initialDelaySeconds: 30,
                   periodSeconds: 10,
-                  failureThreshold: 30,  // Allow up to 5 minutes to start
+                  failureThreshold: 60,  // Allow up to 10 minutes to start
                 },
                 readinessProbe: {
                   httpGet: {
