@@ -707,7 +707,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'argocd2',
+        serviceName: 'argocd',  // Migrated from 'argocd2' - uses svc:argocd
         backendHost: 'argocd-server.argocd.svc.cluster.local',
         backendPort: 443,
         backendInsecure: true,
