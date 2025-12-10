@@ -260,6 +260,114 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
+
+  // =========================================================================
+  // Backstage Developer Portal
+  // =========================================================================
+
+  // Backstage Secrets (External Secrets for OIDC, Gitea, GHCR, ArgoCD credentials)
+  {
+    name: 'backstage-secrets',
+    namespace: 'backstage',
+    clusterType: 'both',  // Backstage needed on both KIND and Talos
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-secrets'
+      },
+      // Retry logic handles ESO webhook not being ready during initial cluster startup
+      // ignoreDifferences prevents perpetual OutOfSync from controller-added fields
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  // Backstage Application - KIND cluster (local development)
+  {
+    name: 'backstage',
+    namespace: 'backstage',
+    clusterType: 'kind',  // KIND uses local ingress with cnoe.localtest.me
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage',
+        ingressHosts: ['localhost', 'cnoe.localtest.me'],
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '20',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Application - Talos cluster (production with public domain)
+  {
+    name: 'backstage',
+    namespace: 'backstage',
+    clusterType: 'talos',  // Talos uses public domain with TLS via cert-manager
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage',
+        ingressHosts: ['ai401kchat.com', 'www.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        }
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '20',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Templates (Catalog entities for Backstage software templates)
+  // This references existing entities directory, not synthesized manifests
+  {
+    name: 'backstage-templates',
+    namespace: 'backstage',
+    clusterType: 'both',  // Templates needed on both KIND and Talos clusters
+    skipSynthesis: true,  // No chart synthesis - references existing entities directory
+    sourcePath: 'entities',  // Override default 'manifests' path
+    directoryExclude: 'catalog-info.yaml',  // Exclude catalog-info from sync
+    argocd: {
+      syncWave: '25',  // After Backstage application (20)
+      labels: {
+        'app.kubernetes.io/component': 'templates',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-templates'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+    }
+  },
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
