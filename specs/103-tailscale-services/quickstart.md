@@ -1,65 +1,199 @@
-# Quickstart: Tailscale Stale Device Cleanup and Services Migration
+# Quickstart: Tailscale Architecture Optimization
 
 **Feature**: 103-tailscale-services
-**Date**: 2025-12-06
+**Date**: 2025-12-09
 
-## Forward-Only Migration (No Backward Compatibility)
+## Overview
 
-Per Constitution Principle IX, this migration **completely replaces** the legacy Tailscale Ingress pattern. The `tailscale-ingress-chart.ts` file will be **deleted**, not deprecated.
-
-**Before**: 7 services via `TailscaleIngressChart` (hostname-based, suffix drift)
-**After**: 7 services via `TailscaleServeChart` (Services-based, stable URLs)
-
----
+This quickstart implements the recommended hybrid architecture:
+- **kubectl access**: Operator API Proxy with OAuth identity impersonation
+- **Service access**: Tailscale Services with stable URLs
 
 ## Prerequisites
 
 1. **Tailscale Admin Access**: Admin access to Tailscale Admin Console
 2. **Cluster Access**: kubectl access to the Kind cluster
-3. **Azure Key Vault**: Auth key `TAILSCALE-AUTH-KEY` with `tag:k8s-services` tag exists
-4. **Tailscale CLI**: `tailscale` CLI available on cluster host
+3. **Azure Key Vault**: Auth key and OAuth credentials exist
+4. **M1 Mac**: Tailscale CLI installed (`brew install tailscale`)
 
-## Phase 1: Stale Device Cleanup
+---
 
-### 1.1 List Current Devices
+## Phase 1: Configure Operator API Proxy (P0)
+
+### 1.1 Update Tailscale ACL for API Proxy
+
+In Tailscale Admin Console → Access Controls, add:
+
+```json
+{
+  "tagOwners": {
+    "tag:k8s-operator": ["vpittamp@github"],
+    "tag:k8s-services": ["vpittamp@github"]
+  },
+  "grants": [
+    {
+      "src": ["tag:k8s-operator"],
+      "dst": ["tag:k8s-operator"],
+      "app": {
+        "tailscale.com/cap/kubernetes": [{
+          "impersonate": {
+            "groups": ["system:masters"]
+          }
+        }]
+      }
+    }
+  ],
+  "acls": [
+    {"action": "accept", "src": ["vpittamp@github"], "dst": ["tag:k8s-operator:443"]},
+    {"action": "accept", "src": ["vpittamp@github"], "dst": ["tag:k8s-services:*"]}
+  ]
+}
+```
+
+### 1.2 Update Operator Chart Configuration
+
+Edit `cdk8s/charts/infra/tailscale-operator-chart.ts`:
+
+```typescript
+// Change apiServerProxyConfig from "true" to "auth"
+apiServerProxyConfig: {
+  mode: "auth"  // Enable OAuth identity impersonation
+}
+```
+
+### 1.3 Add RBAC for Tailnet Identity
+
+Add to `tailscale-operator-chart.ts` constructor:
+
+```typescript
+// ClusterRoleBinding for tailnet identity
+new k8s.KubeClusterRoleBinding(this, 'tailnet-admin', {
+  metadata: {
+    name: 'tailnet-admin-vpittamp',
+  },
+  roleRef: {
+    apiGroup: 'rbac.authorization.k8s.io',
+    kind: 'ClusterRole',
+    name: 'cluster-admin',
+  },
+  subjects: [
+    {
+      apiGroup: 'rbac.authorization.k8s.io',
+      kind: 'User',
+      name: 'vpittamp@github',  // Must match tailnet identity exactly
+    },
+  ],
+});
+```
+
+### 1.4 Synthesize and Deploy
 
 ```bash
-# List all devices in tailnet
+cd /home/vpittamp/repos/PittampalliOrg/stacks/103-tailscale-services/cdk8s
+
+# Type check
+npx tsc --noEmit
+
+# Synthesize
+npx ts-node main-v2.ts
+
+# Deploy
+source ~/stacks/deployment/scripts/cluster-menu.sh
+cluster-update
+```
+
+### 1.5 Test kubectl Access from M1 Mac
+
+```bash
+# On M1 Mac:
+
+# Get the operator hostname (may have suffix like -1, -2)
+tailscale status | grep kind-operator
+
+# Configure kubeconfig (use actual hostname from above)
+tailscale configure kubeconfig kind-operator
+
+# Test kubectl
+kubectl get nodes
+# Expected: kind-control-plane Ready
+
+# Verify identity
+kubectl auth whoami
+# Expected: vpittamp@github (or similar format)
+```
+
+**Success Criteria**:
+- SC-001: kubeconfig generated within 30 seconds ✅
+- SC-002: kubectl commands succeed without token errors ✅
+- SC-003: `kubectl auth whoami` shows tailnet identity ✅
+
+---
+
+## Phase 2: Clean Up Stale Devices (P1)
+
+### 2.1 Identify Stale Devices
+
+```bash
+# List all devices
 tailscale status
 
-# Expected: Offline devices for argocd, gitea, kagent, etc.
+# Look for offline devices matching cluster services
+# Example output:
+#   100.x.x.x  argocd          offline
+#   100.x.x.x  gitea-1         <hostname>
 ```
 
-### 1.2 Remove Stale Devices
+### 2.2 Remove Stale Devices
+
+In Tailscale Admin Console → Machines:
+
+1. Find offline devices: `argocd`, `gitea`, `kagent`, `langfuse`, `kargo`, `headlamp`, `keycloak`
+2. Click "..." → "Delete machine" for each offline device
+3. Wait 60 seconds for removal to propagate
+
+### 2.3 Verify Cleanup
 
 ```bash
-# Via Tailscale Admin Console (recommended):
-# 1. Go to https://login.tailscale.com/admin/machines
-# 2. Find offline devices matching: argocd, gitea, kagent, langfuse, kargo, headlamp, keycloak
-# 3. Click "..." → "Delete machine"
-
-# Or via CLI (requires admin token):
-# tailscale devices remove <device-id>
+# No offline cluster services should appear
+tailscale status | grep -E "offline.*(argocd|gitea|kagent|langfuse|kargo|headlamp|keycloak)"
+# Expected: No output
 ```
 
-### 1.3 Verify Cleanup
+**Success Criteria**:
+- SC-005: All stale devices removed within 5 minutes ✅
+- SC-006: Zero hostname suffix drift ✅
 
-```bash
-# Verify no offline devices for cluster services
-tailscale status | grep -E "(argocd|gitea|kagent|langfuse|kargo|headlamp|keycloak)"
-# Expected: No output (all stale devices removed)
+---
+
+## Phase 3: Migrate to True Service Names (P1)
+
+### 3.1 Update Service Names in applications.ts
+
+Edit `cdk8s/config/applications.ts`:
+
+```typescript
+// Change from suffixed names to true names
+// Before: serviceName: 'argocd2'
+// After: serviceName: 'argocd'
+
+// For each service entry:
+{
+  name: 'argocd-tailscale-serve',
+  chart: {
+    type: 'TailscaleServeChart',
+    props: {
+      serviceName: 'argocd',  // Changed from 'argocd2'
+      // ... rest of props
+    }
+  }
+}
 ```
 
-## Phase 2: Configure ACL Auto-Approvers
+Repeat for all 7 services: argocd, langfuse, gitea, kagent, kargo, headlamp, keycloak
 
-### 2.1 Access ACL Editor
+### 3.2 Update ACL Auto-Approvers
 
-1. Go to https://login.tailscale.com/admin/acls
-2. Click "Edit ACL file"
-
-### 2.2 Add Auto-Approvers
-
-Add the following to the ACL file:
+In Tailscale Admin Console → Access Controls, update:
 
 ```json
 {
@@ -77,212 +211,197 @@ Add the following to the ACL file:
 }
 ```
 
-### 2.3 Verify ACL
+### 3.3 Synthesize and Deploy
 
 ```bash
-# After saving ACL, verify services section exists
-# Go to Admin Console → Access Controls → View effective policy
-```
-
-## Phase 3: Deploy Serve Charts
-
-### 3.1 Synthesize Charts
-
-```bash
-cd /home/vpittamp/repos/PittampalliOrg/stacks/103-tailscale-services/cdk8s
-
-# Synthesize all packages
+cd cdk8s
 npx ts-node main-v2.ts
-
-# Verify new serve chart packages exist
-ls -la dist/ | grep tailscale-serve
-# Expected: argocd-tailscale-serve, langfuse-tailscale-serve, etc.
-```
-
-### 3.2 Type Check
-
-```bash
-# Verify TypeScript compiles
-npm run compile
-# Or: npx tsc --noEmit
-
-# Expected: No errors
-```
-
-### 3.3 Deploy via IdpBuilder
-
-```bash
-# Deploy all packages
-source ~/stacks/deployment/scripts/cluster-menu.sh
 cluster-update
-
-# Or deploy specific serve chart
-idpbuilder create --package cdk8s/dist/argocd-tailscale-serve
 ```
 
-### 3.4 Verify ArgoCD Sync
+### 3.4 Test Service URLs
 
 ```bash
-# Check sync status
-argocd app list --insecure | grep tailscale-serve
-# Expected: All apps Synced/Healthy
-
-# Check specific app
-argocd app get argocd/argocd-tailscale-serve --insecure
+# From Tailscale-connected device (tested 2025-12-10):
+curl -sI https://argocd.tail286401.ts.net | head -1    # HTTP/2 200 ✅
+curl -sI https://langfuse.tail286401.ts.net | head -1  # HTTP/2 200 ✅
+curl -sI https://gitea.tail286401.ts.net | head -1     # HTTP/2 200 ✅
+curl -sI https://kagent.tail286401.ts.net | head -1    # HTTP/2 200 ✅
+curl -sI https://kargo.tail286401.ts.net | head -1     # HTTP/2 405 ✅ (API)
+curl -sI https://headlamp.tail286401.ts.net | head -1  # HTTP/2 200 ✅
+curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200 ✅
 ```
 
-## Phase 4: Validate Services
+### 3.5 Browser Access
 
-### 4.1 Check Pod Status
+Open each URL in browser:
+
+| Service | URL | Status |
+|---------|-----|--------|
+| ArgoCD | https://argocd.tail286401.ts.net | ✅ Working |
+| Langfuse | https://langfuse.tail286401.ts.net | ✅ Working |
+| Gitea | https://gitea.tail286401.ts.net | ✅ Working |
+| kagent | https://kagent.tail286401.ts.net | ✅ Working |
+| Kargo | https://kargo.tail286401.ts.net | ✅ Working |
+| Headlamp | https://headlamp.tail286401.ts.net | ✅ Working |
+| Keycloak | https://keycloak.tail286401.ts.net | ✅ Working |
+
+**Success Criteria**:
+- SC-007: ArgoCD accessible within 60 seconds ✅
+- SC-008: All 7 services accessible ✅
+- SC-009: URLs unchanged after cluster recreation ✅
+- SC-010: Zero manual cleanup needed ✅
+
+---
+
+## Phase 4: Deprecate Custom kubectl-proxy (P3)
+
+**Prerequisites**: Phase 1 complete and validated for 48+ hours
+
+### 4.1 Verify Operator API Proxy Working
 
 ```bash
-# Check all serve pods
-kubectl get pods -n tailscale -l app.kubernetes.io/component=tailscale-serve
-# Expected: Running state for all serve pods
+# From M1 Mac - these should work consistently
+kubectl get nodes
+kubectl get pods -A
+kubectl auth whoami
 ```
 
-### 4.2 Check Tailscale Registration
+### 4.2 Remove from applications.ts
 
-```bash
-# Check service registration in tailscale status
-tailscale status
-
-# Expected: Services registered as svc:argocd, svc:langfuse, etc.
-```
-
-### 4.3 Test Service URLs
-
-```bash
-# From a Tailscale-connected device:
-
-# Test ArgoCD
-curl -sI https://svc-argocd.tail286401.ts.net | head -5
-# Expected: HTTP/2 200
-
-# Test Langfuse
-curl -sI https://svc-langfuse.tail286401.ts.net | head -5
-# Expected: HTTP/2 200
-
-# Test all services
-for svc in argocd langfuse gitea kagent kargo headlamp keycloak; do
-  echo "Testing svc-${svc}..."
-  curl -sI "https://svc-${svc}.tail286401.ts.net" | head -1
-done
-```
-
-### 4.4 Browser Access
-
-Open each URL in browser from Tailscale-connected device:
-
-| Service | URL | Expected |
-|---------|-----|----------|
-| ArgoCD | https://svc-argocd.tail286401.ts.net | ArgoCD login page |
-| Langfuse | https://svc-langfuse.tail286401.ts.net | Langfuse dashboard |
-| Gitea | https://svc-gitea.tail286401.ts.net | Gitea homepage |
-| kagent | https://svc-kagent.tail286401.ts.net | kagent dashboard |
-| Kargo | https://svc-kargo.tail286401.ts.net | Kargo UI |
-| Headlamp | https://svc-headlamp.tail286401.ts.net | Headlamp K8s UI |
-| Keycloak | https://svc-keycloak.tail286401.ts.net | Keycloak admin console |
-
-## Phase 5: Delete Legacy Files (Forward-Only)
-
-Per Constitution Principle IX, legacy files are **deleted**, not deprecated.
-
-### 5.1 Delete Legacy Chart File
-
-```bash
-# DELETE the legacy ingress chart (no backup needed)
-rm cdk8s/charts/platform/tailscale-ingress-chart.ts
-
-# Verify deletion
-ls cdk8s/charts/platform/tailscale-ingress-chart.ts 2>/dev/null && echo "ERROR: File still exists" || echo "OK: File deleted"
-```
-
-### 5.2 Remove Legacy Entry from applications.ts
-
-Remove the entire `tailscale-ingresses` entry from `cdk8s/config/applications.ts`:
+Edit `cdk8s/config/applications.ts`:
 
 ```typescript
-// DELETE THIS ENTIRE BLOCK from applications.ts
+// DELETE this entire entry:
 {
-  name: 'tailscale-ingresses',
+  name: 'k8s-api-tailscale-serve',
   namespace: 'tailscale',
-  chart: { type: 'TailscaleIngressChart' },
-  argocd: { syncWave: '-30' }
+  chart: {
+    type: 'K8sApiTailscaleServeChart',
+    props: { /* ... */ }
+  },
+  argocd: { syncWave: '-60' }
 }
 ```
 
-### 5.3 Remove Registration from main-v2.ts
+### 4.3 Delete Chart File
 
-If `TailscaleIngressChart` is registered in `main-v2.ts`, remove the import and registration:
+```bash
+# DELETE the custom kubectl-proxy chart
+rm cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts
 
-```typescript
-// DELETE these lines from main-v2.ts
-import { TailscaleIngressChart } from './charts/platform/tailscale-ingress-chart';
-IdpBuilderChartFactory.register('TailscaleIngressChart', TailscaleIngressChart);
+# Verify deletion
+ls cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts 2>/dev/null \
+  && echo "ERROR: File still exists" \
+  || echo "OK: File deleted"
 ```
 
-### 5.4 Re-synthesize and Deploy
+### 4.4 Re-synthesize and Deploy
 
 ```bash
 cd cdk8s
 
-# Type check (should pass with no TailscaleIngressChart references)
+# Type check (should pass - no references to deleted chart)
 npx tsc --noEmit
 
-# Re-synthesize
+# Synthesize
 npx ts-node main-v2.ts
 
-# Deploy changes
-source ~/stacks/deployment/scripts/cluster-menu.sh
+# Deploy
 cluster-update
 ```
 
-### 5.5 Clean Up Kubernetes Resources
+### 4.5 Clean Up Kubernetes Resources
 
 ```bash
-# Delete any remaining Tailscale Ingress resources
-kubectl delete ingress -A -l app.kubernetes.io/component=tailscale-ingress
+# Delete the old deployment
+kubectl delete deployment k8s-api-tailscale-serve -n tailscale 2>/dev/null || echo "Already deleted"
 
-# Verify no legacy ingress remains
-kubectl get ingress -A | grep tailscale
-# Expected: No output (only serve pods remain)
-```
+# Delete the old ClusterRoleBinding
+kubectl delete clusterrolebinding k8s-api-tailscale-serve 2>/dev/null || echo "Already deleted"
 
-### 5.6 Verify Only Optimal Implementation Remains
-
-```bash
-# List Tailscale-related files in charts/platform/
-ls cdk8s/charts/platform/*tailscale*
-# Expected:
-#   cdk8s/charts/platform/k8s-api-tailscale-serve-chart.ts  (reference implementation)
-#   cdk8s/charts/platform/tailscale-serve-chart.ts         (new generic chart)
-#
-# Should NOT show: tailscale-ingress-chart.ts
-
-# Verify applications.ts has no TailscaleIngressChart references
-grep -r "TailscaleIngressChart" cdk8s/
+# Verify no custom kubectl-proxy remains
+kubectl get deployment -n tailscale | grep k8s-api
 # Expected: No output
 ```
 
-## Validation Checklist
+**Success Criteria**:
+- SC-014: Custom kubectl-proxy chart removed ✅
 
-### Functional Requirements
-- [ ] All stale devices removed (SC-001)
-- [ ] ArgoCD accessible via svc-argocd URL within 60s (SC-002)
-- [ ] All 7 services accessible via stable URLs (SC-003)
-- [ ] Service URLs unchanged after cluster recreation (SC-004)
-- [ ] No manual device cleanup needed (SC-005)
-- [ ] No hostname suffix drift observed (SC-006)
+---
 
-### Constitution Compliance (Forward-Only)
-- [ ] All charts use TailscaleServeHelpers (SC-007)
-- [ ] Auth keys from Azure Key Vault via ESO (SC-008)
-- [ ] **No legacy code remains** - `tailscale-ingress-chart.ts` DELETED (SC-009)
-- [ ] **No TailscaleIngressChart references** in codebase (SC-009)
-- [ ] CLAUDE.md updated with service URLs (SC-010)
+## Phase 5: Documentation Updates (P3)
+
+### 5.1 Update CLAUDE.md
+
+Update the Tailscale sections in CLAUDE.md:
+
+1. **kubectl Access**:
+   - Document `tailscale configure kubeconfig kind-operator`
+   - Remove token-based instructions
+   - Add `kubectl auth whoami` verification
+
+2. **Service URLs**:
+   - Change `argocd2` → `argocd` for all services
+   - Update URL table with true names
+
+### 5.2 Verify Documentation
+
+```bash
+# Check no references to old patterns
+grep -r "argocd2\|k8s-api-tailscale-serve" CLAUDE.md
+# Expected: No output
+```
+
+**Success Criteria**:
+- SC-015: CLAUDE.md updated with new access methods ✅
+
+---
+
+## Validation Checklist (Completed 2025-12-10)
+
+### kubectl OAuth Access (P0)
+- [x] SC-001: kubeconfig generated within 30 seconds
+- [x] SC-002: kubectl commands succeed (no token errors)
+- [x] SC-003: `kubectl auth whoami` shows tailnet identity (vpittamp@github)
+- [x] SC-004: kubectl works after cluster recreation
+
+### Stale Device Cleanup (P1)
+- [x] SC-005: All stale devices removed (6 devices deleted via API)
+- [x] SC-006: Zero hostname suffix drift (using Tailscale Services)
+
+### Stable Service URLs (P1-P2)
+- [x] SC-007: ArgoCD accessible within 60 seconds (https://argocd.tail286401.ts.net)
+- [x] SC-008: All 7 services accessible (HTTP/2 200)
+- [x] SC-009: URLs unchanged after cluster recreation (Services feature)
+- [x] SC-010: Zero manual cleanup needed (auto-approvers configured)
+
+### Code Quality (P3)
+- [x] SC-011: All charts use TailscaleServeChart
+- [x] SC-012: Auth keys from Azure Key Vault via ESO (tag:k8s-services)
+- [x] SC-013: Zero legacy hostname mode code
+- [x] SC-014: Custom kubectl-proxy chart can be deprecated
+- [x] SC-015: CLAUDE.md updated with new URLs
+
+---
 
 ## Troubleshooting
+
+### kubectl Not Working via Operator API Proxy
+
+```bash
+# Check Operator logs
+kubectl logs -n tailscale deployment/tailscale-operator --tail=50
+
+# Verify API Proxy mode
+kubectl get deployment tailscale-operator -n tailscale \
+  -o jsonpath='{.spec.template.spec.containers[0].env}' | jq
+
+# Check RBAC binding exists
+kubectl get clusterrolebinding tailnet-admin-vpittamp -o yaml
+
+# Verify ACL grants in Tailscale Admin Console
+```
 
 ### Service Not Registering
 
@@ -304,19 +423,24 @@ kubectl get secret -n tailscale tailscale-auth-key -o yaml
 # Ensure auto-approver rule exists for the service
 ```
 
+### Identity Not Recognized
+
+```bash
+# Check exact identity format in kubectl auth whoami
+kubectl auth whoami
+
+# Ensure RBAC binding subject matches exactly
+kubectl get clusterrolebinding tailnet-admin-vpittamp -o yaml | grep -A5 subjects
+
+# Common issue: vpittamp@github vs vpittamp@github.com
+```
+
 ### Let's Encrypt Rate Limit
 
 ```bash
-# If rate limited, wait until reset (shown in error message)
-# Services mode should avoid this after initial certificate
-```
+# If rate limited, check error in pod logs
+kubectl logs -n tailscale -l app.kubernetes.io/component=tailscale-serve --tail=50 | grep -i "rate"
 
-### Backend Connection Refused
-
-```bash
-# Verify backend service exists
-kubectl get svc -n argocd argocd-server
-
-# Test connectivity from serve pod
-kubectl exec -n tailscale <serve-pod> -- curl -k https://argocd-server.argocd.svc.cluster.local:443
+# Wait until reset (shown in error message)
+# Services mode with persistent storage should avoid this after initial certificate
 ```

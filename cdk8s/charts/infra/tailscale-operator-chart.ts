@@ -17,6 +17,7 @@
 
 import { Chart, ChartProps, Helm } from 'cdk8s';
 import { Construct } from 'constructs';
+import * as k8s from '../../imports/k8s';
 
 export interface TailscaleOperatorChartProps extends ChartProps {
   /**
@@ -54,6 +55,14 @@ export interface TailscaleOperatorChartProps extends ChartProps {
    * @default 'info'
    */
   logLevel?: string;
+
+  /**
+   * Tailnet identities to grant cluster-admin access via API Server Proxy auth mode.
+   * These identities will be mapped to Kubernetes RBAC via ClusterRoleBinding.
+   * Example: ['vpittamp@github']
+   * @default []
+   */
+  tailnetAdmins?: string[];
 }
 
 export class TailscaleOperatorChart extends Chart {
@@ -67,6 +76,7 @@ export class TailscaleOperatorChart extends Chart {
       defaultTags = ['tag:k8s'],
       enableApiServerProxy = false,
       logLevel = 'info',
+      tailnetAdmins = [],
     } = props;
 
     // Deploy Tailscale Operator using official Helm chart
@@ -105,6 +115,9 @@ export class TailscaleOperatorChart extends Chart {
         },
 
         // API server proxy mode (for remote kubectl access)
+        // Mode: "true" = auth mode with OAuth identity impersonation (recommended)
+        // Mode: "noauth" = proxy without identity impersonation
+        // See: https://tailscale.com/kb/1437/kubernetes-operator-api-server-proxy
         apiServerProxyConfig: {
           mode: enableApiServerProxy ? 'true' : 'noauth',
         },
@@ -143,6 +156,38 @@ export class TailscaleOperatorChart extends Chart {
         // Node selector
         nodeSelector: {},
       },
+    });
+
+    // Create ClusterRoleBinding for each tailnet admin identity
+    // This maps Tailscale OAuth identities to Kubernetes RBAC for API Server Proxy auth mode
+    // The Operator impersonates these identities when proxying kubectl requests
+    tailnetAdmins.forEach((identity, index) => {
+      // Convert identity to a valid Kubernetes name (e.g., vpittamp@github -> vpittamp-github)
+      const safeName = identity.replace('@', '-').replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+
+      new k8s.KubeClusterRoleBinding(this, `tailnet-admin-${index}`, {
+        metadata: {
+          name: `tailnet-admin-${safeName}`,
+          labels: {
+            'app.kubernetes.io/name': 'tailnet-admin-rbac',
+            'app.kubernetes.io/component': 'rbac',
+            'app.kubernetes.io/part-of': 'tailscale',
+            'app.kubernetes.io/managed-by': 'cdk8s',
+          },
+        },
+        roleRef: {
+          apiGroup: 'rbac.authorization.k8s.io',
+          kind: 'ClusterRole',
+          name: 'cluster-admin',
+        },
+        subjects: [
+          {
+            apiGroup: 'rbac.authorization.k8s.io',
+            kind: 'User',
+            name: identity,  // Must match tailnet identity exactly (e.g., vpittamp@github)
+          },
+        ],
+      });
     });
   }
 }
