@@ -284,15 +284,48 @@ export const applicationConfigs: ApplicationConfig[] = [
       ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
-  // Backstage Application (Deployment, StatefulSet, Services, Ingress)
+  // Backstage Application - KIND cluster (local development)
   {
     name: 'backstage',
     namespace: 'backstage',
-    clusterType: 'both',  // Backstage needed on both KIND and Talos
+    clusterType: 'kind',  // KIND uses local ingress with cnoe.localtest.me
     chart: {
       type: 'BackstageChart',
       props: {
-        namespace: 'backstage'
+        namespace: 'backstage',
+        ingressHosts: ['localhost', 'cnoe.localtest.me'],
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '20',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Application - Talos cluster (production with public domain)
+  {
+    name: 'backstage',
+    namespace: 'backstage',
+    clusterType: 'talos',  // Talos uses public domain with TLS via cert-manager
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage',
+        ingressHosts: ['ai401kchat.com', 'www.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        }
       }
     },
     dependencies: {

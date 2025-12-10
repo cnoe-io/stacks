@@ -13,6 +13,15 @@ export interface BackstageChartProps extends ChartProps {
   postgresStorageSize?: string;
   // Ingress hosts (default: ['localhost', 'cnoe.localtest.me'])
   ingressHosts?: string[];
+  // TLS configuration for ingress
+  tls?: {
+    // Enable TLS (default: false)
+    enabled: boolean;
+    // Secret name for TLS certificate
+    secretName?: string;
+    // Cluster issuer name for cert-manager (e.g., 'letsencrypt-cloudflare')
+    clusterIssuer?: string;
+  };
 }
 
 /**
@@ -379,13 +388,27 @@ export class BackstageChart extends Chart {
     // Ingress
     // ==========================================================================
 
+    // Build ingress annotations
+    const ingressAnnotations: Record<string, string> = {};
+    if (props.tls?.clusterIssuer) {
+      ingressAnnotations['cert-manager.io/cluster-issuer'] = props.tls.clusterIssuer;
+    }
+
+    // Build TLS configuration if enabled
+    const tlsConfig = props.tls?.enabled ? [{
+      hosts: ingressHosts,
+      secretName: props.tls.secretName ?? `${appName}-tls`,
+    }] : undefined;
+
     new k8s.KubeIngress(this, 'backstage-ingress', {
       metadata: {
         name: appName,
         namespace,
+        ...(Object.keys(ingressAnnotations).length > 0 && { annotations: ingressAnnotations }),
       },
       spec: {
         ingressClassName: 'nginx',
+        ...(tlsConfig && { tls: tlsConfig }),
         rules: ingressHosts.map(host => ({
           host,
           http: {
