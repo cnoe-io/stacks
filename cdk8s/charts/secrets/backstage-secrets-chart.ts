@@ -119,8 +119,8 @@ export class BackstageSecretsChart extends Chart {
             data: {
               // Core Backstage URLs
               'BACKSTAGE_FRONTEND_URL': `https://${baseHost}${portSuffix}/backstage`,
-              // PostgreSQL
-              'POSTGRES_HOST': 'postgresql.backstage.svc.cluster.local',
+              // PostgreSQL - use namespace for service discovery
+              'POSTGRES_HOST': `postgresql.${namespace}.svc.cluster.local`,
               'POSTGRES_PORT': '5432',
               'POSTGRES_DB': 'backstage',
               'POSTGRES_USER': 'backstage',

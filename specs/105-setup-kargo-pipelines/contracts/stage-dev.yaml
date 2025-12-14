@@ -1,0 +1,51 @@
+# Stage: backstage-dev (Outer Loop - First Stage)
+# Purpose: Development deployment in KIND cluster with CI-verified images
+# Source: Direct from backstage-ghcr warehouse
+# Promotion: Automatic (via ProjectConfig policy)
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: backstage-dev
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '30'
+  labels:
+    app.kubernetes.io/name: backstage-dev-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: stage
+    kargo.akuity.io/loop: outer
+spec:
+  # Where Freight comes from
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage-ghcr
+      sources:
+        # Get Freight directly from the warehouse
+        direct: true
+
+  # How to promote Freight into this stage
+  promotionTemplate:
+    spec:
+      vars:
+        - name: registry
+          value: ghcr.io/pittampalliorg
+        - name: appName
+          value: backstage-dev
+        - name: argocdNamespace
+          value: argocd
+
+      steps:
+        # Step 1: Update ArgoCD Application with new image
+        - uses: argocd-update
+          as: update-argocd-app
+          config:
+            apps:
+              - name: backstage-dev
+                namespace: argocd
+                sources:
+                  - repoURL: cnoe://backstage/manifests
+                    images:
+                      # GHCR image reference
+                      - image: ghcr.io/pittampalliorg/backstage

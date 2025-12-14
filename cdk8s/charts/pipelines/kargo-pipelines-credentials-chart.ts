@@ -118,5 +118,44 @@ export class KargoPipelinesCredentialsChart extends Chart {
       'app.kubernetes.io/component': 'credentials'
     }));
     gitCreds.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': '-15' }));
+
+    // Create Git credentials for Kargo to push to Gitea repositories
+    // This uses regex matching to handle all giteaAdmin repositories
+    const giteaGitCreds = createEnvExternalSecret(this, 'kargo-gitea-git-credentials-external', {
+      externalName: 'kargo-gitea-git-credentials-external',
+      name: 'kargo-gitea-git-credentials',
+      namespace,
+      refreshInterval: '5m',
+      secretStoreRef: { name: 'gitea', kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE },
+      creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+      deletionPolicy: ExternalSecretSpecTargetDeletionPolicy.RETAIN,
+      engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
+      mergePolicy: ExternalSecretSpecTargetTemplateMergePolicy.REPLACE,
+      templateType: 'Opaque',
+      templateMetadata: {
+        labels: {
+          'app.kubernetes.io/name': 'kargo-gitea-git-credentials',
+          'app.kubernetes.io/part-of': 'kargo-pipelines',
+          'kargo.akuity.io/cred-type': 'git'
+        }
+      },
+      templateData: {
+        // Use regex to match all giteaAdmin repositories
+        repoURL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin/.*',
+        repoURLIsRegex: 'true',
+        username: '{{ .username }}',
+        password: '{{ .token }}'
+      },
+      mappings: [
+        { key: 'username', remoteRef: { key: 'gitea-credential', property: 'username' } },
+        { key: 'token', remoteRef: { key: 'gitea-credential', property: 'token' } },
+      ],
+    });
+    giteaGitCreds.addJsonPatch(JsonPatch.add('/metadata/labels', {
+      'app.kubernetes.io/name': 'kargo-gitea-git-credentials',
+      'app.kubernetes.io/part-of': 'kargo-pipelines',
+      'app.kubernetes.io/component': 'credentials'
+    }));
+    giteaGitCreds.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': '-15' }));
   }
 }
