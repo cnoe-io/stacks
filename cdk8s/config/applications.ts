@@ -651,6 +651,140 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
+  // =========================================================================
+  // Backstage Local Dev - Inner Loop (Kargo Pipeline Target)
+  // This is a separate deployment for rapid iteration with Gitea images
+  // =========================================================================
+  {
+    name: 'backstage-local-dev',
+    namespace: 'backstage-local-dev',
+    clusterType: 'kind',  // Only for KIND cluster (inner loop)
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-local-dev',
+        // Use the same image as production - Kargo will update the tag
+        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage:dev-latest',
+        ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '25',  // After main backstage deployment
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-local-dev' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-local-dev'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-local-dev',
+        'kargo.akuity.io/loop': 'inner'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Dev Secrets - Outer Loop environment secrets
+  {
+    name: 'backstage-dev-secrets',
+    namespace: 'backstage-dev',
+    clusterType: 'kind',
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage-dev',
+        baseHost: 'cnoe.localtest.me',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-dev-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  // Backstage Dev - Outer Loop (Kargo Pipeline Target)
+  // This is a separate deployment for CI-built GHCR images
+  {
+    name: 'backstage-dev',
+    namespace: 'backstage-dev',
+    clusterType: 'kind',  // Deploy to KIND for outer loop dev stage
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-dev',
+        // Use GHCR image - Kargo will update the tag
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.0.0',
+        ingressHosts: ['backstage-dev.cnoe.localtest.me'],
+      }
+    },
+    argocd: {
+      syncWave: '25',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-dev' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-dev'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-dev',
+        'kargo.akuity.io/loop': 'outer'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Staging - Outer Loop (Kargo Pipeline Target for Talos)
+  // Manual promotion from dev stage to staging (Talos cluster)
+  {
+    name: 'backstage-staging',
+    namespace: 'backstage-staging',
+    clusterType: 'talos',  // Staging deploys to Talos cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-staging',
+        // Use GHCR image - Kargo will update the tag
+        image: 'ghcr.io/pittampalliorg/backstage:v1.0.0',
+        ingressHosts: ['backstage-staging.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-staging-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        },
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '25',
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-staging' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-staging'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-staging',
+        'kargo.akuity.io/loop': 'outer'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
   // Backstage Templates (Catalog entities for Backstage software templates)
   // This references existing entities directory, not synthesized manifests
   {
@@ -827,6 +961,50 @@ export const applicationConfigs: ApplicationConfig[] = [
           maxDuration: '3m'
         }
       })
+    }
+  },
+  // Kargo Backstage Pipeline - Progressive delivery for Backstage images
+  // Inner Loop: Gitea → local-dev (rapid iteration)
+  // Outer Loop: GHCR → dev → staging → production (CI-verified)
+  {
+    name: 'kargo-backstage-pipeline',
+    namespace: 'kargo-pipelines',
+    chart: {
+      type: 'KargoBackstagePipelineChart',
+      props: {
+        enableInnerLoop: true,
+        enableOuterLoop: true,
+      }
+    },
+    dependencies: {
+      kargoPipelinesProject: {
+        type: 'KargoPipelinesProjectChart'
+      }
+    },
+    argocd: {
+      syncWave: '77',  // After project creation and credentials
+      labels: {
+        'app.kubernetes.io/component': 'pipeline',
+        'app.kubernetes.io/part-of': 'kargo-pipelines',
+        'app.kubernetes.io/name': 'kargo-backstage-pipeline'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,           // Don't delete Freight
+          selfHeal: false         // Don't auto-revert manual changes
+        },
+        syncOptions: [
+          'CreateNamespace=false',        // Namespace already exists
+          'ApplyOutOfSyncOnly=true',      // Only sync changed resources
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true' // Skip dry-run for Kargo CRs
+        ]
+      },
+      ignoreDifferences: [
+        // Ignore status fields managed by Kargo controller
+        { group: 'kargo.akuity.io', kind: 'Warehouse', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'Stage', jsonPointers: ['/status'] }
+      ]
     }
   },
   {

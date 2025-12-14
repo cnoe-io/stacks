@@ -1,0 +1,56 @@
+# Warehouse: backstage-ghcr (Outer Loop)
+# Purpose: Monitors GitHub Container Registry for CI-built Backstage images
+# Trigger: Webhook from GitHub or polling every 5 minutes
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: backstage-ghcr
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '20'
+  labels:
+    app.kubernetes.io/name: backstage-ghcr-warehouse
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: warehouse
+    kargo.akuity.io/loop: outer
+spec:
+  # Automatically create Freight when new images are discovered
+  freightCreationPolicy: Automatic
+
+  # Polling interval (backup for webhooks)
+  interval: 5m0s
+
+  subscriptions:
+    - image:
+        # GHCR registry URL (no tag)
+        repoURL: ghcr.io/pittampalliorg/backstage
+
+        # SemVer strategy for versioned releases
+        imageSelectionStrategy: SemVer
+
+        # Accept any version >= 1.0.0
+        constraint: ">=1.0.0"
+
+        # Only consider tags matching semantic version pattern
+        # Examples: v1.0.0, v1.2.3, 1.0.0
+        allowTags: "^v?\\d+\\.\\d+\\.\\d+$"
+
+        # Ignore non-release tags
+        ignoreTags:
+          - latest
+          - main
+          - develop
+          - nightly
+
+        # Examine more tags for release tracking
+        discoveryLimit: 30
+
+        # GHCR has valid TLS certificates
+        insecureSkipTLSVerify: false
+
+        # Require full X.Y.Z semantic versions
+        strictSemvers: true
+
+        # Target linux/amd64 images only
+        platform: linux/amd64

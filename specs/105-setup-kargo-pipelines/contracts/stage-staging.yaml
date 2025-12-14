@@ -1,0 +1,58 @@
+# Stage: backstage-staging (Outer Loop - Second Stage)
+# Purpose: Staging deployment on Talos cluster
+# Source: Verified Freight from backstage-dev stage
+# Promotion: Manual (via ProjectConfig policy)
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: backstage-staging
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '30'
+  labels:
+    app.kubernetes.io/name: backstage-staging-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: stage
+    kargo.akuity.io/loop: outer
+spec:
+  # Where Freight comes from
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage-ghcr
+      sources:
+        # Get Freight from the dev stage (not directly from warehouse)
+        stages:
+          - backstage-dev
+        # Optional: Require Freight to have been in dev for some time
+        # requiredSoakTime: 24h
+
+  # How to promote Freight into this stage
+  promotionTemplate:
+    spec:
+      vars:
+        - name: registry
+          value: ghcr.io/pittampalliorg
+        - name: appName
+          value: backstage-staging
+        - name: argocdNamespace
+          value: argocd
+        # Talos cluster URL (managed by ArgoCD)
+        - name: clusterUrl
+          value: https://talos-cluster.example.com:6443
+
+      steps:
+        # Step 1: Update ArgoCD Application targeting Talos cluster
+        - uses: argocd-update
+          as: update-argocd-app
+          config:
+            apps:
+              - name: backstage-staging
+                namespace: argocd
+                sources:
+                  # Git repo for Talos-specific manifests
+                  - repoURL: https://github.com/PittampalliOrg/stacks.git
+                    path: deployment/environments/staging/backstage
+                    images:
+                      - image: ghcr.io/pittampalliorg/backstage

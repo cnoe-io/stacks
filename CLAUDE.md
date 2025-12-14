@@ -279,6 +279,64 @@ argocd-list-outofsync      # List out-of-sync applications
 **Authentication:** Automatic via `ARGOCD_AUTH_TOKEN` environment variable (set by cluster-menu.sh)
 **Documentation:** See `deployment/docs/ARGOCD_AUTOMATION.md` for details
 
+### Kargo Progressive Delivery Pipelines
+
+**Purpose**: Automated image promotion through environments using Kargo.
+
+```bash
+# Check Kargo resources
+kubectl get projects,projectconfigs -n kargo-pipelines
+kubectl get warehouses,stages -n kargo-pipelines
+kubectl get freights,promotions -n kargo-pipelines
+
+# View pipeline status
+kubectl get stages -n kargo-pipelines -o wide
+
+# Watch for new Freight (image versions)
+kubectl get freights -n kargo-pipelines -w
+
+# Filter by loop type
+kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=inner
+kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=outer
+
+# Manual promotion to staging
+kargo promote --project kargo-pipelines --stage backstage-staging --freight <freight-name>
+
+# View promotion history
+kubectl get promotions -n kargo-pipelines --selector stage=backstage-staging
+
+# Force warehouse refresh
+kubectl annotate warehouse backstage-gitea -n kargo-pipelines refresh=$(date +%s) --overwrite
+```
+
+**Key Files:**
+- Pipeline chart: `cdk8s/charts/pipelines/kargo-backstage-pipeline-chart.ts`
+- Pipeline factory: `cdk8s/charts/pipelines/kargo-pipeline-factory.ts`
+- Helpers: `cdk8s/lib/kargo-helpers.ts`
+- Project config: `cdk8s/charts/pipelines/kargo-pipelines-project-chart.ts`
+- Documentation: `specs/105-setup-kargo-pipelines/quickstart.md`
+
+**Pipeline Architecture:**
+- **Inner Loop**: Gitea → local-dev (auto-promote, <60s)
+- **Outer Loop**: GHCR → dev (auto) → staging (manual) → prod (manual)
+
+**Adding New Application Pipeline:**
+```typescript
+// In cdk8s/config/applications.ts
+{
+  name: 'kargo-myapp-pipeline',
+  namespace: 'kargo-pipelines',
+  chart: {
+    type: 'KargoPipelineFactoryChart',
+    props: {
+      appName: 'myapp',
+      enableInnerLoop: true,
+      enableOuterLoop: true,
+    }
+  }
+}
+```
+
 ### Testing
 
 ```bash
