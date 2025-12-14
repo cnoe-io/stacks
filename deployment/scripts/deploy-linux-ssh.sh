@@ -32,6 +32,22 @@ if [ -f "${STACKS_DIR}/.env-files/kind.env" ]; then
     source "${STACKS_DIR}/.env-files/kind.env"
 fi
 
+# Source cluster management functions for hostname detection
+CLUSTER_MENU_SCRIPT="${STACKS_DIR}/deployment/scripts/cluster-menu.sh"
+if [ -f "$CLUSTER_MENU_SCRIPT" ]; then
+    source "$CLUSTER_MENU_SCRIPT"
+fi
+
+# Detect cluster name from hostname
+CLUSTER_NAME="$(detect_cluster_name 2>/dev/null)"
+if [ -z "$CLUSTER_NAME" ]; then
+    echo -e "${RED}❌ Failed to detect cluster name from hostname${NC}"
+    echo -e "${YELLOW}   Set CLUSTER_HOST environment variable to override${NC}"
+    exit 1
+fi
+export CLUSTER_HOST="$CLUSTER_NAME"
+echo -e "${GREEN}Using cluster name: ${CLUSTER_NAME}${NC}"
+
 # Show help if requested
 if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
     echo -e "${BLUE}Usage: $0 [additional idpbuilder arguments]${NC}"
@@ -101,12 +117,11 @@ ensure_kind_ports_free() {
     done
 }
 
-mapfile -t EXISTING_CLUSTERS < <(kind get clusters 2>/dev/null || true)
-for cluster in "${EXISTING_CLUSTERS[@]}"; do
-    [ -n "$cluster" ] || continue
-    echo -e "${YELLOW}⚠️  Deleting existing cluster (${cluster})...${NC}"
-    idpbuilder delete || kind delete cluster --name "$cluster" || true
-done
+# Only delete the cluster matching our target name
+if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+    echo -e "${YELLOW}⚠️  Deleting existing cluster (${CLUSTER_NAME})...${NC}"
+    idpbuilder delete --name "${CLUSTER_NAME}" || kind delete cluster --name "${CLUSTER_NAME}" || true
+fi
 
 cleanup_kind_artifacts
 ensure_kind_ports_free
@@ -212,13 +227,14 @@ if [ -x "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" ]; then
     "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" || true
 fi
 
-idpbuilder create --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
+idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
 
-ACTUAL_CLUSTER=$(kind get clusters 2>/dev/null | tail -1)
-if [ -z "$ACTUAL_CLUSTER" ]; then
-    echo -e "${RED}❌ Kind cluster was not created successfully${NC}"
+# Verify cluster was created with expected name
+if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+    echo -e "${RED}❌ Kind cluster was not created with expected name: ${CLUSTER_NAME}${NC}"
     exit 1
 fi
+ACTUAL_CLUSTER="${CLUSTER_NAME}"
 HOST_CONTEXT="kind-${ACTUAL_CLUSTER}"
 
 # Step 5: Wait for cluster to be ready

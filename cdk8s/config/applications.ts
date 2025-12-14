@@ -6,6 +6,28 @@ import {
 } from '../lib/argocd-sync-builders';
 
 /**
+ * Cluster host detection for multi-host deployments.
+ * When CLUSTER_HOST is set, Tailscale service names include the hostname
+ * to prevent collisions between clusters on different hosts.
+ *
+ * Examples:
+ * - CLUSTER_HOST=thinkpad -> svc:argocd-thinkpad
+ * - CLUSTER_HOST=ryzen -> svc:argocd-ryzen
+ * - CLUSTER_HOST not set -> svc:argocd (backward compatible)
+ */
+const clusterHost = process.env.CLUSTER_HOST || '';
+const hostSuffix = clusterHost ? `-${clusterHost}` : '';
+
+/**
+ * Generate host-aware service name for Tailscale Services.
+ * @param baseName - Base service name (e.g., 'argocd')
+ * @returns Host-aware service name (e.g., 'argocd-thinkpad')
+ */
+function getTailscaleServiceName(baseName: string): string {
+  return `${baseName}${hostSuffix}`;
+}
+
+/**
  * IDPBuilder application configurations
  * Add new applications here to have them automatically synthesized
  */
@@ -996,7 +1018,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'K8sApiTailscaleServeChart',
       props: {
-        serviceName: 'k8s-api',
+        serviceName: getTailscaleServiceName('k8s-api'),
         authKeySecretName: 'tailscale-auth-key',
         tailnetName: 'tail286401',
         createStaticTokenSecret: true,
@@ -1095,7 +1117,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'argocd',  // Migrated from 'argocd2' - uses svc:argocd
+        serviceName: getTailscaleServiceName('argocd'),  // Host-aware: svc:argocd-<host>
         backendHost: 'argocd-server.argocd.svc.cluster.local',
         backendPort: 443,
         backendInsecure: true,
@@ -1124,7 +1146,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'langfuse',  // Migrated from 'langfuse2' - uses svc:langfuse
+        serviceName: getTailscaleServiceName('langfuse'),  // Host-aware: svc:langfuse-<host>
         backendHost: 'langfuse.observability.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -1153,7 +1175,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'gitea',  // Migrated from 'gitea2' - uses svc:gitea
+        serviceName: getTailscaleServiceName('gitea'),  // Host-aware: svc:gitea-<host>
         backendHost: 'my-gitea-http.gitea.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -1182,7 +1204,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'kagent',  // Migrated from 'kagent2' - uses svc:kagent
+        serviceName: getTailscaleServiceName('kagent'),  // Host-aware: svc:kagent-<host>
         backendHost: 'kagent-ui.kagent.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
@@ -1211,7 +1233,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'kargo',  // Migrated from 'kargo2' - uses svc:kargo
+        serviceName: getTailscaleServiceName('kargo'),  // Host-aware: svc:kargo-<host>
         backendHost: 'kargo-api.kargo.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -1240,7 +1262,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'headlamp',  // Migrated from 'headlamp2' - uses svc:headlamp
+        serviceName: getTailscaleServiceName('headlamp'),  // Host-aware: svc:headlamp-<host>
         backendHost: 'headlamp.headlamp.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -1269,7 +1291,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'keycloak',  // Migrated from 'keycloak2' - uses svc:keycloak
+        serviceName: getTailscaleServiceName('keycloak'),  // Host-aware: svc:keycloak-<host>
         backendHost: 'keycloak.keycloak.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
@@ -1298,7 +1320,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'backstage',  // Uses svc:backstage
+        serviceName: getTailscaleServiceName('backstage'),  // Host-aware: svc:backstage-<host>
         backendHost: 'backstage.backstage.svc.cluster.local',
         backendPort: 7007,
         backendInsecure: false,

@@ -61,8 +61,51 @@ load-1password-token() {
   return 1
 }
 
+# Known hosts that can run Kind clusters
+KNOWN_HOSTS=(thinkpad ryzen hetzner)
+
+# Detect current hostname with validation against known hosts
+detect_hostname() {
+  # Allow override via environment variable (for CI/testing)
+  local detected_host="${CLUSTER_HOST:-$(hostname)}"
+
+  # Validate against known hosts
+  local is_known=false
+  for known in "${KNOWN_HOSTS[@]}"; do
+    if [[ "$detected_host" == "$known" ]]; then
+      is_known=true
+      break
+    fi
+  done
+
+  if [ "$is_known" = false ]; then
+    echo "❌ Unknown host: $detected_host" >&2
+    echo "   Supported hosts: ${KNOWN_HOSTS[*]}" >&2
+    echo "" >&2
+    echo "For CI or custom environments, set:" >&2
+    echo "  export CLUSTER_HOST=<hostname>" >&2
+    return 1
+  fi
+
+  echo "$detected_host"
+}
+
 # Azure authentication helper functions
 detect_host_context() {
+  # Detect hostname first
+  local hostname
+  hostname="$(detect_hostname 2>/dev/null)"
+
+  # If we have a hostname, look for matching context
+  if [ -n "$hostname" ]; then
+    local expected_ctx="kind-${hostname}"
+    if kubectl config get-contexts -o name 2>/dev/null | grep -q "^${expected_ctx}$"; then
+      echo "$expected_ctx"
+      return 0
+    fi
+  fi
+
+  # Fallback: Find any kind-* context (backward compatibility)
   local ctx
   ctx=$(kubectl config get-contexts -o name 2>/dev/null | grep '^kind-' | tail -1)
   if [ -z "$ctx" ]; then
@@ -71,15 +114,53 @@ detect_host_context() {
   echo "$ctx"
 }
 
-# Derive the Kind cluster name from the host context (e.g., kind-localdev -> localdev)
+# Derive the Kind cluster name from hostname
 detect_cluster_name() {
-  local ctx="$(detect_host_context)"
-  if [[ "$ctx" == kind-* ]]; then
-    echo "${ctx#kind-}"
-  elif [ -n "$ctx" ]; then
-    echo "$ctx"
-  else
-    echo "localdev"
+  local hostname
+  hostname="$(detect_hostname)" || return 1
+  echo "$hostname"
+}
+
+# Check for legacy 'localdev' cluster and offer migration
+check_legacy_cluster() {
+  # Check if old 'localdev' cluster exists
+  if kind get clusters 2>/dev/null | grep -q "^localdev$"; then
+    local hostname
+    hostname="$(detect_hostname 2>/dev/null)"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "⚠️  LEGACY CLUSTER DETECTED"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Found existing 'localdev' cluster. New deployment will use hostname-based naming."
+    echo ""
+    echo "Expected cluster name: ${hostname}"
+    echo "Current cluster:       localdev"
+    echo ""
+    echo "Migration options:"
+    echo "  1. Delete old cluster: idpbuilder delete --name localdev"
+    echo "  2. Keep both clusters: They can coexist with different contexts"
+    echo ""
+    echo -n "Delete 'localdev' cluster and continue? [y/N] "
+    read -r -t 10 -n 1 response || response="n"
+    echo ""
+
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      echo "🗑️  Deleting localdev cluster..."
+      idpbuilder delete --name localdev || kind delete cluster --name localdev
+      echo "✅ Legacy cluster deleted"
+      echo ""
+    else
+      echo ""
+      echo "Keeping both clusters. Use kubectl context to switch:"
+      echo "  kubectl config use-context kind-localdev"
+      echo "  kubectl config use-context kind-${hostname}"
+      echo ""
+    fi
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
   fi
 }
 
@@ -206,6 +287,10 @@ cluster-deploy() {
   # Use kind.env for KIND clusters (renamed from wi.env in feature 106)
   [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
 
+  # Export hostname for CDK8s synthesis (host-aware Tailscale names)
+  export CLUSTER_HOST="$(detect_hostname)" || { cd "$ORIG_DIR"; return 1; }
+  echo "🏷️  Detected host: ${CLUSTER_HOST}"
+
   # Load 1Password service account token for automated secret access
   if command -v op &>/dev/null; then
     load-1password-token && echo "✅ 1Password service account token loaded"
@@ -223,6 +308,9 @@ cluster-deploy() {
   # Ensure CDK8s dependencies and imports are ready
   echo "🔍 Checking CDK8s dependencies..."
   ensure-cdk8s-dependencies || { cd "$ORIG_DIR"; return 1; }
+
+  # Check for legacy cluster and handle migration
+  check_legacy_cluster || { cd "$ORIG_DIR"; return 1; }
 
   echo "🔨 Synthesizing CDK8s manifests..."
   cd "$CDK8S_DIR" && npm run synth || { cd "$ORIG_DIR"; return 1; }
@@ -243,7 +331,13 @@ cluster-deploy() {
   else
     # Fallback to standard idpbuilder with post-setup JWKS sync
     command -v idpbuilder >/dev/null 2>&1 || { echo "❌ idpbuilder not found. Please install it first."; cd "$ORIG_DIR"; return 1; }
+
+    # Use hostname as cluster name
+    local CLUSTER_NAME="$(detect_cluster_name)"
+    echo "🏷️  Creating cluster: ${CLUSTER_NAME}"
+
     idpbuilder create \
+      --name "${CLUSTER_NAME}" \
       -p "$CDK8S_DIR/dist/" \
       -p "$REF_DIR/" \
       --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
@@ -413,8 +507,15 @@ cluster-recreate() {
     echo ""
   fi
 
-  echo "🗑️  Deleting existing cluster..."
-  idpbuilder delete
+  # Detect cluster name from hostname
+  local CLUSTER_NAME="$(detect_cluster_name)"
+  if [ $? -ne 0 ] || [ -z "$CLUSTER_NAME" ]; then
+    echo "❌ Failed to detect cluster name"
+    return 1
+  fi
+
+  echo "🗑️  Deleting cluster: ${CLUSTER_NAME}..."
+  idpbuilder delete --name "${CLUSTER_NAME}"
 
   # Clear cached ArgoCD token since cluster is being recreated
   unset ARGOCD_AUTH_TOKEN
@@ -455,6 +556,11 @@ cluster-update-gum() {
     gum style --foreground 45 "📋 Loading environment from kind.env..."
     source "$STACKS_DIR/.env-files/kind.env"
   }
+
+  # Export hostname for CDK8s synthesis (host-aware Tailscale names)
+  export CLUSTER_HOST="$(detect_hostname)" || return 1
+  local CLUSTER_NAME="$CLUSTER_HOST"
+  gum style --foreground 45 "🏷️  Detected host: ${CLUSTER_HOST}"
 
   if command -v op &>/dev/null; then
     if load-1password-token; then
@@ -503,8 +609,8 @@ cluster-update-gum() {
   gum style --foreground 82 "✅ Synthesis complete"
 
   # Step 2: Update cluster with spinner
-  gum spin --spinner dot --title "🚀 Updating cluster (idempotent)..." -- \
-    bash -lc "cd '$REF_DIR' && idpbuilder create -p '$CDK8S_DIR/dist/' -p '$REF_DIR/' --kind-config '$DEPLOY_DIR/config/kind-config-linux-ssh.yaml' --dev-password >/dev/null 2>&1"
+  gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
+    bash -lc "cd '$REF_DIR' && idpbuilder create --name '$CLUSTER_NAME' -p '$CDK8S_DIR/dist/' -p '$REF_DIR/' --kind-config '$DEPLOY_DIR/config/kind-config-linux-ssh.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -564,6 +670,11 @@ cluster-update() {
     echo "📋 Loading environment from kind.env..."
     source "$STACKS_DIR/.env-files/kind.env"
   }
+
+  # Export hostname for CDK8s synthesis (host-aware Tailscale names)
+  export CLUSTER_HOST="$(detect_hostname)" || return 1
+  local CLUSTER_NAME="$CLUSTER_HOST"
+  echo "🏷️  Detected host: ${CLUSTER_HOST}"
 
   # Load 1Password service account token for automated secret access
   if command -v op &>/dev/null; then
@@ -667,12 +778,13 @@ cluster-update() {
   fi
 
   # Step 2: Update cluster using idpbuilder
-  echo "🚀 Updating cluster (idempotent)..."
+  echo "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..."
   echo ""
 
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   cd "$REF_DIR"
   idpbuilder create \
+    --name "${CLUSTER_NAME}" \
     -p "$CDK8S_DIR/dist/" \
     -p "$REF_DIR/" \
     --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
