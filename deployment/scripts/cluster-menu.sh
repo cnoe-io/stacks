@@ -706,16 +706,19 @@ cluster-update() {
   # Step 1: Synthesize CDK8s manifests (with environment variables)
   echo "🔨 Synthesizing CDK8s manifests..."
 
-  # Initialize git in dist if not already present (for change tracking)
-  if [ ! -d "$CDK8S_DIR/dist/.git" ]; then
-    cd "$CDK8S_DIR/dist" && git init -q && git add -A && git commit -q -m "Initial commit" 2>/dev/null || true
-    cd "$ORIG_DIR"
-  fi
+  # Snapshot manifests pre-synthesis (no local git commits; idpbuilder publishes to Gitea)
+  local PRE_DIR
+  PRE_DIR="$(mktemp -d -t cluster-update-pre-XXXXXX)"
+  local POST_DIR
+  POST_DIR="$(mktemp -d -t cluster-update-post-XXXXXX)"
+  trap 'rm -rf "$PRE_DIR" "$POST_DIR" 2>/dev/null || true' RETURN
 
-  # Save current state of manifests for comparison
-  cd "$CDK8S_DIR/dist"
-  git add -A 2>/dev/null || true
-  git commit -q -m "Pre-synthesis state" 2>/dev/null || true
+  mkdir -p "$PRE_DIR/dist" "$POST_DIR/dist"
+  if command -v rsync &>/dev/null; then
+    rsync -a --delete --exclude '.git' "$CDK8S_DIR/dist/" "$PRE_DIR/dist/" 2>/dev/null || true
+  else
+    cp -a "$CDK8S_DIR/dist/." "$PRE_DIR/dist/" 2>/dev/null || true
+  fi
 
   # Run synthesis
   cd "$CDK8S_DIR"
@@ -725,13 +728,21 @@ cluster-update() {
     return 1
   }
 
-  # Check for changes and display them immediately
-  cd "$CDK8S_DIR/dist"
   local DIFF_FILE="/tmp/cluster-update-diff-$$.txt"
   local CHANGES=""
 
+  if command -v rsync &>/dev/null; then
+    rsync -a --delete --exclude '.git' "$CDK8S_DIR/dist/" "$POST_DIR/dist/" 2>/dev/null || true
+  else
+    cp -a "$CDK8S_DIR/dist/." "$POST_DIR/dist/" 2>/dev/null || true
+  fi
+
   # Capture the diff and show summary immediately
-  if git diff HEAD 2>/dev/null | head -1000 > "$DIFF_FILE" && [ -s "$DIFF_FILE" ]; then
+  # git diff --no-index returns exit code 1 when there are changes
+  (git diff --no-index --stat "$PRE_DIR/dist" "$POST_DIR/dist" > "${DIFF_FILE}.summary") 2>/dev/null || true
+  (git diff --no-index "$PRE_DIR/dist" "$POST_DIR/dist" > "$DIFF_FILE") 2>/dev/null || true
+
+  if [ -s "$DIFF_FILE" ]; then
     CHANGES="yes"
 
     echo ""
@@ -740,12 +751,7 @@ cluster-update() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     # Show summary immediately
-    git diff --stat HEAD | head -20
-
-    # Save full summary for later
-    echo "=== MANIFEST CHANGES SUMMARY ===" > "${DIFF_FILE}.summary"
-    git diff --stat HEAD >> "${DIFF_FILE}.summary" 2>/dev/null
-    echo "" >> "${DIFF_FILE}.summary"
+    head -20 "${DIFF_FILE}.summary" 2>/dev/null || true
 
     # Offer immediate diff viewing (non-watch mode only)
     if [[ "$NO_EXIT" != "--no-exit" ]]; then
@@ -767,14 +773,11 @@ cluster-update() {
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-    # Commit the changes
-    git add -A 2>/dev/null || true
-    git commit -q -m "Post-synthesis state" 2>/dev/null || true
   else
     echo ""
     echo "✅ No changes detected in manifests"
     echo ""
+    rm -f "$DIFF_FILE" "${DIFF_FILE}.summary" 2>/dev/null || true
   fi
 
   # Step 2: Update cluster using idpbuilder
