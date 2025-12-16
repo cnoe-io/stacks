@@ -17,12 +17,20 @@ export interface BackstageChartProps extends ChartProps {
   namespace?: string;
   // Backstage image (default: docker.io/vpittamp23/backstage:1.1.0)
   image?: string;
+  // Image pull secret name (default: ghcr-dockercfg). Set to null to omit.
+  imagePullSecretName?: string | null;
   // PostgreSQL image (default: docker.io/library/postgres:15.3-alpine3.18)
   postgresImage?: string;
   // PostgreSQL storage size (default: 500Mi)
   postgresStorageSize?: string;
   // Ingress hosts (default: ['localhost', 'cnoe.localtest.me'])
   ingressHosts?: string[];
+  // Base path for hosting Backstage behind an ingress (default: '/backstage')
+  // Note: Backstage is configured (via BACKSTAGE_FRONTEND_URL) to expect '/backstage' by default.
+  // This chart configures the ingress to rewrite '/backstage/*' -> '/*' for the service.
+  basePath?: string;
+  // Redirect requests to '/' -> basePath (default: true)
+  redirectRootToBasePath?: boolean;
   // TLS configuration for ingress
   tls?: {
     // Enable TLS (default: false)
@@ -65,9 +73,14 @@ export class BackstageChart extends Chart {
 
     const namespace = props.namespace ?? 'backstage';
     const backstageImage = props.image ?? 'docker.io/vpittamp23/backstage:1.1.0';
+    const imagePullSecretName = props.imagePullSecretName ?? 'ghcr-dockercfg';
     const postgresImage = props.postgresImage ?? 'docker.io/library/postgres:15.3-alpine3.18';
     const postgresStorageSize = props.postgresStorageSize ?? '500Mi';
     const ingressHosts = props.ingressHosts ?? ['localhost', 'cnoe.localtest.me'];
+    const basePathRaw = props.basePath ?? '/backstage';
+    const basePath = basePathRaw.startsWith('/') ? basePathRaw : `/${basePathRaw}`;
+    const basePathNoTrailingSlash = basePath.length > 1 && basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+    const redirectRootToBasePath = props.redirectRootToBasePath ?? true;
 
     const appName = 'backstage';
     const postgresAppName = 'postgresql';
@@ -429,11 +442,13 @@ proxy:
           },
           spec: {
             serviceAccountName: appName,
-            imagePullSecrets: [
-              {
-                name: 'ghcr-dockercfg',
-              },
-            ],
+            ...(imagePullSecretName && {
+              imagePullSecrets: [
+                {
+                  name: imagePullSecretName,
+                },
+              ],
+            }),
             containers: [
               {
                 name: appName,
@@ -495,11 +510,64 @@ proxy:
       ingressAnnotations['cert-manager.io/cluster-issuer'] = props.tls.clusterIssuer;
     }
 
+    // Backstage is configured to expect a basePath (default '/backstage').
+    // Rewrite '/backstage/*' -> '/*' so the service can run on root paths.
+    const backstageIngressPath = basePathNoTrailingSlash === '/'
+      ? '/'
+      : `${basePathNoTrailingSlash}(/|$)(.*)`;
+    const backstageIngressPathType = basePathNoTrailingSlash === '/'
+      ? 'Prefix'
+      : 'ImplementationSpecific';
+
+    if (basePathNoTrailingSlash !== '/') {
+      ingressAnnotations['nginx.ingress.kubernetes.io/use-regex'] = 'true';
+      ingressAnnotations['nginx.ingress.kubernetes.io/rewrite-target'] = '/$2';
+    }
+
     // Build TLS configuration if enabled
     const tlsConfig = props.tls?.enabled ? [{
       hosts: ingressHosts,
       secretName: props.tls.secretName ?? `${appName}-tls`,
     }] : undefined;
+
+    // Optional root redirect: '/' -> '/backstage'
+    // This avoids a blank page when Backstage is configured with a non-root baseUrl.
+    if (redirectRootToBasePath && basePathNoTrailingSlash !== '/') {
+      new k8s.KubeIngress(this, 'backstage-root-redirect-ingress', {
+        metadata: {
+          name: `${appName}-root-redirect`,
+          namespace,
+          annotations: {
+            'nginx.ingress.kubernetes.io/use-regex': 'true',
+            'nginx.ingress.kubernetes.io/permanent-redirect': basePathNoTrailingSlash,
+          },
+        },
+        spec: {
+          ingressClassName: 'nginx',
+          ...(tlsConfig && { tls: tlsConfig }),
+          rules: ingressHosts.map(host => ({
+            host,
+            http: {
+              paths: [
+                {
+                  // Match only the root path
+                  path: '/$',
+                  pathType: 'ImplementationSpecific',
+                  backend: {
+                    service: {
+                      name: appName,
+                      port: {
+                        name: 'http',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          })),
+        },
+      });
+    }
 
     new k8s.KubeIngress(this, 'backstage-ingress', {
       metadata: {
@@ -515,8 +583,8 @@ proxy:
           http: {
             paths: [
               {
-                path: '/',
-                pathType: 'Prefix',
+                path: backstageIngressPath,
+                pathType: backstageIngressPathType,
                 backend: {
                   service: {
                     name: appName,

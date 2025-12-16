@@ -19,6 +19,7 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface KagentSecretsChartProps extends ChartProps {
   /**
@@ -54,6 +55,8 @@ export class KagentSecretsChart extends Chart {
     const secretName = props.secretName || 'kagent-llm-providers';
     const clusterSecretStoreName = props.clusterSecretStoreName || 'azure-keyvault-store';
     const refreshInterval = props.refreshInterval || '1h';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret for LLM provider API keys
     new ExternalSecret(this, 'kagent-llm-providers', {

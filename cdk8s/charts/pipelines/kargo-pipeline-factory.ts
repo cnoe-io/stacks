@@ -46,7 +46,7 @@ export interface PipelineConfig {
   enableInnerLoop?: boolean;
   /** Gitea registry URL (default: gitea.cnoe.localtest.me:8443/giteaadmin) */
   giteaRegistry?: string;
-  /** Inner loop tag pattern (default: ^dev-[a-f0-9]{7}$) */
+  /** Inner loop tag pattern (default: ^dev-[0-9]{8}-[0-9]{6}(-[a-f0-9]{7})?$) */
   innerLoopTagPattern?: string;
   /** Inner loop tags to ignore */
   innerLoopIgnoreTags?: string[];

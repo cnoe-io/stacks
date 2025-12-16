@@ -664,13 +664,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'backstage-local-dev',
         // Use the same image as production - Kargo will update the tag
-        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage:dev-latest',
+        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest',
+        imagePullSecretName: 'gitea-dockercfg',
         ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
-      }
-    },
-    dependencies: {
-      backstageSecrets: {
-        type: 'BackstageSecretsChart'
       }
     },
     argocd: {
@@ -687,6 +683,30 @@ export const applicationConfigs: ApplicationConfig[] = [
         'kargo.akuity.io/loop': 'inner'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Local Dev Secrets - Inner Loop environment secrets (KIND)
+  {
+    name: 'backstage-local-dev-secrets',
+    namespace: 'backstage-local-dev',
+    clusterType: 'kind',
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage-local-dev',
+        baseHost: 'cnoe.localtest.me',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-local-dev-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
   // Backstage Dev Secrets - Outer Loop environment secrets
@@ -724,7 +744,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'backstage-dev',
         // Use GHCR image - Kargo will update the tag
-        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.0.0',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.1.0',
         ingressHosts: ['backstage-dev.cnoe.localtest.me'],
       }
     },
@@ -974,6 +994,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         enableInnerLoop: true,
         enableOuterLoop: true,
+        enableStagingAndProdStages: false,
       }
     },
     dependencies: {

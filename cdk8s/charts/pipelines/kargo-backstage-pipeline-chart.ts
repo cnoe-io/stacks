@@ -15,8 +15,10 @@ import { WarehouseSpecSubscriptionsImageImageSelectionStrategy } from '../../imp
 export interface KargoBackstagePipelineChartProps extends ChartProps {
   /** Enable inner loop pipeline (Gitea → local-dev) */
   enableInnerLoop?: boolean;
-  /** Enable outer loop pipeline (GHCR → dev → staging → production) */
+  /** Enable outer loop pipeline (GHCR → dev) */
   enableOuterLoop?: boolean;
+  /** Optionally include staging/prod placeholder stages */
+  enableStagingAndProdStages?: boolean;
   /** Gitea registry URL (default: gitea.cnoe.localtest.me:8443/giteaadmin) */
   giteaRegistry?: string;
   /** GHCR registry URL (default: ghcr.io/pittampalliorg) */
@@ -37,14 +39,18 @@ export class KargoBackstagePipelineChart extends Chart {
     const {
       enableInnerLoop = true,
       enableOuterLoop = true,
+      enableStagingAndProdStages = false,
       giteaRegistry = REGISTRY.GITEA,
       ghcrRegistry = REGISTRY.GHCR,
     } = props;
 
     const namespace = 'kargo-pipelines';
     const appName = 'backstage';
+    // Local (Gitea) image is published as 'backstage-cnoe' (different from app name)
+    const giteaImageName = 'backstage-cnoe';
     // GHCR image is published as 'backstage-cnoe' (different from app name)
     const ghcrImageName = 'backstage-cnoe';
+    const clusterHost = process.env.CLUSTER_HOST || 'localdev';
 
     // =========================================================================
     // Inner Loop: Gitea → local-dev
@@ -61,7 +67,7 @@ export class KargoBackstagePipelineChart extends Chart {
         interval: '5m0s',
         subscriptions: [
           {
-            repoUrl: `${giteaRegistry}/${appName}`,
+            repoUrl: `${giteaRegistry}/${giteaImageName}`,
             imageSelectionStrategy: WarehouseSpecSubscriptionsImageImageSelectionStrategy.LEXICAL,
             allowTags: TAG_PATTERNS.INNER_LOOP,
             ignoreTags: IGNORE_TAGS.INNER_LOOP,
@@ -86,8 +92,8 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage-local-dev',
           namespace: 'argocd',
-          repoUrl: `${giteaBaseUrlInner}/idpbuilder-localdev-backstage-local-dev-manifests.git`,
-          imageRef: `${giteaRegistry}/${appName}`,
+          repoUrl: `${giteaBaseUrlInner}/idpbuilder-${clusterHost}-backstage-local-dev-manifests.git`,
+          imageRef: `${giteaRegistry}/${giteaImageName}`,
         },
         customVars: [
           { name: 'registry', value: giteaRegistry },
@@ -137,7 +143,7 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage-dev',
           namespace: 'argocd',
-          repoUrl: `${giteaBaseUrl}/idpbuilder-localdev-backstage-dev-manifests.git`,
+          repoUrl: `${giteaBaseUrl}/idpbuilder-${clusterHost}-backstage-dev-manifests.git`,
           imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         },
         customVars: [
@@ -145,53 +151,55 @@ export class KargoBackstagePipelineChart extends Chart {
         ],
       });
 
-      // Stage: backstage-staging
-      // Manual promotion from dev stage to staging (Talos cluster)
-      createStage(this, 'backstage-staging-stage', {
-        name: 'backstage-staging',
-        namespace,
-        warehouseName: 'backstage-ghcr',
-        directFromWarehouse: false,
-        upstreamStages: ['backstage-dev'],
-        // Optional: requiredSoakTime: '24h',
-        loopType: 'outer',
-        syncWave: '30',
-        argocdConfig: {
-          appName: 'backstage-staging',
-          namespace: 'argocd',
-          // Git repo for staging-specific manifests
-          repoUrl: 'https://github.com/PittampalliOrg/stacks.git',
-          imageRef: `${ghcrRegistry}/${ghcrImageName}`,
-        },
-        customVars: [
-          { name: 'registry', value: ghcrRegistry },
-          { name: 'clusterUrl', value: 'https://talos-cluster.example.com:6443' },
-        ],
-      });
+      if (enableStagingAndProdStages) {
+        // Stage: backstage-staging
+        // Manual promotion from dev stage to staging (Talos cluster)
+        createStage(this, 'backstage-staging-stage', {
+          name: 'backstage-staging',
+          namespace,
+          warehouseName: 'backstage-ghcr',
+          directFromWarehouse: false,
+          upstreamStages: ['backstage-dev'],
+          // Optional: requiredSoakTime: '24h',
+          loopType: 'outer',
+          syncWave: '30',
+          argocdConfig: {
+            appName: 'backstage-staging',
+            namespace: 'argocd',
+            // Git repo for staging-specific manifests
+            repoUrl: 'https://github.com/PittampalliOrg/stacks.git',
+            imageRef: `${ghcrRegistry}/${ghcrImageName}`,
+          },
+          customVars: [
+            { name: 'registry', value: ghcrRegistry },
+            { name: 'clusterUrl', value: 'https://talos-cluster.example.com:6443' },
+          ],
+        });
 
-      // Stage: backstage-prod (Placeholder)
-      // Manual promotion from staging with 48h soak time
-      createStage(this, 'backstage-prod-stage', {
-        name: 'backstage-prod',
-        namespace,
-        warehouseName: 'backstage-ghcr',
-        directFromWarehouse: false,
-        upstreamStages: ['backstage-staging'],
-        requiredSoakTime: '48h',
-        loopType: 'outer',
-        syncWave: '30',
-        isPlaceholder: true, // Mark as placeholder until production cluster is available
-        argocdConfig: {
-          appName: 'backstage-prod',
-          namespace: 'argocd',
-          repoUrl: 'https://github.com/PittampalliOrg/stacks.git',
-          imageRef: `${ghcrRegistry}/${ghcrImageName}`,
-        },
-        customVars: [
-          { name: 'registry', value: ghcrRegistry },
-          { name: 'clusterUrl', value: 'https://production-cluster.example.com:6443' },
-        ],
-      });
+        // Stage: backstage-prod (Placeholder)
+        // Manual promotion from staging with 48h soak time
+        createStage(this, 'backstage-prod-stage', {
+          name: 'backstage-prod',
+          namespace,
+          warehouseName: 'backstage-ghcr',
+          directFromWarehouse: false,
+          upstreamStages: ['backstage-staging'],
+          requiredSoakTime: '48h',
+          loopType: 'outer',
+          syncWave: '30',
+          isPlaceholder: true, // Mark as placeholder until production cluster is available
+          argocdConfig: {
+            appName: 'backstage-prod',
+            namespace: 'argocd',
+            repoUrl: 'https://github.com/PittampalliOrg/stacks.git',
+            imageRef: `${ghcrRegistry}/${ghcrImageName}`,
+          },
+          customVars: [
+            { name: 'registry', value: ghcrRegistry },
+            { name: 'clusterUrl', value: 'https://production-cluster.example.com:6443' },
+          ],
+        });
+      }
     }
   }
 }

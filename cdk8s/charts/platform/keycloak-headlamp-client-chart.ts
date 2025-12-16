@@ -9,6 +9,7 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 /**
  * Creates External Secret for Headlamp Keycloak client credentials
@@ -19,6 +20,8 @@ export class KeycloakHeadlampClientChart extends Chart {
     super(scope, id, props);
 
     const namespace = 'keycloak';
+
+    addExternalSecretsWebhookGate(this, namespace);
     
     // Create an ExternalSecret that fetches the client credentials from Azure Key Vault
     const headlampOidc = createEnvExternalSecret(this, 'headlamp-client-external-secret', {

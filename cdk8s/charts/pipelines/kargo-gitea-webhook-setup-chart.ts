@@ -10,12 +10,15 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export class KargoGiteaWebhookSetupChart extends Chart {
   constructor(scope: Construct, id: string, props: ChartProps = {}) {
     super(scope, id, props);
 
     const namespace = 'kargo-pipelines';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret for Gitea API credentials for webhook setup
     // This pulls the current token from the Gitea namespace, ensuring it's always fresh

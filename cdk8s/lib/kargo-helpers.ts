@@ -299,8 +299,8 @@ export const REGISTRY = {
  * Default image tag patterns
  */
 export const TAG_PATTERNS = {
-  /** Inner loop dev builds: dev-<7-char-hex> */
-  INNER_LOOP: '^dev-[a-f0-9]{7}$',
+  /** Inner loop dev builds: dev-YYYYMMDD-HHMMSS[-<sha7>] */
+  INNER_LOOP: '^dev-[0-9]{8}-[0-9]{6}(-[a-f0-9]{7})?$',
   /** Outer loop semver: v1.2.3 or 1.2.3 */
   OUTER_LOOP_SEMVER: '^v?\\d+\\.\\d+\\.\\d+$',
 };

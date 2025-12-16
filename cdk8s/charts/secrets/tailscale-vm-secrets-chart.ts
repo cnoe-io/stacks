@@ -14,6 +14,7 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface TailscaleVmSecretsChartProps extends ChartProps {
   /**
@@ -37,6 +38,8 @@ export class TailscaleVmSecretsChart extends Chart {
       namespace = 'default',
       syncWave = '0',
     } = props;
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // ExternalSecret for Tailscale VM Auth Key
     new ExternalSecret(this, 'tailscale-vm-auth', {

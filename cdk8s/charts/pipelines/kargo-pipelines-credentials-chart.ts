@@ -10,6 +10,8 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
+import { REGISTRY } from '../../lib/kargo-helpers';
 
 /**
  * Kargo Pipelines Credentials Chart
@@ -20,6 +22,8 @@ export class KargoPipelinesCredentialsChart extends Chart {
     super(scope, id, props);
 
     const namespace = 'kargo-pipelines';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret for GHCR NextJS (chat) credentials
     const ghcrChat = createEnvExternalSecret(this, 'kargo-ghcr-chat-credentials-external', {
@@ -157,5 +161,44 @@ export class KargoPipelinesCredentialsChart extends Chart {
       'app.kubernetes.io/component': 'credentials'
     }));
     giteaGitCreds.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': '-15' }));
+
+    // Create image credentials for Kargo to discover/pull from Gitea OCI registry
+    // Required for warehouses that subscribe to gitea.cnoe.localtest.me:8443/giteaadmin/*
+    const giteaImageRepoUrl = `${REGISTRY.GITEA}/backstage-cnoe`;
+    const giteaImageCreds = createEnvExternalSecret(this, 'kargo-gitea-image-credentials-external', {
+      externalName: 'kargo-gitea-image-credentials-external',
+      name: 'kargo-gitea-image-credentials',
+      namespace,
+      refreshInterval: '5m',
+      secretStoreRef: { name: 'gitea', kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE },
+      creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+      deletionPolicy: ExternalSecretSpecTargetDeletionPolicy.RETAIN,
+      engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
+      mergePolicy: ExternalSecretSpecTargetTemplateMergePolicy.REPLACE,
+      templateType: 'Opaque',
+      templateMetadata: {
+        labels: {
+          'app.kubernetes.io/name': 'kargo-gitea-image-credentials',
+          'app.kubernetes.io/part-of': 'kargo-pipelines',
+          'kargo.akuity.io/cred-type': 'image'
+        }
+      },
+      templateData: {
+        username: '{{ .username }}',
+        password: '{{ .token }}',
+        pat: '{{ .token }}',
+        repoURL: giteaImageRepoUrl,
+      },
+      mappings: [
+        { key: 'username', remoteRef: { key: 'gitea-credential', property: 'username' } },
+        { key: 'token', remoteRef: { key: 'gitea-credential', property: 'token' } },
+      ],
+    });
+    giteaImageCreds.addJsonPatch(JsonPatch.add('/metadata/labels', {
+      'app.kubernetes.io/name': 'kargo-gitea-image-credentials',
+      'app.kubernetes.io/part-of': 'kargo-pipelines',
+      'app.kubernetes.io/component': 'credentials'
+    }));
+    giteaImageCreds.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': '-15' }));
   }
 }

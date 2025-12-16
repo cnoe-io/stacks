@@ -250,6 +250,8 @@ export class KeycloakConfigChart extends Chart {
           baseUrl: '',
           redirectUris: [
             `${baseUrl}/api/auth/keycloak-oidc/handler/frame`,
+            // Backstage is hosted under /backstage behind the ingress in KIND by default
+            `${baseUrl}/backstage/api/auth/keycloak-oidc/handler/frame`,
             'http://localhost:7007/api/auth/keycloak-oidc/handler/frame',
           ],
           webOrigins: ['/*'],
@@ -267,9 +269,14 @@ export class KeycloakConfigChart extends Chart {
         namespace,
         annotations: {
           'argocd.argoproj.io/hook': 'PostSync',
+          // Allow ArgoCD to safely re-run this hook on updates without leaving
+          // stale Jobs stuck in a Terminating state.
+          'argocd.argoproj.io/hook-delete-policy': 'BeforeHookCreation,HookSucceeded',
         },
       },
       spec: {
+        // Prevent a stuck hook from blocking ArgoCD indefinitely.
+        activeDeadlineSeconds: 900,
         template: {
           metadata: {
             generateName: 'config',
@@ -333,17 +340,62 @@ curl --fail-with-body -H "Authorization: bearer \${KEYCLOAK_TOKEN}"  "\${KEYCLOA
 REALM_EXISTS=$?
 set -e
 
-# Always need kubectl for secret creation
-curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
-chmod +x kubectl
+	# Always need kubectl for secret creation
+	curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
+	chmod +x kubectl
 
-# If realm exists, check if keycloak-clients secret exists
-if [ $REALM_EXISTS -eq 0 ]; then
-  # Check if secret already exists
-  if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
-    echo "Realm and secret already exist, nothing to do"
-    exit 0
-  fi
+	patch_client_redirects() {
+	  local client_name="$1"
+	  local payload_file="$2"
+
+	  if [ ! -f "$payload_file" ]; then
+	    echo "payload file not found: $payload_file"
+	    return 1
+	  fi
+
+	  local desired_redirects
+	  desired_redirects=$(jq -c '.redirectUris' "$payload_file")
+
+	  local existing_client_id
+	  existing_client_id=$(curl -sS -H "Content-Type: application/json" \\
+	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -r --arg name "$client_name" '.[] | select(.clientId == $name) | .id' | head -1)
+
+	  if [ -z "$existing_client_id" ] || [ "$existing_client_id" = "null" ]; then
+	    echo "client '\${client_name}' not found; creating"
+	    curl -sS -H "Content-Type: application/json" \\
+	      -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	      -X POST --data @"$payload_file" \\
+	      \${KEYCLOAK_URL}/admin/realms/cnoe/clients
+	    existing_client_id=$(curl -sS -H "Content-Type: application/json" \\
+	      -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	      -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -r --arg name "$client_name" '.[] | select(.clientId == $name) | .id' | head -1)
+	  fi
+
+	  echo "ensuring redirectUris for client '\${client_name}' (\${existing_client_id})"
+	  local existing_json updated_json
+	  existing_json=$(curl -sS -H "Content-Type: application/json" \\
+	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id})
+	  updated_json=$(echo "$existing_json" | jq --argjson redirects "$desired_redirects" '.redirectUris = $redirects')
+
+	  curl -sS -H "Content-Type: application/json" \\
+	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	    -X PUT --data "$updated_json" \\
+	    \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id} >/dev/null
+	}
+
+	# If realm exists, check if keycloak-clients secret exists
+	if [ $REALM_EXISTS -eq 0 ]; then
+	  # Realm exists: still ensure redirect URIs match the desired payloads
+	  patch_client_redirects "argo-workflows" "/var/config/argo-client-payload.json"
+	  patch_client_redirects "backstage" "/var/config/backstage-client-payload.json"
+
+	  # Check if secret already exists
+	  if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
+	    echo "Realm and secret already exist; redirect URIs reconciled"
+	    exit 0
+	  fi
   echo "Realm exists but secret missing, recreating secret..."
 
   # Get existing client secrets from Keycloak

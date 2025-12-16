@@ -24,6 +24,7 @@ import {
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
 import { Password } from '../../imports/generators.external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface KeycloakSecretsChartProps extends ChartProps {
   /**
@@ -60,6 +61,8 @@ export class KeycloakSecretsChart extends Chart {
 
     const namespace = props.namespace ?? 'keycloak';
     const syncWave = props.syncWave ?? '-10';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // ==========================================================================
     // Password Generator

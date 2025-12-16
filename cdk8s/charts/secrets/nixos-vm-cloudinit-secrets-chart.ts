@@ -16,6 +16,7 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface NixOsVmCloudInitSecretsChartProps extends ChartProps {
   /**
@@ -97,6 +98,8 @@ export class NixOsVmCloudInitSecretsChart extends Chart {
       nixosShellPath = '/run/current-system/sw/bin/bash',
       syncWave = '5',
     } = props;
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // Build SSH keys YAML list
     const sshKeysYaml = sshKeys.map(key => `      - ${key}`).join('\n');
