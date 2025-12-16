@@ -287,22 +287,5 @@ export class KargoPipelinesProjectChart extends Chart {
       ]
     });
 
-    // Create project-level admin binding
-    new k8s.KubeRoleBinding(this, 'kargo-project-admin-binding', {
-      metadata: {
-        name: 'kargo-project-admin',
-        namespace: 'kargo-pipelines',
-        labels: {
-          'app.kubernetes.io/name': 'kargo-project-admin-binding',
-          'app.kubernetes.io/part-of': 'kargo-pipelines'
-        }
-      },
-      roleRef: { apiGroup: 'rbac.authorization.k8s.io', kind: 'ClusterRole', name: 'kargo-project-admin' },
-      subjects: [
-        { kind: 'ServiceAccount', name: 'kargo-api', namespace: 'kargo' },
-        { kind: 'ServiceAccount', name: 'kargo-admin', namespace: 'kargo' },
-        { kind: 'Group', name: 'system:authenticated' }
-      ]
-    });
   }
 }
