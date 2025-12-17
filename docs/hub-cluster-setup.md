@@ -287,11 +287,14 @@ rm -f ~/.kube/hub-config ~/.talos/hub-config
 
 ## Next Steps
 
-After hub cluster is running:
+After hub cluster is running, proceed to install the platform software stack:
 
-1. **Install ArgoCD**: Deploy ArgoCD for GitOps management
-2. **Configure Tailscale**: Enable remote access via Tailscale serve
-3. **Setup ESO**: Configure External Secrets Operator with Azure Key Vault
-4. **Register Spokes**: Add spoke clusters to hub ArgoCD
+**[→ Hub GitOps Bootstrap Guide](hub-gitops-bootstrap.md)**
 
-See [hub-recovery-runbook.md](hub-recovery-runbook.md) for recovery procedures.
+This guide covers:
+1. **OIDC Configuration**: External issuer for Azure Workload Identity
+2. **ArgoCD**: GitOps deployment controller
+3. **External Secrets Operator**: Azure Key Vault integration
+4. **Tailscale**: Remote access and stable service URLs
+
+For disaster recovery procedures, see [hub-recovery-runbook.md](hub-recovery-runbook.md).
