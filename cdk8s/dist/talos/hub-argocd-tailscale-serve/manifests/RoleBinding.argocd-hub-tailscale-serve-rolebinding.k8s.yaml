@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: tailscale-serve
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: argocd-hub-tailscale-serve
+  name: argocd-hub-tailscale-serve-rolebinding
+  namespace: tailscale
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-hub-tailscale-serve-role
+subjects:
+  - kind: ServiceAccount
+    name: argocd-hub-tailscale-serve-sa
+    namespace: tailscale

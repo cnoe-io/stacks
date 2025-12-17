@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-120"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: crds
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: hub-tailscale-crds
+    app.kubernetes.io/part-of: hub-cluster
+    example: basic
+  name: hub-tailscale-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/talos/hub-tailscale-crds/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: 108-hub-and-spoke
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
