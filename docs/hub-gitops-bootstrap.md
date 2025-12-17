@@ -79,7 +79,79 @@ Add to your Tailscale ACL policy:
 
 ### Environment Variables
 
-Create `.env-files/talos.env`:
+The CDK8s synthesis requires environment variables for Azure and Git configuration.
+
+#### Required Variables
+
+| Variable | Description | Where to Find |
+|----------|-------------|---------------|
+| `GIT_REPO_URL` | Git repository URL for ArgoCD sources | Your GitHub/GitLab repo URL |
+| `AZURE_CLIENT_ID` | Azure AD App Registration Client ID | Azure Portal → App Registrations → Overview |
+| `AZURE_TENANT_ID` | Azure AD Tenant ID | Azure Portal → Azure Active Directory → Overview |
+| `AZURE_KEYVAULT_NAME` | Azure Key Vault name (without .vault.azure.net) | Azure Portal → Key Vaults |
+
+#### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GIT_BRANCH` | Git branch for ArgoCD | `main` |
+| `SERVICE_ACCOUNT_ISSUER` | OIDC issuer URL for Workload Identity | (from Talos config) |
+| `TAILSCALE_TAILNET` | Your Tailscale tailnet name | (for serve URLs) |
+
+#### Setup Instructions
+
+1. **Copy the template:**
+   ```bash
+   cd ~/repos/PittampalliOrg/stacks/108-hub-and-spoke/cdk8s
+   cp .env-files/talos.env.template .env-files/talos.env
+   ```
+
+2. **Create the env file** (if template doesn't exist):
+   ```bash
+   mkdir -p .env-files
+   cat > .env-files/talos.env << 'EOF'
+   # Git Configuration
+   GIT_REPO_URL="https://github.com/PittampalliOrg/stacks.git"
+   GIT_BRANCH="108-hub-and-spoke"
+
+   # Tailscale
+   TAILSCALE_TAILNET="tail286401"
+
+   # Azure Workload Identity
+   SERVICE_ACCOUNT_ISSUER="https://oidcissuerhub<id>.z13.web.core.windows.net/"
+   AZURE_KEYVAULT_NAME="keyvault-<suffix>"
+   AZURE_TENANT_ID="<tenant-id>"
+   AZURE_CLIENT_ID="<app-registration-client-id>"
+   EOF
+   ```
+
+3. **Get Azure values:**
+   ```bash
+   # Get Tenant ID
+   az account show --query tenantId -o tsv
+
+   # Get App Registration Client ID (replace <app-name>)
+   az ad app list --display-name "<app-name>" --query "[0].appId" -o tsv
+
+   # List Key Vaults
+   az keyvault list --query "[].name" -o tsv
+   ```
+
+4. **Get OIDC Issuer URL:**
+   ```bash
+   # List storage accounts with OIDC in name
+   az storage account list --query "[?contains(name, 'oidc')].{name:name, url:primaryEndpoints.web}" -o table
+   ```
+
+5. **Validate configuration:**
+   ```bash
+   cd ~/repos/PittampalliOrg/stacks/108-hub-and-spoke/cdk8s
+   source .env-files/talos.env
+   npm run synth:talos
+   # Should complete without "Missing required environment variable" errors
+   ```
+
+#### Example Complete Configuration
 
 ```bash
 # Git Configuration
@@ -90,11 +162,13 @@ GIT_BRANCH="108-hub-and-spoke"
 TAILSCALE_TAILNET="tail286401"
 
 # Azure Workload Identity
-SERVICE_ACCOUNT_ISSUER="https://oidcissuerhub<id>.z13.web.core.windows.net/"
-AZURE_KEYVAULT_NAME="keyvault-<suffix>"
-AZURE_TENANT_ID="<tenant-id>"
-AZURE_CLIENT_ID="<app-registration-client-id>"
+SERVICE_ACCOUNT_ISSUER="https://oidcissuerhub7332b489.z13.web.core.windows.net/"
+AZURE_KEYVAULT_NAME="keyvault-thcmfmoo5oeow"
+AZURE_TENANT_ID="0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38"
+AZURE_CLIENT_ID="1140d9c2-62f6-4857-94c2-7e0e6c64e562"
 ```
+
+**Security Note:** The `.env-files/` directory is in `.gitignore`. Never commit actual credentials to Git.
 
 ## Step 1: Configure OIDC Issuer
 
