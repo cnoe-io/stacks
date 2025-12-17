@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: tailscale-serve
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: hub-argocd-tailscale-serve
+    app.kubernetes.io/part-of: hub-cluster
+    example: basic
+  name: hub-argocd-tailscale-serve
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/hub-argocd-tailscale-serve/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/108-hub-and-spoke
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

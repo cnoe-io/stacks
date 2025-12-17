@@ -19,10 +19,10 @@ spec:
     namespace: observability
     server: https://kubernetes.default.svc
   project: default
-  source:
-    path: "."
-    repoURL: cnoe://jaeger/manifests
-    targetRevision: HEAD
+  sources:
+    - path: cdk8s/dist/jaeger/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/main
   syncPolicy:
     automated:
       prune: true

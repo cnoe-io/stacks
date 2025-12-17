@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/component: cluster-secret
+    app.kubernetes.io/environment: dev
+    app.kubernetes.io/managed-by: cdk8s
+    app.kubernetes.io/name: spoke-cluster-hetzner
+    app.kubernetes.io/part-of: spoke-registration
+    cluster-host: hetzner
+    example: basic
+  name: spoke-cluster-hetzner
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - path: cdk8s/dist/spoke-cluster-hetzner/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/108-hub-and-spoke
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
