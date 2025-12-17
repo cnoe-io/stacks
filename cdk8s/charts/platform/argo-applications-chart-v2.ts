@@ -1,7 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
-import { 
-  Application, 
+import {
+  Application,
   ApplicationSpec,
   ApplicationSpecSource,
   ApplicationSpecSources,
@@ -9,7 +9,8 @@ import {
   ApplicationSpecSyncPolicy,
   ApplicationSpecIgnoreDifferences
 } from '../../imports/argoproj.io';
-import { ApplicationConfig } from '../../lib/idpbuilder-types';
+import { ApplicationConfig, TargetCluster } from '../../lib/idpbuilder-types';
+import { isSpokeCluster } from '../../lib/cluster-registry';
 
 export interface ArgoApplicationsChartV2Props extends ChartProps {
   /**
@@ -214,24 +215,66 @@ export class ArgoApplicationsChartV2 extends Chart {
   }
 
   /**
+   * Build destination based on targetCluster configuration (hub-and-spoke model)
+   *
+   * Priority:
+   * 1. Explicit targetCluster takes precedence
+   * 2. Environment label (dev/staging) routes to vcluster
+   * 3. Default: in-cluster deployment
+   */
+  private buildDestination(props: ArgoApplicationsChartV2Props): ApplicationSpecDestination {
+    const targetCluster = props.argoCdConfig?.targetCluster;
+
+    // Explicit targetCluster takes precedence
+    if (targetCluster) {
+      if (targetCluster === 'hub') {
+        // Hub cluster = in-cluster destination
+        return {
+          server: 'https://kubernetes.default.svc',
+          namespace: props.applicationNamespace,
+        };
+      }
+
+      // Spoke cluster by name (validated against registry)
+      if (isSpokeCluster(targetCluster)) {
+        return {
+          name: targetCluster,
+          namespace: props.applicationNamespace,
+        };
+      }
+
+      // Allow custom cluster names (for future extensibility)
+      return {
+        name: targetCluster,
+        namespace: props.applicationNamespace,
+      };
+    }
+
+    // Fall back to existing vcluster logic for environment-based routing
+    const envLabel = props.argoCdConfig?.labels?.['app.kubernetes.io/environment'];
+    if (envLabel === 'dev' || envLabel === 'staging') {
+      return {
+        name: `${envLabel}-vcluster`,
+        namespace: props.applicationNamespace,
+      };
+    }
+
+    // Default: in-cluster deployment
+    return {
+      server: 'https://kubernetes.default.svc',
+      namespace: props.applicationNamespace,
+    };
+  }
+
+  /**
    * Build base Application spec with common properties
    */
   private buildBaseSpec(
     props: ArgoApplicationsChartV2Props,
     sourceConfig: { source?: ApplicationSpecSource; sources?: ApplicationSpecSources[] }
   ): ApplicationSpec {
-    // Choose destination by cluster name if environment label requests a vcluster
-    const envLabel = props.argoCdConfig?.labels?.['app.kubernetes.io/environment'];
-    const destination: ApplicationSpecDestination =
-      envLabel === 'dev' || envLabel === 'staging'
-        ? {
-            name: `${envLabel}-vcluster`,
-            namespace: props.applicationNamespace,
-          }
-        : {
-            server: 'https://kubernetes.default.svc',
-            namespace: props.applicationNamespace,
-          };
+    // Use new buildDestination for hub-and-spoke support
+    const destination = this.buildDestination(props);
 
     const syncPolicy: ApplicationSpecSyncPolicy = props.argoCdConfig?.syncPolicy || {
       automated: {

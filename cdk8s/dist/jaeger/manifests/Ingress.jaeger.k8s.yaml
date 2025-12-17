@@ -14,7 +14,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: jaeger.cnoe.localtest.me
+    - host: jaeger.ai401kchat.com
       http:
         paths:
           - backend:
@@ -26,4 +26,4 @@ spec:
             pathType: Prefix
   tls:
     - hosts:
-        - jaeger.cnoe.localtest.me
+        - jaeger.ai401kchat.com

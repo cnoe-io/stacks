@@ -1,4 +1,5 @@
 import { ChartProps } from 'cdk8s';
+import { TargetCluster } from './cluster-registry';
 
 /**
  * Cluster type for filtering applications during synthesis
@@ -7,6 +8,9 @@ import { ChartProps } from 'cdk8s';
  * - 'both': Deploy to both cluster types
  */
 export type AppClusterType = 'kind' | 'talos' | 'both';
+
+// Re-export TargetCluster for convenience
+export type { TargetCluster } from './cluster-registry';
 
 /**
  * Configuration for an IDPBuilder application package
@@ -82,13 +86,22 @@ export interface ApplicationConfig {
    */
   argocd?: {
     /**
+     * Target cluster for deployment (hub-and-spoke model)
+     * - 'hub': Deploy to hub cluster only (in-cluster destination)
+     * - spoke name: Deploy to specific spoke cluster (e.g., 'hetzner', 'thinkpad')
+     * - undefined: Use existing logic (vcluster for dev/staging, in-cluster otherwise)
+     */
+    targetCluster?: TargetCluster;
+
+    /**
      * Sync wave annotation
      */
     syncWave?: string;
-  /**
-   * Extra metadata annotations for the ArgoCD Application
-   */
-  annotations?: Record<string, string>;
+
+    /**
+     * Extra metadata annotations for the ArgoCD Application
+     */
+    annotations?: Record<string, string>;
     
     /**
      * Additional labels for the ArgoCD application

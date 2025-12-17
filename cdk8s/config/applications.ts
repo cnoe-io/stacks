@@ -2315,5 +2315,502 @@ export const applicationConfigs: ApplicationConfig[] = [
         }
       }
     }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Hub Cluster Applications
+  // These apps deploy to the dedicated hub cluster for centralized management
+  // =========================================================================
+
+  // Hub Cluster: ESO Workload Identity Patch - Azure AD federation for external-secrets ServiceAccount
+  // Required for ClusterSecretStore to authenticate with Azure Key Vault
+  {
+    name: 'hub-eso-workload-identity',
+    namespace: 'external-secrets',
+    clusterType: 'talos',  // Hub is a Talos cluster
+    chart: {
+      type: 'WorkloadIdentityPatchChart',
+      props: {
+        clientId: process.env.AZURE_CLIENT_ID || '',
+        tenantId: process.env.AZURE_TENANT_ID || '',
+        serviceAccountName: 'external-secrets',
+        serviceAccountNamespace: 'external-secrets'
+      }
+    },
+    argocd: {
+      syncWave: '-90',  // Before cluster-secret-store
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'workload-identity',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-eso-workload-identity'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: ClusterSecretStore - Azure Key Vault access
+  // Required for syncing spoke credentials and other secrets to hub
+  {
+    name: 'hub-cluster-secret-store',
+    namespace: 'external-secrets',
+    clusterType: 'talos',
+    chart: {
+      type: 'ClusterSecretStoreChart',
+      props: {
+        storeName: 'azure-keyvault-store',
+        keyVaultName: process.env.AZURE_KEYVAULT_NAME || 'idp-kv',
+        serviceAccountRef: {
+          name: 'external-secrets',
+          namespace: 'external-secrets'
+        }
+      }
+    },
+    argocd: {
+      syncWave: '-88',  // After ESO workload identity
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'secret-store',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-cluster-secret-store'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: Tailscale CRDs - Required before Tailscale operator
+  {
+    name: 'hub-tailscale-crds',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleCrdsChart'
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy CRDs very early
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-tailscale-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Hub Cluster: Tailscale Operator Secrets (OAuth credentials from Azure Key Vault)
+  {
+    name: 'hub-tailscale-operator-secrets',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleOperatorSecretsChart',
+      props: {
+        namespace: 'tailscale',
+        syncWave: '-85'
+      }
+    },
+    argocd: {
+      syncWave: '-85',  // After bootstrap-secrets, before operator
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-operator-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hub Cluster: Tailscale Operator - Manages Tailscale connectivity
+  {
+    name: 'hub-tailscale-operator',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleOperatorChart',
+      props: {
+        version: '1.82.0',
+        namespace: 'tailscale',
+        operatorHostname: 'hub-operator',
+        defaultTags: ['tag:k8s-operator'],
+        enableApiServerProxy: true,
+        tailnetAdmins: ['vpittamp@github']
+      }
+    },
+    argocd: {
+      syncWave: '-75',  // After operator secrets
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-operator',
+        'app.kubernetes.io/component': 'operator',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: Tailscale Secrets (Auth key for Tailscale Services pods)
+  {
+    name: 'hub-tailscale-secrets',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleSecretsChart',
+      props: {
+        namespace: 'tailscale',
+        syncWave: '-70'
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // Before tailscale serve pods
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hub Cluster: ArgoCD Tailscale Serve - Access: https://argocd-hub.<tailnet>.ts.net
+  // Provides remote access to hub ArgoCD UI via Tailscale
+  {
+    name: 'hub-argocd-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'argocd-hub',  // Stable URL: argocd-hub.tail286401.ts.net
+        backendHost: 'argocd-server.argocd.svc.cluster.local',
+        backendPort: 443,
+        backendInsecure: true,
+        persistentStorage: true,
+        storageSize: '1Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',  // After auth key secret
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Hub Cluster: Kubernetes API Tailscale Serve - Access: https://k8s-api-hub.<tailnet>.ts.net
+  // Provides remote kubectl access to hub cluster via Tailscale
+  {
+    name: 'hub-k8s-api-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'K8sApiTailscaleServeChart',
+      props: {
+        serviceName: 'k8s-api-hub',
+        authKeySecretName: 'tailscale-auth-key',
+        tailnetName: 'tail286401',
+        createStaticTokenSecret: true,
+        remoteAccessTokenSecretName: 'hub-k8s-remote-access-token'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-k8s-api-tailscale-serve',
+        'app.kubernetes.io/component': 'api-proxy',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Spoke Cluster Registration
+  // ExternalSecrets sync spoke credentials from Azure Key Vault
+  // Cluster secrets register spokes in ArgoCD
+  // =========================================================================
+
+  // Hetzner Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-hetzner',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'hetzner',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-HETZNER'
+      }
+    },
+    argocd: {
+      syncWave: '-82',  // After ClusterSecretStore
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-hetzner',
+        'cluster-host': 'hetzner'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Thinkpad Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-thinkpad',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'thinkpad',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-THINKPAD'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-thinkpad',
+        'cluster-host': 'thinkpad'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Ryzen Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-ryzen',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'ryzen',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-RYZEN'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-ryzen',
+        'cluster-host': 'ryzen'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Talos Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-talos',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'talos',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-TALOS'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-talos',
+        'cluster-host': 'talos'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hetzner Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-hetzner',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'hetzner',
+        credentialsSecretName: 'spoke-creds-hetzner'
+      }
+    },
+    argocd: {
+      syncWave: '-80',  // After ExternalSecret syncs credentials
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-hetzner',
+        'cluster-host': 'hetzner'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Thinkpad Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-thinkpad',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'thinkpad',
+        credentialsSecretName: 'spoke-creds-thinkpad'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-thinkpad',
+        'cluster-host': 'thinkpad'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Ryzen Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-ryzen',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'ryzen',
+        credentialsSecretName: 'spoke-creds-ryzen'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-ryzen',
+        'cluster-host': 'ryzen'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Talos Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-talos',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'talos',
+        credentialsSecretName: 'spoke-creds-talos'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-talos',
+        'cluster-host': 'talos'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Cross-Cluster Application Deployments
+  // Example applications targeting spoke clusters via hub ArgoCD
+  // =========================================================================
+
+  // Example: Backstage Dev Environment on Thinkpad Spoke
+  // Demonstrates cross-cluster deployment using targetCluster field
+  {
+    name: 'backstage-dev-spoke',
+    namespace: 'backstage',
+    clusterType: 'talos',
+    chart: {
+      type: 'NamespaceChart',  // Just the namespace for demo
+      props: {
+        namespace: 'backstage'
+      }
+    },
+    argocd: {
+      syncWave: '50',  // Deploy after spoke registration
+      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke cluster
+      labels: {
+        'app.kubernetes.io/name': 'backstage-dev-spoke',
+        'app.kubernetes.io/component': 'application',
+        'app.kubernetes.io/part-of': 'cross-cluster-demo',
+        'app.kubernetes.io/environment': 'dev'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // Example: Backstage Prod Environment on Talos Spoke
+  // Demonstrates production deployment to separate cluster
+  {
+    name: 'backstage-prod-spoke',
+    namespace: 'backstage',
+    clusterType: 'talos',
+    chart: {
+      type: 'NamespaceChart',  // Just the namespace for demo
+      props: {
+        namespace: 'backstage'
+      }
+    },
+    argocd: {
+      syncWave: '50',
+      targetCluster: 'talos',  // Deploy to talos spoke cluster
+      labels: {
+        'app.kubernetes.io/name': 'backstage-prod-spoke',
+        'app.kubernetes.io/component': 'application',
+        'app.kubernetes.io/part-of': 'cross-cluster-demo',
+        'app.kubernetes.io/environment': 'production'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
   }
 ];

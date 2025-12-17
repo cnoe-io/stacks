@@ -19,10 +19,10 @@ spec:
     namespace: default
     server: https://kubernetes.default.svc
   project: default
-  source:
-    path: "."
-    repoURL: cnoe://dapr-crds/manifests
-    targetRevision: HEAD
+  sources:
+    - path: cdk8s/dist/dapr-crds/manifests
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      targetRevision: rendered/talos/main
   syncPolicy:
     automated:
       prune: true
