@@ -1,9 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ClusterRoleBinding.k8s-api-tailscale-serve.k8s.yaml
-  - ClusterRoleBinding.k8s-remote-access.k8s.yaml
-  - ConfigMap.k8s-remote-kubeconfig-template.k8s.yaml
-  - Deployment.k8s-api-tailscale-serve.k8s.yaml
-  - ServiceAccount.k8s-api-serve.k8s.yaml
-  - ServiceAccount.k8s-remote-access.k8s.yaml

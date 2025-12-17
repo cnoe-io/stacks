@@ -824,9 +824,14 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
     }
   },
+  // =========================================================================
+  // KIND Kargo - Local development cluster Kargo with Gitea integration
+  // These apps are KIND-specific (use Gitea CA certs, nginx ingress)
+  // =========================================================================
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - uses Gitea/local registry
     chart: {
       type: 'KargoSecretsChart'
     },
@@ -846,6 +851,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - uses Gitea CA certs, nginx ingress
     chart: {
       type: 'KargoHelmChart'
     },
@@ -920,6 +926,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-project',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - uses local Kargo
     chart: {
       type: 'KargoPipelinesProjectChart'
     },
@@ -957,6 +964,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-credentials',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - Gitea credentials
     chart: {
       type: 'KargoPipelinesCredentialsChart'
     },
@@ -989,6 +997,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-backstage-pipeline',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - local Kargo pipeline
     chart: {
       type: 'KargoBackstagePipelineChart',
       props: {
@@ -1031,6 +1040,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-ca-certificates',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - Gitea CA certificates
     chart: {
       type: 'KargoCACertificatesChart'
     },
@@ -1053,6 +1063,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-gitea-webhook-setup',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - Gitea webhooks
     chart: {
       type: 'KargoGiteaWebhookSetupChart'
     },
@@ -1080,6 +1091,193 @@ export const applicationConfigs: ApplicationConfig[] = [
       })
     }
   },
+
+  // =========================================================================
+  // Hub Kargo - Centralized Kargo controller on hub cluster (Talos)
+  // Manages progressive delivery across all spoke clusters
+  // Access via: https://kargo-hub.tail286401.ts.net
+  // =========================================================================
+  {
+    name: 'hub-kargo-secrets',
+    namespace: 'kargo',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoSecretsChart'  // Reuse existing secrets chart
+    },
+    argocd: {
+      syncWave: '-50',  // Deploy secrets before Kargo
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-kargo',
+        'app.kubernetes.io/name': 'hub-kargo-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  {
+    name: 'hub-kargo',
+    namespace: 'kargo',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoHubHelmChart'  // Hub-specific chart (no Gitea CA, uses Tailscale Serve)
+    },
+    dependencies: {
+      hubKargoSecrets: {
+        type: 'KargoSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '70',  // After ArgoCD Helm app
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'continuous-delivery',
+        'app.kubernetes.io/part-of': 'platform',
+        'app.kubernetes.io/name': 'hub-kargo',
+        'app.kubernetes.io/instance': 'hub-kargo',
+        'app.kubernetes.io/version': '1.8.4'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true']
+      },
+      ignoreDifferences: [
+        {
+          group: 'cert-manager.io',
+          kind: 'Certificate'
+        },
+        {
+          group: 'cert-manager.io',
+          kind: 'Issuer'
+        },
+        {
+          group: 'batch',
+          kind: 'Job',
+          jsonPointers: [
+            '/spec/podReplacementPolicy',
+            '/status/terminating'
+          ]
+        }
+      ]
+    }
+  },
+  {
+    name: 'hub-kargo-pipelines-project',
+    namespace: 'kargo-pipelines',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoPipelinesProjectChart'  // Reuse existing project chart
+    },
+    dependencies: {
+      hubKargo: {
+        type: 'KargoHubHelmChart'
+      }
+    },
+    argocd: {
+      syncWave: '75',  // After Kargo installation
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'project',
+        'app.kubernetes.io/part-of': 'hub-kargo-pipelines',
+        'app.kubernetes.io/name': 'hub-kargo-pipelines-project'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,
+          selfHeal: false
+        },
+        syncOptions: [
+          'CreateNamespace=false',
+          'ApplyOutOfSyncOnly=true',
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true'
+        ]
+      },
+      ignoreDifferences: [
+        { group: 'kargo.akuity.io', kind: 'Project', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'ProjectConfig', jsonPointers: ['/status'] }
+      ]
+    }
+  },
+  // Hub Kargo Tailscale Serve - Access: https://kargo-hub.tail286401.ts.net
+  {
+    name: 'hub-kargo-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kargo-hub',  // Fixed name for hub Kargo (not host-aware)
+        backendHost: 'kargo-api.kargo.svc.cluster.local',
+        backendPort: 8080,  // Hub Kargo uses port 8080
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/name': 'hub-kargo-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+  // Hub Kargo Backstage Pipeline - Cross-cluster progressive delivery
+  // Inner Loop: KIND Gitea → thinkpad spoke (auto-promote, ~60s)
+  // Outer Loop: GHCR → dev (auto) → staging (manual)
+  {
+    name: 'hub-kargo-backstage-pipeline',
+    namespace: 'kargo-pipelines',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoHubBackstagePipelineChart',
+      props: {
+        enableInnerLoop: true,
+        enableOuterLoop: true,
+      }
+    },
+    dependencies: {
+      hubKargoPipelinesProject: {
+        type: 'KargoPipelinesProjectChart'
+      }
+    },
+    argocd: {
+      syncWave: '80',  // After hub Kargo pipelines project
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'pipeline',
+        'app.kubernetes.io/part-of': 'hub-kargo-pipelines',
+        'app.kubernetes.io/name': 'hub-kargo-backstage-pipeline'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,
+          selfHeal: false
+        },
+        syncOptions: [
+          'CreateNamespace=false',
+          'ApplyOutOfSyncOnly=true',
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true'
+        ]
+      },
+      ignoreDifferences: [
+        { group: 'kargo.akuity.io', kind: 'Warehouse', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'Stage', jsonPointers: ['/status'] }
+      ]
+    }
+  },
+
   {
     name: 'dagger-infra',
     namespace: 'argo',
@@ -1424,11 +1622,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Kargo Tailscale Serve - Access: https://kargo2.tail286401.ts.net
-  // Note: Using 'kargo2' to bypass Let's Encrypt rate limit on 'kargo'
+  // Kargo Tailscale Serve (KIND) - Access: https://kargo-<host>.tail286401.ts.net
   {
     name: 'kargo-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',  // KIND only - local Kargo access
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -2754,63 +2952,107 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // =========================================================================
-  // Hub-and-Spoke Architecture - Cross-Cluster Application Deployments
-  // Example applications targeting spoke clusters via hub ArgoCD
+  // Hub-and-Spoke Architecture - Backstage Applications via Hub ArgoCD
+  // These apps are managed by hub ArgoCD and deploy to spoke clusters
+  // Hub Kargo stages update these apps to promote images across environments
   // =========================================================================
 
-  // Example: Backstage Dev Environment on Thinkpad Spoke
-  // Demonstrates cross-cluster deployment using targetCluster field
+  // Hub-Managed Backstage Local Dev - Inner Loop Target (Thinkpad Spoke)
+  // Hub Kargo stage 'hub-backstage-local-dev' updates this application
   {
-    name: 'backstage-dev-spoke',
-    namespace: 'backstage',
-    clusterType: 'talos',
+    name: 'hub-backstage-local-dev',
+    namespace: 'backstage-local-dev',
+    clusterType: 'talos',  // Synthesize for hub cluster
     chart: {
-      type: 'NamespaceChart',  // Just the namespace for demo
+      type: 'BackstageChart',
       props: {
-        namespace: 'backstage'
+        namespace: 'backstage-local-dev',
+        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest',
+        imagePullSecretName: 'gitea-dockercfg',
+        ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
       }
     },
     argocd: {
-      syncWave: '50',  // Deploy after spoke registration
-      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke cluster
-      labels: {
-        'app.kubernetes.io/name': 'backstage-dev-spoke',
-        'app.kubernetes.io/component': 'application',
-        'app.kubernetes.io/part-of': 'cross-cluster-demo',
-        'app.kubernetes.io/environment': 'dev'
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-local-dev'
       },
-      syncPolicy: {
-        automated: { prune: true, selfHeal: true },
-        syncOptions: ['CreateNamespace=true']
-      }
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-local-dev',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'inner',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
 
-  // Example: Backstage Prod Environment on Talos Spoke
-  // Demonstrates production deployment to separate cluster
+  // Hub-Managed Backstage Dev - Outer Loop Target (Thinkpad Spoke)
+  // Hub Kargo stage 'hub-backstage-dev' auto-promotes from GHCR
   {
-    name: 'backstage-prod-spoke',
-    namespace: 'backstage',
-    clusterType: 'talos',
+    name: 'hub-backstage-dev',
+    namespace: 'backstage-dev',
+    clusterType: 'talos',  // Synthesize for hub cluster
     chart: {
-      type: 'NamespaceChart',  // Just the namespace for demo
+      type: 'BackstageChart',
       props: {
-        namespace: 'backstage'
+        namespace: 'backstage-dev',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.1.0',
+        ingressHosts: ['backstage-dev.cnoe.localtest.me'],
       }
     },
     argocd: {
-      syncWave: '50',
-      targetCluster: 'talos',  // Deploy to talos spoke cluster
-      labels: {
-        'app.kubernetes.io/name': 'backstage-prod-spoke',
-        'app.kubernetes.io/component': 'application',
-        'app.kubernetes.io/part-of': 'cross-cluster-demo',
-        'app.kubernetes.io/environment': 'production'
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-dev'
       },
-      syncPolicy: {
-        automated: { prune: true, selfHeal: true },
-        syncOptions: ['CreateNamespace=true']
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-dev',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'outer',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Hub-Managed Backstage Staging - Outer Loop Target (Talos Spoke)
+  // Hub Kargo stage 'hub-backstage-staging' requires manual promotion from dev
+  {
+    name: 'hub-backstage-staging',
+    namespace: 'backstage-staging',
+    clusterType: 'talos',  // Synthesize for hub cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-staging',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.0.0',
+        ingressHosts: ['backstage-staging.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-staging-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        },
       }
+    },
+    argocd: {
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'talos',  // Deploy to talos spoke (hetzner)
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-staging'
+      },
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-staging',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'outer',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   }
 ];

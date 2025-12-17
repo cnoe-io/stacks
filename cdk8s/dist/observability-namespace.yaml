@@ -22,7 +22,7 @@ spec:
   sources:
     - path: cdk8s/dist/observability-namespace/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: rendered/talos/main
+      targetRevision: rendered/talos/108-hub-and-spoke
   syncPolicy:
     automated:
       prune: true
