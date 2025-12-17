@@ -21,9 +21,9 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   sources:
-    - path: cdk8s/dist/talos/spoke-cluster-talos/manifests
+    - path: cdk8s/dist/spoke-cluster-talos/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: 108-hub-and-spoke
+      targetRevision: rendered/talos/108-hub-and-spoke
   syncPolicy:
     automated:
       prune: true

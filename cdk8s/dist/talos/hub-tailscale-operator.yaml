@@ -20,9 +20,9 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   sources:
-    - path: cdk8s/dist/talos/hub-tailscale-operator/manifests
+    - path: cdk8s/dist/hub-tailscale-operator/manifests
       repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: 108-hub-and-spoke
+      targetRevision: rendered/talos/108-hub-and-spoke
   syncPolicy:
     automated:
       prune: true

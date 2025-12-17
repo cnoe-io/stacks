@@ -284,9 +284,9 @@ function generateServeScriptWithBackend(
 ): string {
   // For backend health check - use http for insecure backends, https for secure
   const backendScheme = backendInsecure ? 'http' : (backendPort === 443 ? 'https' : 'http');
-  // For tailscale serve - always use https (socat forwards to local 443)
-  // Use https+insecure when backend uses self-signed certs
-  const serveScheme = backendInsecure ? 'https+insecure' : 'http';
+  // backendInsecure is kept for health check scheme but no longer affects serve config
+  // Tailscale serve always uses http:// to socat, which does raw TCP forwarding
+  void backendInsecure; // Explicitly mark as intentionally unused for serve scheme
 
   return `
 set -euo pipefail
@@ -324,14 +324,16 @@ for i in $(seq 1 60); do
   sleep 2
 done
 
-# Start socat to forward from exposed port (443) to backend service
-# This is required because netstack in userspace mode routes to the exposed port
-socat TCP-LISTEN:443,fork,reuseaddr TCP:${backendHost}:${backendPort} &
+# Start socat to forward from internal port (8080) to backend service
+# NOTE: socat does raw TCP forwarding - it doesn't speak TLS
+# The backend service handles TLS termination if needed
+socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 
 # Expose via Tailscale serve on HTTPS 443 with service registration
-# The serve command tells Tailscale to route traffic to localhost:443 (socat)
+# Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080
+# socat then forwards raw TCP to the backend (which may re-establish TLS)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 ${serveScheme}://127.0.0.1:443
+  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
 
 echo "Service running at https://svc-${serviceName}.<tailnet>.ts.net"
 echo "Backend: ${backendHost}:${backendPort}"

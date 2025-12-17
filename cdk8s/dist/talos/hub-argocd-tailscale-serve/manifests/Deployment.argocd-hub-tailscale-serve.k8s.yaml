@@ -58,14 +58,16 @@ spec:
                 sleep 2
               done
 
-              # Start socat to forward from exposed port (443) to backend service
-              # This is required because netstack in userspace mode routes to the exposed port
-              socat TCP-LISTEN:443,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
+              # Start socat to forward from internal port (8080) to backend service
+              # NOTE: socat does raw TCP forwarding - it doesn't speak TLS
+              # The backend service handles TLS termination if needed
+              socat TCP-LISTEN:8080,fork,reuseaddr TCP:argocd-server.argocd.svc.cluster.local:443 &
 
               # Expose via Tailscale serve on HTTPS 443 with service registration
-              # The serve command tells Tailscale to route traffic to localhost:443 (socat)
+              # Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080
+              # socat then forwards raw TCP to the backend (which may re-establish TLS)
               tailscale --socket=/run/tailscale/tailscaled.sock \
-                serve --service=svc:argocd-hub --https=443 https+insecure://127.0.0.1:443
+                serve --service=svc:argocd-hub --https=443 http://127.0.0.1:8080
 
               echo "Service running at https://svc-argocd-hub.<tailnet>.ts.net"
               echo "Backend: argocd-server.argocd.svc.cluster.local:443"
