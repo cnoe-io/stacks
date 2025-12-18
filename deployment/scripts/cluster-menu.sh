@@ -341,7 +341,7 @@ cluster-deploy() {
       -p "$REF_DIR/" \
       -p "$CDK8S_DIR/dist/" \
       --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
-      --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
+      --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
       --dev-password "$@"
 
     # Sync JWKS after cluster creation
@@ -611,7 +611,7 @@ cluster-update-gum() {
 
   # Step 2: Update cluster with spinner
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
-    bash -lc "cd '$REF_DIR' && idpbuilder create --name '$CLUSTER_NAME' -p '$REF_DIR/' -p '$CDK8S_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config-linux-ssh.yaml' --dev-password >/dev/null 2>&1"
+    bash -lc "cd '$REF_DIR' && idpbuilder create --name '$CLUSTER_NAME' -p '$REF_DIR/' -p '$CDK8S_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -792,7 +792,7 @@ cluster-update() {
     -p "$REF_DIR/" \
     -p "$CDK8S_DIR/dist/" \
     --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
-    --kind-config "$DEPLOY_DIR/config/kind-config-linux-ssh.yaml" \
+    --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
     --dev-password
 
   if [ $? -ne 0 ]; then
