@@ -651,25 +651,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
-  // Backstage Templates (Catalog entities for Backstage software templates)
-  // This references existing entities directory, not synthesized manifests
-  {
-    name: 'backstage-templates',
-    namespace: 'backstage',
-    clusterType: 'both',  // Templates needed on both KIND and Talos clusters
-    skipSynthesis: true,  // No chart synthesis - references existing entities directory
-    sourcePath: 'entities',  // Override default 'manifests' path
-    directoryExclude: 'catalog-info.yaml',  // Exclude catalog-info from sync
-    argocd: {
-      syncWave: '25',  // After Backstage application (20)
-      labels: {
-        'app.kubernetes.io/component': 'templates',
-        'app.kubernetes.io/part-of': 'backstage',
-        'app.kubernetes.io/name': 'backstage-templates'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
-    }
-  },
+  // Backstage templates are packaged in `ref-implementation/backstage-templates/` (non-CDK8s assets).
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
@@ -2116,5 +2098,237 @@ export const applicationConfigs: ApplicationConfig[] = [
         }
       }
     }
-  }
+  },
+
+  // =========================================================================
+  // KubeVirt + CDI (Kind-only)
+  // =========================================================================
+
+  // KubeVirt Operator (installs CRDs + controllers)
+  {
+    name: 'kubevirt-operator',
+    namespace: 'kubevirt',
+    clusterType: 'kind',
+    chart: {
+      type: 'KubeVirtOperatorChart',
+      props: {
+        version: 'v1.6.2',
+      },
+    },
+    argocd: {
+      syncWave: '-120',
+      labels: {
+        'app.kubernetes.io/name': 'kubevirt-operator',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'kubevirt',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // KubeVirt Custom Resource (enables software emulation for Kind)
+  {
+    name: 'kubevirt',
+    namespace: 'kubevirt',
+    clusterType: 'kind',
+    chart: {
+      type: 'KubeVirtCRChart',
+      props: {
+        useEmulation: true,
+      },
+    },
+    argocd: {
+      syncWave: '-110',
+      labels: {
+        'app.kubernetes.io/name': 'kubevirt',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'kubevirt',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // CDI Operator (installs DataVolume CRDs)
+  {
+    name: 'cdi-operator',
+    namespace: 'cdi',
+    clusterType: 'kind',
+    chart: {
+      type: 'CDIOperatorChart',
+      props: {
+        version: 'v1.62.0',
+      },
+    },
+    argocd: {
+      syncWave: '-120',
+      labels: {
+        'app.kubernetes.io/name': 'cdi-operator',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'kubevirt',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // CDI Custom Resource
+  {
+    name: 'cdi',
+    namespace: 'cdi',
+    clusterType: 'kind',
+    chart: {
+      type: 'CDICRChart',
+    },
+    argocd: {
+      syncWave: '-110',
+      labels: {
+        'app.kubernetes.io/name': 'cdi',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'kubevirt',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // KubeVirt Smoke Test VM (containerDisk)
+  {
+    name: 'kubevirt-cirros-vm',
+    namespace: 'default',
+    clusterType: 'kind',
+    chart: {
+      type: 'KubeVirtCirrosVmChart',
+      props: {
+        vmName: 'kv-cirros',
+        namespace: 'default',
+        runStrategy: 'Always',
+      },
+    },
+    argocd: {
+      syncWave: '-50',
+      labels: {
+        'app.kubernetes.io/name': 'kubevirt-cirros-vm',
+        'app.kubernetes.io/component': 'kubevirt-smoke-test',
+        'app.kubernetes.io/part-of': 'kubevirt',
+      },
+      // KubeVirt mutates VirtualMachine resources (firmware UUID/serial, arch) and
+      // adds finalizers/annotations; ignore these to avoid perpetual OutOfSync.
+      ignoreDifferences: [
+        {
+          group: 'kubevirt.io',
+          kind: 'VirtualMachine',
+          jsonPointers: [
+            '/metadata/annotations/argocd.argoproj.io~1tracking-id',
+            '/metadata/annotations/kubevirt.io~1latest-observed-api-version',
+            '/metadata/annotations/kubevirt.io~1storage-observed-api-version',
+            '/metadata/finalizers',
+            '/spec/template/metadata/creationTimestamp',
+            '/spec/template/spec/architecture',
+            '/spec/template/spec/domain/firmware',
+          ],
+        },
+      ],
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // =========================================================================
+  // NixOS (nixos-config) VM on KubeVirt (Kind-only)
+  // =========================================================================
+
+  // Image server: nginx serving nixos.qcow2 (locally loaded into Kind or pulled from registry)
+  {
+    name: 'nixos-image-server',
+    namespace: 'default',
+    clusterType: 'kind',
+    chart: {
+      type: 'NixOsImageServerChart',
+      props: {
+        image: process.env.NIXOS_SWAY_IMAGE_SERVER_IMAGE || 'nixos-hetzner-sway-qcow2:latest',
+        imagePullPolicy: 'IfNotPresent',
+        replicas: 1,
+        namespace: 'default',
+      },
+    },
+    argocd: {
+      syncWave: '-50',
+      labels: {
+        'app.kubernetes.io/name': 'nixos-image-server',
+        'app.kubernetes.io/component': 'image-server',
+        'app.kubernetes.io/part-of': 'kubevirt',
+        'app.kubernetes.io/environment': 'host',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // DataVolume: imports nixos.qcow2 into a PVC
+  {
+    name: 'nixos-sway-datavolume',
+    namespace: 'default',
+    clusterType: 'kind',
+    chart: {
+      type: 'NixOsDataVolumeChart',
+      props: {
+        dataVolumeName: 'nixos-sway-datavolume',
+        imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
+        storageSize: '60Gi',
+        targetNamespace: 'default',
+      },
+    },
+    argocd: {
+      syncWave: '0',
+      labels: {
+        'app.kubernetes.io/name': 'nixos-sway-datavolume',
+        'app.kubernetes.io/component': 'datavolume',
+        'app.kubernetes.io/part-of': 'kubevirt',
+        'app.kubernetes.io/environment': 'host',
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
+
+  // VM: boots the imported DataVolume
+  {
+    name: 'nixos-sway-vm',
+    namespace: 'default',
+    clusterType: 'kind',
+    chart: {
+      type: 'NixOsSwayVmChart',
+      props: {
+        vmName: 'nixos-sway-vm',
+        dataVolumeName: 'nixos-sway-datavolume',
+        namespace: 'default',
+        cpuCores: 2,
+        memory: '4Gi',
+        enableGraphics: true,
+        runStrategy: 'Always',
+      },
+    },
+    argocd: {
+      syncWave: '10',
+      labels: {
+        'app.kubernetes.io/name': 'nixos-sway-vm',
+        'app.kubernetes.io/component': 'virtual-machine',
+        'app.kubernetes.io/part-of': 'kubevirt',
+        'app.kubernetes.io/environment': 'host',
+      },
+      // KubeVirt mutates VirtualMachine resources (firmware UUID/serial, arch) and
+      // adds finalizers/annotations; ignore these to avoid perpetual OutOfSync.
+      ignoreDifferences: [
+        {
+          group: 'kubevirt.io',
+          kind: 'VirtualMachine',
+          jsonPointers: [
+            '/metadata/annotations/argocd.argoproj.io~1tracking-id',
+            '/metadata/annotations/kubevirt.io~1latest-observed-api-version',
+            '/metadata/annotations/kubevirt.io~1storage-observed-api-version',
+            '/metadata/finalizers',
+            '/spec/template/metadata/creationTimestamp',
+            '/spec/template/spec/architecture',
+            '/spec/template/spec/domain/firmware',
+          ],
+        },
+      ],
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
+    },
+  },
 ];

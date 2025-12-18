@@ -11,7 +11,7 @@ import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 
-export interface NixOsImageServerChartProps extends ChartProps {
+export interface NixOsImageServerPlatformChartProps extends ChartProps {
   /**
    * Docker image containing qcow2 files
    * @default "vpittamp23/nixos-kubevirt-minimal:latest"
@@ -25,8 +25,8 @@ export interface NixOsImageServerChartProps extends ChartProps {
   replicas?: number;
 }
 
-export class NixOsImageServerChart extends Chart {
-  constructor(scope: Construct, id: string, props: NixOsImageServerChartProps = {}) {
+export class NixOsImageServerPlatformChart extends Chart {
+  constructor(scope: Construct, id: string, props: NixOsImageServerPlatformChartProps = {}) {
     super(scope, id, props);
 
     const {

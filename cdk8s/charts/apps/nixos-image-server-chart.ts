@@ -35,6 +35,14 @@ export interface NixOsImageServerChartProps extends ChartProps {
    * @default "default"
    */
   namespace?: string;
+
+  /**
+   * Image pull policy for the nginx + qcow2 image
+   * Use `IfNotPresent` for locally-loaded Kind images.
+   *
+   * @default "IfNotPresent"
+   */
+  imagePullPolicy?: 'Always' | 'IfNotPresent' | 'Never';
 }
 
 export class NixOsImageServerChart extends Chart {
@@ -45,10 +53,15 @@ export class NixOsImageServerChart extends Chart {
       image = 'vpittamp23/nixos-kubevirt-minimal:latest',
       replicas = 1,
       namespace = 'default',
+      imagePullPolicy = 'IfNotPresent',
     } = props;
 
     const appName = 'nixos-image-server';
+    // NOTE: Keep the legacy `app: <name>` selector for compatibility with
+    // existing idpbuilder-generated repos/Applications. Deployment selectors are immutable.
+    const selectorLabels = { app: appName };
     const labels = {
+      ...selectorLabels,
       'app.kubernetes.io/name': appName,
       'app.kubernetes.io/component': 'image-server',
     };
@@ -67,7 +80,7 @@ export class NixOsImageServerChart extends Chart {
       spec: {
         replicas,
         selector: {
-          matchLabels: labels,
+          matchLabels: selectorLabels,
         },
         template: {
           metadata: {
@@ -78,7 +91,7 @@ export class NixOsImageServerChart extends Chart {
               {
                 name: 'nginx',
                 image,
-                imagePullPolicy: 'Always', // Always pull to get latest qcow2 content
+                imagePullPolicy,
                 ports: [
                   {
                     name: 'http',
@@ -131,7 +144,7 @@ export class NixOsImageServerChart extends Chart {
       },
       spec: {
         type: 'ClusterIP',
-        selector: labels,
+        selector: selectorLabels,
         ports: [
           {
             name: 'http',

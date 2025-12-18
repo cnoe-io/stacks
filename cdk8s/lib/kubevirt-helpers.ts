@@ -40,7 +40,7 @@ export interface VirtualMachineBuilderProps {
 
 export interface VolumeConfig {
   name: string;
-  type: 'dataVolume' | 'persistentVolumeClaim' | 'cloudInit';
+  type: 'dataVolume' | 'persistentVolumeClaim' | 'cloudInit' | 'containerDisk';
 
   // For dataVolume or PVC volumes
   source?: string; // DataVolume or PVC name
@@ -48,6 +48,9 @@ export interface VolumeConfig {
   // For cloudInit volumes (use Secret for data > 2048 bytes)
   cloudInitData?: string;  // Inline cloud-init data (max 2048 bytes)
   cloudInitSecretName?: string;  // Secret reference for larger cloud-init data
+
+  // For containerDisk volumes
+  containerDiskImage?: string;  // e.g., "quay.io/kubevirt/cirros-container-disk-demo"
 
   // Disk bus type (virtio, sata, scsi)
   bus?: string;
@@ -142,6 +145,14 @@ export function buildVirtualMachine(
         name: vol.name,
         persistentVolumeClaim: { claimName: vol.source },
       };
+    } else if (vol.type === 'containerDisk') {
+      if (!vol.containerDiskImage) {
+        throw new Error(`containerDisk volume requires containerDiskImage: ${JSON.stringify(vol)}`);
+      }
+      return {
+        name: vol.name,
+        containerDisk: { image: vol.containerDiskImage },
+      };
     } else if (vol.type === 'cloudInit') {
       return {
         name: vol.name,
@@ -194,7 +205,7 @@ export function buildVirtualMachine(
           'kubevirt.io/domain': name,
           ...labels,
         },
-        annotations,
+        ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
       },
       spec: {
         domain: {
@@ -203,7 +214,6 @@ export function buildVirtualMachine(
             sockets: 1,
             threads: 1,
             model: 'host-model',  // Host model provides ~90% of passthrough performance with better compatibility
-            dedicatedCpuPlacement: false,  // Don't require dedicated CPUs (for Kind compatibility)
           },
           resources: {
             requests: {
