@@ -651,6 +651,160 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
+  // =========================================================================
+  // Backstage Local Dev - Inner Loop (Kargo Pipeline Target)
+  // This is a separate deployment for rapid iteration with Gitea images
+  // =========================================================================
+  {
+    name: 'backstage-local-dev',
+    namespace: 'backstage-local-dev',
+    clusterType: 'kind',  // Only for KIND cluster (inner loop)
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-local-dev',
+        // Use the same image as production - Kargo will update the tag
+        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest',
+        imagePullSecretName: 'gitea-dockercfg',
+        ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
+      }
+    },
+    argocd: {
+      syncWave: '25',  // After main backstage deployment
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-local-dev' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-local-dev'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-local-dev',
+        'kargo.akuity.io/loop': 'inner'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Local Dev Secrets - Inner Loop environment secrets (KIND)
+  {
+    name: 'backstage-local-dev-secrets',
+    namespace: 'backstage-local-dev',
+    clusterType: 'kind',
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage-local-dev',
+        baseHost: 'cnoe.localtest.me',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-local-dev-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  // Backstage Dev Secrets - Outer Loop environment secrets
+  {
+    name: 'backstage-dev-secrets',
+    namespace: 'backstage-dev',
+    clusterType: 'kind',
+    chart: {
+      type: 'BackstageSecretsChart',
+      props: {
+        namespace: 'backstage-dev',
+        baseHost: 'cnoe.localtest.me',
+        syncWave: '-10'
+      }
+    },
+    argocd: {
+      syncWave: '-10',  // Deploy secrets before Backstage workloads
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-dev-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  // Backstage Dev - Outer Loop (Kargo Pipeline Target)
+  // This is a separate deployment for CI-built GHCR images
+  {
+    name: 'backstage-dev',
+    namespace: 'backstage-dev',
+    clusterType: 'kind',  // Deploy to KIND for outer loop dev stage
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-dev',
+        // Use GHCR image - Kargo will update the tag
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.1.0',
+        ingressHosts: ['backstage-dev.cnoe.localtest.me'],
+      }
+    },
+    argocd: {
+      syncWave: '25',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-dev' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-dev'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-dev',
+        'kargo.akuity.io/loop': 'outer'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Backstage Staging - Outer Loop (Kargo Pipeline Target for Talos)
+  // Manual promotion from dev stage to staging (Talos cluster)
+  {
+    name: 'backstage-staging',
+    namespace: 'backstage-staging',
+    clusterType: 'talos',  // Staging deploys to Talos cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-staging',
+        // Use GHCR image - Kargo will update the tag
+        image: 'ghcr.io/pittampalliorg/backstage:v1.0.0',
+        ingressHosts: ['backstage-staging.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-staging-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        },
+      }
+    },
+    dependencies: {
+      backstageSecrets: {
+        type: 'BackstageSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '25',
+      // CRITICAL: Kargo authorization annotation
+      // Allows Kargo stage 'backstage-staging' to update this application
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-staging'
+      },
+      labels: {
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'app.kubernetes.io/name': 'backstage-staging',
+        'kargo.akuity.io/loop': 'outer'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
   // Backstage Templates (Catalog entities for Backstage software templates)
   // This references existing entities directory, not synthesized manifests
   {
@@ -670,9 +824,14 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
     }
   },
+  // =========================================================================
+  // KIND Kargo - Local development cluster Kargo with Gitea integration
+  // These apps are KIND-specific (use Gitea CA certs, nginx ingress)
+  // =========================================================================
   {
     name: 'kargo-secrets',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - uses Gitea/local registry
     chart: {
       type: 'KargoSecretsChart'
     },
@@ -692,6 +851,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - uses Gitea CA certs, nginx ingress
     chart: {
       type: 'KargoHelmChart'
     },
@@ -766,6 +926,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-project',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - uses local Kargo
     chart: {
       type: 'KargoPipelinesProjectChart'
     },
@@ -803,6 +964,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-pipelines-credentials',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - Gitea credentials
     chart: {
       type: 'KargoPipelinesCredentialsChart'
     },
@@ -829,9 +991,56 @@ export const applicationConfigs: ApplicationConfig[] = [
       })
     }
   },
+  // Kargo Backstage Pipeline - Progressive delivery for Backstage images
+  // Inner Loop: Gitea → local-dev (rapid iteration)
+  // Outer Loop: GHCR → dev → staging → production (CI-verified)
+  {
+    name: 'kargo-backstage-pipeline',
+    namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - local Kargo pipeline
+    chart: {
+      type: 'KargoBackstagePipelineChart',
+      props: {
+        enableInnerLoop: true,
+        enableOuterLoop: true,
+        enableStagingAndProdStages: false,
+      }
+    },
+    dependencies: {
+      kargoPipelinesProject: {
+        type: 'KargoPipelinesProjectChart'
+      }
+    },
+    argocd: {
+      syncWave: '77',  // After project creation and credentials
+      labels: {
+        'app.kubernetes.io/component': 'pipeline',
+        'app.kubernetes.io/part-of': 'kargo-pipelines',
+        'app.kubernetes.io/name': 'kargo-backstage-pipeline'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,           // Don't delete Freight
+          selfHeal: false         // Don't auto-revert manual changes
+        },
+        syncOptions: [
+          'CreateNamespace=false',        // Namespace already exists
+          'ApplyOutOfSyncOnly=true',      // Only sync changed resources
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true' // Skip dry-run for Kargo CRs
+        ]
+      },
+      ignoreDifferences: [
+        // Ignore status fields managed by Kargo controller
+        { group: 'kargo.akuity.io', kind: 'Warehouse', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'Stage', jsonPointers: ['/status'] }
+      ]
+    }
+  },
   {
     name: 'kargo-ca-certificates',
     namespace: 'kargo',
+    clusterType: 'kind',  // KIND only - Gitea CA certificates
     chart: {
       type: 'KargoCACertificatesChart'
     },
@@ -854,6 +1063,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   {
     name: 'kargo-gitea-webhook-setup',
     namespace: 'kargo-pipelines',
+    clusterType: 'kind',  // KIND only - Gitea webhooks
     chart: {
       type: 'KargoGiteaWebhookSetupChart'
     },
@@ -881,6 +1091,193 @@ export const applicationConfigs: ApplicationConfig[] = [
       })
     }
   },
+
+  // =========================================================================
+  // Hub Kargo - Centralized Kargo controller on hub cluster (Talos)
+  // Manages progressive delivery across all spoke clusters
+  // Access via: https://kargo-hub.tail286401.ts.net
+  // =========================================================================
+  {
+    name: 'hub-kargo-secrets',
+    namespace: 'kargo',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoSecretsChart'  // Reuse existing secrets chart
+    },
+    argocd: {
+      syncWave: '-50',  // Deploy secrets before Kargo
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-kargo',
+        'app.kubernetes.io/name': 'hub-kargo-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  {
+    name: 'hub-kargo',
+    namespace: 'kargo',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoHubHelmChart'  // Hub-specific chart (no Gitea CA, uses Tailscale Serve)
+    },
+    dependencies: {
+      hubKargoSecrets: {
+        type: 'KargoSecretsChart'
+      }
+    },
+    argocd: {
+      syncWave: '70',  // After ArgoCD Helm app
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'continuous-delivery',
+        'app.kubernetes.io/part-of': 'platform',
+        'app.kubernetes.io/name': 'hub-kargo',
+        'app.kubernetes.io/instance': 'hub-kargo',
+        'app.kubernetes.io/version': '1.8.4'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true']
+      },
+      ignoreDifferences: [
+        {
+          group: 'cert-manager.io',
+          kind: 'Certificate'
+        },
+        {
+          group: 'cert-manager.io',
+          kind: 'Issuer'
+        },
+        {
+          group: 'batch',
+          kind: 'Job',
+          jsonPointers: [
+            '/spec/podReplacementPolicy',
+            '/status/terminating'
+          ]
+        }
+      ]
+    }
+  },
+  {
+    name: 'hub-kargo-pipelines-project',
+    namespace: 'kargo-pipelines',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoPipelinesProjectChart'  // Reuse existing project chart
+    },
+    dependencies: {
+      hubKargo: {
+        type: 'KargoHubHelmChart'
+      }
+    },
+    argocd: {
+      syncWave: '75',  // After Kargo installation
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'project',
+        'app.kubernetes.io/part-of': 'hub-kargo-pipelines',
+        'app.kubernetes.io/name': 'hub-kargo-pipelines-project'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,
+          selfHeal: false
+        },
+        syncOptions: [
+          'CreateNamespace=false',
+          'ApplyOutOfSyncOnly=true',
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true'
+        ]
+      },
+      ignoreDifferences: [
+        { group: 'kargo.akuity.io', kind: 'Project', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'ProjectConfig', jsonPointers: ['/status'] }
+      ]
+    }
+  },
+  // Hub Kargo Tailscale Serve - Access: https://kargo-hub.tail286401.ts.net
+  {
+    name: 'hub-kargo-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'kargo-hub',  // Fixed name for hub Kargo (not host-aware)
+        backendHost: 'kargo-api.kargo.svc.cluster.local',
+        backendPort: 8080,  // Hub Kargo uses port 8080
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/name': 'hub-kargo-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+  // Hub Kargo Backstage Pipeline - Cross-cluster progressive delivery
+  // Inner Loop: KIND Gitea → thinkpad spoke (auto-promote, ~60s)
+  // Outer Loop: GHCR → dev (auto) → staging (manual)
+  {
+    name: 'hub-kargo-backstage-pipeline',
+    namespace: 'kargo-pipelines',
+    clusterType: 'talos',  // Hub cluster only
+    chart: {
+      type: 'KargoHubBackstagePipelineChart',
+      props: {
+        enableInnerLoop: true,
+        enableOuterLoop: true,
+      }
+    },
+    dependencies: {
+      hubKargoPipelinesProject: {
+        type: 'KargoPipelinesProjectChart'
+      }
+    },
+    argocd: {
+      syncWave: '80',  // After hub Kargo pipelines project
+      targetCluster: 'hub',  // Deploy to hub cluster
+      labels: {
+        'app.kubernetes.io/component': 'pipeline',
+        'app.kubernetes.io/part-of': 'hub-kargo-pipelines',
+        'app.kubernetes.io/name': 'hub-kargo-backstage-pipeline'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,
+          selfHeal: false
+        },
+        syncOptions: [
+          'CreateNamespace=false',
+          'ApplyOutOfSyncOnly=true',
+          'RespectIgnoreDifferences=true',
+          'SkipDryRunOnMissingResource=true'
+        ]
+      },
+      ignoreDifferences: [
+        { group: 'kargo.akuity.io', kind: 'Warehouse', jsonPointers: ['/status'] },
+        { group: 'kargo.akuity.io', kind: 'Stage', jsonPointers: ['/status'] }
+      ]
+    }
+  },
+
   {
     name: 'dagger-infra',
     namespace: 'argo',
@@ -1225,11 +1622,11 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Kargo Tailscale Serve - Access: https://kargo2.tail286401.ts.net
-  // Note: Using 'kargo2' to bypass Let's Encrypt rate limit on 'kargo'
+  // Kargo Tailscale Serve (KIND) - Access: https://kargo-<host>.tail286401.ts.net
   {
     name: 'kargo-tailscale-serve',
     namespace: 'tailscale',
+    clusterType: 'kind',  // KIND only - local Kargo access
     chart: {
       type: 'TailscaleServeChart',
       props: {
@@ -2198,6 +2595,547 @@ export const applicationConfigs: ApplicationConfig[] = [
           selfHeal: true
         }
       }
+    }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Hub Cluster Applications
+  // These apps deploy to the dedicated hub cluster for centralized management
+  // =========================================================================
+
+  // Hub Cluster: ESO Workload Identity Patch - Azure AD federation for external-secrets ServiceAccount
+  // Required for ClusterSecretStore to authenticate with Azure Key Vault
+  {
+    name: 'hub-eso-workload-identity',
+    namespace: 'external-secrets',
+    clusterType: 'talos',  // Hub is a Talos cluster
+    chart: {
+      type: 'WorkloadIdentityPatchChart',
+      props: {
+        clientId: process.env.AZURE_CLIENT_ID || '',
+        tenantId: process.env.AZURE_TENANT_ID || '',
+        serviceAccountName: 'external-secrets',
+        serviceAccountNamespace: 'external-secrets'
+      }
+    },
+    argocd: {
+      syncWave: '-90',  // Before cluster-secret-store
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'workload-identity',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-eso-workload-identity'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: ClusterSecretStore - Azure Key Vault access
+  // Required for syncing spoke credentials and other secrets to hub
+  {
+    name: 'hub-cluster-secret-store',
+    namespace: 'external-secrets',
+    clusterType: 'talos',
+    chart: {
+      type: 'ClusterSecretStoreChart',
+      props: {
+        storeName: 'azure-keyvault-store',
+        keyVaultName: process.env.AZURE_KEYVAULT_NAME || 'idp-kv',
+        serviceAccountRef: {
+          name: 'external-secrets',
+          namespace: 'external-secrets'
+        }
+      }
+    },
+    argocd: {
+      syncWave: '-88',  // After ESO workload identity
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'secret-store',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-cluster-secret-store'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: Tailscale CRDs - Required before Tailscale operator
+  {
+    name: 'hub-tailscale-crds',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleCrdsChart'
+    },
+    argocd: {
+      syncWave: '-120',  // Deploy CRDs very early
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'crds',
+        'app.kubernetes.io/part-of': 'hub-cluster',
+        'app.kubernetes.io/name': 'hub-tailscale-crds'
+      },
+      syncPolicy: {
+        automated: {
+          prune: false,  // Never auto-delete CRDs
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
+    }
+  },
+
+  // Hub Cluster: Tailscale Operator Secrets (OAuth credentials from Azure Key Vault)
+  {
+    name: 'hub-tailscale-operator-secrets',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleOperatorSecretsChart',
+      props: {
+        namespace: 'tailscale',
+        syncWave: '-85'
+      }
+    },
+    argocd: {
+      syncWave: '-85',  // After bootstrap-secrets, before operator
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-operator-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hub Cluster: Tailscale Operator - Manages Tailscale connectivity
+  {
+    name: 'hub-tailscale-operator',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleOperatorChart',
+      props: {
+        version: '1.82.0',
+        namespace: 'tailscale',
+        operatorHostname: 'hub-operator',
+        defaultTags: ['tag:k8s-operator'],
+        enableApiServerProxy: true,
+        tailnetAdmins: ['vpittamp@github']
+      }
+    },
+    argocd: {
+      syncWave: '-75',  // After operator secrets
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-operator',
+        'app.kubernetes.io/component': 'operator',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Hub Cluster: Tailscale Secrets (Auth key for Tailscale Services pods)
+  {
+    name: 'hub-tailscale-secrets',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleSecretsChart',
+      props: {
+        namespace: 'tailscale',
+        syncWave: '-70'
+      }
+    },
+    argocd: {
+      syncWave: '-70',  // Before tailscale serve pods
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-tailscale-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hub Cluster: ArgoCD Tailscale Serve - Access: https://argocd-hub.<tailnet>.ts.net
+  // Provides remote access to hub ArgoCD UI via Tailscale
+  {
+    name: 'hub-argocd-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'argocd-hub',  // Stable URL: argocd-hub.tail286401.ts.net
+        backendHost: 'argocd-server.argocd.svc.cluster.local',
+        backendPort: 443,
+        backendInsecure: true,
+        persistentStorage: true,
+        storageSize: '1Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',  // After auth key secret
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-argocd-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Hub Cluster: Kubernetes API Tailscale Serve - Access: https://k8s-api-hub.<tailnet>.ts.net
+  // Provides remote kubectl access to hub cluster via Tailscale
+  {
+    name: 'hub-k8s-api-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'talos',
+    chart: {
+      type: 'K8sApiTailscaleServeChart',
+      props: {
+        serviceName: 'k8s-api-hub',
+        authKeySecretName: 'tailscale-auth-key',
+        tailnetName: 'tail286401',
+        createStaticTokenSecret: true,
+        remoteAccessTokenSecretName: 'hub-k8s-remote-access-token'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/name': 'hub-k8s-api-tailscale-serve',
+        'app.kubernetes.io/component': 'api-proxy',
+        'app.kubernetes.io/part-of': 'hub-cluster'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Spoke Cluster Registration
+  // ExternalSecrets sync spoke credentials from Azure Key Vault
+  // Cluster secrets register spokes in ArgoCD
+  // =========================================================================
+
+  // Hetzner Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-hetzner',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'hetzner',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-HETZNER'
+      }
+    },
+    argocd: {
+      syncWave: '-82',  // After ClusterSecretStore
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-hetzner',
+        'cluster-host': 'hetzner'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Thinkpad Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-thinkpad',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'thinkpad',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-THINKPAD'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-thinkpad',
+        'cluster-host': 'thinkpad'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Ryzen Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-ryzen',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'ryzen',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-RYZEN'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-ryzen',
+        'cluster-host': 'ryzen'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Talos Spoke: ExternalSecret for credentials
+  {
+    name: 'spoke-credentials-talos',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterCredentialsChart',
+      props: {
+        clusterName: 'talos',
+        keyVaultSecretPrefix: 'ARGOCD-CLUSTER-TALOS'
+      }
+    },
+    argocd: {
+      syncWave: '-82',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'credentials',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-credentials-talos',
+        'cluster-host': 'talos'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // Hetzner Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-hetzner',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'hetzner',
+        credentialsSecretName: 'spoke-creds-hetzner'
+      }
+    },
+    argocd: {
+      syncWave: '-80',  // After ExternalSecret syncs credentials
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-hetzner',
+        'cluster-host': 'hetzner'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Thinkpad Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-thinkpad',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'thinkpad',
+        credentialsSecretName: 'spoke-creds-thinkpad'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-thinkpad',
+        'cluster-host': 'thinkpad'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Ryzen Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-ryzen',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'ryzen',
+        credentialsSecretName: 'spoke-creds-ryzen'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-ryzen',
+        'cluster-host': 'ryzen'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // Talos Spoke: ArgoCD Cluster Secret
+  {
+    name: 'spoke-cluster-talos',
+    namespace: 'argocd',
+    clusterType: 'talos',
+    chart: {
+      type: 'ArgocdClusterSecretChart',
+      props: {
+        clusterName: 'talos',
+        credentialsSecretName: 'spoke-creds-talos'
+      }
+    },
+    argocd: {
+      syncWave: '-80',
+      targetCluster: 'hub',
+      labels: {
+        'app.kubernetes.io/component': 'cluster-secret',
+        'app.kubernetes.io/part-of': 'spoke-registration',
+        'app.kubernetes.io/name': 'spoke-cluster-talos',
+        'cluster-host': 'talos'
+      },
+      syncPolicy: automatedSyncWithOptions(['ServerSideApply=true'])
+    }
+  },
+
+  // =========================================================================
+  // Hub-and-Spoke Architecture - Backstage Applications via Hub ArgoCD
+  // These apps are managed by hub ArgoCD and deploy to spoke clusters
+  // Hub Kargo stages update these apps to promote images across environments
+  // =========================================================================
+
+  // Hub-Managed Backstage Local Dev - Inner Loop Target (Thinkpad Spoke)
+  // Hub Kargo stage 'hub-backstage-local-dev' updates this application
+  {
+    name: 'hub-backstage-local-dev',
+    namespace: 'backstage-local-dev',
+    clusterType: 'talos',  // Synthesize for hub cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-local-dev',
+        image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest',
+        imagePullSecretName: 'gitea-dockercfg',
+        ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
+      }
+    },
+    argocd: {
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-local-dev'
+      },
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-local-dev',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'inner',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Hub-Managed Backstage Dev - Outer Loop Target (Thinkpad Spoke)
+  // Hub Kargo stage 'hub-backstage-dev' auto-promotes from GHCR
+  {
+    name: 'hub-backstage-dev',
+    namespace: 'backstage-dev',
+    clusterType: 'talos',  // Synthesize for hub cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-dev',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.1.0',
+        ingressHosts: ['backstage-dev.cnoe.localtest.me'],
+      }
+    },
+    argocd: {
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-dev'
+      },
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-dev',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'outer',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Hub-Managed Backstage Staging - Outer Loop Target (Talos Spoke)
+  // Hub Kargo stage 'hub-backstage-staging' requires manual promotion from dev
+  {
+    name: 'hub-backstage-staging',
+    namespace: 'backstage-staging',
+    clusterType: 'talos',  // Synthesize for hub cluster
+    chart: {
+      type: 'BackstageChart',
+      props: {
+        namespace: 'backstage-staging',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.0.0',
+        ingressHosts: ['backstage-staging.ai401kchat.com'],
+        tls: {
+          enabled: true,
+          secretName: 'backstage-staging-tls',
+          clusterIssuer: 'letsencrypt-cloudflare',
+        },
+      }
+    },
+    argocd: {
+      syncWave: '85',  // After hub Kargo pipelines
+      targetCluster: 'talos',  // Deploy to talos spoke (hetzner)
+      annotations: {
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:hub-backstage-staging'
+      },
+      labels: {
+        'app.kubernetes.io/name': 'hub-backstage-staging',
+        'app.kubernetes.io/component': 'developer-portal',
+        'app.kubernetes.io/part-of': 'backstage',
+        'kargo.akuity.io/loop': 'outer',
+        'kargo.akuity.io/managed-by': 'hub-kargo'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   }
 ];

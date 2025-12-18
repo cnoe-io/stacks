@@ -22,6 +22,7 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface DaprAgentsSecretsChartProps extends ChartProps {
   /**
@@ -57,6 +58,8 @@ export class DaprAgentsSecretsChart extends Chart {
     const secretName = props.secretName || 'dapr-agents-llm-providers';
     const clusterSecretStoreName = props.clusterSecretStoreName || 'azure-keyvault-store';
     const refreshInterval = props.refreshInterval || '1h';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret for LLM provider API keys
     new ExternalSecret(this, 'dapr-agents-llm-providers', {

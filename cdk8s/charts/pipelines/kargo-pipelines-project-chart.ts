@@ -59,14 +59,28 @@ export class KargoPipelinesProjectChart extends Chart {
       },
       spec: {
         promotionPolicies: [
-          // Auto-promote to dev stages for all pipelines
+          // Inner Loop: Auto-promote to local-dev stages (rapid iteration)
+          {
+            stageSelector: {
+              name: 'glob:*-local-dev'
+            },
+            autoPromotionEnabled: true
+          },
+          // Outer Loop: Auto-promote to dev stages
           {
             stageSelector: {
               name: 'glob:*-dev'
             },
             autoPromotionEnabled: true
           },
-          // Manual promotion for production
+          // Outer Loop: Manual promotion for staging
+          {
+            stageSelector: {
+              name: 'glob:*-staging'
+            },
+            autoPromotionEnabled: false
+          },
+          // Outer Loop: Manual promotion for production
           {
             stageSelector: {
               name: 'glob:*-prod'
@@ -74,14 +88,25 @@ export class KargoPipelinesProjectChart extends Chart {
             autoPromotionEnabled: false
           }
         ],
-        // Configure webhook receivers for Gitea integration
-        // Gitea is GitHub-compatible, so we use the github webhook receiver
+        // Configure webhook receivers for instant image detection
+        // Both Gitea and GitHub use the github webhook receiver type
+        // (Gitea implements GitHub-compatible webhook format)
         webhookReceivers: [
+          // Gitea webhook for inner loop (in-cluster, rapid iteration)
           {
             name: 'gitea-backstage',
             github: {
               secretRef: {
                 name: 'kargo-gitea-webhook-secret'
+              }
+            }
+          },
+          // GitHub webhook for outer loop (external CI-built images)
+          {
+            name: 'github-backstage',
+            github: {
+              secretRef: {
+                name: 'kargo-github-webhook-secret'
               }
             }
           }
@@ -139,6 +164,65 @@ export class KargoPipelinesProjectChart extends Chart {
 5. Test the webhook:
    - Push a new image to the Gitea registry
    - Check Kargo warehouse for new freight
+`
+      }
+    });
+
+    // Create webhook secret for GitHub integration
+    // This secret will be used to authenticate webhook calls from GitHub Actions
+    new k8s.KubeSecret(this, 'github-webhook-secret', {
+      metadata: {
+        name: 'kargo-github-webhook-secret',
+        namespace: 'kargo-pipelines',
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '5'  // After namespace and project config
+        },
+        labels: {
+          'app.kubernetes.io/name': 'kargo-github-webhook',
+          'app.kubernetes.io/part-of': 'kargo-pipelines',
+          'app.kubernetes.io/component': 'webhook-secret'
+        }
+      },
+      stringData: {
+        // Secure webhook secret for GitHub authentication
+        // In production, this should be stored in Azure Key Vault
+        // The key must be named 'secret' for GitHub-compatible webhooks
+        secret: 'FzLfqJOXWWvzgxVNz6qLq6YuDp4g1BRm',
+        'setup-instructions.txt': `GitHub Webhook Setup Instructions
+===============================
+
+1. Generate a secure webhook secret (or use the default one):
+   secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+   echo "Webhook Secret: $secret"
+
+2. Update this secret with the generated value:
+   kubectl patch secret kargo-github-webhook-secret \\
+     -n kargo-pipelines \\
+     --type json \\
+     -p='[{"op": "replace", "path": "/stringData/secret", "value": "'$secret'"}]'
+
+3. Get the webhook receiver URL:
+   kubectl get projectconfigs kargo-pipelines \\
+     -n kargo-pipelines \\
+     -o=jsonpath='{.status.webhookReceivers}'
+
+4. Configure webhook in GitHub repository:
+   - Go to Repository Settings > Webhooks
+   - Add a new webhook with:
+     - Payload URL: <webhook receiver URL from step 3>
+     - Content type: application/json
+     - Secret: <secret from step 1>
+     - Events: Select "Packages" or "push" events
+     - Active: Yes
+
+5. For external access (if not using Tailscale):
+   - Expose the webhook endpoint via Ingress with TLS
+   - GitHub requires HTTPS for webhook endpoints
+
+6. Test the webhook:
+   - Push a new tagged image to GHCR (e.g., ghcr.io/pittampalliorg/backstage:v1.0.0)
+   - Check Kargo warehouse for new freight:
+     kubectl get freights -n kargo-pipelines
 `
       }
     });
@@ -203,22 +287,5 @@ export class KargoPipelinesProjectChart extends Chart {
       ]
     });
 
-    // Create project-level admin binding
-    new k8s.KubeRoleBinding(this, 'kargo-project-admin-binding', {
-      metadata: {
-        name: 'kargo-project-admin',
-        namespace: 'kargo-pipelines',
-        labels: {
-          'app.kubernetes.io/name': 'kargo-project-admin-binding',
-          'app.kubernetes.io/part-of': 'kargo-pipelines'
-        }
-      },
-      roleRef: { apiGroup: 'rbac.authorization.k8s.io', kind: 'ClusterRole', name: 'kargo-project-admin' },
-      subjects: [
-        { kind: 'Group', name: 'system:authenticated' },
-        { kind: 'ServiceAccount', name: 'kargo-api', namespace: 'kargo' },
-        { kind: 'ServiceAccount', name: 'kargo-admin', namespace: 'kargo' }
-      ]
-    });
   }
 }

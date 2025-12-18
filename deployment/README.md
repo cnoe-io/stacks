@@ -10,6 +10,8 @@ deployment/
 │   ├── cluster-menu.sh           # Main cluster management functions
 │   ├── deploy-linux-ssh.sh       # idpbuilder deployment with Azure integration
 │   └── .bashrc-cluster           # Shell initialization snippet
+├── overrides/
+│   └── nginx-hostnetwork-no-hostport.yaml # Core package overrides (nginx)
 └── config/
     └── (dynamically generated)   # Config files created by scripts at runtime
 ```
@@ -144,6 +146,12 @@ The `deploy-linux-ssh.sh` script generates configuration files at runtime:
 - Generated with current `KEYS_DIR` path and `SERVICE_ACCOUNT_ISSUER` from wi.env
 - Minimal configuration that adds only Azure Workload Identity to idpbuilder defaults
 - Mounts service account keys for custom OIDC issuer
+
+### Core Package Overrides
+
+We keep idpbuilder core package overrides under `deployment/overrides/` and apply them automatically from the deployment scripts.
+
+- `deployment/overrides/nginx-hostnetwork-no-hostport.yaml`: Runs ingress-nginx controller with `hostNetwork: true` and removes `hostPort` bindings to avoid stale CNI hostport DNAT rules after host reboots (a common KIND + Docker issue).
 
 ### Environment Variables
 

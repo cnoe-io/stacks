@@ -227,7 +227,34 @@ if [ -x "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" ]; then
     "$STACKS_DIR/scripts/cluster/remove-core-dns-package.sh" || true
 fi
 
-idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password $IDPBUILDER_ARGS
+# Core package overrides
+# - nginx: avoid hostPort (prevents stale CNI hostport DNAT rules after reboot)
+NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+USE_NGINX_OVERRIDE="true"
+prev_arg=""
+for arg in "$@"; do
+    if [[ "$arg" == --package-custom-file=nginx:* ]] || [[ "$arg" == -c=nginx:* ]]; then
+        USE_NGINX_OVERRIDE="false"
+        break
+    fi
+    if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == nginx:* ]]; then
+        USE_NGINX_OVERRIDE="false"
+        break
+    fi
+    prev_arg="$arg"
+done
+
+NGINX_CUSTOM_ARG=""
+if [[ "$USE_NGINX_OVERRIDE" == "true" ]]; then
+    if [ -f "$NGINX_OVERRIDE_FILE" ]; then
+        echo -e "${BLUE}Applying ingress-nginx override (hostNetwork; no hostPort)${NC}"
+        NGINX_CUSTOM_ARG="--package-custom-file=nginx:${NGINX_OVERRIDE_FILE}"
+    else
+        echo -e "${YELLOW}⚠️  Nginx override file not found: ${NGINX_OVERRIDE_FILE}${NC}"
+    fi
+fi
+
+idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password ${NGINX_CUSTOM_ARG:+$NGINX_CUSTOM_ARG} $IDPBUILDER_ARGS
 
 # Verify cluster was created with expected name
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then

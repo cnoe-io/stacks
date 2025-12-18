@@ -18,6 +18,7 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface CertManagerSecretsChartProps extends ChartProps {
   /**
@@ -48,6 +49,8 @@ export class CertManagerSecretsChart extends Chart {
       syncWave = '-85',
       secretName = 'cloudflare-api-token-secret',
     } = props;
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // ExternalSecret for Cloudflare API Token (used by cert-manager ClusterIssuer)
     new ExternalSecret(this, 'cloudflare-api-token', {

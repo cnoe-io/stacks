@@ -1,0 +1,53 @@
+# ProjectConfig: kargo-pipelines
+# Purpose: Project-wide configuration for promotion policies and webhook receivers
+# Scope: All pipelines in the kargo-pipelines namespace
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-pipelines
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+  labels:
+    app.kubernetes.io/name: kargo-pipelines-config
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: project-config
+spec:
+  # Promotion policies control which stages auto-promote
+  promotionPolicies:
+    # Inner Loop: Auto-promote to local-dev stages
+    - stageSelector:
+        name: 'glob:*-local-dev'
+      autoPromotionEnabled: true
+
+    # Outer Loop: Auto-promote to dev stages
+    - stageSelector:
+        name: 'glob:*-dev'
+      autoPromotionEnabled: true
+
+    # Outer Loop: Manual promotion for staging
+    - stageSelector:
+        name: 'glob:*-staging'
+      autoPromotionEnabled: false
+
+    # Outer Loop: Manual promotion for production
+    - stageSelector:
+        name: 'glob:*-prod'
+      autoPromotionEnabled: false
+
+  # Webhook receivers for instant image detection
+  webhookReceivers:
+    # Gitea webhook (GitHub-compatible format)
+    # Used for inner loop rapid iteration
+    - name: gitea-backstage
+      github:
+        secretRef:
+          name: kargo-gitea-webhook-secret
+
+    # GitHub webhook
+    # Used for outer loop CI-built images
+    - name: github-backstage
+      github:
+        secretRef:
+          name: kargo-github-webhook-secret

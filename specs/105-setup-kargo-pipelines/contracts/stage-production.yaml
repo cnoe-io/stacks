@@ -1,0 +1,60 @@
+# Stage: backstage-prod (Outer Loop - Final Stage)
+# Purpose: Production deployment (placeholder for future)
+# Source: Verified Freight from backstage-staging stage
+# Promotion: Manual with extended soak time
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: backstage-prod
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '30'
+    # Mark as placeholder until production cluster is available
+    kargo.akuity.io/placeholder: "true"
+  labels:
+    app.kubernetes.io/name: backstage-prod-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: stage
+    kargo.akuity.io/loop: outer
+spec:
+  # Where Freight comes from
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage-ghcr
+      sources:
+        # Get Freight from staging stage only
+        stages:
+          - backstage-staging
+        # Require Freight to have soaked in staging for 48 hours
+        requiredSoakTime: 48h
+
+  # How to promote Freight into this stage
+  promotionTemplate:
+    spec:
+      vars:
+        - name: registry
+          value: ghcr.io/pittampalliorg
+        - name: appName
+          value: backstage-prod
+        - name: argocdNamespace
+          value: argocd
+        # Production cluster URL (to be configured)
+        - name: clusterUrl
+          value: https://production-cluster.example.com:6443
+
+      steps:
+        # Step 1: Update ArgoCD Application targeting production cluster
+        - uses: argocd-update
+          as: update-argocd-app
+          config:
+            apps:
+              - name: backstage-prod
+                namespace: argocd
+                sources:
+                  # Git repo for production-specific manifests
+                  - repoURL: https://github.com/PittampalliOrg/stacks.git
+                    path: deployment/environments/production/backstage
+                    images:
+                      - image: ghcr.io/pittampalliorg/backstage

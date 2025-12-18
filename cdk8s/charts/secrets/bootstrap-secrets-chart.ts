@@ -10,6 +10,7 @@ import {
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
 import { ExternalSecretsWorkloadIdentityChart } from './external-secrets-workload-identity-chart';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface BootstrapSecretsChartProps extends ChartProps {
   externalSecretsWorkloadIdentity?: ExternalSecretsWorkloadIdentityChart;
@@ -23,6 +24,8 @@ export interface BootstrapSecretsChartProps extends ChartProps {
 export class BootstrapSecretsChart extends Chart {
   constructor(scope: Construct, id: string, props: BootstrapSecretsChartProps = {}) {
     super(scope, id, props);
+
+    addExternalSecretsWebhookGate(this, 'argocd');
 
     // GitHub App Repository Credentials ExternalSecret
     const ghRepoCreds = createEnvExternalSecret(this, 'github-app-repo-creds-external', {

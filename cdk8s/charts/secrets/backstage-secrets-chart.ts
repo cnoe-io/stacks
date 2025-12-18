@@ -11,6 +11,7 @@ import {
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
 import { Password } from '../../imports/generators.external-secrets.io';
+import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface BackstageSecretsChartProps extends ChartProps {
   // Namespace for Backstage secrets (default: backstage)
@@ -43,6 +44,9 @@ export class BackstageSecretsChart extends Chart {
     const namespace = props.namespace ?? 'backstage';
     const baseHost = props.baseHost ?? process.env.INGRESS_HOST ?? 'cnoe.localtest.me';
     const syncWave = props.syncWave ?? '-10';
+    const clusterHost = process.env.CLUSTER_HOST || 'localdev';
+
+    addExternalSecretsWebhookGate(this, namespace);
 
     // ==========================================================================
     // Password Generators
@@ -98,6 +102,12 @@ export class BackstageSecretsChart extends Chart {
     const portSuffix = isKind ? ':8443' : '';
     const giteaHost = isKind ? `gitea.${baseHost}${portSuffix}` : `gitea.${baseHost}`;
     const giteaHostNoPort = isKind ? `gitea.${baseHost}` : `gitea.${baseHost}`;
+    // Agent Forge (A2A) endpoint:
+    // - KIND: use the in-cluster kagent service (Backstage reaches it via backend proxy)
+    // - Talos: use the external host
+    const agentForgeUrl = isKind
+      ? 'http://k8s-agent.kagent:8080'
+      : `https://ai-platform-engineering.${baseHost}${portSuffix}`;
 
     // ExternalSecret: backstage-oidc → backstage-env-vars Secret
     // Uses keycloak ClusterSecretStore + Password generators
@@ -119,8 +129,8 @@ export class BackstageSecretsChart extends Chart {
             data: {
               // Core Backstage URLs
               'BACKSTAGE_FRONTEND_URL': `https://${baseHost}${portSuffix}/backstage`,
-              // PostgreSQL
-              'POSTGRES_HOST': 'postgresql.backstage.svc.cluster.local',
+              // PostgreSQL - use namespace for service discovery
+              'POSTGRES_HOST': `postgresql.${namespace}.svc.cluster.local`,
               'POSTGRES_PORT': '5432',
               'POSTGRES_DB': 'backstage',
               'POSTGRES_USER': 'backstage',
@@ -139,10 +149,10 @@ export class BackstageSecretsChart extends Chart {
               'GITEA_URL_NO_PORT': `https://${giteaHostNoPort}`,
               'GITEA_HOST_NO_PORT': giteaHostNoPort,
               // Proxy targets
-              'AGENT_FORGE_URL': `https://ai-platform-engineering.${baseHost}${portSuffix}`,
+              'AGENT_FORGE_URL': agentForgeUrl,
               'KARGO_URL': `https://kargo.${baseHost}${portSuffix}`,
               // Catalog URL
-              'CATALOG_URL': `https://${giteaHost}/giteaAdmin/idpbuilder-localdev-backstage-templates-entities/src/branch/main/catalog-info.yaml`,
+              'CATALOG_URL': `https://${giteaHost}/giteaAdmin/idpbuilder-${clusterHost}-backstage-templates-entities/src/branch/main/catalog-info.yaml`,
             },
           },
         },
@@ -232,6 +242,60 @@ export class BackstageSecretsChart extends Chart {
         ],
       },
     });
+
+    // ExternalSecret: gitea-dockercfg-external (pull secret for the in-cluster Gitea OCI registry)
+    const giteaDockerCfg = new ExternalSecret(this, 'gitea-dockercfg-external', {
+      metadata: {
+        name: 'gitea-dockercfg-external',
+        namespace,
+        labels: {
+          'app.kubernetes.io/name': 'gitea-dockercfg',
+          'app.kubernetes.io/part-of': 'backstage',
+        },
+      },
+      spec: {
+        refreshInterval: '0',
+        secretStoreRef: {
+          name: 'gitea',
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+        },
+        target: {
+          name: 'gitea-dockercfg',
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+          template: {
+            type: 'kubernetes.io/dockerconfigjson',
+            data: {
+              '.dockerconfigjson': `{
+  "auths": {
+    "${giteaHost}": {
+      "username": "{{ .username }}",
+      "password": "{{ .password }}",
+      "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+    }
+  }
+}`,
+            },
+          },
+        },
+        data: [
+          {
+            secretKey: 'username',
+            remoteRef: {
+              key: 'gitea-credential',
+              property: 'username',
+            },
+          },
+          {
+            secretKey: 'password',
+            remoteRef: {
+              key: 'gitea-credential',
+              property: 'password',
+            },
+          },
+        ],
+      },
+    });
+    giteaDockerCfg.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
 
     // ExternalSecret: ghcr-dockercfg-external (with sync-wave -10)
     const ghcrDockerCfg = new ExternalSecret(this, 'ghcr-dockercfg-external', {

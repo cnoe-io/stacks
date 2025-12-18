@@ -5,3 +5,4 @@ resources:
   - ExternalSecret.langfuse-auth.k8s.yaml
   - ExternalSecret.langfuse-init.k8s.yaml
   - ExternalSecret.langfuse-postgres-credentials.k8s.yaml
+  - Job.install-wait-external-secrets-webhook.k8s.yaml

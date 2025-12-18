@@ -1,0 +1,54 @@
+# Stage: backstage-local-dev (Inner Loop)
+# Purpose: Rapid iteration deployment in KIND cluster
+# Source: Direct from backstage-gitea warehouse
+# Promotion: Automatic (via ProjectConfig policy)
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: backstage-local-dev
+  namespace: kargo-pipelines
+  annotations:
+    argocd.argoproj.io/sync-wave: '30'
+  labels:
+    app.kubernetes.io/name: backstage-local-dev-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+    app.kubernetes.io/component: stage
+    kargo.akuity.io/loop: inner
+spec:
+  # Where Freight comes from
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage-gitea
+      sources:
+        # Get Freight directly from the warehouse (no upstream stages)
+        direct: true
+
+  # How to promote Freight into this stage
+  promotionTemplate:
+    spec:
+      # Variables available to all steps
+      vars:
+        - name: registry
+          value: gitea.cnoe.localtest.me:8443/giteaadmin
+        - name: appName
+          value: backstage-local-dev
+        - name: argocdNamespace
+          value: argocd
+
+      steps:
+        # Step 1: Update ArgoCD Application with new image
+        - uses: argocd-update
+          as: update-argocd-app
+          config:
+            apps:
+              - name: backstage-local-dev
+                namespace: argocd
+                sources:
+                  - repoURL: cnoe://backstage/manifests
+                    images:
+                      # Kargo substitutes the image from Freight
+                      - image: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+                        # Use the tag from the Freight's first image
+                        # Expression: {{ .freight.images.0.tag }}

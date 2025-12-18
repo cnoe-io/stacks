@@ -279,6 +279,64 @@ argocd-list-outofsync      # List out-of-sync applications
 **Authentication:** Automatic via `ARGOCD_AUTH_TOKEN` environment variable (set by cluster-menu.sh)
 **Documentation:** See `deployment/docs/ARGOCD_AUTOMATION.md` for details
 
+### Kargo Progressive Delivery Pipelines
+
+**Purpose**: Automated image promotion through environments using Kargo.
+
+```bash
+# Check Kargo resources
+kubectl get projects,projectconfigs -n kargo-pipelines
+kubectl get warehouses,stages -n kargo-pipelines
+kubectl get freights,promotions -n kargo-pipelines
+
+# View pipeline status
+kubectl get stages -n kargo-pipelines -o wide
+
+# Watch for new Freight (image versions)
+kubectl get freights -n kargo-pipelines -w
+
+# Filter by loop type
+kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=inner
+kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=outer
+
+# Manual promotion to staging
+kargo promote --project kargo-pipelines --stage backstage-staging --freight <freight-name>
+
+# View promotion history
+kubectl get promotions -n kargo-pipelines --selector stage=backstage-staging
+
+# Force warehouse refresh
+kubectl annotate warehouse backstage-gitea -n kargo-pipelines refresh=$(date +%s) --overwrite
+```
+
+**Key Files:**
+- Pipeline chart: `cdk8s/charts/pipelines/kargo-backstage-pipeline-chart.ts`
+- Pipeline factory: `cdk8s/charts/pipelines/kargo-pipeline-factory.ts`
+- Helpers: `cdk8s/lib/kargo-helpers.ts`
+- Project config: `cdk8s/charts/pipelines/kargo-pipelines-project-chart.ts`
+- Documentation: `specs/105-setup-kargo-pipelines/quickstart.md`
+
+**Pipeline Architecture:**
+- **Inner Loop**: Gitea → local-dev (auto-promote, <60s)
+- **Outer Loop**: GHCR → dev (auto) → staging (manual) → prod (manual)
+
+**Adding New Application Pipeline:**
+```typescript
+// In cdk8s/config/applications.ts
+{
+  name: 'kargo-myapp-pipeline',
+  namespace: 'kargo-pipelines',
+  chart: {
+    type: 'KargoPipelineFactoryChart',
+    props: {
+      appName: 'myapp',
+      enableInnerLoop: true,
+      enableOuterLoop: true,
+    }
+  }
+}
+```
+
 ### Testing
 
 ```bash
@@ -295,7 +353,7 @@ kubectl get all -n <namespace>
 
 ### Nix Binary Cache (Attic + MinIO)
 
-**Purpose**: In-cluster Nix binary cache for accelerating NixOS VM builds (20-25 min → under 3 min)
+**Purpose**: In-cluster Nix binary cache for accelerating NixOS builds
 
 ```bash
 # Deploy MinIO + Attic (via cluster-update)
@@ -333,125 +391,8 @@ curl http://localhost:8080/nixos/nix-cache-info
 - MinIO CrashLoopBackOff: Check disk space (`docker exec kind-control-plane df -h`)
 - Attic connection errors: Verify MinIO is Running (`kubectl get pods -n nix-cache -l app=minio`)
 - Cache push 401: Regenerate admin token via init-attic-cache.sh
-- VM can't reach cache: Check DNS resolution from VM (`curl http://attic.nix-cache.svc.cluster.local:8080/nixos/nix-cache-info`)
 
 For full documentation, see `specs/003-implement-attic-minio/quickstart.md`.
-
-### NixOS VMs with RustDesk Remote Desktop
-
-**Purpose**: Deploy NixOS VMs via KubeVirt with automatic RustDesk headless mode configuration for remote desktop access.
-
-**Key Achievement**: Cloud-init-based RustDesk configuration that works within NixOS immutable filesystem constraints by using `/root/.config` and systemd system services.
-
-```bash
-# Deploy NixOS VM with RustDesk enabled (via cluster-update)
-source deployment/scripts/cluster-menu.sh
-cluster-update  # Deploys nixos-dev-vm package with enableRustDesk: true
-
-# Check VM status
-kubectl get vm,vmi -n default
-# Expected: nixos-dev-vm VM Running, VMI Running
-
-# Get RustDesk credentials via SSH
-kubectl port-forward -n default svc/nixos-dev-vm-rdp 2222:22 &
-ssh -p 2222 nixos@localhost 'cat /root/rustdesk-info.txt'
-# Expected: RustDesk ID: 123456789
-
-# Verify RustDesk service running
-kubectl port-forward -n default svc/nixos-dev-vm-rdp 2222:22 &
-ssh -p 2222 nixos@localhost 'sudo systemctl status rustdesk'
-# Expected: active (running)
-
-# Connect via Tailscale subnet router (recommended)
-# 1. Ensure Tailscale subnet routes (10.244.0.0/16) are approved in Tailscale admin
-# 2. Get VM pod IP: kubectl get vmi nixos-dev-vm -o jsonpath='{.status.interfaces[0].ipAddress}'
-# 3. Connect RustDesk client to: <VM_POD_IP>:21116
-
-# Alternative: Port-forward for testing
-kubectl port-forward -n default svc/nixos-dev-vm-rdp 21116:21116 &
-# Connect RustDesk client to: localhost:21116
-```
-
-**Key Files**:
-- Chart: `cdk8s/lib/kubevirt-helpers.ts` (generateCloudInitUserData function with RustDesk setup)
-- VM Configuration: `cdk8s/charts/infra/nixos-vm-chart.ts`
-- Documentation: `docs/RUSTDESK_CONNECTION_GUIDE.md`, `specs/004-deploy-nixos-vms/rustdesk-headless-spec.md`
-
-**Architecture** (NixOS Immutability Constraints):
-- **Challenge**: NixOS immutable filesystem prevents traditional runtime configuration
-- **Solution**: Cloud-init + system service approach
-  - Configuration written to `/root/.config/rustdesk/` (writable at runtime)
-  - Systemd system service (multi-user.target) running as root
-  - Headless mode enabled via `rustdesk --option allow-linux-headless Y`
-  - Direct connection mode on port 21116 (no relay server)
-- **Benefits**: Fast deployment (no image rebuild), GitOps-friendly (cloud-init in version control)
-
-**RustDesk Configuration**:
-- **Headless Mode**: Enabled (`allow-linux-headless = "Y"` in RustDesk2.toml)
-- **Direct Connection**: Port 21116 exposed in VM network and Service
-- **Authentication**: Permanent password (configured via chart props or Azure Key Vault)
-- **Service**: `/etc/systemd/system/rustdesk.service` (auto-start, auto-restart on failure)
-- **GL Fallback**: `LIBGL_ALWAYS_SOFTWARE=1` for software rendering
-
-**Access Methods**:
-1. **Tailscale Subnet Router** (Recommended): Direct access to VM pod IP from any Tailscale-connected device
-2. **Port-Forward**: For testing from cluster host (`kubectl port-forward`)
-3. **NodePort**: Accessible from Kind node IP (cluster host only)
-
-**Troubleshooting**:
-```bash
-# RustDesk service not running: Check logs
-kubectl exec -n default <vm-pod-name> -- journalctl -u rustdesk --tail=50
-
-# Cloud-init RustDesk setup failed: Check cloud-init output
-kubectl exec -n default <vm-pod-name> -- cat /var/log/cloud-init-output.log | grep -A 20 rustdesk
-
-# Cannot connect via Tailscale: Verify subnet routes approved
-kubectl exec -n tailscale tailscale-subnet-router -- tailscale status
-
-# RustDesk ID not found: Check configuration directory
-kubectl exec -n default <vm-pod-name> -- ls -la /root/.config/rustdesk/
-
-# GL errors (shouldn't occur with headless mode): Check service environment
-kubectl exec -n default <vm-pod-name> -- systemctl show rustdesk | grep -i environment
-```
-
-**CDK8s Configuration** (in `config/applications.ts`):
-```typescript
-{
-  name: 'nixos-dev-vm',
-  namespace: 'default',
-  chart: {
-    type: 'NixOsVmChart',
-    props: {
-      vmName: 'nixos-dev-vm',
-      enableRustDesk: true,  // Enable RustDesk headless mode
-      enableTailscale: true,  // Enable Tailscale auth via Azure Key Vault
-      cpuCores: 2,
-      memory: '4Gi',
-      storageSize: '50Gi'
-    }
-  }
-}
-```
-
-**Implementation Status**:
-- ✅ RustDesk headless mode enabled (commit f92daf5)
-- ✅ Systemd system service running as root
-- ✅ Configuration in `/root/.config/rustdesk/`
-- ✅ Direct connection mode on port 21116
-- ✅ Tailscale subnet router access tested
-- ✅ GL errors resolved (headless mode avoids GL)
-- ⚠️ Password currently hard-coded ("nixos123") - Azure Key Vault integration planned
-- ⚠️ RustDesk ID regenerates on VM recreation (no persistent storage)
-
-**Security Considerations**:
-- RustDesk runs as root (required for headless mode functionality)
-- Permanent password should be sourced from Azure Key Vault (not implemented yet)
-- Tailscale network provides access control (only Tailscale-connected devices can reach VM)
-- End-to-end encryption enabled by default in RustDesk protocol
-
-For full documentation, see `docs/RUSTDESK_CONNECTION_GUIDE.md` and `specs/004-deploy-nixos-vms/rustdesk-headless-spec.md`.
 
 ### kagent/kmcp (AI Agent Platform)
 
@@ -726,6 +667,121 @@ curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200
 - ACL auto-approvers for all 7 services (`svc:argocd`, `svc:langfuse`, etc.)
 
 See `specs/103-tailscale-services/quickstart.md` for complete setup and validation guide.
+
+### Hub-and-Spoke ArgoCD Architecture (Feature 108)
+
+**Purpose**: Multi-cluster GitOps management with a dedicated hub cluster running ArgoCD that manages spoke clusters via Tailscale connectivity.
+
+**Architecture Overview**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Hub Cluster (Hetzner CX32)                            │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐               │
+│  │    ArgoCD     │  │     Kargo     │  │      ESO      │               │
+│  │  (Management) │  │  (Promotion)  │  │   (Secrets)   │               │
+│  └───────┬───────┘  └───────────────┘  └───────────────┘               │
+│          │                                                               │
+│          │ Tailscale k8s-api-<spoke>.tail286401.ts.net                  │
+└──────────┼──────────────────────────────────────────────────────────────┘
+           │
+     ┌─────┴─────┬─────────────┬─────────────┐
+     ▼           ▼             ▼             ▼
+┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│ hetzner │ │thinkpad │ │  ryzen  │ │  talos  │
+│ (prod)  │ │  (dev)  │ │(staging)│ │ (prod)  │
+└─────────┘ └─────────┘ └─────────┘ └─────────┘
+   Spoke        Spoke       Spoke       Spoke
+```
+
+**Key Concepts**:
+- **Hub Cluster**: Single-node Talos Linux cluster running centralized management workloads
+- **Spoke Clusters**: Existing clusters (hetzner, thinkpad, ryzen, talos) running application workloads
+- **targetCluster Field**: ApplicationConfig property that routes deployments to specific clusters
+- **ArgoCD Cluster Secrets**: Secrets with `argocd.argoproj.io/secret-type: cluster` label
+
+**Hub Provisioning**:
+```bash
+# Navigate to talos-cluster repo
+cd ~/repos/PittampalliOrg/talos-cluster
+
+# Set required environment variables
+export HCLOUD_TOKEN="your-hetzner-api-token"
+
+# Step 1: Provision Hetzner infrastructure
+./scripts/provision-hub.sh
+
+# Step 2: Generate Talos machine configuration
+./scripts/gen-hub-config.sh
+
+# Step 3: Bootstrap the cluster
+./scripts/bootstrap-hub.sh $HUB_PUBLIC_IP
+
+# Access hub ArgoCD
+open https://argocd-hub.tail286401.ts.net
+```
+
+**Spoke Registration**:
+```bash
+# Source spoke helpers
+source scripts/lib/spoke-helpers.sh
+export AZURE_KEYVAULT_NAME="idp-kv"
+
+# Register a spoke cluster
+kubectl config use-context thinkpad
+create_spoke_service_account thinkpad
+export_credentials_to_keyvault thinkpad
+
+# Or use the bootstrap script
+./scripts/bootstrap-spoke.sh thinkpad
+./scripts/bootstrap-spoke.sh --all  # Bootstrap all spokes
+```
+
+**Using targetCluster**:
+```typescript
+// In cdk8s/config/applications.ts
+{
+  name: 'backstage-dev',
+  namespace: 'backstage',
+  chart: { type: 'BackstageChart' },
+  argocd: {
+    syncWave: '50',
+    targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
+    labels: {
+      'app.kubernetes.io/environment': 'dev'
+    }
+  }
+}
+```
+
+**Valid targetCluster Values**:
+- `'hub'` - Deploy to hub cluster (in-cluster)
+- `'hetzner'` - Deploy to hetzner spoke
+- `'thinkpad'` - Deploy to thinkpad spoke
+- `'ryzen'` - Deploy to ryzen spoke
+- `'talos'` - Deploy to talos spoke
+
+**Key Files**:
+- Cluster registry: `cdk8s/lib/cluster-registry.ts`
+- ApplicationConfig types: `cdk8s/lib/idpbuilder-types.ts`
+- ArgoCD destination: `cdk8s/charts/platform/argo-applications-chart-v2.ts`
+- Cluster secret chart: `cdk8s/charts/platform/argocd-cluster-secret-chart.ts`
+- Credentials chart: `cdk8s/charts/secrets/argocd-cluster-credentials-chart.ts`
+- Spoke helpers: `scripts/lib/spoke-helpers.sh`
+- Hub provisioning: `talos-cluster/scripts/provision-hub.sh`
+- Recovery runbook: `docs/hub-recovery-runbook.md`
+- Feature spec: `specs/108-hub-and-spoke/`
+
+**Recovery**:
+```bash
+# If hub cluster fails, spokes continue running
+# To restore hub:
+./scripts/provision-hub.sh --force
+./scripts/gen-hub-config.sh
+./scripts/bootstrap-hub.sh $HUB_PUBLIC_IP
+
+# Validate recovery
+./scripts/validate-hub-recovery.sh
+```
 
 ## Architecture
 
