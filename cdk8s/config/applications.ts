@@ -1998,6 +1998,89 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
+  // =========================================================================
+  // OpenTelemetry Stack - ClickHouse + OTel Collector + Grafana
+  // =========================================================================
+
+  {
+    name: 'otel-stack',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'OtelStackChart',
+      props: {
+        namespace: 'observability',
+        clickhouseStorageSize: '20Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'otel-stack',
+        'app.kubernetes.io/component': 'observability-stack',
+        'app.kubernetes.io/part-of': 'observability'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // OTel Collector Tailscale Serve - Access: https://otel-collector.<tailnet>.ts.net
+  // Allows NixOS OTel Collector to export to Kubernetes
+  {
+    name: 'otel-collector-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: getTailscaleServiceName('otel-collector'),
+        backendHost: 'otel-collector.observability.svc.cluster.local',
+        backendPort: 4318,
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'otel-collector-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Grafana Tailscale Serve - Access: https://grafana.<tailnet>.ts.net
+  {
+    name: 'grafana-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: getTailscaleServiceName('grafana'),
+        backendHost: 'grafana.observability.svc.cluster.local',
+        backendPort: 80,
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'grafana-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
   // Dapr Agents Secrets (LLM API keys from Azure Key Vault) - Both clusters
   {
     name: 'dapr-agents-secrets',
