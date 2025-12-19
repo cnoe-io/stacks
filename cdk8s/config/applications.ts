@@ -2403,7 +2403,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // OTel Collector Tailscale Serve - Access: https://otel-collector.<tailnet>.ts.net
+  // OTEL Collector Tailscale Serve - Access: https://otel-collector.tail286401.ts.net (fixed service name)
   // Allows NixOS OTel Collector to export to Kubernetes
   {
     name: 'otel-collector-tailscale-serve',
@@ -2411,7 +2411,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('otel-collector'),
+        serviceName: 'otel-collector',  // Fixed name to match Tailscale service definition
         backendHost: 'otel-collector.observability.svc.cluster.local',
         backendPort: 4318,
         backendInsecure: false,
@@ -2432,14 +2432,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Grafana Tailscale Serve - Access: https://grafana.<tailnet>.ts.net
+  // Grafana Tailscale Serve - Access: https://grafana.tail286401.ts.net (fixed service name)
   {
     name: 'grafana-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('grafana'),
+        serviceName: 'grafana',  // Fixed name to match Tailscale service definition
         backendHost: 'grafana.observability.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -3155,7 +3155,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'KubeVirtCRChart',
       props: {
-        useEmulation: true,
+        useEmulation: false,
       },
     },
     argocd: {
@@ -3318,8 +3318,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         vmName: 'nixos-sway-vm',
         dataVolumeName: 'nixos-sway-datavolume',
         namespace: 'default',
-        cpuCores: 2,
-        memory: '4Gi',
+        cpuCores: 4,
+        memory: '8Gi',
         enableGraphics: true,
         runStrategy: 'Always',
       },
