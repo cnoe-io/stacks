@@ -14,7 +14,8 @@ import * as k8s from '../../imports/k8s';
 export interface NixOsImageServerPlatformChartProps extends ChartProps {
   /**
    * Docker image containing qcow2 files
-   * @default "vpittamp23/nixos-kubevirt-minimal:latest"
+   * Build locally with: build-nixos-image (or clnix) from cluster-menu.sh
+   * @default "nixos-kubevirt-minimal:latest"
    */
   image?: string;
 
@@ -30,7 +31,7 @@ export class NixOsImageServerPlatformChart extends Chart {
     super(scope, id, props);
 
     const {
-      image = 'vpittamp23/nixos-kubevirt-minimal:latest',
+      image = 'nixos-kubevirt-minimal:latest',
       replicas = 1,
     } = props;
 

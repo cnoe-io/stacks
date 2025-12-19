@@ -35,6 +35,12 @@ if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
   source "$ARGOCD_AUTH_SCRIPT"
 fi
 
+# Source NixOS KubeVirt helper (build-nixos-image, nixos-vm-status, etc.)
+NIXOS_KUBEVIRT_SCRIPT="$STACKS_DIR/deployment/scripts/nixos-kubevirt.sh"
+if [ -f "$NIXOS_KUBEVIRT_SCRIPT" ]; then
+  source "$NIXOS_KUBEVIRT_SCRIPT"
+fi
+
 # 1Password service account helper
 load-1password-token() {
   # Load 1Password service account token from Azure Key Vault for automated access
@@ -976,6 +982,7 @@ alias clug="cluster-update-gum"
 alias clr="cluster-recreate"
 alias clst="cluster-status"
 alias clm="cluster-menu"
+# NixOS aliases (clnix, clnix-force, clnix-github, etc.) defined in nixos-kubevirt.sh
 
 # ArgoCD Aliases (if argocd-auth.sh is loaded)
 if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then

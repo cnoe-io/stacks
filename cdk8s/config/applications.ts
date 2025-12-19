@@ -3256,6 +3256,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   // =========================================================================
 
   // Image server: nginx serving nixos.qcow2 (locally loaded into Kind or pulled from registry)
+  // Build image with: build-nixos-image (or clnix) from cluster-menu.sh
   {
     name: 'nixos-image-server',
     namespace: 'default',
@@ -3263,7 +3264,10 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'NixOsImageServerChart',
       props: {
-        image: process.env.NIXOS_SWAY_IMAGE_SERVER_IMAGE || 'nixos-hetzner-sway-qcow2:latest',
+        // Priority: NIXOS_IMAGE_SERVER_IMAGE > NIXOS_SWAY_IMAGE_SERVER_IMAGE (legacy) > default
+        image: process.env.NIXOS_IMAGE_SERVER_IMAGE ||
+               process.env.NIXOS_SWAY_IMAGE_SERVER_IMAGE ||
+               'nixos-kubevirt-minimal:latest',
         imagePullPolicy: 'IfNotPresent',
         replicas: 1,
         namespace: 'default',
@@ -3282,6 +3286,8 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // DataVolume: imports nixos.qcow2 into a PVC
+  // Storage needs ~30GB for minimal base + nixos-rebuild with Attic cache
+  // Increase to 60Gi+ for full desktop configurations
   {
     name: 'nixos-sway-datavolume',
     namespace: 'default',
@@ -3291,7 +3297,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         dataVolumeName: 'nixos-sway-datavolume',
         imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
-        storageSize: '60Gi',
+        storageSize: process.env.NIXOS_VM_STORAGE || '40Gi',
         targetNamespace: 'default',
       },
     },
@@ -3308,6 +3314,9 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // VM: boots the imported DataVolume
+  // Resources: 2 CPU / 4Gi RAM default (fits on loaded clusters)
+  // For nixos-rebuild with Attic cache, 2 CPU is sufficient
+  // Set NIXOS_VM_CPU_CORES=4 NIXOS_VM_MEMORY=8Gi for faster builds
   {
     name: 'nixos-sway-vm',
     namespace: 'default',
@@ -3318,10 +3327,16 @@ export const applicationConfigs: ApplicationConfig[] = [
         vmName: 'nixos-sway-vm',
         dataVolumeName: 'nixos-sway-datavolume',
         namespace: 'default',
-        cpuCores: 4,
-        memory: '8Gi',
+        cpuCores: parseInt(process.env.NIXOS_VM_CPU_CORES || '1', 10),  // Default to 1 CPU for resource-constrained clusters
+        memory: process.env.NIXOS_VM_MEMORY || '4Gi',
         enableGraphics: true,
         runStrategy: 'Always',
+        // Tailscale integration for stable access via Tailnet
+        // VM joins Tailscale on boot and registers to svc:nixos-vm
+        // Set TAILSCALE_VM_AUTH_KEY env var before synthesis (from Azure Key Vault)
+        enableTailscale: true,
+        tailscaleAuthKey: process.env.TAILSCALE_VM_AUTH_KEY,
+        tailscaleHostname: 'nixos-vm',  // Matches Tailscale Service svc:nixos-vm
       },
     },
     argocd: {

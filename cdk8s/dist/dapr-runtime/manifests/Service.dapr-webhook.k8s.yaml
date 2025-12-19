@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: dapr
     app.kubernetes.io/part-of: dapr
-    app.kubernetes.io/version: 1.16.4
+    app.kubernetes.io/version: 1.16.5
   name: dapr-webhook
   namespace: dapr-system
 spec:

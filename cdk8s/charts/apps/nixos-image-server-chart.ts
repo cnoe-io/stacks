@@ -20,7 +20,10 @@ export interface NixOsImageServerChartProps extends ChartProps {
    * - nginx web server
    * - qcow2 file at /usr/share/nginx/html/nixos.qcow2
    *
-   * @default "vpittamp23/nixos-kubevirt-minimal:latest"
+   * Build locally with: build-nixos-image (or clnix) from cluster-menu.sh
+   * This loads the image into Kind without needing a registry.
+   *
+   * @default "nixos-kubevirt-minimal:latest"
    */
   image?: string;
 
@@ -50,7 +53,7 @@ export class NixOsImageServerChart extends Chart {
     super(scope, id, props);
 
     const {
-      image = 'vpittamp23/nixos-kubevirt-minimal:latest',
+      image = 'nixos-kubevirt-minimal:latest',
       replicas = 1,
       namespace = 'default',
       imagePullPolicy = 'IfNotPresent',
