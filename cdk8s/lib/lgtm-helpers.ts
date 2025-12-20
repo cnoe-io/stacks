@@ -506,6 +506,9 @@ export function generateGrafanaDatasources(
       { name: 'ClickHouse-OTEL', orgId: 1 },
     ],
     datasources: [
+      // =======================================================================
+      // MIMIR - Metrics Backend with Exemplar Support (Metrics → Traces)
+      // =======================================================================
       {
         name: 'Mimir',
         type: 'prometheus',
@@ -518,15 +521,19 @@ export function generateGrafanaDatasources(
           prometheusType: 'Mimir',
           prometheusVersion: '2.14.0',
           timeInterval: '15s',
+          // METRICS → TRACES: Click exemplars to jump to trace
           exemplarTraceIdDestinations: [
             {
               name: 'trace_id',
               datasourceUid: 'tempo',
-              urlDisplayLabel: 'View trace',
+              urlDisplayLabel: 'View trace in Tempo',
             },
           ],
         },
       },
+      // =======================================================================
+      // LOKI - Logs Backend with Derived Fields (Logs → Traces)
+      // =======================================================================
       {
         name: 'Loki',
         type: 'loki',
@@ -535,14 +542,17 @@ export function generateGrafanaDatasources(
         uid: 'loki',
         jsonData: {
           maxLines: 1000,
+          // LOGS → TRACES: Extract trace_id from logs and link to Tempo
           derivedFields: [
+            // Standard OTEL format: trace_id=abc123 or trace_id: abc123
             {
               datasourceUid: 'tempo',
-              matcherRegex: '(?:trace_id|traceId|TraceId)[=:]?\\s*"?([a-fA-F0-9]{32})"?',
+              matcherRegex: '(?:trace_id|traceId|TraceId|traceid)[=:]\\s*"?([a-fA-F0-9]{32})"?',
               matcherType: 'regex',
               name: 'TraceID',
               url: '${__value.raw}',
             },
+            // JSON format: "trace_id": "abc123"
             {
               datasourceUid: 'tempo',
               matcherRegex: '"trace_id"\\s*:\\s*"([a-fA-F0-9]{32})"',
@@ -550,9 +560,28 @@ export function generateGrafanaDatasources(
               name: 'TraceID (JSON)',
               url: '${__value.raw}',
             },
+            // W3C Trace Context format: 00-abc123...-def456-01
+            {
+              datasourceUid: 'tempo',
+              matcherRegex: '(?:traceparent)[=:]\\s*"?00-([a-fA-F0-9]{32})-[a-fA-F0-9]{16}-[0-9]{2}"?',
+              matcherType: 'regex',
+              name: 'TraceID (W3C)',
+              url: '${__value.raw}',
+            },
+            // Span ID extraction for span-level correlation
+            {
+              datasourceUid: 'tempo',
+              matcherRegex: '(?:span_id|spanId|SpanId)[=:]\\s*"?([a-fA-F0-9]{16})"?',
+              matcherType: 'regex',
+              name: 'SpanID',
+              url: '${__value.raw}',
+            },
           ],
         },
       },
+      // =======================================================================
+      // TEMPO - Tracing Backend with Full Correlation Support
+      // =======================================================================
       {
         name: 'Tempo',
         type: 'tempo',
@@ -561,18 +590,30 @@ export function generateGrafanaDatasources(
         uid: 'tempo',
         jsonData: {
           httpMethod: 'GET',
+          // Service dependency graph visualization
           serviceMap: {
             datasourceUid: 'mimir',
           },
+          // Span hierarchy visualization
           nodeGraph: {
             enabled: true,
           },
+          // Search interface
           search: {
             hide: false,
           },
+          // Search logs by trace ID
           lokiSearch: {
             datasourceUid: 'loki',
           },
+          // Span links between traces
+          spanBar: {
+            type: 'Tag',
+            tag: 'http.status_code',
+          },
+          // =====================================================================
+          // TRACES → LOGS: Click span to see related logs
+          // =====================================================================
           tracesToLogs: {
             datasourceUid: 'loki',
             spanStartTimeShift: '-1h',
@@ -580,19 +621,32 @@ export function generateGrafanaDatasources(
             filterByTraceID: true,
             filterBySpanID: true,
             mapTagNamesEnabled: true,
+            // Map OTEL span attributes to Loki labels (dots → underscores)
             mappedTags: [
               { key: 'service.name', value: 'service_name' },
               { key: 'host.name', value: 'host' },
+              { key: 'k8s.pod.name', value: 'k8s_pod_name' },
+              { key: 'k8s.namespace.name', value: 'k8s_namespace_name' },
+              { key: 'container.id', value: 'container_id' },
+              { key: 'deployment.environment', value: 'deployment_environment' },
             ],
           },
+          // =====================================================================
+          // TRACES → METRICS: Click span to see related metrics
+          // =====================================================================
           tracesToMetrics: {
             datasourceUid: 'mimir',
             spanStartTimeShift: '-1h',
             spanEndTimeShift: '1h',
+            // Map span attributes to metric label dimensions
             tags: [
               { key: 'service.name', value: 'service' },
               { key: 'host.name', value: 'instance' },
+              { key: 'http.method', value: 'http_method' },
+              { key: 'http.status_code', value: 'http_status_code' },
+              { key: 'k8s.namespace.name', value: 'namespace' },
             ],
+            // Pre-configured metric queries accessible from trace view
             queries: [
               {
                 name: 'Request rate',
@@ -603,19 +657,53 @@ export function generateGrafanaDatasources(
                 query: 'sum(rate(traces_spanmetrics_calls_total{$__tags,status_code="STATUS_CODE_ERROR"}[5m]))',
               },
               {
+                name: 'Duration (p50)',
+                query: 'histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{$__tags}[5m])) by (le))',
+              },
+              {
                 name: 'Duration (p95)',
                 query: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{$__tags}[5m])) by (le))',
               },
+              {
+                name: 'Duration (p99)',
+                query: 'histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket{$__tags}[5m])) by (le))',
+              },
+              {
+                name: 'Throughput (req/s)',
+                query: 'sum(rate(traces_spanmetrics_calls_total{$__tags}[5m]))',
+              },
+              {
+                name: 'Error ratio',
+                query: 'sum(rate(traces_spanmetrics_calls_total{$__tags,status_code="STATUS_CODE_ERROR"}[5m])) / sum(rate(traces_spanmetrics_calls_total{$__tags}[5m]))',
+              },
+              {
+                name: 'Span size distribution',
+                query: 'sum(rate(traces_spanmetrics_size_total{$__tags}[5m])) by (span_name)',
+              },
             ],
           },
+          // =====================================================================
+          // TRACES → PROFILES: Click span to see CPU/memory profiles
+          // =====================================================================
           tracesToProfiles: {
             datasourceUid: 'pyroscope',
+            // Multiple profile types for comprehensive analysis
             profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds',
             customQuery: true,
             query: '{service_name="${__span.tags["service.name"]}"}',
+            // Additional profile types available via dropdown
+            // - process_cpu:cpu:nanoseconds:cpu:nanoseconds (CPU time)
+            // - memory:alloc_objects:count:space:bytes (Allocations)
+            // - memory:inuse_objects:count:space:bytes (Heap)
+            // - goroutine:goroutine:count:goroutine:count (Goroutines)
+            // - block:contentions:count:delay:nanoseconds (Block profile)
+            // - mutex:contentions:count:delay:nanoseconds (Mutex profile)
           },
         },
       },
+      // =======================================================================
+      // PYROSCOPE - Continuous Profiling Backend
+      // =======================================================================
       {
         name: 'Pyroscope',
         type: 'grafana-pyroscope-datasource',
