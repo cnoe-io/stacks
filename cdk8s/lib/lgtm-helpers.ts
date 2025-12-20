@@ -631,6 +631,323 @@ export function generateGrafanaDatasources(
 }
 
 // =============================================================================
+// Dashboard Definitions
+// =============================================================================
+
+/**
+ * Community dashboard IDs from Grafana.com
+ * These are downloaded at runtime via init container
+ */
+export const GRAFANA_COMMUNITY_DASHBOARDS = {
+  nodeExporter: { id: 1860, revision: 37, name: 'Node Exporter Full' },
+  beylaRed: { id: 19923, revision: 1, name: 'Beyla RED Metrics' },
+  otelCollector: { id: 15983, revision: 1, name: 'OpenTelemetry Collector' },
+} as const;
+
+/**
+ * Generate the GenAI CLI Monitor dashboard JSON
+ * Tracks LLM token usage, latency, and active sessions
+ */
+export function generateGenAiDashboard(): object {
+  return {
+    title: 'GenAI CLI Monitor',
+    uid: 'genai-monitor',
+    editable: true,
+    tags: ['genai', 'llm', 'claude', 'openai'],
+    time: { from: 'now-1h', to: 'now' },
+    refresh: '30s',
+    panels: [
+      {
+        id: 1,
+        title: 'Tokens Per Second (5m)',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 0, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(gen_ai_client_token_usage_total[5m])) by (tool, type)',
+            legendFormat: '{{tool}} - {{type}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'tokens/s',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 2,
+        title: 'LLM API Latency (P95)',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 12, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'histogram_quantile(0.95, sum by (le, tool) (rate(gen_ai_client_operation_duration_seconds_bucket[5m])))',
+            legendFormat: '{{tool}} P95',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 's',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 3,
+        title: 'Active Sessions',
+        type: 'stat',
+        gridPos: { h: 4, w: 6, x: 0, y: 8 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'count(count by (session_id, tool) (rate(gen_ai_client_token_usage_total[5m]) > 0))',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'green', value: null },
+                { color: 'yellow', value: 5 },
+                { color: 'red', value: 10 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 4,
+        title: 'Total Tokens (24h)',
+        type: 'stat',
+        gridPos: { h: 4, w: 6, x: 6, y: 8 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(increase(gen_ai_client_token_usage_total[24h]))',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'short',
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'green', value: null },
+                { color: 'yellow', value: 100000 },
+                { color: 'red', value: 500000 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 5,
+        title: 'Token Usage by Model',
+        type: 'piechart',
+        gridPos: { h: 8, w: 6, x: 0, y: 12 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum by (model) (increase(gen_ai_client_token_usage_total[24h]))',
+            legendFormat: '{{model}}',
+            refId: 'A',
+          },
+        ],
+      },
+      {
+        id: 6,
+        title: 'Request Rate by Tool',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 6, x: 6, y: 12 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(gen_ai_client_operation_duration_seconds_count[5m])) by (tool)',
+            legendFormat: '{{tool}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'reqps',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 7,
+        title: 'Error Rate',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 12, y: 8 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(gen_ai_client_operation_duration_seconds_count{status="error"}[5m])) by (tool)',
+            legendFormat: '{{tool}} errors',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'reqps',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+            color: { mode: 'palette-classic' },
+          },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate LGTM Stack Overview dashboard
+ * Shows health and performance of Mimir, Loki, Tempo, Pyroscope
+ */
+export function generateLgtmOverviewDashboard(): object {
+  return {
+    title: 'LGTM Stack Overview',
+    uid: 'lgtm-overview',
+    editable: true,
+    tags: ['lgtm', 'observability', 'infrastructure'],
+    time: { from: 'now-1h', to: 'now' },
+    refresh: '30s',
+    panels: [
+      {
+        id: 1,
+        title: 'Mimir - Ingestion Rate',
+        type: 'timeseries',
+        gridPos: { h: 6, w: 6, x: 0, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(cortex_ingester_ingested_samples_total[5m]))',
+            legendFormat: 'samples/s',
+            refId: 'A',
+          },
+        ],
+      },
+      {
+        id: 2,
+        title: 'Loki - Log Ingestion Rate',
+        type: 'timeseries',
+        gridPos: { h: 6, w: 6, x: 6, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(loki_distributor_lines_received_total[5m]))',
+            legendFormat: 'lines/s',
+            refId: 'A',
+          },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Tempo - Traces Received',
+        type: 'timeseries',
+        gridPos: { h: 6, w: 6, x: 12, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(tempo_distributor_spans_received_total[5m]))',
+            legendFormat: 'spans/s',
+            refId: 'A',
+          },
+        ],
+      },
+      {
+        id: 4,
+        title: 'OTEL Collector - Throughput',
+        type: 'timeseries',
+        gridPos: { h: 6, w: 6, x: 18, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(otelcol_receiver_accepted_metric_points[5m]))',
+            legendFormat: 'metrics',
+            refId: 'A',
+          },
+          {
+            expr: 'sum(rate(otelcol_receiver_accepted_log_records[5m]))',
+            legendFormat: 'logs',
+            refId: 'B',
+          },
+          {
+            expr: 'sum(rate(otelcol_receiver_accepted_spans[5m]))',
+            legendFormat: 'traces',
+            refId: 'C',
+          },
+        ],
+      },
+      {
+        id: 5,
+        title: 'Storage Used',
+        type: 'bargauge',
+        gridPos: { h: 6, w: 12, x: 0, y: 6 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(kubelet_volume_stats_used_bytes{namespace="observability"}) by (persistentvolumeclaim)',
+            legendFormat: '{{persistentvolumeclaim}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'bytes',
+            max: 21474836480, // 20Gi
+            thresholds: {
+              mode: 'percentage',
+              steps: [
+                { color: 'green', value: null },
+                { color: 'yellow', value: 70 },
+                { color: 'red', value: 90 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 6,
+        title: 'Component Memory Usage',
+        type: 'timeseries',
+        gridPos: { h: 6, w: 12, x: 12, y: 6 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(container_memory_working_set_bytes{namespace="observability", container!=""}) by (pod)',
+            legendFormat: '{{pod}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'bytes',
+          },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate all custom dashboards as a map of filename to JSON content
+ */
+export function generateDashboardConfigs(): Record<string, string> {
+  return {
+    'genai-monitor.json': JSON.stringify(generateGenAiDashboard(), null, 2),
+    'lgtm-overview.json': JSON.stringify(generateLgtmOverviewDashboard(), null, 2),
+  };
+}
+
+// =============================================================================
 // YAML Helpers
 // =============================================================================
 
