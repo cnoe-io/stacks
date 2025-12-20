@@ -244,8 +244,26 @@ ls -la /dashboards/
                   { name: 'GF_AUTH_ANONYMOUS_ORG_ROLE', value: 'Admin' },
                   // Install Pyroscope plugin
                   { name: 'GF_INSTALL_PLUGINS', value: 'grafana-pyroscope-app' },
-                  // Enable tracing features
-                  { name: 'GF_FEATURE_TOGGLES_ENABLE', value: 'traceToLogs,traceToMetrics,traceToProfiles' },
+                  // Enable comprehensive drill-down features
+                  // - traceToLogs: Navigate from traces to related logs
+                  // - traceToMetrics: Navigate from traces to related metrics
+                  // - traceToProfiles: Navigate from traces to CPU/memory profiles
+                  // - correlations: Enable data source correlations
+                  // - lokiQuerySplitting: Better Loki query performance
+                  // - lokiLogsDataplane: Enhanced Loki log handling
+                  // - tempoServiceGraph: Service dependency visualization
+                  // - tempoSearch: Tempo search functionality
+                  // - tempoBackendSearch: Backend search optimization
+                  // - metricsSummary: Metrics summary in trace view
+                  // - traceQLStreaming: Real-time trace streaming
+                  {
+                    name: 'GF_FEATURE_TOGGLES_ENABLE',
+                    value: 'traceToLogs,traceToMetrics,traceToProfiles,correlations,lokiQuerySplitting,lokiLogsDataplane,tempoServiceGraph,tempoSearch,tempoBackendSearch,metricsSummary,traceQLStreaming',
+                  },
+                  // Enable unified alerting for observability
+                  { name: 'GF_UNIFIED_ALERTING_ENABLED', value: 'true' },
+                  // Explore settings for better drill-down experience
+                  { name: 'GF_EXPLORE_ENABLED', value: 'true' },
                 ],
                 volumeMounts: [
                   {
