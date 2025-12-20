@@ -1,0 +1,57 @@
+# Grafana Dashboard Provisioning for LGTM Stack
+# Configures dashboard providers and references community dashboards
+#
+# Feature: 111-configure-k8s-observability
+# Date: 2025-12-19
+
+apiVersion: 1
+
+providers:
+  # Provider for LGTM stack dashboards
+  - name: LGTM
+    orgId: 1
+    folder: LGTM Stack
+    folderUid: lgtm
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards/lgtm
+
+  # Provider for Node Exporter dashboards
+  - name: Node Exporter
+    orgId: 1
+    folder: Infrastructure
+    folderUid: infrastructure
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards/infrastructure
+
+---
+# Dashboard JSON files should be mounted at the paths above.
+#
+# Recommended community dashboards to embed:
+#
+# 1. Node Exporter Full (ID: 1860)
+#    - Comprehensive node metrics
+#    - CPU, Memory, Disk, Network
+#    - URL: https://grafana.com/grafana/dashboards/1860
+#
+# 2. Loki Logs Dashboard (ID: 13639)
+#    - Log overview and search
+#    - URL: https://grafana.com/grafana/dashboards/13639
+#
+# 3. Tempo / Distributed Tracing (ID: 15489)
+#    - Trace exploration
+#    - URL: https://grafana.com/grafana/dashboards/15489
+#
+# 4. Mimir Overview (built-in)
+#    - Mimir metrics and health
+#    - Bundled with Mimir
+#
+# For initial deployment, dashboards are optional.
+# Users can import dashboards manually via Grafana UI.

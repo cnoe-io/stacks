@@ -2378,26 +2378,141 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // =========================================================================
-  // OpenTelemetry Stack - ClickHouse + OTel Collector + Grafana
+  // LGTM Observability Stack - Mimir, Loki, Tempo, Pyroscope, OTEL Collector, Grafana
+  // Feature: 111-configure-k8s-observability
   // =========================================================================
 
+  // Mimir - Metrics Backend (Prometheus-compatible)
   {
-    name: 'otel-stack',
+    name: 'lgtm-mimir',
     namespace: 'observability',
     clusterType: 'both',
     chart: {
-      type: 'OtelStackChart',
+      type: 'LgtmMimirChart',
       props: {
         namespace: 'observability',
-        clickhouseStorageSize: '20Gi'
+        storageSize: '20Gi'
       }
     },
     argocd: {
       syncWave: '-60',
       labels: {
-        'app.kubernetes.io/name': 'otel-stack',
-        'app.kubernetes.io/component': 'observability-stack',
-        'app.kubernetes.io/part-of': 'observability'
+        'app.kubernetes.io/name': 'lgtm-mimir',
+        'app.kubernetes.io/component': 'metrics-backend',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Loki - Logs Backend
+  {
+    name: 'lgtm-loki',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'LgtmLokiChart',
+      props: {
+        namespace: 'observability',
+        storageSize: '20Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'lgtm-loki',
+        'app.kubernetes.io/component': 'logs-backend',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Tempo - Traces Backend
+  {
+    name: 'lgtm-tempo',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'LgtmTempoChart',
+      props: {
+        namespace: 'observability',
+        storageSize: '20Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'lgtm-tempo',
+        'app.kubernetes.io/component': 'traces-backend',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Pyroscope - Profiles Backend
+  {
+    name: 'lgtm-pyroscope',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'LgtmPyroscopeChart',
+      props: {
+        namespace: 'observability',
+        storageSize: '10Gi'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'lgtm-pyroscope',
+        'app.kubernetes.io/component': 'profiles-backend',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // OTEL Collector - Ingestion Gateway (routes to Mimir, Loki, Tempo)
+  {
+    name: 'lgtm-otel-collector',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'LgtmOtelCollectorChart',
+      props: {
+        namespace: 'observability'
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'lgtm-otel-collector',
+        'app.kubernetes.io/component': 'ingestion-gateway',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+
+  // Grafana - Visualization (with LGTM datasources)
+  {
+    name: 'lgtm-grafana',
+    namespace: 'observability',
+    clusterType: 'both',
+    chart: {
+      type: 'LgtmGrafanaChart',
+      props: {
+        namespace: 'observability'
+      }
+    },
+    argocd: {
+      syncWave: '-50',
+      labels: {
+        'app.kubernetes.io/name': 'lgtm-grafana',
+        'app.kubernetes.io/component': 'visualization',
+        'app.kubernetes.io/part-of': 'lgtm-stack'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
@@ -2451,6 +2566,35 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '-55',
       labels: {
         'app.kubernetes.io/name': 'grafana-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Mimir Tailscale Serve - Access: https://mimir.tail286401.ts.net (fixed service name)
+  // Exposes Prometheus-compatible API for remote metrics queries
+  {
+    name: 'mimir-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: 'mimir',  // Fixed name to match Tailscale service definition
+        backendHost: 'mimir.observability.svc.cluster.local',
+        backendPort: 9009,
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-45',  // After LGTM backends are deployed
+      labels: {
+        'app.kubernetes.io/name': 'mimir-tailscale-serve',
         'app.kubernetes.io/component': 'tailscale-serve',
         'app.kubernetes.io/part-of': 'tailscale'
       },
