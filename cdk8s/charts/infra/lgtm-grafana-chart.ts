@@ -25,6 +25,8 @@ import {
   getLgtmSelectorLabels,
   toK8sResources,
   generateGrafanaDatasources,
+  generateDashboardConfigs,
+  GRAFANA_COMMUNITY_DASHBOARDS,
 } from '../../lib/lgtm-helpers';
 
 export interface LgtmGrafanaChartProps extends ChartProps {
@@ -107,16 +109,29 @@ export class LgtmGrafanaChart extends Chart {
       apiVersion: 1,
       providers: [
         {
-          name: 'LGTM',
+          name: 'Custom',
           orgId: 1,
-          folder: 'LGTM Stack',
-          folderUid: 'lgtm',
+          folder: 'Custom',
+          folderUid: 'custom',
           type: 'file',
           disableDeletion: false,
           editable: true,
           updateIntervalSeconds: 30,
           options: {
-            path: '/etc/grafana/provisioning/dashboards/lgtm',
+            path: '/var/lib/grafana/dashboards/custom',
+          },
+        },
+        {
+          name: 'Community',
+          orgId: 1,
+          folder: 'Community',
+          folderUid: 'community',
+          type: 'file',
+          disableDeletion: false,
+          editable: true,
+          updateIntervalSeconds: 30,
+          options: {
+            path: '/var/lib/grafana/dashboards/community',
           },
         },
       ],
@@ -130,6 +145,50 @@ export class LgtmGrafanaChart extends Chart {
       },
       data: {
         'dashboards.yaml': JSON.stringify(dashboardProviders, null, 2),
+      },
+    });
+
+    // ConfigMap with custom dashboards (GenAI, LGTM Overview)
+    const customDashboards = generateDashboardConfigs();
+    new k8s.KubeConfigMap(this, 'custom-dashboards', {
+      metadata: {
+        name: 'grafana-dashboards-custom',
+        namespace,
+        labels,
+      },
+      data: customDashboards,
+    });
+
+    // ConfigMap with download script for community dashboards
+    // Generate individual download commands for each dashboard
+    const communityDashboards = GRAFANA_COMMUNITY_DASHBOARDS;
+    const downloadCommands = Object.values(communityDashboards)
+      .map(d => {
+        const name = d.name.replace(/\s+/g, '-').toLowerCase();
+        return `echo "Downloading ${name} (ID: ${d.id}, Rev: ${d.revision})..."
+wget -q -O "/dashboards/${name}.json" "https://grafana.com/api/dashboards/${d.id}/revisions/${d.revision}/download" || echo "Failed to download ${name}"`;
+      })
+      .join('\n');
+
+    const downloadScript = `#!/bin/sh
+set -e
+mkdir -p /dashboards
+echo "Downloading community dashboards from Grafana.com..."
+
+${downloadCommands}
+
+echo "Dashboard download complete."
+ls -la /dashboards/
+`;
+
+    new k8s.KubeConfigMap(this, 'dashboard-downloader', {
+      metadata: {
+        name: 'grafana-dashboard-downloader',
+        namespace,
+        labels,
+      },
+      data: {
+        'download-dashboards.sh': downloadScript,
       },
     });
 
@@ -151,6 +210,27 @@ export class LgtmGrafanaChart extends Chart {
               runAsUser: 472,
               runAsNonRoot: true,
             },
+            initContainers: [
+              {
+                name: 'download-dashboards',
+                image: 'busybox:1.36',
+                command: ['sh', '/scripts/download-dashboards.sh'],
+                volumeMounts: [
+                  {
+                    name: 'dashboard-downloader',
+                    mountPath: '/scripts',
+                  },
+                  {
+                    name: 'community-dashboards',
+                    mountPath: '/dashboards',
+                  },
+                ],
+                securityContext: {
+                  runAsUser: 472,
+                  runAsNonRoot: true,
+                },
+              },
+            ],
             containers: [
               {
                 name: 'grafana',
@@ -175,6 +255,14 @@ export class LgtmGrafanaChart extends Chart {
                   {
                     name: 'dashboard-providers',
                     mountPath: '/etc/grafana/provisioning/dashboards',
+                  },
+                  {
+                    name: 'custom-dashboards',
+                    mountPath: '/var/lib/grafana/dashboards/custom',
+                  },
+                  {
+                    name: 'community-dashboards',
+                    mountPath: '/var/lib/grafana/dashboards/community',
                   },
                 ],
                 resources: toK8sResources(resources),
@@ -204,6 +292,21 @@ export class LgtmGrafanaChart extends Chart {
               {
                 name: 'dashboard-providers',
                 configMap: { name: 'grafana-dashboard-providers' },
+              },
+              {
+                name: 'custom-dashboards',
+                configMap: { name: 'grafana-dashboards-custom' },
+              },
+              {
+                name: 'dashboard-downloader',
+                configMap: {
+                  name: 'grafana-dashboard-downloader',
+                  defaultMode: 0o755,
+                },
+              },
+              {
+                name: 'community-dashboards',
+                emptyDir: {},
               },
             ],
           },
