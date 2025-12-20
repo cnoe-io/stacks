@@ -1,0 +1,113 @@
+# Grafana Datasource Provisioning for LGTM Stack
+# Configures Mimir, Loki, Tempo, and Pyroscope with cross-signal correlation
+#
+# Feature: 111-configure-k8s-observability
+# Date: 2025-12-19
+
+apiVersion: 1
+
+deleteDatasources:
+  # Remove legacy ClickHouse datasources if they exist
+  - name: ClickHouse
+    orgId: 1
+  - name: ClickHouse-OTEL
+    orgId: 1
+
+datasources:
+  # Mimir - Prometheus-compatible metrics backend
+  - name: Mimir
+    type: prometheus
+    access: proxy
+    url: http://mimir:9009/prometheus
+    isDefault: true
+    uid: mimir
+    jsonData:
+      httpMethod: POST
+      prometheusType: Mimir
+      prometheusVersion: 2.14.0
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: View trace
+
+  # Loki - Log aggregation backend
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    uid: loki
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Extract trace_id from log lines and link to Tempo
+        - datasourceUid: tempo
+          matcherRegex: '(?:trace_id|traceId|TraceId)[=:]?\s*"?([a-fA-F0-9]{32})"?'
+          matcherType: regex
+          name: TraceID
+          url: '$${__value.raw}'
+        # Extract trace_id from JSON logs
+        - datasourceUid: tempo
+          matcherRegex: '"trace_id"\s*:\s*"([a-fA-F0-9]{32})"'
+          matcherType: regex
+          name: TraceID (JSON)
+          url: '$${__value.raw}'
+
+  # Tempo - Distributed tracing backend
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    uid: tempo
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: mimir
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki
+      tracesToLogs:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: true
+        filterBySpanID: true
+        mapTagNamesEnabled: true
+        mappedTags:
+          - key: service.name
+            value: service_name
+          - key: host.name
+            value: host
+      tracesToMetrics:
+        datasourceUid: mimir
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        tags:
+          - key: service.name
+            value: service
+          - key: host.name
+            value: instance
+        queries:
+          - name: Request rate
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+          - name: Error rate
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))'
+          - name: Duration (p95)
+            query: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])) by (le))'
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        profileTypeId: process_cpu:cpu:nanoseconds:cpu:nanoseconds
+        customQuery: true
+        query: '{service_name="$${__span.tags["service.name"]}"}'
+
+  # Pyroscope - Continuous profiling backend
+  - name: Pyroscope
+    type: grafana-pyroscope-datasource
+    access: proxy
+    url: http://pyroscope:4040
+    uid: pyroscope
+    jsonData:
+      backendType: pyroscope

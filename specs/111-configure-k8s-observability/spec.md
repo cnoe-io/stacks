@@ -16,6 +16,8 @@ This feature deploys the Grafana LGTM stack (Loki, Grafana, Tempo, Mimir) plus P
 
 An OpenTelemetry Collector acts as the ingestion gateway, receiving OTLP from workstations via Tailscale and routing to the appropriate backends.
 
+**Note**: This feature fully replaces the existing ClickHouse-based OTEL stack (`otel-stack-chart.ts`) with the optimal Grafana LGTM architecture. Legacy ClickHouse-based observability resources will be removed.
+
 ## Architecture
 
 ```
@@ -166,30 +168,54 @@ As an infrastructure operator, I want all observability services accessible via 
 
 ### Functional Requirements
 
+#### Core LGTM Stack Deployment
+
 - **FR-001**: System MUST deploy OpenTelemetry Collector as the ingestion gateway
-- **FR-002**: System MUST configure OTEL Collector to receive OTLP on port 4318
-- **FR-003**: System MUST deploy Grafana Mimir for long-term metrics storage
-- **FR-004**: System MUST deploy Grafana Loki for log aggregation
-- **FR-005**: System MUST deploy Grafana Tempo for distributed tracing
-- **FR-006**: System MUST deploy Grafana for visualization
-- **FR-007**: System MUST deploy Pyroscope for continuous profiling
+- **FR-002**: System MUST configure OTEL Collector to receive OTLP on port 4318 (HTTP) and 4317 (gRPC)
+- **FR-003**: System MUST deploy Grafana Mimir for Prometheus-compatible long-term metrics storage
+- **FR-004**: System MUST deploy Grafana Loki for log aggregation and label-based querying
+- **FR-005**: System MUST deploy Grafana Tempo for distributed tracing with trace correlation
+- **FR-006**: System MUST deploy Grafana for unified visualization of all telemetry signals
+- **FR-007**: System MUST deploy Pyroscope for continuous profiling with flame graph visualization
 - **FR-008**: System MUST configure OTEL Collector to route metrics to Mimir, logs to Loki, traces to Tempo
-- **FR-009**: System MUST expose all services via Tailscale with MagicDNS names
-- **FR-010**: System MUST configure 30-day retention for all telemetry signals
-- **FR-011**: System MUST use persistent volume claims for all stateful services
-- **FR-012**: System MUST configure Grafana with data sources for Mimir, Loki, Tempo, Pyroscope
-- **FR-013**: System MUST support receiving telemetry from multiple workstations simultaneously
-- **FR-014**: System MUST preserve existing observability namespace and Langfuse deployment
+
+#### Data Persistence and Retention
+
+- **FR-009**: System MUST configure 30-day retention for all telemetry signals (metrics, logs, traces, profiles)
+- **FR-010**: System MUST use persistent volume claims for all stateful services (Mimir, Loki, Tempo, Pyroscope)
+
+#### Grafana Configuration
+
+- **FR-011**: System MUST configure Grafana with data sources for Mimir (Prometheus), Loki, Tempo, and Pyroscope
+- **FR-012**: System MUST enable trace-to-logs and logs-to-traces correlation in Grafana
+
+#### Network Exposure
+
+- **FR-013**: System MUST expose OTEL Collector via Tailscale for workstation telemetry ingestion
+- **FR-014**: System MUST expose Grafana via Tailscale for dashboard access
+- **FR-015**: System MUST support receiving telemetry from multiple workstations simultaneously
+
+#### Legacy Removal
+
+- **FR-016**: System MUST remove the existing ClickHouse-based OTEL stack (`otel-stack-chart.ts`)
+- **FR-017**: System MUST remove ClickHouse deployment from the observability namespace (excluding Langfuse's separate ClickHouse)
+- **FR-018**: System MUST remove legacy Grafana dashboards configured for ClickHouse OTEL schema
+- **FR-019**: System MUST update ArgoCD application configurations to deploy LGTM stack instead of ClickHouse stack
+
+#### Coexistence with Langfuse
+
+- **FR-020**: System MUST preserve Langfuse deployment and its dedicated infrastructure (PostgreSQL, ClickHouse, Redis, MinIO)
+- **FR-021**: Langfuse MUST continue functioning independently of the LGTM observability stack
 
 ### Key Entities
 
-- **OTEL Collector**: Gateway service receiving OTLP and routing to backends
-- **Mimir**: Prometheus-compatible metrics backend with long-term storage
-- **Loki**: Log aggregation service with label-based querying
-- **Tempo**: Distributed tracing backend with trace correlation
-- **Grafana**: Visualization and dashboard platform
-- **Pyroscope**: Continuous profiling with flame graph visualization
-- **Tailscale Service**: Kubernetes service exposed via Tailscale operator
+- **OTEL Collector**: Gateway service receiving OTLP and routing to LGTM backends
+- **Mimir**: Prometheus-compatible metrics backend with long-term storage and PromQL query support
+- **Loki**: Log aggregation service with LogQL query language and label-based indexing
+- **Tempo**: Distributed tracing backend with TraceQL support and trace correlation
+- **Grafana**: Unified visualization platform with LGTM data source integrations
+- **Pyroscope**: Continuous profiling backend with flame graph visualization
+- **Tailscale Service**: Kubernetes service exposed via Tailscale operator for secure access
 
 ## Success Criteria *(mandatory)*
 
@@ -201,8 +227,10 @@ As an infrastructure operator, I want all observability services accessible via 
 - **SC-004**: All services accessible via Tailscale MagicDNS from any tailnet device
 - **SC-005**: Data retention of 30 days is enforced for all signals
 - **SC-006**: System handles telemetry from 5+ workstations simultaneously without degradation
-- **SC-007**: Grafana dashboards show unified view across all hosts
-- **SC-008**: Service restarts preserve all historical data (persistent storage)
+- **SC-007**: Grafana dashboards show unified view across all hosts with signal correlation
+- **SC-008**: Service restarts preserve all historical data (persistent storage verified)
+- **SC-009**: Legacy ClickHouse-based OTEL resources are fully removed from the cluster
+- **SC-010**: Langfuse continues operating without disruption after migration
 
 ## Assumptions
 
@@ -210,15 +238,18 @@ As an infrastructure operator, I want all observability services accessible via 
 2. Tailscale operator is installed and configured in the cluster
 3. Tailscale tailnet includes both workstations and cluster
 4. Persistent storage (local-path-provisioner or similar) is available
-5. Cluster has sufficient resources (4GB RAM, 50GB storage minimum)
+5. Cluster has sufficient resources (8GB RAM, 100GB storage recommended for LGTM stack)
 6. ArgoCD is used for GitOps deployment (manifests in dist/ directory)
-7. Existing observability namespace with Langfuse should be preserved
+7. Langfuse and its infrastructure (langfuse-clickhouse, langfuse-postgres, langfuse-redis, langfuse-minio) are separate from the LGTM observability stack and will be preserved
+8. Workstations are configured to send OTLP to the cluster (Grafana Alloy configuration is out of scope for this feature)
 
 ## Out of Scope
 
 - High availability / multi-replica deployments (single-node cluster)
-- Authentication/authorization for Grafana (internal use only)
+- Authentication/authorization for Grafana (internal use only via Tailscale)
 - Alerting rules and notification channels
 - Custom Grafana dashboards (use community dashboards initially)
 - Cross-cluster federation
 - Cost monitoring or usage quotas
+- Grafana Alloy configuration on workstations (separate feature)
+- Langfuse infrastructure modifications
