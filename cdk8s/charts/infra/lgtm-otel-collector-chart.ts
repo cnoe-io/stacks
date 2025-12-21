@@ -63,6 +63,18 @@ export interface LgtmOtelCollectorChartProps extends ChartProps {
   tempoEndpoint?: string;
 
   /**
+   * Langfuse OTLP HTTP endpoint
+   * @default 'http://langfuse:3000/api/public/otlp'
+   */
+  langfuseEndpoint?: string;
+
+  /**
+   * Secret name containing LANGFUSE_AUTH
+   * @default 'langfuse-api'
+   */
+  langfuseAuthSecret?: string;
+
+  /**
    * Resource requests and limits
    */
   resources?: {
@@ -80,13 +92,15 @@ export class LgtmOtelCollectorChart extends Chart {
     const mimirEndpoint = props?.mimirEndpoint || 'http://mimir:9009/api/v1/push';
     const lokiEndpoint = props?.lokiEndpoint || 'http://loki:3100/loki/api/v1/push';
     const tempoEndpoint = props?.tempoEndpoint || 'tempo:4317';
+    const langfuseEndpoint = props?.langfuseEndpoint;
+    const langfuseAuthSecret = props?.langfuseAuthSecret || 'langfuse-api';
     const resources = props?.resources || LGTM_RESOURCES.otelCollector;
 
     const labels = getLgtmComponentLabels('otel-collector', 'ingestion-gateway');
     const selectorLabels = getLgtmSelectorLabels('otel-collector');
 
     // ConfigMap with OTEL Collector configuration
-    const collectorConfig = generateOtelCollectorConfig(mimirEndpoint, lokiEndpoint, tempoEndpoint);
+    const collectorConfig = generateOtelCollectorConfig(mimirEndpoint, lokiEndpoint, tempoEndpoint, langfuseEndpoint);
 
     new k8s.KubeConfigMap(this, 'config', {
       metadata: {
@@ -98,6 +112,20 @@ export class LgtmOtelCollectorChart extends Chart {
         'config.yaml': JSON.stringify(collectorConfig, null, 2),
       },
     });
+
+    // Env vars for collector
+    const env: k8s.EnvVar[] = [];
+    if (langfuseEndpoint) {
+      env.push({
+        name: 'LANGFUSE_AUTH',
+        valueFrom: {
+          secretKeyRef: {
+            name: langfuseAuthSecret,
+            key: 'LANGFUSE_AUTH',
+          },
+        },
+      });
+    }
 
     // Deployment
     new k8s.KubeDeployment(this, 'deployment', {
@@ -123,6 +151,7 @@ export class LgtmOtelCollectorChart extends Chart {
                   { containerPort: 8888, name: 'metrics' },
                   { containerPort: 13133, name: 'health' },
                 ],
+                env,
                 volumeMounts: [
                   {
                     name: 'config',

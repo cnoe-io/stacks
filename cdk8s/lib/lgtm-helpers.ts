@@ -370,12 +370,59 @@ export function generateTempoConfig(
  * @param mimirEndpoint - Mimir Prometheus remote write endpoint
  * @param lokiEndpoint - Loki push endpoint
  * @param tempoEndpoint - Tempo OTLP gRPC endpoint
+ * @param langfuseEndpoint - Langfuse OTLP HTTP endpoint
  */
 export function generateOtelCollectorConfig(
   mimirEndpoint: string = 'http://mimir:9009/api/v1/push',
   lokiEndpoint: string = 'http://loki:3100/loki/api/v1/push',
-  tempoEndpoint: string = 'tempo:4317'
+  tempoEndpoint: string = 'tempo:4317',
+  langfuseEndpoint?: string
 ): object {
+  const exporters: any = {
+    prometheusremotewrite: {
+      endpoint: mimirEndpoint,
+      resource_to_telemetry_conversion: {
+        enabled: true,
+      },
+      external_labels: {
+        cluster: 'homelab',
+        source: 'otel-collector',
+      },
+    },
+    loki: {
+      endpoint: lokiEndpoint,
+      default_labels_enabled: {
+        exporter: false,
+        job: true,
+        instance: true,
+        level: true,
+      },
+    },
+    'otlp/tempo': {
+      endpoint: tempoEndpoint,
+      tls: {
+        insecure: true,
+      },
+    },
+  };
+
+  const traceExporters = ['otlp/tempo'];
+
+  // Add Langfuse exporter if endpoint is provided
+  if (langfuseEndpoint) {
+    exporters['otlphttp/langfuse'] = {
+      endpoint: langfuseEndpoint,
+      // Langfuse expects traces at /api/public/otlp
+      // If endpoint already includes it, don't append
+      headers: {
+        // Authorization header will be injected from environment variable
+        // LANGFUSE_AUTH should be "Basic <base64(public_key:secret_key)>"
+        Authorization: '${env:LANGFUSE_AUTH}',
+      },
+    };
+    traceExporters.push('otlphttp/langfuse');
+  }
+
   return {
     receivers: {
       otlp: {
@@ -415,33 +462,7 @@ export function generateOtelCollectorConfig(
         ],
       },
     },
-    exporters: {
-      prometheusremotewrite: {
-        endpoint: mimirEndpoint,
-        resource_to_telemetry_conversion: {
-          enabled: true,
-        },
-        external_labels: {
-          cluster: 'homelab',
-          source: 'otel-collector',
-        },
-      },
-      loki: {
-        endpoint: lokiEndpoint,
-        default_labels_enabled: {
-          exporter: false,
-          job: true,
-          instance: true,
-          level: true,
-        },
-      },
-      'otlp/tempo': {
-        endpoint: tempoEndpoint,
-        tls: {
-          insecure: true,
-        },
-      },
-    },
+    exporters,
     extensions: {
       health_check: {
         endpoint: '0.0.0.0:13133',
@@ -469,7 +490,7 @@ export function generateOtelCollectorConfig(
         traces: {
           receivers: ['otlp'],
           processors: ['memory_limiter', 'batch', 'resource'],
-          exporters: ['otlp/tempo'],
+          exporters: traceExporters,
         },
       },
       telemetry: {

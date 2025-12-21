@@ -361,6 +361,11 @@ export class LangfuseChart extends Chart {
         name: 'AUTH_DISABLE_SIGNUP',
         value: 'false',
       },
+      // Enable OTLP ingestion for traces
+      {
+        name: 'LANGFUSE_ENABLE_OTEL_INGESTION',
+        value: 'true',
+      },
     ];
 
     // Langfuse Web Deployment

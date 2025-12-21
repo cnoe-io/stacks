@@ -201,6 +201,13 @@ export class ObservabilitySecretsChart extends Chart {
                 'app.kubernetes.io/component': 'secrets',
               },
             },
+            data: {
+              // Basic Auth header for OTLP ingestion: Basic base64(public_key:secret_key)
+              LANGFUSE_AUTH: 'Basic {{ printf "%s:%s" .PUBLIC_KEY .SECRET_KEY | b64enc }}',
+              // Keep original keys for SDK usage
+              PUBLIC_KEY: '{{ .PUBLIC_KEY }}',
+              SECRET_KEY: '{{ .SECRET_KEY }}',
+            },
           },
         },
         data: [

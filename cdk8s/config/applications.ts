@@ -2482,7 +2482,8 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'LgtmOtelCollectorChart',
       props: {
-        namespace: 'observability'
+        namespace: 'observability',
+        langfuseEndpoint: 'http://langfuse.observability.svc.cluster.local:3000/api/public/otlp'
       }
     },
     argocd: {
