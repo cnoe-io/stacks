@@ -315,6 +315,9 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   --accept-dns=false --accept-routes=false --ssh=false
 
+# Clear any stale serve configuration (PVC-backed state can survive pod reschedules)
+tailscale --socket=/run/tailscale/tailscaled.sock serve reset || true
+
 # Wait for backend service to be reachable
 echo "Waiting for backend service ${backendHost}:${backendPort}..."
 for i in $(seq 1 60); do
@@ -332,6 +335,10 @@ done
 # NOTE: socat does raw TCP forwarding - it doesn't speak TLS
 # The backend service handles TLS termination if needed
 socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
+
+# Expose via device MagicDNS name (immediate access, no service approval required)
+tailscale --socket=/run/tailscale/tailscaled.sock \\
+  serve --bg --https=443 http://127.0.0.1:8080
 
 # Expose via Tailscale serve on HTTPS 443 with service registration
 # Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080

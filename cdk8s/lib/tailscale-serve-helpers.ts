@@ -237,6 +237,9 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   --accept-dns=false --accept-routes=false --ssh=false
 
+# Clear any stale serve configuration (PVC-backed state can survive pod reschedules)
+tailscale --socket=/run/tailscale/tailscaled.sock serve reset || true
+
 # Wait for backend service to be ready (try healthz first, then root)
 for i in $(seq 1 30); do
   wget -q -O /dev/null http://127.0.0.1:${backendPort}/healthz 2>/dev/null || \\
@@ -247,6 +250,10 @@ done
 # Start socat to forward from exposed port (443) to backend port
 # This is required because netstack in userspace mode routes to the exposed port
 socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:${backendPort} &
+
+# Expose via device MagicDNS name (immediate access, no service approval required)
+tailscale --socket=/run/tailscale/tailscaled.sock \\
+  serve --bg --https=443 http://127.0.0.1:443
 
 # Expose via Tailscale serve on HTTPS 443 with service registration
 tailscale --socket=/run/tailscale/tailscaled.sock \\
