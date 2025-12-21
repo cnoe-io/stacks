@@ -63,6 +63,12 @@ mapfile -t vm_names < <(
     | sort -u
 )
 
+mapfile -t vm_base_names < <(
+  grep -oE "tailscaleHostname: getTailscaleServiceName\\('[^']+'\\)" "$APPS_FILE" \
+    | sed -E "s/.*getTailscaleServiceName\\('([^']+)'\\).*/\\1/" \
+    | sort -u
+)
+
 declare -A required_services=()
 
 for name in "${fixed_names[@]}"; do
@@ -74,6 +80,13 @@ for name in "${vm_names[@]}"; do
 done
 
 for base in "${base_names[@]}"; do
+  required_services["$base"]=1
+  for host in "${hosts[@]}"; do
+    required_services["${base}-${host}"]=1
+  done
+done
+
+for base in "${vm_base_names[@]}"; do
   required_services["$base"]=1
   for host in "${hosts[@]}"; do
     required_services["${base}-${host}"]=1

@@ -3493,7 +3493,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         enableTailscale: true,
         tailscaleAuthKey: process.env.TAILSCALE_VM_AUTH_KEY,
         // Keep VM hostname unique across clusters in the same tailnet.
-        tailscaleHostname: `nixos-vm${clusterSuffix}`,
+        // Also keeps ACL drift checks consistent with other Tailscale-exposed services.
+        tailscaleHostname: getTailscaleServiceName('nixos-vm'),
       },
     },
     argocd: {
