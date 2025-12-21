@@ -201,6 +201,20 @@ nodes:
       extraArgs:
         service-account-private-key-file: /etc/kubernetes/pki/custom-keys/sa.key
 
+- role: worker
+  extraMounts:
+    # Mount Docker Hub registry config (with auth from 1Password)
+    - hostPath: ${CONTAINERD_CONFIG_DIR}
+      containerPath: /etc/containerd/certs.d
+      readOnly: true
+
+- role: worker
+  extraMounts:
+    # Mount Docker Hub registry config (with auth from 1Password)
+    - hostPath: ${CONTAINERD_CONFIG_DIR}
+      containerPath: /etc/containerd/certs.d
+      readOnly: true
+
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry]

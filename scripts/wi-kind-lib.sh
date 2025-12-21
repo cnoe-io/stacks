@@ -618,6 +618,8 @@ nodes:
           - host.docker.internal
           - localhost
           - 127.0.0.1
+  - role: worker
+  - role: worker
 EOF
   else
     # Direct port mappings when not in devcontainer
@@ -655,6 +657,8 @@ nodes:
           - host.docker.internal
           - localhost
           - 127.0.0.1
+  - role: worker
+  - role: worker
 EOF
   fi
   log "✅ Kind cluster '$KIND_CLUSTER_NAME' creation initiated (will host vcluster '$VCLUSTER_NAME')."
