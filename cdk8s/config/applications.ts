@@ -6,17 +6,25 @@ import {
 } from '../lib/argocd-sync-builders';
 
 /**
- * Cluster host detection for multi-host deployments.
- * When CLUSTER_HOST is set, Tailscale service names include the hostname
- * to prevent collisions between clusters on different hosts.
+ * Deterministic cluster identity for multi-cluster tailnets.
+ *
+ * Prefer CLUSTER_NAME (target cluster identifier) and fall back to CLUSTER_HOST
+ * (local host name) to keep KIND workflows working.
  *
  * Examples:
- * - CLUSTER_HOST=thinkpad -> svc:argocd-thinkpad
- * - CLUSTER_HOST=ryzen -> svc:argocd-ryzen
- * - CLUSTER_HOST not set -> svc:argocd (backward compatible)
+ * - CLUSTER_NAME=thinkpad -> svc:argocd-thinkpad
+ * - CLUSTER_NAME=ryzen -> svc:argocd-ryzen
+ * - CLUSTER_NAME=hub -> svc:argocd-hub
+ * - CLUSTER_NAME not set -> svc:argocd (backward compatible, but risks collisions)
  */
-const clusterHost = process.env.CLUSTER_HOST || '';
-const hostSuffix = clusterHost ? `-${clusterHost}` : '';
+const clusterIdRaw = (process.env.CLUSTER_NAME || process.env.CLUSTER_HOST || '').trim();
+// Normalize to a DNS-label-ish slug to keep Tailscale/Kubernetes naming predictable.
+const clusterId = clusterIdRaw
+  .toLowerCase()
+  .replace(/[^a-z0-9-]+/g, '-')
+  .replace(/^-+/, '')
+  .replace(/-+$/, '');
+const clusterSuffix = clusterId ? `-${clusterId}` : '';
 
 /**
  * Generate host-aware service name for Tailscale Services.
@@ -24,7 +32,7 @@ const hostSuffix = clusterHost ? `-${clusterHost}` : '';
  * @returns Host-aware service name (e.g., 'argocd-thinkpad')
  */
 function getTailscaleServiceName(baseName: string): string {
-  return `${baseName}${hostSuffix}`;
+  return `${baseName}${clusterSuffix}`;
 }
 
 /**
@@ -1368,7 +1376,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         version: '1.82.0',
         namespace: 'tailscale',
-        operatorHostname: 'kind-operator',
+        // Make operator hostname cluster-unique to avoid collisions across multiple clusters in one tailnet.
+        // Keep the "<cluster>-operator" suffix so helper scripts can derive "<cluster>".
+        operatorHostname: clusterId ? `${clusterId}-operator` : 'kind-operator',
         defaultTags: ['tag:k8s-operator'],  // Must match OAuth client's permitted tags
         enableApiServerProxy: true,  // Enable kubectl access via kind-operator.tail286401.ts.net
         // OAuth identity impersonation: these tailnet identities get cluster-admin RBAC
@@ -1450,6 +1460,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'TailscaleSubnetRouterChart',
       props: {
         namespace: 'tailscale',
+        hostname: `subnet-router${clusterSuffix}`,
         routes: ['10.244.0.0/16', '10.96.0.0/16'],  // Kind cluster pod and service CIDRs
         authKeySecretName: 'tailscale-auth-key',
         authKeySecretKey: 'authKey',
@@ -2527,7 +2538,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'otel-collector',  // Fixed name to match Tailscale service definition
+        serviceName: getTailscaleServiceName('otel-collector'),
         backendHost: 'otel-collector.observability.svc.cluster.local',
         backendPort: 4318,
         backendInsecure: false,
@@ -2555,7 +2566,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'grafana',  // Fixed name to match Tailscale service definition
+        serviceName: getTailscaleServiceName('grafana'),
         backendHost: 'grafana.observability.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -2584,7 +2595,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: 'mimir',  // Fixed name to match Tailscale service definition
+        serviceName: getTailscaleServiceName('mimir'),
         backendHost: 'mimir.observability.svc.cluster.local',
         backendPort: 9009,
         backendInsecure: false,
@@ -3481,7 +3492,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         // Set TAILSCALE_VM_AUTH_KEY env var before synthesis (from Azure Key Vault)
         enableTailscale: true,
         tailscaleAuthKey: process.env.TAILSCALE_VM_AUTH_KEY,
-        tailscaleHostname: 'nixos-vm',  // Matches Tailscale Service svc:nixos-vm
+        // Keep VM hostname unique across clusters in the same tailnet.
+        tailscaleHostname: `nixos-vm${clusterSuffix}`,
       },
     },
     argocd: {

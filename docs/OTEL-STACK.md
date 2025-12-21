@@ -31,7 +31,7 @@ This document describes the OpenTelemetry observability stack deployed in the Ku
 │                                     │                                         │
 │  ┌──────────────────────────────────┴──────────────────────────────────────┐ │
 │  │                    Tailscale Serve Proxy                                 │ │
-│  │  Exposes: https://otel-collector.tail286401.ts.net (port 443)           │ │
+│  │  Exposes: https://svc-otel-collector-<cluster>.tail286401.ts.net (port 443) │ │
 │  │  Forwards: TLS termination → socat:8080 → collector:4318                │ │
 │  └──────────────────────────────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────────────┘
@@ -67,13 +67,15 @@ This document describes the OpenTelemetry observability stack deployed in the Ku
 
 | Purpose                   | Endpoint                                    | Protocol     |
 |---------------------------|---------------------------------------------|--------------|
-| External → Collector      | `https://otel-collector.tail286401.ts.net`  | HTTPS (443)  |
-| Grafana Dashboard (Traces)| `https://grafana.tail286401.ts.net/d/otel-traces` | HTTPS |
-| Grafana Dashboard (Logs)  | `https://grafana.tail286401.ts.net/d/otel-logs`   | HTTPS |
-| Grafana Dashboard (Metrics)| `https://grafana.tail286401.ts.net/d/otel-metrics`| HTTPS |
-| Grafana Dashboard (Overview)| `https://grafana.tail286401.ts.net/d/otel-overview`| HTTPS |
+| External → Collector      | `https://svc-otel-collector-<cluster>.tail286401.ts.net`  | HTTPS (443)  |
+| Grafana Dashboard (Traces)| `https://svc-grafana-<cluster>.tail286401.ts.net/d/otel-traces` | HTTPS |
+| Grafana Dashboard (Logs)  | `https://svc-grafana-<cluster>.tail286401.ts.net/d/otel-logs`   | HTTPS |
+| Grafana Dashboard (Metrics)| `https://svc-grafana-<cluster>.tail286401.ts.net/d/otel-metrics`| HTTPS |
+| Grafana Dashboard (Overview)| `https://svc-grafana-<cluster>.tail286401.ts.net/d/otel-overview`| HTTPS |
 
 **Important:** External access uses HTTPS on port 443 (NOT HTTP on port 4318). The Tailscale serve proxy terminates TLS and forwards to the in-cluster collector.
+
+**Cluster suffix:** `<cluster>` is the cluster identifier (e.g., `thinkpad`, `ryzen`, `hub`) used in Tailscale Service names to prevent collisions when multiple clusters share one tailnet.
 
 ## Data Flow
 
@@ -105,7 +107,7 @@ Local OTEL Collector (NixOS systemd service)
     └──▶ Tailscale HTTPS (:443)
          │
          ▼
-    Tailscale Serve Proxy (otel-collector.tail286401.ts.net)
+    Tailscale Serve Proxy (svc-otel-collector-<cluster>.tail286401.ts.net)
          │
          ▼ socat TCP forward
     OTEL Collector (otel-collector.observability.svc:4318)
@@ -157,7 +159,7 @@ services.otel-ai-collector = {
   enable = true;
   enableK8sExporter = true;
   # Endpoint uses HTTPS on port 443 (NOT HTTP on 4318!)
-  # k8sExporterEndpoint defaults to https://otel-collector.tail286401.ts.net
+  # k8sExporterEndpoint defaults to https://svc-otel-collector-<cluster>.tail286401.ts.net
 };
 ```
 
@@ -180,7 +182,7 @@ exporter = OTLPSpanExporter(
 
 # External (via Tailscale) - note HTTPS and no path suffix needed
 exporter = OTLPSpanExporter(
-    endpoint="https://otel-collector.tail286401.ts.net/v1/traces"
+    endpoint="https://svc-otel-collector-<cluster>.tail286401.ts.net/v1/traces"
 )
 
 provider = TracerProvider()
@@ -222,7 +224,7 @@ trace.set_tracer_provider(provider)
 
 - **Purpose:** Expose OTEL collector to external systems via Tailscale
 - **Flow:** HTTPS :443 → TLS termination → socat :8080 → collector :4318
-- **Hostname:** `otel-collector.tail286401.ts.net`
+- **Hostname:** `svc-otel-collector-<cluster>.tail286401.ts.net`
 
 ## Troubleshooting
 
@@ -253,7 +255,7 @@ curl "http://localhost:8123" --data "SELECT count() FROM otel.otel_logs"
 
 ```bash
 # Test from NixOS machine
-curl -v https://otel-collector.tail286401.ts.net/v1/traces \
+curl -v https://svc-otel-collector-<cluster>.tail286401.ts.net/v1/traces \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{}'

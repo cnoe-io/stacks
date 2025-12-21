@@ -10,6 +10,17 @@ export interface TailscaleSubnetRouterChartProps extends ChartProps {
   namespace?: string;
 
   /**
+   * Explicit Tailscale device hostname.
+   *
+   * Strongly recommended when you run more than one cluster in the same tailnet,
+   * otherwise multiple subnet routers can collide on the same device name and
+   * Tailscale will suffix them (-1, -2, ...).
+   *
+   * When set, exported as `TS_HOSTNAME`.
+   */
+  hostname?: string;
+
+  /**
    * CIDR ranges to advertise as subnet routes
    * @default ['10.244.0.0/16', '10.96.0.0/16'] (Kind cluster pod and service CIDRs)
    */
@@ -54,6 +65,7 @@ export class TailscaleSubnetRouterChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || 'tailscale';
+    const hostname = props.hostname;
     const routes = props.routes || ['10.244.0.0/16', '10.96.0.0/16'];
     const authKeySecretName = props.authKeySecretName || 'tailscale-auth-key';
     const authKeySecretKey = props.authKeySecretKey || 'authKey';
@@ -140,6 +152,7 @@ echo "Secret ${authKeySecretName} found, proceeding..."
             name: 'tailscale',
             image: 'ghcr.io/tailscale/tailscale:latest',
             env: [
+              ...(hostname ? [{ name: 'TS_HOSTNAME', value: hostname }] : []),
               {
                 name: 'TS_KUBE_SECRET',
                 value: 'tailscale-subnet-state',

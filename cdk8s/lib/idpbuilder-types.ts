@@ -36,6 +36,19 @@ export interface ApplicationConfig {
   clusterType?: AppClusterType;
 
   /**
+   * Optional cluster-name filter for synthesis.
+   *
+   * If set, the app is only synthesized when the current cluster identity matches
+   * one of these values. The current identity is determined by:
+   *  - `CLUSTER_NAME` (preferred, deterministic in CI/GitOps)
+   *  - falling back to `CLUSTER_HOST` (legacy/kind convenience)
+   *
+   * This is intended for cases where certain apps should only exist on specific
+   * clusters (e.g., heavy workloads, host-bound experiments).
+   */
+  clusterNames?: string[];
+
+  /**
    * Source path override for ArgoCD Application.
    * Use this for applications that reference existing directories (like 'entities')
    * instead of CDK8s-synthesized 'manifests'.

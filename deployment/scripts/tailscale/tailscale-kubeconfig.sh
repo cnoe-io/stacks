@@ -20,7 +20,9 @@
 # Environment Variables:
 #   AZURE_KEYVAULT_NAME     Key Vault name (default: keyvault-thcmfmoo5oeow)
 #   TAILNET_NAME            Tailnet name (default: tail286401)
-#   SERVICE_NAME            k8s-api service name (default: k8s-api)
+#   CLUSTER_NAME            Cluster identifier (preferred; e.g., thinkpad/ryzen/hub)
+#   CLUSTER_HOST            Legacy cluster identifier (fallback; often the hostname)
+#   SERVICE_NAME            k8s-api service name (default: k8s-api-<cluster> when cluster is set)
 #   OUTPUT_FILE             Output kubeconfig file (default: ~/.kube/tailscale-cluster.yaml)
 #
 # 1Password Integration:
@@ -33,6 +35,11 @@ set -euo pipefail
 # Configuration
 AZURE_KEYVAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
 TAILNET_NAME="${TAILNET_NAME:-tail286401}"
+
+# Prefer CLUSTER_NAME, fall back to CLUSTER_HOST, then default to unsuffixed service name.
+CLUSTER_ID_RAW="${CLUSTER_NAME:-${CLUSTER_HOST:-}}"
+CLUSTER_ID_SLUG="$(echo "${CLUSTER_ID_RAW}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//')"
+SERVICE_NAME="${SERVICE_NAME:-${CLUSTER_ID_SLUG:+k8s-api-${CLUSTER_ID_SLUG}}}"
 SERVICE_NAME="${SERVICE_NAME:-k8s-api}"
 OUTPUT_FILE="${OUTPUT_FILE:-$HOME/.kube/tailscale-cluster.yaml}"
 
@@ -365,7 +372,7 @@ cmd_test() {
         echo "  2. Check Tailscale service status:"
         echo "     kubectl logs -n tailscale -l app.kubernetes.io/name=k8s-api-tailscale-serve -c tailscale-serve"
         echo ""
-        echo "  3. Verify Tailscale ACL grants access to svc:k8s-api"
+        echo "  3. Verify Tailscale ACL grants access to svc:${SERVICE_NAME}"
         echo ""
         exit 1
     fi
@@ -410,7 +417,9 @@ Examples:
 Environment Variables:
   AZURE_KEYVAULT_NAME   Azure Key Vault name (default: keyvault-thcmfmoo5oeow)
   TAILNET_NAME          Tailscale tailnet (default: tail286401)
-  SERVICE_NAME          Service name (default: k8s-api)
+  CLUSTER_NAME          Cluster identifier (preferred; e.g., thinkpad/ryzen/hub)
+  CLUSTER_HOST          Legacy cluster identifier (fallback; often the hostname)
+  SERVICE_NAME          Service name (default: k8s-api-<cluster> when cluster is set)
   OUTPUT_FILE           Output file (default: ~/.kube/tailscale-cluster.yaml)
   OP_VAULT              1Password vault (default: CLI)
   OP_TITLE              1Password item title (default: K8s Remote Access)

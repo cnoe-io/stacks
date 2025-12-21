@@ -36,6 +36,37 @@ import {
 } from './lib/source-url';
 
 /**
+ * Normalize a cluster identity string for comparisons and naming.
+ * Keeps comparisons stable across environments (CI hostnames, FQDNs, etc.).
+ */
+function normalizeClusterName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+/**
+ * Optional per-cluster synthesis gating.
+ * If an app declares `clusterNames`, it is only synthesized for matching clusters.
+ */
+function shouldIncludeForClusterName(appConfig: any, currentClusterName: string): boolean {
+  const clusterNames: string[] | undefined = appConfig.clusterNames;
+  if (!clusterNames || clusterNames.length === 0) return true;
+
+  if (!currentClusterName) {
+    console.warn(
+      `⚠ App "${appConfig.name}" has clusterNames but CLUSTER_NAME/CLUSTER_HOST is not set; skipping.`
+    );
+    return false;
+  }
+
+  return clusterNames.map(normalizeClusterName).includes(currentClusterName);
+}
+
+/**
  * Synthesis configuration options
  */
 interface SynthesisOptions {
@@ -228,8 +259,14 @@ async function main() {
   fs.mkdirSync(options.outputDir, { recursive: true });
 
   // Filter applications by cluster type
-  const filteredApps = applicationConfigs.filter((app) =>
-    shouldIncludeApp(app.clusterType, clusterType)
+  const currentClusterName = normalizeClusterName(
+    process.env.CLUSTER_NAME || process.env.CLUSTER_HOST || ''
+  );
+
+  const filteredApps = applicationConfigs.filter(
+    (app) =>
+      shouldIncludeApp(app.clusterType, clusterType) &&
+      shouldIncludeForClusterName(app, currentClusterName)
   );
 
   // Check for specific app requested via CLI
