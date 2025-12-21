@@ -136,7 +136,25 @@
       "svc:otel-collector": [
         "tag:k8s-services"
       ],
+      "svc:otel-collector-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:otel-collector-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:otel-collector-hetzner": [
+        "tag:k8s-services"
+      ],
       "svc:grafana": [
+        "tag:k8s-services"
+      ],
+      "svc:grafana-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:grafana-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:grafana-hetzner": [
         "tag:k8s-services"
       ],
       "svc:nixos-vm": [
@@ -158,6 +176,15 @@
         "tag:k8s-services"
       ],
       "svc:mimir": [
+        "tag:k8s-services"
+      ],
+      "svc:mimir-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:mimir-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:mimir-hetzner": [
         "tag:k8s-services"
       ]
     }
@@ -242,14 +269,23 @@
         "svc:backstage-ryzen:*",
         "svc:backstage-hetzner:*",
         "svc:otel-collector:*",
+        "svc:otel-collector-thinkpad:*",
+        "svc:otel-collector-ryzen:*",
+        "svc:otel-collector-hetzner:*",
         "svc:grafana:*",
+        "svc:grafana-thinkpad:*",
+        "svc:grafana-ryzen:*",
+        "svc:grafana-hetzner:*",
         "svc:nixos-vm:*",
         "svc:nixos-vm-thinkpad:*",
         "svc:nixos-vm-ryzen:*",
         "svc:nixos-vm-hetzner:*",
         "svc:k8s-api-hub:*",
         "svc:kargo-hub:*",
-        "svc:mimir:*"
+        "svc:mimir:*",
+        "svc:mimir-thinkpad:*",
+        "svc:mimir-ryzen:*",
+        "svc:mimir-hetzner:*"
       ]
     },
     {
