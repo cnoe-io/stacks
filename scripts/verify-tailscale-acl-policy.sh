@@ -84,7 +84,7 @@ done
 # do not require host-suffixed variants for it.
 for fixed in "${fixed_names[@]}"; do
   for host in "${hosts[@]}"; do
-    unset 'required_services["'"${fixed}-${host}"'"]'
+    unset "required_services[${fixed}-${host}]"
   done
 done
 
