@@ -1,0 +1,61 @@
+# Tailscale ACL GitOps
+#
+# Keeps tailnet ACL policy in Git and applies it via GitHub Actions.
+# Docs: https://tailscale.com/kb/1306/gitops-acls-github
+#
+# Required repo secrets:
+# - TS_TAILNET        (tailnet name for the API, e.g. "vpittamp.github" or "example.com")
+# - TS_OAUTH_ID       (OAuth client ID with ACL write access)
+# - TS_OAUTH_SECRET   (OAuth client secret)
+#
+# Optional alternative:
+# - TS_API_KEY (instead of OAuth ID/secret)
+#
+# Files:
+# - policy.hujson (tailnet ACL policy)
+
+name: Tailscale ACL GitOps
+
+on:
+  pull_request:
+    paths:
+      - 'policy.hujson'
+  push:
+    branches:
+      - main
+    paths:
+      - 'policy.hujson'
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Test policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate ACL policy
+        uses: tailscale/gitops-acl-action@v1
+        with:
+          tailnet: ${{ secrets.TS_TAILNET }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          action: test
+
+  apply:
+    name: Apply policy
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Apply ACL policy
+        uses: tailscale/gitops-acl-action@v1
+        with:
+          tailnet: ${{ secrets.TS_TAILNET }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          action: apply
