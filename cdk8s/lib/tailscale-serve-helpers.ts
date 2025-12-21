@@ -23,9 +23,9 @@ import { ChartProps } from 'cdk8s';
 export interface TailscaleServeChartProps extends ChartProps {
   /**
    * Service name for Tailscale Services registration.
-   * Will be prefixed with 'svc:' for registration and 'svc-' for URL.
+   * Will be prefixed with 'svc:' for registration.
    *
-   * @example 'argocd' → svc:argocd → https://svc-argocd.<tailnet>.ts.net
+   * @example 'argocd' → svc:argocd → https://argocd.<tailnet>.ts.net
    */
   serviceName: string;
 
@@ -250,71 +250,13 @@ socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:${backendPort} &
 
 # Expose via Tailscale serve on HTTPS 443 with service registration
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:443
+  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:443
 
-echo "Service running at https://svc-${serviceName}.<tailnet>.ts.net"
+# Advertise as a Service host (required for approval/auto-approval)
+tailscale --socket=/run/tailscale/tailscaled.sock \\
+  serve advertise svc:${serviceName} || echo "WARN: service host not yet approved (svc:${serviceName})"
+
+echo "Service running at https://${serviceName}.<tailnet>.ts.net"
 exec tail -f /dev/null
 `;
 }
-
-/**
- * Service configurations for all platform services
- *
- * NOTE: Service names use "2" suffix to bypass Let's Encrypt rate limits.
- * This can be reverted to base names (argocd, langfuse, etc.) once rate limits reset.
- *
- * URLs: https://<serviceName>.tail286401.ts.net
- *
- * Let's Encrypt Rate Limits (Tailscale hardcodes production endpoint):
- * - 5 certificates per domain per 168 hours (7 days)
- * - 10 new registrations per IP per 3 hours
- * - Solution: Use PVC for /var/lib/tailscale to persist certificates across restarts
- * - No paid Tailscale plan exemption (limits from Let's Encrypt, not Tailscale)
- *
- * @see data-model.md Service Configuration Matrix
- * @see applications.ts for actual deployment configuration
- */
-export const PLATFORM_SERVICES: Record<string, Omit<TailscaleServeChartProps, keyof ChartProps>> = {
-  argocd: {
-    serviceName: 'argocd2',  // Using argocd2 to bypass Let's Encrypt rate limit
-    backendHost: 'argocd-server.argocd.svc.cluster.local',
-    backendPort: 443,
-    backendInsecure: true,
-  },
-  langfuse: {
-    serviceName: 'langfuse2',  // Using langfuse2 to bypass Let's Encrypt rate limit
-    backendHost: 'langfuse.observability.svc.cluster.local',
-    backendPort: 3000,
-    backendInsecure: false,
-  },
-  gitea: {
-    serviceName: 'gitea2',  // Using gitea2 to bypass Let's Encrypt rate limit
-    backendHost: 'my-gitea-http.gitea.svc.cluster.local',
-    backendPort: 3000,
-    backendInsecure: false,
-  },
-  kagent: {
-    serviceName: 'kagent2',  // Using kagent2 to bypass Let's Encrypt rate limit
-    backendHost: 'kagent-ui.kagent.svc.cluster.local',
-    backendPort: 8080,
-    backendInsecure: false,
-  },
-  kargo: {
-    serviceName: 'kargo2',  // Using kargo2 to bypass Let's Encrypt rate limit
-    backendHost: 'kargo-api.kargo.svc.cluster.local',
-    backendPort: 80,
-    backendInsecure: false,
-  },
-  headlamp: {
-    serviceName: 'headlamp2',  // Using headlamp2 to bypass Let's Encrypt rate limit
-    backendHost: 'headlamp.headlamp.svc.cluster.local',
-    backendPort: 80,
-    backendInsecure: false,
-  },
-  keycloak: {
-    serviceName: 'keycloak2',  // Using keycloak2 to bypass Let's Encrypt rate limit
-    backendHost: 'keycloak.keycloak.svc.cluster.local',
-    backendPort: 8080,
-    backendInsecure: false,
-  },
-};

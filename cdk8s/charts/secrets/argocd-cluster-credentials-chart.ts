@@ -23,7 +23,6 @@ import {
   getAzureKeyVaultSecretNames,
   isSpokeCluster,
 } from '../../lib/cluster-registry';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface ArgocdClusterCredentialsChartProps extends ChartProps {
   /**
@@ -92,9 +91,6 @@ export class ArgocdClusterCredentialsChart extends Chart {
     const keyVaultKeys = getAzureKeyVaultSecretNames(clusterName);
     this.secretName = getClusterSecretName(clusterName);
     this.externalSecretName = getExternalSecretName(clusterName);
-
-    // Add ESO webhook gate to ensure ClusterSecretStore exists
-    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret that syncs credentials and templates ArgoCD cluster secret
     new ExternalSecret(this, 'cluster-credentials', {

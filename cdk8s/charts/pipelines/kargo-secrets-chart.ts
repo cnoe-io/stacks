@@ -4,7 +4,6 @@ import { ExternalSecret, ExternalSecretSpecTargetCreationPolicy, ExternalSecretS
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
 import { KubeSecret } from '../../imports/k8s';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface KargoSecretsChartProps extends ChartProps {
   namespace?: string;
@@ -15,8 +14,6 @@ export class KargoSecretsChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || 'kargo';
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // Create External Secret for Kargo admin credentials
     const kargoAdmin = createEnvExternalSecret(this, 'kargo-admin-external-secret', {

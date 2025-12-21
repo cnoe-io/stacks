@@ -186,6 +186,18 @@
       ],
       "svc:mimir-hetzner": [
         "tag:k8s-services"
+      ],
+      "svc:loki": [
+        "tag:k8s-services"
+      ],
+      "svc:loki-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:loki-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:loki-hetzner": [
+        "tag:k8s-services"
       ]
     }
   },
@@ -285,7 +297,11 @@
         "svc:mimir:*",
         "svc:mimir-thinkpad:*",
         "svc:mimir-ryzen:*",
-        "svc:mimir-hetzner:*"
+        "svc:mimir-hetzner:*",
+        "svc:loki:*",
+        "svc:loki-thinkpad:*",
+        "svc:loki-ryzen:*",
+        "svc:loki-hetzner:*"
       ]
     },
     {

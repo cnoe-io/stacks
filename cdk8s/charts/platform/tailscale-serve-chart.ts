@@ -6,7 +6,7 @@
  * per Constitution Principle V (Tailscale Services Standards).
  *
  * Key features:
- * - Stable service URLs (svc-<name>.<tailnet>.ts.net)
+ * - Stable service URLs (<name>.<tailnet>.ts.net)
  * - No hostname suffix drift (-1, -2, etc.)
  * - ACL auto-approvers with tag:k8s-services
  *
@@ -39,7 +39,7 @@ export { TailscaleServeChartProps } from '../../lib/tailscale-serve-helpers';
 /**
  * Tailscale Serve Chart using Services mode for stable URLs.
  *
- * Access: https://svc-<serviceName>.<tailnet>.ts.net
+ * Access: https://<serviceName>.<tailnet>.ts.net
  *
  * @example
  * new TailscaleServeChart(app, 'argocd-serve', {
@@ -155,6 +155,10 @@ export class TailscaleServeChart extends Chart {
       },
       spec: {
         replicas: 1,
+        // Avoid Rollout deadlocks on single-node KIND clusters at max pod capacity.
+        // RollingUpdate defaults can require scheduling a surge pod first (maxSurge=25%),
+        // which fails when the node is already at its pod limit.
+        strategy: { type: 'Recreate' },
         selector: {
           matchLabels: {
             'app.kubernetes.io/name': deploymentName,
@@ -333,9 +337,13 @@ socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 # Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080
 # socat then forwards raw TCP to the backend (which may re-establish TLS)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
+  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
 
-echo "Service running at https://svc-${serviceName}.<tailnet>.ts.net"
+# Advertise as a Service host (required for approval/auto-approval)
+tailscale --socket=/run/tailscale/tailscaled.sock \\
+  serve advertise svc:${serviceName} || echo "WARN: service host not yet approved (svc:${serviceName})"
+
+echo "Service running at https://${serviceName}.<tailnet>.ts.net"
 echo "Backend: ${backendHost}:${backendPort}"
 
 # Keep container running

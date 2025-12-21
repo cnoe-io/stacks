@@ -11,7 +11,6 @@ import {
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
 import { Password } from '../../imports/generators.external-secrets.io';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface BackstageSecretsChartProps extends ChartProps {
   // Namespace for Backstage secrets (default: backstage)
@@ -45,8 +44,6 @@ export class BackstageSecretsChart extends Chart {
     const baseHost = props.baseHost ?? process.env.INGRESS_HOST ?? 'cnoe.localtest.me';
     const syncWave = props.syncWave ?? '-10';
     const clusterHost = process.env.CLUSTER_HOST || 'localdev';
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // ==========================================================================
     // Password Generators

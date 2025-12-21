@@ -20,7 +20,6 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface TailscaleOperatorSecretsChartProps extends ChartProps {
   /**
@@ -51,8 +50,6 @@ export class TailscaleOperatorSecretsChart extends Chart {
       syncWave = '-85',
       secretName = 'operator-oauth',  // Must match Helm chart default
     } = props;
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // ExternalSecret for Tailscale OAuth credentials (used by Tailscale Operator)
     new ExternalSecret(this, 'tailscale-operator-oauth', {

@@ -36,13 +36,13 @@ So the service registration becomes:
 
 and the HTTPS URL becomes:
 
-- `https://svc-<base>-<cluster>.<tailnet>.ts.net`
+- `https://<base>-<cluster>.<tailnet>.ts.net`
 
 Examples (cluster = `thinkpad`):
 
-- ArgoCD UI: `svc:argocd-thinkpad` → `https://svc-argocd-thinkpad.<tailnet>.ts.net`
-- Grafana: `svc:grafana-thinkpad` → `https://svc-grafana-thinkpad.<tailnet>.ts.net`
-- K8s API proxy: `svc:k8s-api-thinkpad` → `https://svc-k8s-api-thinkpad.<tailnet>.ts.net`
+- ArgoCD UI: `svc:argocd-thinkpad` → `https://argocd-thinkpad.<tailnet>.ts.net`
+- Grafana: `svc:grafana-thinkpad` → `https://grafana-thinkpad.<tailnet>.ts.net`
+- K8s API proxy: `svc:k8s-api-thinkpad` → `https://k8s-api-thinkpad.<tailnet>.ts.net`
 
 ## Device Naming (Operator, Subnet Router, VMs)
 
@@ -56,7 +56,7 @@ Some components register as **devices** (not services). Those also need unique h
 
 Because service names are cluster-scoped, the **Tailscale ACL `autoApprovers.services` block must include the suffixed names**.
 
-Add the tag and approve the services (Tailscale Admin Console → Access Controls):
+Add the tag and auto-approvers (Tailscale Admin Console → Access Controls):
 
 ```json
 {
@@ -76,6 +76,16 @@ Add the tag and approve the services (Tailscale Admin Console → Access Control
 
 Extend that list for each `<base>-<cluster>` service you expose (e.g., `grafana-<cluster>`, `otel-collector-<cluster>`, etc.).
 
+## Required Admin Console Setup (Services)
+
+ACLs alone do **not** create Tailscale Services. You must define each service once in:
+
+- Tailscale Admin Console → **Services** (Beta)
+
+Then the Kubernetes hosts (pods) advertising `svc:<name>` can be approved automatically by `autoApprovers.services`.
+
+On Linux clients, you may need `sudo tailscale set --accept-routes=true` to learn the TailVIP routes for Services.
+
 ## Should Production Use Unsuffixed Names?
 
 It’s possible to reserve unsuffixed names (e.g., `svc:argocd`) for a “primary” cluster by **not** setting `CLUSTER_NAME` and leaving `CLUSTER_HOST` empty during synthesis — but it’s easy to accidentally point at prod.
@@ -84,4 +94,3 @@ Recommendation:
 
 - Prefer **always-suffixed** names for clarity and safety (`argocd-talos`, not `argocd`)
 - If you do want a canonical alias, make it a deliberate exception and keep all other clusters strictly suffixed
-

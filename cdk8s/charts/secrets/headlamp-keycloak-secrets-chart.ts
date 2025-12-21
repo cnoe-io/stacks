@@ -8,7 +8,6 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 /**
  * Creates External Secrets for Headlamp Keycloak authentication
@@ -21,8 +20,6 @@ export class HeadlampKeycloakSecretsChart extends Chart {
     const namespace = 'headlamp';
     const keycloakUrl = process.env.KEYCLOAK_URL || 'https://cnoe.localtest.me:8443/keycloak';
     const keycloakRealm = process.env.KEYCLOAK_REALM || 'cnoe';
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // Headlamp Keycloak OIDC Authentication Secrets
     const oidc = createEnvExternalSecret(this, 'headlamp-oidc-secrets-external', {

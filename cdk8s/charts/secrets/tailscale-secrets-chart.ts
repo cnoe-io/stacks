@@ -14,7 +14,6 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 
 export interface TailscaleSecretsChartProps extends ChartProps {
   /**
@@ -59,8 +58,6 @@ export class TailscaleSecretsChart extends Chart {
       refreshInterval = '24h',
       syncWave = '-70',
     } = props;
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // ExternalSecret for Tailscale Auth Key (used by Tailscale Serve pods)
     new ExternalSecret(this, 'tailscale-auth-key', {

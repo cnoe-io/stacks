@@ -7,7 +7,7 @@
  * - Exposes ArgoCD server via Tailscale Services
  * - Provides HTTPS access with automatic TLS
  *
- * Access: https://svc-argocd.<tailnet>.ts.net
+ * Access: https://argocd.<tailnet>.ts.net
  */
 
 import { Chart, ChartProps } from 'cdk8s';

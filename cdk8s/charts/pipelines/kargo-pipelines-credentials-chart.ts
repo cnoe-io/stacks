@@ -10,7 +10,6 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
-import { addExternalSecretsWebhookGate } from '../../lib/external-secrets-hooks';
 import { REGISTRY } from '../../lib/kargo-helpers';
 
 /**
@@ -22,8 +21,6 @@ export class KargoPipelinesCredentialsChart extends Chart {
     super(scope, id, props);
 
     const namespace = 'kargo-pipelines';
-
-    addExternalSecretsWebhookGate(this, namespace);
 
     // Create ExternalSecret for GHCR NextJS (chat) credentials
     const ghcrChat = createEnvExternalSecret(this, 'kargo-ghcr-chat-credentials-external', {

@@ -1,6 +1,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
+import { generateServeScript } from '../../lib/tailscale-serve-helpers';
 
 /**
  * Props for K8sApiTailscaleServeChart
@@ -255,6 +256,10 @@ Note: The token is valid for 1 year. Regenerate before expiration.
       },
       spec: {
         replicas: 1,
+        // Avoid Rollout deadlocks on single-node KIND clusters at max pod capacity.
+        // RollingUpdate defaults can require scheduling a surge pod first (maxSurge=25%),
+        // which fails when the node is already at its pod limit.
+        strategy: { type: 'Recreate' },
         selector: { matchLabels: { 'app.kubernetes.io/name': deploymentName } },
         template: {
           metadata: {
@@ -296,10 +301,10 @@ echo "Secret ${authKeySecretName} found, proceeding..."
                         key: 'authKey',
                       },
                     },
-                  },
+              },
                 ],
                 command: ['/bin/sh', '-c'],
-                args: [generateK8sApiServeScript(serviceName)],
+                args: [generateServeScript(serviceName, 8001)],
                 ports: [
                   { name: 'https', containerPort: 443 },
                 ],
@@ -341,61 +346,4 @@ echo "Secret ${authKeySecretName} found, proceeding..."
       },
     });
   }
-}
-
-/**
- * Generate the shell script for the K8s API Tailscale serve container.
- *
- * Note: Uses legacy hostname mode (without --service flag) because Tailscale
- * Services beta is not available for all tailnets. The pod will register with
- * its hostname and be accessible via https://<pod-name>.<tailnet>.ts.net
- *
- * Tailscale CLI notes:
- * - Use --bg flag to run serve in background mode
- * - Legacy mode uses pod hostname instead of stable service names
- */
-function generateK8sApiServeScript(serviceName: string): string {
-  return `
-set -euo pipefail
-
-# start tailscaled in userspace mode (no TUN device needed)
-mkdir -p /var/lib/tailscale
-tailscaled --tun=userspace-networking \\
-  --socket=/run/tailscale/tailscaled.sock \\
-  --state=/var/lib/tailscale/tailscaled.state &
-
-# install socat for port forwarding
-apk add --no-cache socat >/dev/null
-
-# wait for tailscaled to come up
-for i in $(seq 1 40); do
-  tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1 && break
-  sleep 0.5
-done
-
-# bring the node up (no DNS/routes/ssh)
-tailscale --socket=/run/tailscale/tailscaled.sock up \\
-  --authkey="$TS_AUTHKEY" \\
-  --accept-dns=false --accept-routes=false --ssh=false
-
-# wait for kubectl-proxy to be ready
-for i in $(seq 1 30); do
-  wget -q -O /dev/null http://127.0.0.1:8001/healthz && break
-  sleep 1
-done
-
-# Start socat to forward from exposed port (443) to kubectl-proxy (8001)
-socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:8001 &
-
-# expose kubectl-proxy via tailscale serve on HTTPS 443
-# Using legacy hostname mode (no --service flag) - accessible via pod hostname
-echo "Starting Tailscale serve for ${serviceName}..."
-tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --https=443 http://127.0.0.1:443
-
-# Get the hostname for logging
-HOSTNAME=$(tailscale --socket=/run/tailscale/tailscaled.sock status --json | grep -o '"Self":{"[^"]*' | head -1 || echo "unknown")
-echo "Kubernetes API proxy running - check Tailscale admin for hostname"
-exec tail -f /dev/null
-`;
 }
