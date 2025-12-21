@@ -64,7 +64,7 @@ export interface LgtmOtelCollectorChartProps extends ChartProps {
 
   /**
    * Langfuse OTLP HTTP endpoint
-   * @default 'http://langfuse:3000/api/public/otlp'
+   * @default 'http://langfuse:3000/api/public/otel'
    */
   langfuseEndpoint?: string;
 

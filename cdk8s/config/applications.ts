@@ -2483,7 +2483,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'LgtmOtelCollectorChart',
       props: {
         namespace: 'observability',
-        langfuseEndpoint: 'http://langfuse.observability.svc.cluster.local:3000/api/public/otlp'
+        langfuseEndpoint: 'http://langfuse.observability.svc.cluster.local:3000/api/public/otel'
       }
     },
     argocd: {

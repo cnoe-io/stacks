@@ -412,7 +412,7 @@ export function generateOtelCollectorConfig(
   if (langfuseEndpoint) {
     exporters['otlphttp/langfuse'] = {
       endpoint: langfuseEndpoint,
-      // Langfuse expects traces at /api/public/otlp
+      // Langfuse expects traces at /api/public/otel
       // If endpoint already includes it, don't append
       headers: {
         // Authorization header will be injected from environment variable
