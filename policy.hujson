@@ -321,6 +321,18 @@
         "tag:vm"
       ],
       "dst": [
+        "svc:loki:*",
+        "svc:loki-thinkpad:*",
+        "svc:loki-ryzen:*",
+        "svc:loki-hetzner:*"
+      ]
+    },
+    {
+      "action": "accept",
+      "src": [
+        "tag:vm"
+      ],
+      "dst": [
         "tag:k8s-services:*"
       ]
     }
