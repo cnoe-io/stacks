@@ -80,6 +80,14 @@ for base in "${base_names[@]}"; do
   done
 done
 
+# Defensive: if a fixed-name service ever appears in the host-aware list (e.g., from comments),
+# do not require host-suffixed variants for it.
+for fixed in "${fixed_names[@]}"; do
+  for host in "${hosts[@]}"; do
+    unset 'required_services["'"${fixed}-${host}"'"]'
+  done
+done
+
 missing=()
 
 require_jq_key() {
