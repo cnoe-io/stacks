@@ -1489,7 +1489,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   //
   // These serve charts replace the legacy TailscaleIngressChart pattern.
   // Benefits:
-  // - Stable URLs (svc-<name>.<tailnet>.ts.net) that survive cluster recreation
+  // - Stable URLs (<name>.<tailnet>.ts.net) that survive cluster recreation
   // - No hostname suffix drift (-1, -2, etc.)
   // - Persistent storage for certificates (avoids Let's Encrypt rate limits)
   // - ACL auto-approvers with tag:k8s-services
@@ -1499,15 +1499,14 @@ export const applicationConfigs: ApplicationConfig[] = [
   // - 10 new registrations per IP per 3 hours
   // - PVC persists /var/lib/tailscale across pod restarts
 
-  // ArgoCD Tailscale Serve - Access: https://argocd2.tail286401.ts.net
-  // Note: Using 'argocd2' to bypass Let's Encrypt rate limit on 'argocd'
+  // ArgoCD Tailscale Serve - Access: https://argocd-<cluster>.tail286401.ts.net
   {
     name: 'argocd-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('argocd'),  // Host-aware: svc:argocd-<host>
+        serviceName: getTailscaleServiceName('argocd'),  // Host-aware: svc:argocd-<cluster>
         backendHost: 'argocd-server.argocd.svc.cluster.local',
         backendPort: 443,
         backendInsecure: true,
@@ -1528,15 +1527,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Langfuse Tailscale Serve - Access: https://langfuse2.tail286401.ts.net
-  // Note: Using 'langfuse2' to bypass Let's Encrypt rate limit on 'langfuse'
+  // Langfuse Tailscale Serve - Access: https://langfuse-<cluster>.tail286401.ts.net
   {
     name: 'langfuse-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('langfuse'),  // Host-aware: svc:langfuse-<host>
+        serviceName: getTailscaleServiceName('langfuse'),  // Host-aware: svc:langfuse-<cluster>
         backendHost: 'langfuse.observability.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -1557,15 +1555,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Gitea Tailscale Serve - Access: https://gitea2.tail286401.ts.net
-  // Note: Using 'gitea2' to bypass Let's Encrypt rate limit on 'gitea'
+  // Gitea Tailscale Serve - Access: https://gitea-<cluster>.tail286401.ts.net
   {
     name: 'gitea-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('gitea'),  // Host-aware: svc:gitea-<host>
+        serviceName: getTailscaleServiceName('gitea'),  // Host-aware: svc:gitea-<cluster>
         backendHost: 'my-gitea-http.gitea.svc.cluster.local',
         backendPort: 3000,
         backendInsecure: false,
@@ -1586,15 +1583,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // kagent Tailscale Serve - Access: https://kagent2.tail286401.ts.net
-  // Note: Using 'kagent2' to bypass Let's Encrypt rate limit on 'kagent'
+  // kagent Tailscale Serve - Access: https://kagent-<cluster>.tail286401.ts.net
   {
     name: 'kagent-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('kagent'),  // Host-aware: svc:kagent-<host>
+        serviceName: getTailscaleServiceName('kagent'),  // Host-aware: svc:kagent-<cluster>
         backendHost: 'kagent-ui.kagent.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
@@ -1644,15 +1640,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Headlamp Tailscale Serve - Access: https://headlamp2.tail286401.ts.net
-  // Note: Using 'headlamp2' to bypass Let's Encrypt rate limit on 'headlamp'
+  // Headlamp Tailscale Serve - Access: https://headlamp-<cluster>.tail286401.ts.net
   {
     name: 'headlamp-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('headlamp'),  // Host-aware: svc:headlamp-<host>
+        serviceName: getTailscaleServiceName('headlamp'),  // Host-aware: svc:headlamp-<cluster>
         backendHost: 'headlamp.headlamp.svc.cluster.local',
         backendPort: 80,
         backendInsecure: false,
@@ -1673,15 +1668,14 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Keycloak Tailscale Serve - Access: https://keycloak2.tail286401.ts.net
-  // Note: Using 'keycloak2' to bypass Let's Encrypt rate limit on 'keycloak'
+  // Keycloak Tailscale Serve - Access: https://keycloak-<cluster>.tail286401.ts.net
   {
     name: 'keycloak-tailscale-serve',
     namespace: 'tailscale',
     chart: {
       type: 'TailscaleServeChart',
       props: {
-        serviceName: getTailscaleServiceName('keycloak'),  // Host-aware: svc:keycloak-<host>
+        serviceName: getTailscaleServiceName('keycloak'),  // Host-aware: svc:keycloak-<cluster>
         backendHost: 'keycloak.keycloak.svc.cluster.local',
         backendPort: 8080,
         backendInsecure: false,
@@ -2217,7 +2211,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // Langfuse LLM Observability (v3 with full infrastructure)
-  // Access via Tailscale: https://langfuse-2.tail286401.ts.net/
+  // Access via Tailscale: https://langfuse-<cluster>.tail286401.ts.net/
   {
     name: 'langfuse',
     namespace: 'observability',
@@ -2243,8 +2237,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         ingressHost: 'langfuse.cnoe.localtest.me',
         // Use Tailscale Services URL for remote access (NextAuth requires exact URL match)
         // Format: <name>.<tailnet>.ts.net - stable URL that survives cluster recreation
-        // Note: Using 'langfuse2' to bypass Let's Encrypt rate limit on 'langfuse'
-        nextAuthUrl: 'https://langfuse2.tail286401.ts.net'
+        nextAuthUrl: `https://${getTailscaleServiceName('langfuse')}.tail286401.ts.net`
       }
     },
     argocd: {
@@ -2607,6 +2600,35 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '-45',  // After LGTM backends are deployed
       labels: {
         'app.kubernetes.io/name': 'mimir-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // Loki Tailscale Serve - Access: https://loki-<cluster>.tail286401.ts.net
+  // Feature 125: Exposes Loki push API for log ingestion from NixOS hosts
+  {
+    name: 'loki-tailscale-serve',
+    namespace: 'tailscale',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: getTailscaleServiceName('loki'),
+        backendHost: 'loki.observability.svc.cluster.local',
+        backendPort: 3100,  // Loki HTTP API port
+        backendInsecure: false,
+        persistentStorage: true,
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-45',  // After LGTM backends are deployed
+      labels: {
+        'app.kubernetes.io/name': 'loki-tailscale-serve',
         'app.kubernetes.io/component': 'tailscale-serve',
         'app.kubernetes.io/part-of': 'tailscale'
       },
