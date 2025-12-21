@@ -3442,7 +3442,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         dataVolumeName: 'nixos-sway-datavolume',
         imageUrl: 'http://nixos-image-server.default.svc.cluster.local/nixos.qcow2',
-        storageSize: process.env.NIXOS_VM_STORAGE || '40Gi',
+        storageSize: process.env.NIXOS_VM_STORAGE || '80Gi',  // 80Gi for full desktop (thinkpad config)
         targetNamespace: 'default',
       },
     },
@@ -3472,8 +3472,8 @@ export const applicationConfigs: ApplicationConfig[] = [
         vmName: 'nixos-sway-vm',
         dataVolumeName: 'nixos-sway-datavolume',
         namespace: 'default',
-        cpuCores: parseInt(process.env.NIXOS_VM_CPU_CORES || '1', 10),  // Default to 1 CPU for resource-constrained clusters
-        memory: process.env.NIXOS_VM_MEMORY || '4Gi',
+        cpuCores: parseInt(process.env.NIXOS_VM_CPU_CORES || '2', 10),  // 2 CPU for desktop (cluster has limited headroom)
+        memory: process.env.NIXOS_VM_MEMORY || '6Gi',  // 6Gi for Sway + development
         enableGraphics: true,
         runStrategy: 'Always',
         // Tailscale integration for stable access via Tailnet

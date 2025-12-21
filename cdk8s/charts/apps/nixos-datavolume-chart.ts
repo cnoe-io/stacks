@@ -55,7 +55,10 @@ export class NixOsDataVolumeChart extends Chart {
       dataVolumeName,
       targetNamespace,
       imageUrl,
-      storageSize
+      storageSize,
+      {
+        'cdi.kubevirt.io/storage.import.requiresScratch': 'false',
+      }
     );
 
     // Add sync wave annotation for ArgoCD ordering

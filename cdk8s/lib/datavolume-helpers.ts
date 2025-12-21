@@ -155,6 +155,7 @@ export function buildDataVolume(
  * @param namespace - Namespace
  * @param imageUrl - HTTP URL to qcow2 image
  * @param storageSize - PVC storage size (default: "20Gi")
+ * @param annotations - Additional annotations
  */
 export function buildHttpDataVolume(
   scope: any,
@@ -162,7 +163,8 @@ export function buildHttpDataVolume(
   name: string,
   namespace: string,
   imageUrl: string,
-  storageSize?: string
+  storageSize?: string,
+  annotations?: { [key: string]: string }
 ): ApiObject {
   return buildDataVolume(scope, id, {
     name,
@@ -172,6 +174,7 @@ export function buildHttpDataVolume(
       url: imageUrl,
     },
     storageSize,
+    annotations,
   });
 }
 
