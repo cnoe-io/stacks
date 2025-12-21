@@ -60,22 +60,17 @@ This guide installs the platform software stack on the hub cluster:
 
 ### Required Tailscale ACL Configuration
 
-Add to your Tailscale ACL policy:
+This repo manages the tailnet ACL policy via GitHub Actions (GitOps):
 
-```json
-{
-  "tagOwners": {
-    "tag:k8s-operator": ["autogroup:admin"],
-    "tag:k8s-services": ["autogroup:admin"]
-  },
-  "autoApprovers": {
-    "services": {
-      "svc:argocd-hub": ["tag:k8s-services"],
-      "svc:k8s-api-hub": ["tag:k8s-services"]
-    }
-  }
-}
-```
+- Source of truth: `policy.hujson` (repo root)
+- Workflow: `.github/workflows/tailscale-acl.yml` (tests on PRs, applies on merges to `main`)
+
+**One-time setup** (GitHub repo secrets):
+- `TS_TAILNET` (tailnet name for the API, e.g. `vpittamp.github` — not the MagicDNS suffix like `tail286401.ts.net`)
+- `TS_OAUTH_ID`
+- `TS_OAUTH_SECRET`
+
+To change ACLs, update `policy.hujson` in a PR; merging to `main` applies the policy automatically.
 
 ### Environment Variables
 
