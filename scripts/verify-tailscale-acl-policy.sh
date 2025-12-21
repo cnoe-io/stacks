@@ -46,8 +46,8 @@ if [[ ${#hosts[@]} -eq 0 ]]; then
 fi
 
 mapfile -t base_names < <(
-  grep -oE "getTailscaleServiceName\\('[^']+'\\)" "$APPS_FILE" \
-    | sed -E "s/.*\\('([^']+)'\\).*/\\1/" \
+  grep -oE "serviceName: getTailscaleServiceName\\('[^']+'\\)" "$APPS_FILE" \
+    | sed -E "s/.*getTailscaleServiceName\\('([^']+)'\\).*/\\1/" \
     | sort -u
 )
 
