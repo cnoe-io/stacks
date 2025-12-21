@@ -8,6 +8,9 @@
     ],
     "tag:vm": [
       "vpittamp@github"
+    ],
+    "tag:gitops-test": [
+      "vpittamp@github"
     ]
   },
   "autoApprovers": {
