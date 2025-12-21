@@ -1,0 +1,89 @@
+{
+  "groups": {
+    "group:platform-admins": ["vpittamp@github"]
+  },
+  "tagOwners": {
+    "tag:k8s-operator": ["group:platform-admins"],
+    "tag:k8s-services": ["group:platform-admins"],
+    "tag:k8s": ["tag:k8s-operator", "group:platform-admins"]
+  },
+  "autoApprovers": {
+    "routes": {
+      "10.244.0.0/16": ["tag:k8s-services", "tag:k8s"],
+      "10.96.0.0/16": ["tag:k8s-services", "tag:k8s"]
+    },
+    "services": {
+      "svc:argocd": ["tag:k8s-services"],
+      "svc:argocd-thinkpad": ["tag:k8s-services"],
+      "svc:argocd-ryzen": ["tag:k8s-services"],
+      "svc:argocd-hetzner": ["tag:k8s-services"],
+      "svc:langfuse": ["tag:k8s-services"],
+      "svc:langfuse-thinkpad": ["tag:k8s-services"],
+      "svc:langfuse-ryzen": ["tag:k8s-services"],
+      "svc:langfuse-hetzner": ["tag:k8s-services"],
+      "svc:gitea": ["tag:k8s-services"],
+      "svc:gitea-thinkpad": ["tag:k8s-services"],
+      "svc:gitea-ryzen": ["tag:k8s-services"],
+      "svc:gitea-hetzner": ["tag:k8s-services"],
+      "svc:kagent": ["tag:k8s-services"],
+      "svc:kagent-thinkpad": ["tag:k8s-services"],
+      "svc:kagent-ryzen": ["tag:k8s-services"],
+      "svc:kagent-hetzner": ["tag:k8s-services"],
+      "svc:kargo": ["tag:k8s-services"],
+      "svc:kargo-thinkpad": ["tag:k8s-services"],
+      "svc:kargo-ryzen": ["tag:k8s-services"],
+      "svc:kargo-hetzner": ["tag:k8s-services"],
+      "svc:headlamp": ["tag:k8s-services"],
+      "svc:headlamp-thinkpad": ["tag:k8s-services"],
+      "svc:headlamp-ryzen": ["tag:k8s-services"],
+      "svc:headlamp-hetzner": ["tag:k8s-services"],
+      "svc:keycloak": ["tag:k8s-services"],
+      "svc:keycloak-thinkpad": ["tag:k8s-services"],
+      "svc:keycloak-ryzen": ["tag:k8s-services"],
+      "svc:keycloak-hetzner": ["tag:k8s-services"],
+      "svc:backstage": ["tag:k8s-services"],
+      "svc:backstage-thinkpad": ["tag:k8s-services"],
+      "svc:backstage-ryzen": ["tag:k8s-services"],
+      "svc:backstage-hetzner": ["tag:k8s-services"],
+      "svc:k8s-api": ["tag:k8s-services"],
+      "svc:k8s-api-thinkpad": ["tag:k8s-services"],
+      "svc:k8s-api-ryzen": ["tag:k8s-services"],
+      "svc:k8s-api-hetzner": ["tag:k8s-services"],
+      "svc:otel-collector": ["tag:k8s-services"],
+      "svc:grafana": ["tag:k8s-services"],
+      "svc:mimir": ["tag:k8s-services"],
+      "svc:argocd-hub": ["tag:k8s-services"],
+      "svc:k8s-api-hub": ["tag:k8s-services"],
+      "svc:kargo-hub": ["tag:k8s-services"]
+    }
+  },
+  "grants": [
+    {
+      "src": ["tag:k8s-operator"],
+      "dst": ["tag:k8s-operator"],
+      "app": {
+        "tailscale.com/cap/kubernetes": [
+          {
+            "impersonate": {
+              "groups": ["system:masters"]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "acls": [
+    { "action": "accept", "src": ["autogroup:members"], "dst": ["autogroup:members:*"] },
+    { "action": "accept", "src": ["group:platform-admins"], "dst": ["tag:k8s-operator:*"] },
+    { "action": "accept", "src": ["group:platform-admins"], "dst": ["tag:k8s-services:*"] },
+    { "action": "accept", "src": ["tag:k8s-services"], "dst": ["tag:k8s-operator:*", "tag:k8s:*", "group:platform-admins:*"] }
+  ],
+  "ssh": [
+    {
+      "action": "check",
+      "src": ["autogroup:members"],
+      "dst": ["autogroup:self"],
+      "users": ["autogroup:nonroot", "root"]
+    }
+  ]
+}
