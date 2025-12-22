@@ -31,7 +31,6 @@ import * as k8s from '../../imports/k8s';
 import {
   TailscaleServeChartProps,
   resolveProps,
-  generateServeScript,
 } from '../../lib/tailscale-serve-helpers';
 
 export { TailscaleServeChartProps } from '../../lib/tailscale-serve-helpers';
@@ -217,12 +216,7 @@ echo "Secret ${resolved.authKeySecretName} found, proceeding..."
                   },
                 ],
                 command: ['/bin/sh', '-c'],
-                args: [generateServeScriptWithBackend(
-                  resolved.serviceName,
-                  resolved.backendHost,
-                  resolved.backendPort,
-                  resolved.backendInsecure
-                )],
+                args: [generateServeScriptWithBackend(resolved)],
                 ports: [
                   { name: 'https', containerPort: 443 },
                 ],
@@ -272,26 +266,14 @@ echo "Secret ${resolved.authKeySecretName} found, proceeding..."
  * This script:
  * 1. Starts tailscaled in userspace mode
  * 2. Authenticates with the auth key
- * 3. Sets up socat to forward traffic to the backend service
- * 4. Registers with Tailscale Services via --service flag
+ * 3. Registers with Tailscale Services via --service flag
+ * 4. Proxies directly to the in-cluster Service DNS/port (not localhost)
  *
- * @param serviceName - Tailscale service name (e.g., 'argocd')
- * @param backendHost - Backend service hostname
- * @param backendPort - Backend service port
- * @param backendInsecure - Whether to skip TLS verification for backend
+ * @param resolved - Fully resolved chart props
  */
 function generateServeScriptWithBackend(
-  serviceName: string,
-  backendHost: string,
-  backendPort: number,
-  backendInsecure: boolean
+  resolved: ReturnType<typeof resolveProps>
 ): string {
-  // For backend health check - use http for insecure backends, https for secure
-  const backendScheme = backendInsecure ? 'http' : (backendPort === 443 ? 'https' : 'http');
-  // backendInsecure is kept for health check scheme but no longer affects serve config
-  // Tailscale serve always uses http:// to socat, which does raw TCP forwarding
-  void backendInsecure; // Explicitly mark as intentionally unused for serve scheme
-
   return `
 set -euo pipefail
 
@@ -300,9 +282,6 @@ mkdir -p /var/lib/tailscale
 tailscaled --tun=userspace-networking \\
   --socket=/run/tailscale/tailscaled.sock \\
   --state=/var/lib/tailscale/tailscaled.state &
-
-# Install socat for port forwarding (required for userspace networking + Services)
-apk add --no-cache socat >/dev/null 2>&1 || true
 
 # Wait for tailscaled to come up
 for i in $(seq 1 40); do
@@ -313,41 +292,23 @@ done
 # Bring the node up with service registration
 tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
+  --hostname="${resolved.serviceName}" \\
   --accept-dns=false --accept-routes=false --ssh=false
 
 # Clear any stale serve configuration (PVC-backed state can survive pod reschedules)
 tailscale --socket=/run/tailscale/tailscaled.sock serve reset || true
 
-# Wait for backend service to be reachable
-echo "Waiting for backend service ${backendHost}:${backendPort}..."
-for i in $(seq 1 60); do
-  if wget -q --spider --timeout=2 ${backendScheme}://${backendHost}:${backendPort}/ 2>/dev/null || \\
-     wget -q --spider --timeout=2 ${backendScheme}://${backendHost}:${backendPort}/healthz 2>/dev/null || \\
-     nc -z -w2 ${backendHost} ${backendPort} 2>/dev/null; then
-    echo "Backend service is reachable"
-    break
-  fi
-  echo "Waiting for backend... ($i/60)"
-  sleep 2
-done
-
-# Start socat to forward from internal port (8080) to backend service
-# NOTE: socat does raw TCP forwarding - it doesn't speak TLS
-# The backend service handles TLS termination if needed
-socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
-
 # Expose via Tailscale Services (stable, predictable URL)
-# Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080
-# socat then forwards raw TCP to the backend (which may re-establish TLS)
+# Tailscale serve terminates TLS and proxies to the in-cluster Service DNS/port.
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
+  serve --bg --yes --service=${resolved.serviceRegistration} --https=${resolved.exposedPort} ${resolved.backendUrl}
 
 # Advertise as a Service host (required for approval/auto-approval)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve advertise svc:${serviceName} || echo "WARN: service host not yet approved (svc:${serviceName})"
+  serve advertise ${resolved.serviceRegistration} || echo "WARN: service host not yet approved (${resolved.serviceRegistration})"
 
-echo "Service running at https://${serviceName}.<tailnet>.ts.net"
-echo "Backend: ${backendHost}:${backendPort}"
+echo "Service running at https://${resolved.serviceName}.<tailnet>.ts.net"
+echo "Backend: ${resolved.backendUrl}"
 
 # Keep container running
 exec tail -f /dev/null

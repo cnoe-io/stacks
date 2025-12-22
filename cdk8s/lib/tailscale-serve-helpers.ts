@@ -140,7 +140,9 @@ export interface ResolvedTailscaleServeChartProps {
   storageClassName?: string;
   /**
    * Computed backend URL scheme based on backendInsecure flag
-   * 'http+insecure' when backendInsecure=true, 'https' otherwise
+   * - 'https+insecure' when backendInsecure=true (self-signed/invalid cert)
+   * - 'https' when backendPort=443
+   * - 'http' otherwise
    */
   backendScheme: string;
   /**
@@ -150,7 +152,7 @@ export interface ResolvedTailscaleServeChartProps {
   serviceRegistration: string;
   /**
    * Full backend URL for tailscale serve command
-   * @example 'http+insecure://argocd-server.argocd.svc.cluster.local:443'
+   * @example 'https+insecure://argocd-server.argocd.svc.cluster.local:443'
    */
   backendUrl: string;
 }
@@ -174,7 +176,10 @@ export function resolveProps(props: TailscaleServeChartProps): ResolvedTailscale
   const storageClassName = props.storageClassName;
 
   // Compute derived values
-  const backendScheme = backendInsecure ? 'http+insecure' : 'https';
+  const backendScheme =
+    props.backendPort === 443
+      ? (backendInsecure ? 'https+insecure' : 'https')
+      : 'http';
   const serviceRegistration = `svc:${props.serviceName}`;
   const backendUrl = `${backendScheme}://${props.backendHost}:${props.backendPort}`;
 
