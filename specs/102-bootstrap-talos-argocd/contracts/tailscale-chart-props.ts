@@ -227,22 +227,27 @@ export const TAILSCALE_SERVICE_URLS = {
   /**
    * Generate ArgoCD service URL
    * @param tailnet Tailnet domain (e.g., 'tail286401')
+   * @param cluster Optional cluster suffix (e.g., 'ryzen', 'thinkpad')
    */
-  argocd: (tailnet: string) => `svc-argocd.${tailnet}.ts.net`,
+  argocd: (tailnet: string, cluster?: string) =>
+    cluster ? `argocd-${cluster}.${tailnet}.ts.net` : `argocd.${tailnet}.ts.net`,
 
   /**
    * Generate K8s API service URL
    * @param tailnet Tailnet domain
+   * @param cluster Cluster suffix (e.g., 'ryzen', 'thinkpad')
    */
-  k8sApi: (tailnet: string) => `svc-k8s-api.${tailnet}.ts.net`,
+  k8sApi: (tailnet: string, cluster: string) =>
+    `k8s-api-${cluster}.${tailnet}.ts.net`,
 
   /**
    * Generate custom service URL
    * @param serviceName Service name
    * @param tailnet Tailnet domain
+   * @param cluster Optional cluster suffix
    */
-  custom: (serviceName: string, tailnet: string) =>
-    `svc-${serviceName}.${tailnet}.ts.net`,
+  custom: (serviceName: string, tailnet: string, cluster?: string) =>
+    cluster ? `${serviceName}-${cluster}.${tailnet}.ts.net` : `${serviceName}.${tailnet}.ts.net`,
 } as const;
 
 /**

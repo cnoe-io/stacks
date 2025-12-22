@@ -221,9 +221,9 @@ Once Tailscale serve pods are running, access via:
 
 | Service | URL |
 |---------|-----|
-| OTEL Collector | `https://otel-collector.tail286401.ts.net:4318` |
-| Grafana | `https://grafana.tail286401.ts.net` |
-| Mimir | `https://mimir.tail286401.ts.net:9009` |
+| OTEL Collector | `https://otel-collector-<cluster>.tail286401.ts.net` |
+| Grafana | `https://grafana-<cluster>.tail286401.ts.net` |
+| Mimir | `https://mimir-<cluster>.tail286401.ts.net` |
 
 ### Verify Tailscale Services
 
@@ -233,7 +233,7 @@ kubectl get pods -n tailscale -l app.kubernetes.io/component=tailscale-serve
 
 # Check pod logs for service registration
 kubectl logs -n tailscale -l app.kubernetes.io/name=otel-collector-tailscale-serve --tail=20
-# Expected: "Service running at https://svc-otel-collector..."
+# Expected: "Service running at https://otel-collector-<cluster>.<tailnet>.ts.net"
 ```
 
 ---
@@ -363,10 +363,10 @@ kubectl get pvc -n observability -l app.kubernetes.io/name=clickhouse
 | SC-001: Metrics in 30s | Send metric, query in Grafana | Visible within 30s |
 | SC-002: Traces in 5s | Send trace, search in Tempo | Searchable within 5s |
 | SC-003: Logs in 30s | Send log, query in Loki | Queryable within 30s |
-| SC-004: Tailscale access | curl grafana.tail286401.ts.net | HTTP 200 |
+| SC-004: Tailscale access | curl grafana-<cluster>.tail286401.ts.net | HTTP 200 |
 | SC-005: 30-day retention | Check component configs | retention_period: 720h |
 | SC-006: Multi-workstation | Send from 5+ hosts | All data visible |
 | SC-007: Unified dashboards | Open Grafana | All datasources work |
 | SC-008: Persistent storage | Restart pods, check data | Data preserved |
 | SC-009: Legacy removed | Check for ClickHouse | Not found (except langfuse-clickhouse) |
-| SC-010: Langfuse works | Access langfuse.tail286401.ts.net | HTTP 200 |
+| SC-010: Langfuse works | Access langfuse-<cluster>.<tailnet>.ts.net | HTTP 200 |

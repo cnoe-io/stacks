@@ -225,7 +225,7 @@ kubectl get stage backstage-staging -n kargo-pipelines -o wide
 
 ```bash
 # Access Kargo UI (via Tailscale)
-open https://kargo.tail286401.ts.net
+open "https://kargo-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET:-tail286401}.ts.net"
 
 # Or port-forward
 kubectl port-forward -n kargo svc/kargo-api 8080:443
@@ -404,7 +404,7 @@ kubectl get projectconfig kargo-pipelines -n kargo-pipelines \
   -o jsonpath='{.status.webhookReceivers[?(@.name=="github-backstage")].url}'
 
 # For external access via Tailscale:
-# https://kargo.tail286401.ts.net/webhooks/github-backstage
+# https://kargo-<cluster>.<tailnet>.ts.net/webhooks/github-backstage
 ```
 
 #### Step 2: Get Webhook Secret
@@ -443,7 +443,7 @@ GitHub requires HTTPS endpoints accessible from the internet.
 # This is handled by the tailscale-serve chart for kargo
 
 # Webhook URL will be:
-# https://kargo.tail286401.ts.net/webhooks/github-backstage
+# https://kargo-<cluster>.<tailnet>.ts.net/webhooks/github-backstage
 ```
 
 #### Option 2: Ingress with TLS
@@ -597,7 +597,7 @@ kargo promote --project kargo-pipelines \
   --freight <freight-name>
 
 # Or via Kargo UI:
-# 1. Open https://kargo.tail286401.ts.net
+# 1. Open https://kargo-<cluster>.<tailnet>.ts.net
 # 2. Select project: kargo-pipelines
 # 3. Click on backstage-staging stage
 # 4. Click "Promote" and select Freight

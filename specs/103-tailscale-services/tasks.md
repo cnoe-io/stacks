@@ -93,7 +93,7 @@
 
 ## Phase 5: User Story 3 - Access ArgoCD via Stable URL (Priority: P1)
 
-**Goal**: ArgoCD accessible at `https://svc-argocd.<tailnet>.ts.net`
+**Goal**: ArgoCD accessible at `https://argocd-<cluster>.<tailnet>.ts.net`
 
 **Independent Test**: Access ArgoCD via stable URL from Tailscale-connected device
 
@@ -108,7 +108,7 @@
 - [X] T031 [US3] Synthesize CDK8s packages (`cd cdk8s && npx ts-node main-v2.ts`)
 - [X] T032 [US3] Deploy changes (`cluster-update`)
 - [X] T033 [US3] Wait for ArgoCD Tailscale serve pod to restart
-- [X] T034 [US3] Verify ArgoCD accessible at `https://argocd.tail286401.ts.net` ✅
+- [X] T034 [US3] Verify ArgoCD accessible at `https://argocd-<cluster>.<tailnet>.ts.net` ✅
 
 **Checkpoint**: ArgoCD stable URL working - SC-007 validated
 
@@ -118,7 +118,7 @@
 
 **Goal**: All 7 platform services accessible via stable URLs
 
-**Independent Test**: Access each service via `https://svc-<name>.<tailnet>.ts.net`
+**Independent Test**: Access each service via `https://<service>-<cluster>.<tailnet>.ts.net`
 
 ### Prerequisites: ACL Auto-Approvers
 

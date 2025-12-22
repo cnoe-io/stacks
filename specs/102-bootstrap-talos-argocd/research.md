@@ -249,7 +249,7 @@ The Azure Workload Identity webhook automatically injects:
 
 **Rationale**:
 - Device hostnames change on cluster recreation (e.g., `argocd-ui-serve-1` → `argocd-ui-serve-2`)
-- Services provide stable URLs (e.g., `svc-argocd.<tailnet>.ts.net`)
+- Services provide stable URLs (e.g., `argocd-<cluster>.<tailnet>.ts.net`)
 - ACL auto-approval enables automatic service registration with tagged auth keys
 - No manual device cleanup needed after cluster recreation
 
@@ -265,9 +265,9 @@ The Azure Workload Identity webhook automatically injects:
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| ArgoCD | `svc-argocd.<tailnet>.ts.net` | GitOps Dashboard |
-| Langfuse | `svc-langfuse.<tailnet>.ts.net` | LLM Observability |
-| K8s API | `svc-k8s-api.<tailnet>.ts.net` | kubectl access |
+| ArgoCD | `argocd-<cluster>.<tailnet>.ts.net` | GitOps Dashboard |
+| Langfuse | `langfuse-<cluster>.<tailnet>.ts.net` | LLM Observability |
+| K8s API | `k8s-api-<cluster>.<tailnet>.ts.net` | kubectl access |
 
 ### APISERVER_PROXY Mode
 

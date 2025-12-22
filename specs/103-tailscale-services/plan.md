@@ -43,7 +43,7 @@ Migrate platform services (ArgoCD, Langfuse, Gitea, kagent, Kargo, Headlamp, Key
 | I. CDK8s Typed Composition | Charts use typed imports from `cdk8s/imports/` | ✅ PASS | Charts will use `imports/k8s.ts` for resources |
 | III. Modular Chart Composition | Use helpers from `cdk8s/lib/tailscale-serve-helpers.ts` | ✅ PASS | Existing helpers will be extended |
 | IV. ArgoCD Sync Wave Discipline | Explicit sync waves for deployment ordering | ✅ PASS | Sync wave -60 for serve charts (after secrets -70) |
-| V. Tailscale Services Standards | `svc-<name>` pattern, `tag:k8s-services`, ACL auto-approvers | ✅ PASS | Primary focus of this feature |
+| V. Tailscale Services Standards | `<name>-<cluster>` naming, `tag:k8s-services`, ACL auto-approvers for `svc:<name>` | ✅ PASS | Primary focus of this feature |
 | VI. External Secrets Management | Auth keys from Azure Key Vault via ESO | ✅ PASS | Using existing `tailscale-secrets-chart.ts` |
 | IX. Forward-Only Development | Remove legacy hostname mode, no dual support | ✅ PASS | Will remove `tailscale-ingress-chart.ts` after migration |
 | X. Documentation as Code | Update CLAUDE.md with service URLs | ✅ PASS | Will update Tailscale Services section |

@@ -37,10 +37,10 @@ Tailscale Services (beta) provides stable service endpoints that survive cluster
 **Syntax Confirmed**:
 ```bash
 # For HTTPS service (ArgoCD)
-tailscale serve --service=svc:argocd --https=443 https+insecure://127.0.0.1:8443
+tailscale serve --service=svc:argocd-<cluster> --https=443 https+insecure://127.0.0.1:8443
 
 # For HTTP service (Langfuse)
-tailscale serve --service=svc:langfuse --https=443 http://127.0.0.1:3000
+tailscale serve --service=svc:langfuse-<cluster> --https=443 http://127.0.0.1:3000
 ```
 
 **Key Details**:
@@ -53,7 +53,7 @@ tailscale serve --service=svc:langfuse --https=443 http://127.0.0.1:3000
 {
   "version": "0.0.1",
   "services": {
-    "svc:argocd": {
+    "svc:argocd-<cluster>": {
       "endpoints": {
         "tcp:443": "https://localhost:8443"
       }
@@ -127,9 +127,9 @@ Not recommended for our use case - CLI is simpler for single-endpoint services.
     },
     // NEW: Add service auto-approvers
     "services": {
-      "svc:argocd": ["tag:k8s-services"],
-      "svc:langfuse": ["tag:k8s-services"],
-      "svc:k8s-api": ["tag:k8s-services"]
+      "svc:argocd-<cluster>": ["tag:k8s-services"],
+      "svc:langfuse-<cluster>": ["tag:k8s-services"],
+      "svc:k8s-api-<cluster>": ["tag:k8s-services"]
     }
   },
   "acls": [
@@ -187,7 +187,7 @@ Not recommended for our use case - CLI is simpler for single-endpoint services.
 **Process**:
 1. Pod starts, runs `tailscale up` with tagged auth key
 2. Device registered to tailnet with `tag:k8s-services`
-3. Pod runs `tailscale serve --service=svc:argocd --https=443 ...`
+3. Pod runs `tailscale serve --service=svc:argocd-<cluster> --https=443 ...`
 4. Tailscale control plane sees service advertisement
 5. ACL auto-approver approves registration (matches `tag:k8s-services`)
 6. Service becomes available at stable URL
@@ -205,12 +205,12 @@ Not recommended for our use case - CLI is simpler for single-endpoint services.
 
 ### 7. Service URL Format
 
-**Decision**: Use `svc:<name>.<tailnet>.ts.net` format
+**Decision**: Use `https://<serviceName>.<tailnet>.ts.net` format (where `serviceName` is the Tailscale Service name, e.g., `argocd-ryzen`)
 
 **URL Examples**:
-- ArgoCD: `https://svc:argocd.tail286401.ts.net`
-- Langfuse: `https://svc:langfuse.tail286401.ts.net`
-- K8s API: `https://svc:k8s-api.tail286401.ts.net`
+- ArgoCD: `https://argocd-<cluster>.tail286401.ts.net`
+- Langfuse: `https://langfuse-<cluster>.tail286401.ts.net`
+- K8s API: `https://k8s-api-<cluster>.tail286401.ts.net`
 
 **Note**: The exact URL format may vary by tailnet configuration. Test after initial deployment.
 
@@ -226,7 +226,7 @@ Not recommended for our use case - CLI is simpler for single-endpoint services.
 tailscale serve --bg https+insecure://127.0.0.1:${PORT_FWD}
 
 # Updated:
-tailscale serve --service=svc:argocd --https=443 https+insecure://127.0.0.1:${PORT_FWD}
+tailscale serve --service=svc:argocd-<cluster> --https=443 https+insecure://127.0.0.1:${PORT_FWD}
 ```
 
 **Langfuse Chart** (`langfuse-tailscale-serve-chart.ts`):
@@ -235,7 +235,7 @@ tailscale serve --service=svc:argocd --https=443 https+insecure://127.0.0.1:${PO
 tailscale serve --bg http://127.0.0.1:${PORT_FWD}
 
 # Updated:
-tailscale serve --service=svc:langfuse --https=443 http://127.0.0.1:${PORT_FWD}
+tailscale serve --service=svc:langfuse-<cluster> --https=443 http://127.0.0.1:${PORT_FWD}
 ```
 
 **Key Changes**:
@@ -251,9 +251,9 @@ tailscale serve --service=svc:langfuse --https=443 http://127.0.0.1:${PORT_FWD}
 ### Tailscale Admin Console (One-Time Setup)
 
 - [ ] Create tag `tag:k8s-services` in ACL tagOwners
-- [ ] Define service `svc:argocd` with endpoint `tcp:443`
-- [ ] Define service `svc:langfuse` with endpoint `tcp:443`
-- [ ] Define service `svc:k8s-api` with endpoint `tcp:443` (optional)
+- [ ] Define service `svc:argocd-<cluster>` with endpoint `tcp:443`
+- [ ] Define service `svc:langfuse-<cluster>` with endpoint `tcp:443`
+- [ ] Define service `svc:k8s-api-<cluster>` with endpoint `tcp:443` (optional)
 - [ ] Add auto-approvers for services
 - [ ] Generate new tagged auth key (reusable, ephemeral, `tag:k8s-services`)
 

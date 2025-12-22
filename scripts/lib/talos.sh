@@ -212,7 +212,8 @@ generate_remote_kubeconfig() {
         return 1
     fi
 
-    local api_server="https://svc-k8s-api.${tailnet}.ts.net"
+    local cluster_id="${CLUSTER_NAME:-${CLUSTER_HOST:-$cluster_name}}"
+    local api_server="https://k8s-api-${cluster_id}.${tailnet}.ts.net"
 
     log_info "Generating remote kubeconfig for: $api_server"
 

@@ -136,7 +136,12 @@ echo "3. Restart Langfuse to pick up the new init secrets:"
 echo "   kubectl rollout restart deployment -n observability langfuse"
 echo ""
 echo "4. Access Langfuse UI:"
-echo "   https://langfuse.cnoe.localtest.me:8443"
+cluster_name="${CLUSTER_NAME:-${CLUSTER_HOST:-$(hostname)}}"
+cluster_suffix=""
+if [[ -n "${cluster_name}" ]]; then
+  cluster_suffix="-${cluster_name}"
+fi
+echo "   https://langfuse${cluster_suffix}.cnoe.localtest.me:8443"
 echo ""
 echo "   Login credentials:"
 echo "   Email:    ${LANGFUSE_USER_EMAIL}"
@@ -172,7 +177,7 @@ API Keys:
   Public:  ${LANGFUSE_PUBLIC_KEY}
   Secret:  ${LANGFUSE_SECRET_KEY}
 
-URL: https://langfuse.cnoe.localtest.me:8443
+URL: https://langfuse${cluster_suffix}.cnoe.localtest.me:8443
 EOF
 
 echo -e "${YELLOW}Credentials saved to: ${CREDS_FILE}${NC}"

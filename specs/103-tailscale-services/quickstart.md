@@ -223,13 +223,16 @@ cluster-update
 
 ```bash
 # From Tailscale-connected device (tested 2025-12-10):
-curl -sI https://argocd.tail286401.ts.net | head -1    # HTTP/2 200 ✅
-curl -sI https://langfuse.tail286401.ts.net | head -1  # HTTP/2 200 ✅
-curl -sI https://gitea.tail286401.ts.net | head -1     # HTTP/2 200 ✅
-curl -sI https://kagent.tail286401.ts.net | head -1    # HTTP/2 200 ✅
-curl -sI https://kargo.tail286401.ts.net | head -1     # HTTP/2 405 ✅ (API)
-curl -sI https://headlamp.tail286401.ts.net | head -1  # HTTP/2 200 ✅
-curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200 ✅
+export CLUSTER_NAME="${CLUSTER_NAME:-<cluster>}"     # e.g., ryzen | thinkpad
+export TAILSCALE_TAILNET="${TAILSCALE_TAILNET:-tail286401}"
+
+curl -sI "https://argocd-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200 ✅
+curl -sI "https://langfuse-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200 ✅
+curl -sI "https://gitea-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 200 ✅
+curl -sI "https://kagent-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200 ✅
+curl -sI "https://kargo-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 405 ✅ (API)
+curl -sI "https://headlamp-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200 ✅
+curl -sI "https://keycloak-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200 ✅
 ```
 
 ### 3.5 Browser Access
@@ -238,13 +241,13 @@ Open each URL in browser:
 
 | Service | URL | Status |
 |---------|-----|--------|
-| ArgoCD | https://argocd.tail286401.ts.net | ✅ Working |
-| Langfuse | https://langfuse.tail286401.ts.net | ✅ Working |
-| Gitea | https://gitea.tail286401.ts.net | ✅ Working |
-| kagent | https://kagent.tail286401.ts.net | ✅ Working |
-| Kargo | https://kargo.tail286401.ts.net | ✅ Working |
-| Headlamp | https://headlamp.tail286401.ts.net | ✅ Working |
-| Keycloak | https://keycloak.tail286401.ts.net | ✅ Working |
+| ArgoCD | https://argocd-<cluster>.<tailnet>.ts.net | ✅ Working |
+| Langfuse | https://langfuse-<cluster>.<tailnet>.ts.net | ✅ Working |
+| Gitea | https://gitea-<cluster>.<tailnet>.ts.net | ✅ Working |
+| kagent | https://kagent-<cluster>.<tailnet>.ts.net | ✅ Working |
+| Kargo | https://kargo-<cluster>.<tailnet>.ts.net | ✅ Working |
+| Headlamp | https://headlamp-<cluster>.<tailnet>.ts.net | ✅ Working |
+| Keycloak | https://keycloak-<cluster>.<tailnet>.ts.net | ✅ Working |
 
 **Success Criteria**:
 - SC-007: ArgoCD accessible within 60 seconds ✅
@@ -371,7 +374,7 @@ grep -r "argocd2\|k8s-api-tailscale-serve" CLAUDE.md
 - [x] SC-006: Zero hostname suffix drift (using Tailscale Services)
 
 ### Stable Service URLs (P1-P2)
-- [x] SC-007: ArgoCD accessible within 60 seconds (https://argocd.tail286401.ts.net)
+- [x] SC-007: ArgoCD accessible within 60 seconds (https://argocd-<cluster>.<tailnet>.ts.net)
 - [x] SC-008: All 7 services accessible (HTTP/2 200)
 - [x] SC-009: URLs unchanged after cluster recreation (Services feature)
 - [x] SC-010: Zero manual cleanup needed (auto-approvers configured)

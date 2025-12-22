@@ -4,6 +4,7 @@ import {
   externalSecretsAppSyncPolicy,
   EXTERNAL_SECRET_IGNORE_DIFFERENCES
 } from '../lib/argocd-sync-builders';
+import { getClusterId, getClusterSuffix } from '../lib/cluster-identity';
 
 /**
  * Deterministic cluster identity for multi-cluster tailnets.
@@ -17,14 +18,15 @@ import {
  * - CLUSTER_NAME=hub -> svc:argocd-hub
  * - CLUSTER_NAME not set -> svc:argocd (backward compatible, but risks collisions)
  */
-const clusterIdRaw = (process.env.CLUSTER_NAME || process.env.CLUSTER_HOST || '').trim();
-// Normalize to a DNS-label-ish slug to keep Tailscale/Kubernetes naming predictable.
-const clusterId = clusterIdRaw
-  .toLowerCase()
-  .replace(/[^a-z0-9-]+/g, '-')
-  .replace(/^-+/, '')
-  .replace(/-+$/, '');
-const clusterSuffix = clusterId ? `-${clusterId}` : '';
+const clusterId = getClusterId();
+const clusterSuffix = getClusterSuffix();
+
+// Base domain for local ingress hosts (KIND) and public ingress hosts (Talos).
+const ingressBaseHost = (process.env.INGRESS_HOST || 'cnoe.localtest.me').trim();
+
+function getIngressHost(subdomain: string): string {
+  return `${subdomain}${clusterSuffix}.${ingressBaseHost}`;
+}
 
 /**
  * Generate host-aware service name for Tailscale Services.
@@ -1400,7 +1402,7 @@ export const applicationConfigs: ApplicationConfig[] = [
 
   // Tailscale Serve for Kubernetes API (kubectl access)
   // Replaces tailscale-api-proxy with Tailscale Services for stable URL
-  // Access: https://k8s-api.<tailnet>.ts.net
+  // Access: https://k8s-api-<cluster>.<tailnet>.ts.net
   {
     name: 'k8s-api-tailscale-serve',
     namespace: 'tailscale',
@@ -1696,7 +1698,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Backstage Tailscale Serve - Access: https://backstage.tail286401.ts.net
+  // Backstage Tailscale Serve - Access: https://backstage-<cluster>.tail286401.ts.net
   // Primary developer portal access via Tailscale
   {
     name: 'backstage-tailscale-serve',
@@ -2046,7 +2048,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         imageVersion: '1.66.0', // Latest 1.x version (2.x doesn't exist yet as tagged release)
         storageSize: '10Gi',
         spanStorageTtl: '168h',
-        ingressHost: 'jaeger.cnoe.localtest.me'
+        ingressHost: getIngressHost('jaeger')
       }
     },
     argocd: {
@@ -2077,7 +2079,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         imageVersion: '1.66.0',
         storageSize: '10Gi',
         spanStorageTtl: '168h',
-        ingressHost: 'jaeger.ai401kchat.com'
+        ingressHost: getIngressHost('jaeger')
       }
     },
     argocd: {
@@ -2234,7 +2236,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         clickhouseCredentialsSecretName: 'langfuse-clickhouse-credentials',
         minioCredentialsSecretName: 'langfuse-minio-credentials',
         authSecretName: 'langfuse-auth',
-        ingressHost: 'langfuse.cnoe.localtest.me',
+        ingressHost: getIngressHost('langfuse'),
         // Use Tailscale Services URL for remote access (NextAuth requires exact URL match)
         // Format: <name>.<tailnet>.ts.net - stable URL that survives cluster recreation
         nextAuthUrl: `https://${getTailscaleServiceName('langfuse')}.tail286401.ts.net`
@@ -2523,7 +2525,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // OTEL Collector Tailscale Serve - Access: https://otel-collector.tail286401.ts.net (fixed service name)
+  // OTEL Collector Tailscale Serve - Access: https://otel-collector-<cluster>.tail286401.ts.net
   // Allows NixOS OTel Collector to export to Kubernetes
   {
     name: 'otel-collector-tailscale-serve',
@@ -2552,7 +2554,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Grafana Tailscale Serve - Access: https://grafana.tail286401.ts.net (fixed service name)
+  // Grafana Tailscale Serve - Access: https://grafana-<cluster>.tail286401.ts.net
   {
     name: 'grafana-tailscale-serve',
     namespace: 'tailscale',
@@ -2580,7 +2582,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Mimir Tailscale Serve - Access: https://mimir.tail286401.ts.net (fixed service name)
+  // Mimir Tailscale Serve - Access: https://mimir-<cluster>.tail286401.ts.net
   // Exposes Prometheus-compatible API for remote metrics queries
   {
     name: 'mimir-tailscale-serve',

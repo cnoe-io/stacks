@@ -311,7 +311,7 @@ npm run import
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `CLUSTER_TYPE` | Cluster type identifier | `kind` or `talos` |
-| `CLUSTER_NAME` | Cluster name | `gitops`, `talos-cluster` |
+| `CLUSTER_NAME` | Cluster name | `ryzen`, `thinkpad`, `hub` |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription | UUID |
 | `AZURE_TENANT_ID` | Azure AD tenant | UUID |
 | `AZURE_CLIENT_ID` | Azure AD app client ID | UUID |
@@ -335,7 +335,7 @@ After successful bootstrap:
 
 1. **Access ArgoCD**:
    - KIND: `https://argocd.cnoe.localtest.me:8443`
-   - Talos: `https://svc-argocd.<tailnet>.ts.net`
+   - Talos: `https://argocd-<cluster>.<tailnet>.ts.net`
 
 2. **View applications**: Check ArgoCD UI for synced applications
 

@@ -159,8 +159,9 @@ kubectl get externalsecrets -A
 # Check Tailscale services
 kubectl get pods -n tailscale
 
-# Access ArgoCD UI via Tailscale
-open https://svc-argocd.${TAILSCALE_TAILNET}.ts.net
+# Access ArgoCD UI via Tailscale Services
+# Example: https://argocd-ryzen.tail286401.ts.net
+open "https://argocd-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
 
 # Get ArgoCD admin password
 kubectl get secret argocd-initial-admin-secret -n argocd \
@@ -590,17 +591,17 @@ See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete 
 
 **Purpose**: Provides stable URLs for all platform services that survive cluster recreation without hostname suffix drift (-1, -2, etc.).
 
-**Service URLs** (tailnet: `tail286401`):
+**Service URLs** (cluster-scoped pattern):
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| ArgoCD | `https://argocd.tail286401.ts.net` | GitOps Dashboard |
-| Langfuse | `https://langfuse.tail286401.ts.net` | LLM Observability |
-| Gitea | `https://gitea.tail286401.ts.net` | Git Server |
-| kagent | `https://kagent.tail286401.ts.net` | AI Agent Dashboard |
-| Kargo | `https://kargo.tail286401.ts.net` | Progressive Delivery |
-| Headlamp | `https://headlamp.tail286401.ts.net` | Kubernetes Dashboard |
-| Keycloak | `https://keycloak.tail286401.ts.net` | Identity Provider |
+| ArgoCD | `https://argocd-<cluster>.<tailnet>.ts.net` | GitOps Dashboard |
+| Langfuse | `https://langfuse-<cluster>.<tailnet>.ts.net` | LLM Observability |
+| Gitea | `https://gitea-<cluster>.<tailnet>.ts.net` | Git Server |
+| kagent | `https://kagent-<cluster>.<tailnet>.ts.net` | AI Agent Dashboard |
+| Kargo | `https://kargo-<cluster>.<tailnet>.ts.net` | Progressive Delivery |
+| Headlamp | `https://headlamp-<cluster>.<tailnet>.ts.net` | Kubernetes Dashboard |
+| Keycloak | `https://keycloak-<cluster>.<tailnet>.ts.net` | Identity Provider |
 
 **kubectl Access** (via Tailscale Operator API Proxy):
 ```bash
@@ -624,7 +625,7 @@ kubectl auth whoami  # Returns: vpittamp@github
   chart: {
     type: 'TailscaleServeChart',  // Generic chart for all services
     props: {
-      serviceName: 'argocd',          // → svc:argocd
+      serviceName: getTailscaleServiceName('argocd'), // → svc:argocd-<cluster>
       backendHost: 'argocd-server.argocd.svc.cluster.local',
       backendPort: 443,
       backendInsecure: true,
@@ -646,13 +647,16 @@ kubectl auth whoami  # Returns: vpittamp@github
 kubectl logs -n tailscale -l app.kubernetes.io/component=tailscale-serve --tail=10
 
 # Test all service URLs (from Tailscale-connected device)
-curl -sI https://argocd.tail286401.ts.net | head -1    # HTTP/2 200
-curl -sI https://langfuse.tail286401.ts.net | head -1  # HTTP/2 200
-curl -sI https://gitea.tail286401.ts.net | head -1     # HTTP/2 200
-curl -sI https://kagent.tail286401.ts.net | head -1    # HTTP/2 200
-curl -sI https://kargo.tail286401.ts.net | head -1     # HTTP/2 405 (API)
-curl -sI https://headlamp.tail286401.ts.net | head -1  # HTTP/2 200
-curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200
+export CLUSTER_NAME="${CLUSTER_NAME:-<cluster>}"     # e.g., ryzen | thinkpad
+export TAILSCALE_TAILNET="${TAILSCALE_TAILNET:-tail286401}"
+
+curl -sI "https://argocd-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200
+curl -sI "https://langfuse-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
+curl -sI "https://gitea-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 200
+curl -sI "https://kagent-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200
+curl -sI "https://kargo-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 405 (API)
+curl -sI "https://headlamp-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
+curl -sI "https://keycloak-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
 ```
 
 **Troubleshooting**:
@@ -664,7 +668,7 @@ curl -sI https://keycloak.tail286401.ts.net | head -1  # HTTP/2 200
 **Requirements**:
 - Tailscale v1.86.0+ (Services feature)
 - Tag-based auth key with `tag:k8s-services`
-- ACL auto-approvers for all 7 services (`svc:argocd`, `svc:langfuse`, etc.)
+- ACL auto-approvers for each cluster-scoped service (`svc:argocd-ryzen`, `svc:argocd-thinkpad`, etc.)
 
 See `specs/103-tailscale-services/quickstart.md` for complete setup and validation guide.
 

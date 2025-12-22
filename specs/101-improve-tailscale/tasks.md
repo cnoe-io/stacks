@@ -30,10 +30,10 @@
 **Purpose**: One-time Tailscale Admin Console configuration (manual, outside cluster)
 
 - [x] T001 Update ACL policy: Add `tag:k8s-services` to `tagOwners` in Tailscale Admin Console
-- [x] T002 Update ACL policy: Add `services` block to `autoApprovers` with `svc:argocd`, `svc:langfuse` in Tailscale Admin Console
+- [x] T002 Update ACL policy: Add `services` block to `autoApprovers` with `svc:argocd-<cluster>`, `svc:langfuse-<cluster>` in Tailscale Admin Console
 - [x] T003 Update ACL policy: Add ACL rules for `tag:k8s-services` traffic in Tailscale Admin Console
-- [x] T004 Define service `svc:argocd` with endpoint `tcp:443` in Tailscale Admin Console → Services
-- [x] T005 Define service `svc:langfuse` with endpoint `tcp:443` in Tailscale Admin Console → Services
+- [x] T004 Define service `argocd-<cluster>` with endpoint `tcp:443` in Tailscale Admin Console → Services
+- [x] T005 Define service `langfuse-<cluster>` with endpoint `tcp:443` in Tailscale Admin Console → Services
 - [x] T006 Generate tagged auth key (reusable, ephemeral, tag:k8s-services) in Tailscale Admin Console → Settings → Keys
 
 **Checkpoint**: Tailscale Admin Console fully configured - save auth key for Phase 2
@@ -58,9 +58,9 @@
 
 ## Phase 3: User Story 1 - Access ArgoCD Dashboard Remotely (Priority: P1) 🎯 MVP
 
-**Goal**: Platform engineers can access ArgoCD at stable URL `svc:argocd` that survives cluster recreation
+**Goal**: Platform engineers can access ArgoCD at stable URL `https://argocd-<cluster>.<tailnet>.ts.net` that survives cluster recreation
 
-**Independent Test**: From Tailscale-connected device, `curl -sI https://svc:argocd.<tailnet>.ts.net` returns HTTP 200/302
+**Independent Test**: From Tailscale-connected device, `curl -sI https://argocd-<cluster>.<tailnet>.ts.net` returns HTTP 200/302
 
 ### Implementation for User Story 1
 
@@ -74,8 +74,8 @@
 - [x] T019 [US1] Deploy via ArgoCD sync or `argocd-sync argocd/argocd-tailscale-serve`
 - [x] T020 [US1] Verify pod running: `kubectl get pods -n tailscale -l app.kubernetes.io/name=argocd-tailscale-serve`
 - [x] T021 [US1] Verify pod logs show service registration: `kubectl logs -n tailscale -l app.kubernetes.io/name=argocd-tailscale-serve --tail=20`
-- [x] T022 [US1] Verify service active in Tailscale Admin Console → Services → svc:argocd
-- [x] T023 [US1] Test access from Tailscale device: `curl -sI https://svc:argocd.<tailnet>.ts.net`
+- [x] T022 [US1] Verify service active in Tailscale Admin Console → Services → argocd-<cluster>
+- [x] T023 [US1] Test access from Tailscale device: `curl -sI https://argocd-<cluster>.<tailnet>.ts.net`
 
 **Checkpoint**: ArgoCD accessible at stable service URL - US1 complete and independently testable
 
@@ -83,9 +83,9 @@
 
 ## Phase 4: User Story 2 - Access Langfuse Dashboard (Priority: P2)
 
-**Goal**: ML engineers can access Langfuse at stable URL `svc:langfuse` with working authentication
+**Goal**: ML engineers can access Langfuse at stable URL `https://langfuse-<cluster>.<tailnet>.ts.net` with working authentication
 
-**Independent Test**: From Tailscale-connected device, navigate to `https://svc:langfuse.<tailnet>.ts.net` and successfully authenticate
+**Independent Test**: From Tailscale-connected device, navigate to `https://langfuse-<cluster>.<tailnet>.ts.net` and successfully authenticate
 
 ### Implementation for User Story 2
 
@@ -99,8 +99,8 @@
 - [x] T031 [US2] Synthesize charts: `cd cdk8s && npx ts-node main-v2.ts`
 - [x] T032 [US2] Deploy via ArgoCD sync or `argocd-sync argocd/langfuse-tailscale-serve`
 - [x] T033 [US2] Verify pod running: `kubectl get pods -n tailscale -l app.kubernetes.io/name=langfuse-tailscale-serve`
-- [x] T034 [US2] Verify service active in Tailscale Admin Console → Services → svc:langfuse
-- [x] T035 [US2] Test access and authentication: navigate to `https://svc:langfuse.<tailnet>.ts.net` and login
+- [x] T034 [US2] Verify service active in Tailscale Admin Console → Services → langfuse-<cluster>
+- [x] T035 [US2] Test access and authentication: navigate to `https://langfuse-<cluster>.<tailnet>.ts.net` and login
 
 **Checkpoint**: Langfuse accessible at stable service URL with working auth - US2 complete
 
@@ -116,12 +116,12 @@
 
 ### Validation for User Story 4
 
-- [ ] T036 [US4] Record current service URLs: `svc:argocd.<tailnet>.ts.net`, `svc:langfuse.<tailnet>.ts.net`
+- [ ] T036 [US4] Record current service URLs: `argocd-<cluster>.<tailnet>.ts.net`, `langfuse-<cluster>.<tailnet>.ts.net`
 - [ ] T037 [US4] Delete cluster: `idpbuilder delete --name localdev`
 - [ ] T038 [US4] Recreate cluster: `idpbuilder create --package cdk8s/dist/`
 - [ ] T039 [US4] Wait for pods: `kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-tailscale-serve -n tailscale --timeout=300s`
-- [ ] T040 [US4] Verify ArgoCD URL unchanged: `curl -sI https://svc:argocd.<tailnet>.ts.net` returns HTTP 200/302
-- [ ] T041 [US4] Verify Langfuse URL unchanged: `curl -sI https://svc:langfuse.<tailnet>.ts.net` returns HTTP 200/302
+- [ ] T040 [US4] Verify ArgoCD URL unchanged: `curl -sI https://argocd-<cluster>.<tailnet>.ts.net` returns HTTP 200/302
+- [ ] T041 [US4] Verify Langfuse URL unchanged: `curl -sI https://langfuse-<cluster>.<tailnet>.ts.net` returns HTTP 200/302
 - [ ] T042 [US4] Verify no `-1`, `-2` suffixes in Tailscale Admin Console → Machines
 
 **Checkpoint**: Hostname stability validated across cluster recreation - US4 complete
@@ -234,6 +234,6 @@ Task T044: "Update CLAUDE.md Tailscale section"
 - [Story] label maps task to specific user story for traceability
 - Manual Tailscale Admin Console tasks (Phase 1) cannot be automated
 - External Secrets sync may take up to 1h (or force with `kubectl delete secret`)
-- Service URLs format: `https://svc:<name>.<tailnet>.ts.net`
+- Service URLs format: `https://<name>.<tailnet>.ts.net`
 - Test from Tailscale-connected device only
 - Commit after each phase or logical group

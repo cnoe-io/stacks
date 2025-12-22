@@ -249,7 +249,7 @@ curl -X POST http://localhost:8000/run \
 
 ```bash
 # Open Langfuse UI
-open https://langfuse.cnoe.localtest.me:8443
+open https://langfuse-<cluster>.cnoe.localtest.me:8443
 
 # Expected:
 # - Trace named "workflow_{uuid}" appears

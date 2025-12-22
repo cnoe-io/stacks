@@ -238,8 +238,8 @@ Exposes a Kubernetes service via Tailscale.
 
 | Service | Pattern | Example |
 |---------|---------|---------|
-| ArgoCD | `svc-argocd.<tailnet>.ts.net` | `svc-argocd.tail286401.ts.net` |
-| K8s API | `svc-k8s-api.<tailnet>.ts.net` | `svc-k8s-api.tail286401.ts.net` |
+| ArgoCD | `argocd-<cluster>.<tailnet>.ts.net` | `argocd-ryzen.tail286401.ts.net` |
+| K8s API | `k8s-api-<cluster>.<tailnet>.ts.net` | `k8s-api-ryzen.tail286401.ts.net` |
 
 ---
 
@@ -332,8 +332,8 @@ Bootstrap State
 
 ### Post-Bootstrap Validation
 
-- [ ] ArgoCD accessible via Tailscale (`svc-argocd.<tailnet>.ts.net`)
+- [ ] ArgoCD accessible via Tailscale (`argocd-<cluster>.<tailnet>.ts.net`)
 - [ ] ClusterSecretStore reports Ready status
 - [ ] ExternalSecret syncs within 60 seconds
-- [ ] Kubernetes API accessible via Tailscale (`svc-k8s-api.<tailnet>.ts.net`)
+- [ ] Kubernetes API accessible via Tailscale (`k8s-api-<cluster>.<tailnet>.ts.net`)
 - [ ] All ArgoCD Applications show Synced/Healthy status

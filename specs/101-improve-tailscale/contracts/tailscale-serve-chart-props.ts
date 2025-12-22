@@ -17,8 +17,8 @@ export interface TailscaleServeChartProps extends ChartProps {
    * Service name for Tailscale Services registration.
    * Will be prefixed with 'svc:' when used with --service flag.
    *
-   * @example 'argocd' → --service=svc:argocd
-   * @example 'langfuse' → --service=svc:langfuse
+   * @example 'argocd-ryzen' → --service=svc:argocd-ryzen
+   * @example 'langfuse-thinkpad' → --service=svc:langfuse-thinkpad
    */
   serviceName: string;
 

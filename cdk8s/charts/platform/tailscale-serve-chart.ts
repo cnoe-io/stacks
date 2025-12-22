@@ -336,11 +336,7 @@ done
 # The backend service handles TLS termination if needed
 socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 
-# Expose via device MagicDNS name (immediate access, no service approval required)
-tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --https=443 http://127.0.0.1:8080
-
-# Expose via Tailscale serve on HTTPS 443 with service registration
+# Expose via Tailscale Services (stable, predictable URL)
 # Tailscale serve terminates TLS and forwards plain HTTP to socat on port 8080
 # socat then forwards raw TCP to the backend (which may re-establish TLS)
 tailscale --socket=/run/tailscale/tailscaled.sock \\

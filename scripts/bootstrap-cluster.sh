@@ -361,8 +361,8 @@ print_access_info() {
     echo ""
 
     echo "Access URLs (via Tailscale):"
-    echo "  ArgoCD UI:     https://svc-argocd.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
-    echo "  Kubernetes:    https://svc-k8s-api.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
+    echo "  ArgoCD UI:     https://argocd-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
+    echo "  Kubernetes:    https://k8s-api-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
     echo ""
 
     echo "ArgoCD admin password:"

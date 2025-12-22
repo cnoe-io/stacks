@@ -149,7 +149,7 @@ Use Tailscale Services (not device hostnames) for stable access:
 ```typescript
 // cdk8s/charts/platform/argocd-tailscale-serve-chart.ts
 {
-  serviceName: 'argocd',           // → svc-argocd.<tailnet>.ts.net
+  serviceName: 'argocd-<cluster>', // → argocd-<cluster>.<tailnet>.ts.net
   backendHost: 'argocd-server.argocd.svc.cluster.local',
   backendPort: 443,
   backendInsecure: true

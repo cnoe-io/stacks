@@ -333,6 +333,22 @@
         "tag:vm"
       ],
       "dst": [
+        "svc:otel-collector:*",
+        "svc:otel-collector-thinkpad:*",
+        "svc:otel-collector-ryzen:*",
+        "svc:otel-collector-hetzner:*",
+        "svc:mimir:*",
+        "svc:mimir-thinkpad:*",
+        "svc:mimir-ryzen:*",
+        "svc:mimir-hetzner:*"
+      ]
+    },
+    {
+      "action": "accept",
+      "src": [
+        "tag:vm"
+      ],
+      "dst": [
         "tag:k8s-services:*"
       ]
     }

@@ -62,11 +62,11 @@ An OpenTelemetry Collector acts as the ingestion gateway, receiving OTLP from wo
 │  │                    Tailscale Proxy Service                          │   │
 │  │         Exposes services to Tailscale network as MagicDNS           │   │
 │  │                                                                      │   │
-│  │  otel-collector.tail286401.ts.net:4318 → OTEL Collector             │   │
-│  │  mimir.tail286401.ts.net:9009 → Mimir                               │   │
-│  │  loki.tail286401.ts.net:3100 → Loki                                 │   │
-│  │  grafana.tail286401.ts.net:3000 → Grafana                           │   │
-│  │  pyroscope.tail286401.ts.net:4040 → Pyroscope                       │   │
+│  │  otel-collector-<cluster>.tail286401.ts.net → OTEL Collector        │   │
+│  │  mimir-<cluster>.tail286401.ts.net → Mimir                          │   │
+│  │  loki-<cluster>.tail286401.ts.net → Loki                            │   │
+│  │  grafana-<cluster>.tail286401.ts.net → Grafana                      │   │
+│  │  (Tempo/Pyroscope are internal; access via Grafana)                 │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -147,13 +147,13 @@ As an infrastructure operator, I want all observability services accessible via 
 
 **Why this priority**: Critical infrastructure - without Tailscale exposure, workstations cannot send data.
 
-**Independent Test**: Deploy Tailscale proxy, verify `otel-collector.tail286401.ts.net:4318` resolves and accepts OTLP.
+**Independent Test**: Deploy Tailscale proxy, verify `otel-collector-<cluster>.tail286401.ts.net` resolves and accepts OTLP.
 
 **Acceptance Scenarios**:
 
 1. **Given** Tailscale operator is configured, **When** services are annotated for exposure, **Then** MagicDNS names resolve within the tailnet
-2. **Given** OTEL Collector is exposed, **When** a workstation sends OTLP to `otel-collector.tail286401.ts.net:4318`, **Then** data is received
-3. **Given** Grafana is exposed, **When** I browse to `grafana.tail286401.ts.net:3000`, **Then** I can access dashboards
+2. **Given** OTEL Collector is exposed, **When** a workstation sends OTLP to `otel-collector-<cluster>.tail286401.ts.net`, **Then** data is received
+3. **Given** Grafana is exposed, **When** I browse to `grafana-<cluster>.tail286401.ts.net`, **Then** I can access dashboards
 
 ---
 

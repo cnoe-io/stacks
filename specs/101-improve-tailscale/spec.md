@@ -9,7 +9,7 @@
 
 ### User Story 1 - Access ArgoCD Dashboard Remotely (Priority: P1)
 
-A platform engineer working from home needs to access the ArgoCD dashboard to monitor and manage GitOps deployments. Currently, when the cluster is recreated, the Tailscale hostname changes (e.g., `argocd-ui-serve-3.tail286401.ts.net`), requiring the user to discover the new URL. With stable Tailscale Services, the user always accesses `svc:argocd` which resolves to a consistent endpoint regardless of cluster recreation.
+A platform engineer working from home needs to access the ArgoCD dashboard to monitor and manage GitOps deployments. Currently, when the cluster is recreated, the Tailscale hostname changes (e.g., `argocd-ui-serve-3.tail286401.ts.net`), requiring the user to discover the new URL. With Tailscale Services, the user always accesses a stable URL like `https://argocd-<cluster>.<tailnet>.ts.net` (service identity `svc:argocd-<cluster>`), regardless of cluster recreation.
 
 **Why this priority**: ArgoCD is the primary GitOps control plane used daily for deployment management. Stable URLs reduce friction and eliminate bookmark/script updates after cluster recreation.
 
@@ -17,7 +17,7 @@ A platform engineer working from home needs to access the ArgoCD dashboard to mo
 
 **Acceptance Scenarios**:
 
-1. **Given** a platform engineer connected to the Tailscale network, **When** they navigate to the ArgoCD service URL (e.g., `https://svc:argocd.ts.net` or registered service name), **Then** they see the ArgoCD dashboard login page within 5 seconds.
+1. **Given** a platform engineer connected to the Tailscale network, **When** they navigate to the ArgoCD service URL (e.g., `https://argocd-<cluster>.<tailnet>.ts.net`), **Then** they see the ArgoCD dashboard login page within 5 seconds.
 
 2. **Given** the Kubernetes cluster has been recreated with a fresh ArgoCD pod, **When** the user accesses the same ArgoCD service URL as before recreation, **Then** the URL resolves to the new ArgoCD instance without requiring URL changes.
 
@@ -88,7 +88,7 @@ When the Kind cluster is recreated (during development or updates), Tailscale-ex
 
 - **FR-002**: System MUST use tag-based auth keys (e.g., `tag:k8s-services`) to enable service auto-approval in Tailscale ACLs.
 
-- **FR-003**: System MUST update the `tailscale serve` command to use the `--service` flag pattern (e.g., `tailscale serve --service=svc:argocd --https=443 127.0.0.1:8443`).
+- **FR-003**: System MUST update the `tailscale serve` command to use the `--service` flag pattern (e.g., `tailscale serve --service=svc:argocd-<cluster> --https=443 http://127.0.0.1:443`).
 
 - **FR-004**: System MUST provide documentation for required Tailscale Admin Console configuration including service definitions and ACL auto-approvers.
 
@@ -102,7 +102,7 @@ When the Kind cluster is recreated (during development or updates), Tailscale-ex
 
 ### Key Entities
 
-- **Tailscale Service**: A stable service endpoint in Tailscale that maps to one or more backend pods (e.g., `svc:argocd → tcp:443`). Survives pod/cluster recreation.
+- **Tailscale Service**: A stable service endpoint in Tailscale that maps to one or more backend pods (e.g., `svc:argocd-ryzen → tcp:443`). Survives pod/cluster recreation.
 
 - **Tagged Auth Key**: A Tailscale auth key with ACL tags (e.g., `tag:k8s-services`) that enables automatic service registration approval.
 

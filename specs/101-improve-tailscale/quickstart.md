@@ -51,9 +51,12 @@ Navigate to **Access Controls** in Tailscale Admin Console.
         },
         // ▼▼▼ NEW: Add this block ▼▼▼
         "services": {
-            "svc:argocd":   ["tag:k8s-services"],
-            "svc:langfuse": ["tag:k8s-services"],
-            "svc:k8s-api":  ["tag:k8s-services"],
+            "svc:argocd-ryzen":       ["tag:k8s-services"],
+            "svc:argocd-thinkpad":    ["tag:k8s-services"],
+            "svc:langfuse-ryzen":     ["tag:k8s-services"],
+            "svc:langfuse-thinkpad":  ["tag:k8s-services"],
+            "svc:k8s-api-ryzen":      ["tag:k8s-services"],
+            "svc:k8s-api-thinkpad":   ["tag:k8s-services"],
         },
     },
     "acls": [
@@ -80,17 +83,17 @@ Navigate to **Access Controls** in Tailscale Admin Console.
 Navigate to **Services** (beta) in the left sidebar and create:
 
 **Service 1: ArgoCD**
-- Name: `argocd`
+- Name: `argocd-ryzen` and `argocd-thinkpad`
 - Description: ArgoCD GitOps Dashboard
 - Endpoint: `tcp:443`
 
 **Service 2: Langfuse**
-- Name: `langfuse`
+- Name: `langfuse-ryzen` and `langfuse-thinkpad`
 - Description: Langfuse LLM Observability
 - Endpoint: `tcp:443`
 
 **Service 3 (Optional): K8s API**
-- Name: `k8s-api`
+- Name: `k8s-api-ryzen` and `k8s-api-thinkpad`
 - Description: Kubernetes API Server Proxy
 - Endpoint: `tcp:443`
 
@@ -177,14 +180,14 @@ kubectl logs -n tailscale -l app.kubernetes.io/name=argocd-tailscale-serve --tai
 
 Expected output includes:
 ```
-tailscale serve running for ArgoCD service svc:argocd
+tailscale serve running for ArgoCD service svc:argocd-<cluster>
 ```
 
 ### 4.3 Verify Service Registration
 
 In Tailscale Admin Console → **Services**:
-- `svc:argocd` should show as "Active"
-- `svc:langfuse` should show as "Active"
+- `argocd-<cluster>` should show as "Active"
+- `langfuse-<cluster>` should show as "Active"
 
 ### 4.4 Test Access
 
@@ -192,10 +195,10 @@ From a Tailscale-connected device:
 
 ```bash
 # Test ArgoCD
-curl -sI https://svc:argocd.<your-tailnet>.ts.net | head -5
+curl -sI https://argocd-<cluster>.<your-tailnet>.ts.net | head -5
 
 # Test Langfuse
-curl -sI https://svc:langfuse.<your-tailnet>.ts.net | head -5
+curl -sI https://langfuse-<cluster>.<your-tailnet>.ts.net | head -5
 ```
 
 Expected: HTTP 200 or redirect response.
@@ -206,8 +209,8 @@ To verify hostname stability:
 
 ```bash
 # 1. Note current URLs
-echo "ArgoCD: https://svc:argocd.<tailnet>.ts.net"
-echo "Langfuse: https://svc:langfuse.<tailnet>.ts.net"
+echo "ArgoCD: https://argocd-<cluster>.<tailnet>.ts.net"
+echo "Langfuse: https://langfuse-<cluster>.<tailnet>.ts.net"
 
 # 2. Recreate cluster
 idpbuilder delete --name localdev
@@ -217,7 +220,7 @@ idpbuilder create --package cdk8s/dist/
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-tailscale-serve -n tailscale --timeout=180s
 
 # 4. Test same URLs - should still work!
-curl -sI https://svc:argocd.<tailnet>.ts.net | head -5
+curl -sI https://argocd-<cluster>.<tailnet>.ts.net | head -5
 ```
 
 ## Troubleshooting
@@ -251,7 +254,7 @@ kubectl get secret tailscale-auth-key -n tailscale -o jsonpath='{.data.authKey}'
 **Check**:
 1. Tailscale client connected on test device
 2. Service is "Active" in Admin Console
-3. Try with IP: `tailscale status | grep svc:argocd`
+3. Confirm the service identity is advertised: `tailscale status | grep svc:argocd-<cluster>`
 
 ### Langfuse Auth Callback Fails
 
@@ -259,7 +262,7 @@ kubectl get secret tailscale-auth-key -n tailscale -o jsonpath='{.data.authKey}'
 
 **Fix**: Update Langfuse chart's `nextAuthUrl` to match new service URL:
 ```typescript
-nextAuthUrl: 'https://svc:langfuse.<tailnet>.ts.net'
+nextAuthUrl: 'https://langfuse-<cluster>.<tailnet>.ts.net'
 ```
 
 ## Rollback
@@ -276,8 +279,8 @@ After successful deployment:
 
 | Service | URL | Notes |
 |---------|-----|-------|
-| ArgoCD | `https://svc:argocd.<tailnet>.ts.net` | GitOps Dashboard |
-| Langfuse | `https://svc:langfuse.<tailnet>.ts.net` | LLM Observability |
-| K8s API | `https://svc:k8s-api.<tailnet>.ts.net` | kubectl access (if enabled) |
+| ArgoCD | `https://argocd-<cluster>.<tailnet>.ts.net` | GitOps Dashboard |
+| Langfuse | `https://langfuse-<cluster>.<tailnet>.ts.net` | LLM Observability |
+| K8s API | `https://k8s-api-<cluster>.<tailnet>.ts.net` | kubectl access (if enabled) |
 
 Replace `<tailnet>` with your tailnet domain (e.g., `tail286401`).

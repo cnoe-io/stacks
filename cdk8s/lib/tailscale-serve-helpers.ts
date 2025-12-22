@@ -25,7 +25,7 @@ export interface TailscaleServeChartProps extends ChartProps {
    * Service name for Tailscale Services registration.
    * Will be prefixed with 'svc:' for registration.
    *
-   * @example 'argocd' → svc:argocd → https://argocd.<tailnet>.ts.net
+   * @example 'argocd-ryzen' → svc:argocd-ryzen → https://argocd-ryzen.<tailnet>.ts.net
    */
   serviceName: string;
 
@@ -251,11 +251,7 @@ done
 # This is required because netstack in userspace mode routes to the exposed port
 socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:${backendPort} &
 
-# Expose via device MagicDNS name (immediate access, no service approval required)
-tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --https=443 http://127.0.0.1:443
-
-# Expose via Tailscale serve on HTTPS 443 with service registration
+# Expose via Tailscale Services (stable, predictable URL)
 tailscale --socket=/run/tailscale/tailscaled.sock \\
   serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:443
 

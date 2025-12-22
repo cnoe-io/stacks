@@ -76,7 +76,7 @@
 
 **Goal**: Expose OTEL Collector and Grafana via Tailscale for workstation telemetry ingestion
 
-**Independent Test**: Run `curl -I https://otel-collector.tail286401.ts.net:4318/v1/traces` from a Tailscale-connected device
+**Independent Test**: Run `curl -I https://otel-collector-<cluster>.tail286401.ts.net/v1/traces` from a Tailscale-connected device
 
 **Why First**: Without Tailscale exposure, workstations cannot send data. Must be deployed alongside OTEL Collector.
 

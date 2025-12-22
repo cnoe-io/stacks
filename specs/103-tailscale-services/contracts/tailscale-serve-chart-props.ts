@@ -23,9 +23,10 @@ import { ChartProps } from 'cdk8s';
 export interface TailscaleServeChartProps extends ChartProps {
   /**
    * Service name for Tailscale Services registration.
-   * Will be prefixed with 'svc:' for registration and 'svc-' for URL.
+   * Will be prefixed with 'svc:' for service identity (ACLs/auto-approvers).
+   * URL format is `https://<serviceName>.<tailnet>.ts.net`.
    *
-   * @example 'argocd' → svc:argocd → https://svc-argocd.<tailnet>.ts.net
+   * @example 'argocd-ryzen' → svc:argocd-ryzen → https://argocd-ryzen.<tailnet>.ts.net
    */
   serviceName: string;
 
@@ -200,7 +201,7 @@ socat TCP-LISTEN:443,fork,reuseaddr TCP:127.0.0.1:${backendPort} &
 tailscale --socket=/run/tailscale/tailscaled.sock \\
   serve --service=svc:${serviceName} --https=443 http://127.0.0.1:443
 
-echo "Service running at https://svc-${serviceName}.<tailnet>.ts.net"
+echo "Service running at https://${serviceName}.<tailnet>.ts.net"
 exec tail -f /dev/null
 `;
 }

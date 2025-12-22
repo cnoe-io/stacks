@@ -206,14 +206,14 @@ Both services will be accessible via:
 **Description:** Expose observability UIs via cluster ingress
 
 **Requirements:**
-- FR-4.1: Jaeger UI accessible at `jaeger.cnoe.localtest.me`
-- FR-4.2: Langfuse UI accessible at `langfuse.cnoe.localtest.me`
+- FR-4.1: Jaeger UI accessible at `jaeger-<cluster>.cnoe.localtest.me`
+- FR-4.2: Langfuse UI accessible at `langfuse-<cluster>.cnoe.localtest.me`
 - FR-4.3: Both use HTTPS with cluster TLS (consistent with other services)
 - FR-4.4: Ingress uses nginx ingress class
 
 **Acceptance Criteria:**
-- `https://jaeger.cnoe.localtest.me:8443` loads Jaeger UI
-- `https://langfuse.cnoe.localtest.me:8443` loads Langfuse UI
+- `https://jaeger-<cluster>.cnoe.localtest.me:8443` loads Jaeger UI
+- `https://langfuse-<cluster>.cnoe.localtest.me:8443` loads Langfuse UI
 - TLS certificates are valid (self-signed acceptable for local dev)
 
 ---

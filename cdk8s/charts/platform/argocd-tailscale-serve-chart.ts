@@ -7,7 +7,7 @@
  * - Exposes ArgoCD server via Tailscale Services
  * - Provides HTTPS access with automatic TLS
  *
- * Access: https://argocd.<tailnet>.ts.net
+ * Access: https://<serviceName>.<tailnet>.ts.net
  */
 
 import { Chart, ChartProps } from 'cdk8s';
@@ -220,8 +220,6 @@ echo "Secret ${authKeySecretName} found, proceeding..."
  * Generate the shell script for the ArgoCD Tailscale serve container.
  *
  * Notes:
- * - Uses legacy hostname mode (without --service flag) because Tailscale
- *   Services beta is not available for all tailnets
  * - Tailscale serve can only proxy to localhost, not remote hosts
  * - We use socat to forward from localhost to the ArgoCD backend
  * - ArgoCD in HA mode (with HAProxy) exposes HTTP on port 80
@@ -260,6 +258,9 @@ tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   --accept-dns=false --accept-routes=false --ssh=false
 
+# Clear any stale serve configuration (PVC-backed state can survive pod reschedules)
+tailscale --socket=/run/tailscale/tailscaled.sock serve reset || true
+
 # Wait for ArgoCD to be ready
 echo "Waiting for ArgoCD backend at ${healthCheckUrl}..."
 for i in $(seq 1 60); do
@@ -276,13 +277,16 @@ socat TCP-LISTEN:8080,fork,reuseaddr TCP:${backendHost}:${backendPort} &
 # Wait for socat to be ready
 sleep 1
 
-# Expose via Tailscale serve (legacy hostname mode)
-# Using legacy hostname mode (no --service flag) - accessible via pod hostname
+# Expose via Tailscale Services (stable, predictable URL)
 echo "Starting Tailscale serve for ${serviceName}..."
 tailscale --socket=/run/tailscale/tailscaled.sock \\
-  serve --bg --https=443 http://127.0.0.1:8080
+  serve --bg --service=svc:${serviceName} --https=443 http://127.0.0.1:8080
 
-echo "ArgoCD UI available - check Tailscale admin for hostname"
+# Advertise as a Service host (required for approval/auto-approval)
+tailscale --socket=/run/tailscale/tailscaled.sock \\
+  serve advertise svc:${serviceName} || echo "WARN: service host not yet approved (svc:${serviceName})"
+
+echo "Service running at https://${serviceName}.<tailnet>.ts.net"
 exec tail -f /dev/null
 `;
 }

@@ -73,7 +73,7 @@ This migration completely replaces the legacy Tailscale Ingress pattern. There i
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Service identifier (e.g., "svc:argocd") |
-| `url` | string | Public URL (e.g., "https://svc-argocd.tail286401.ts.net") |
+| `url` | string | Public URL (e.g., "https://argocd-<cluster>.tail286401.ts.net") |
 | `tag` | string | ACL tag for auto-approval (e.g., "tag:k8s-services") |
 | `status` | enum | "active", "pending", "error" |
 
@@ -138,25 +138,25 @@ active → pending (on pod restart)
 
 ### Service Mode URLs
 
-Format: `https://svc-<serviceName>.<tailnet>.ts.net`
+Format: `https://<serviceName>.<tailnet>.ts.net`
 
 | Service | URL |
 |---------|-----|
-| ArgoCD | `https://svc-argocd.tail286401.ts.net` |
-| Langfuse | `https://svc-langfuse.tail286401.ts.net` |
-| Gitea | `https://svc-gitea.tail286401.ts.net` |
-| kagent | `https://svc-kagent.tail286401.ts.net` |
-| Kargo | `https://svc-kargo.tail286401.ts.net` |
-| Headlamp | `https://svc-headlamp.tail286401.ts.net` |
-| Keycloak | `https://svc-keycloak.tail286401.ts.net` |
+| ArgoCD | `https://argocd-<cluster>.tail286401.ts.net` |
+| Langfuse | `https://langfuse-<cluster>.tail286401.ts.net` |
+| Gitea | `https://gitea-<cluster>.tail286401.ts.net` |
+| kagent | `https://kagent-<cluster>.tail286401.ts.net` |
+| Kargo | `https://kargo-<cluster>.tail286401.ts.net` |
+| Headlamp | `https://headlamp-<cluster>.tail286401.ts.net` |
+| Keycloak | `https://keycloak-<cluster>.tail286401.ts.net` |
 
-### Legacy Hostname URLs (to be deprecated)
+### Legacy Hostname URLs (deprecated)
 
-Format: `https://<hostname>.<tailnet>.ts.net`
+Format: `https://<device-hostname>.<tailnet>.ts.net` (often ends up with `-1`, `-2`, … suffix drift)
 
 | Service | Legacy URL | Status |
 |---------|------------|--------|
-| ArgoCD | `https://argocd.tail286401.ts.net` | Blocked by rate limit |
+| ArgoCD | `https://argocd-1.tail286401.ts.net` | Blocked by rate limit |
 | Gitea | `https://gitea-1.tail286401.ts.net` | Active (suffixed) |
 | kagent | `https://kagent-1.tail286401.ts.net` | Active (suffixed) |
 

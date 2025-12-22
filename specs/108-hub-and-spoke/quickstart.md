@@ -523,7 +523,7 @@ kubectl --context=thinkpad get pods -n backstage
 # Expected: backstage-xxx Running
 
 # Access backstage via spoke's Tailscale URL
-curl -I https://backstage.thinkpad.tail286401.ts.net
+curl -I https://backstage-thinkpad.tail286401.ts.net
 # Expected: HTTP/2 200
 ```
 

@@ -4,7 +4,7 @@
  * Deploys Jaeger v1.66.0 all-in-one with Badger embedded storage.
  * - PVC for persistent Badger storage (10Gi)
  * - Services: query (16686), collector (9411 Zipkin)
- * - Ingress for local access via jaeger.cnoe.localtest.me
+ * - Ingress for local access via jaeger-<cluster>.cnoe.localtest.me
  *
  * Sync wave: -65 (after namespace and secrets)
  */
@@ -12,6 +12,7 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
+import { getClusterSuffix } from '../../lib/cluster-identity';
 
 export interface JaegerChartProps extends ChartProps {
   /**
@@ -40,7 +41,7 @@ export interface JaegerChartProps extends ChartProps {
 
   /**
    * Ingress hostname
-   * @default 'jaeger.cnoe.localtest.me'
+   * @default 'jaeger-<cluster>.<INGRESS_HOST>'
    */
   ingressHost?: string;
 }
@@ -53,7 +54,8 @@ export class JaegerChart extends Chart {
     const imageVersion = props?.imageVersion || '1.66.0';
     const storageSize = props?.storageSize || '10Gi';
     const spanStorageTtl = props?.spanStorageTtl || '168h';
-    const ingressHost = props?.ingressHost || 'jaeger.cnoe.localtest.me';
+    const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
+    const ingressHost = props?.ingressHost || `jaeger${getClusterSuffix()}.${baseHost}`;
 
     const labels = {
       'app': 'jaeger',

@@ -60,8 +60,8 @@
 │  │                    ingress-nginx namespace                       │ │
 │  │  ┌─────────────────────────────────────────────────────────────┐│ │
 │  │  │                   Ingress Controller                        ││ │
-│  │  │  jaeger.cnoe.localtest.me:8443 → jaeger:16686               ││ │
-│  │  │  langfuse.cnoe.localtest.me:8443 → langfuse:3000            ││ │
+│  │  │  jaeger-<cluster>.cnoe.localtest.me:8443 → jaeger:16686     ││ │
+│  │  │  langfuse-<cluster>.cnoe.localtest.me:8443 → langfuse:3000  ││ │
 │  │  └─────────────────────────────────────────────────────────────┘│ │
 │  │  ┌─────────────────────────────────────────────────────────────┐│ │
 │  │  │              Tailscale LoadBalancer Services                ││ │
@@ -105,7 +105,7 @@
 | Deployment | jaeger | all-in-one:2.12.0, 1 replica |
 | Service | jaeger-query | ClusterIP, port 16686 |
 | Service | jaeger-collector | ClusterIP, port 9411 (Zipkin) |
-| Ingress | jaeger | jaeger.cnoe.localtest.me → jaeger-query:16686 |
+| Ingress | jaeger | jaeger-<cluster>.cnoe.localtest.me → jaeger-query:16686 |
 
 **Environment Variables:**
 ```yaml
@@ -149,12 +149,12 @@ BADGER_SPAN_STORAGE_TTL: 168h
 |----------|------|---------|
 | Deployment | langfuse | langfuse:3.123.1, 1 replica |
 | Service | langfuse | ClusterIP, port 3000 |
-| Ingress | langfuse | langfuse.cnoe.localtest.me → langfuse:3000 |
+| Ingress | langfuse | langfuse-<cluster>.cnoe.localtest.me → langfuse:3000 |
 
 **Environment Variables:**
 ```yaml
 DATABASE_URL: postgresql://langfuse:${password}@langfuse-postgres:5432/langfuse
-NEXTAUTH_URL: https://langfuse.cnoe.localtest.me:8443
+NEXTAUTH_URL: https://langfuse-<cluster>.cnoe.localtest.me:8443
 NEXTAUTH_SECRET: ${from-secret}
 SALT: ${from-secret}
 ENCRYPTION_KEY: ${from-secret}
@@ -449,9 +449,14 @@ kubectl run curl-test --rm -i --restart=Never --image=curlimages/curl -- \
 ### 4. Remote Access Verification
 
 ```bash
-# From Tailscale-connected device
-curl -k https://jaeger.tail286401.ts.net/api/services
-curl -k https://langfuse.tail286401.ts.net/api/health
+# From Tailscale-connected device (Langfuse)
+export CLUSTER_NAME="${CLUSTER_NAME:-<cluster>}"     # e.g., ryzen | thinkpad
+export TAILSCALE_TAILNET="${TAILSCALE_TAILNET:-tail286401}"
+curl -k "https://langfuse-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net/api/health"
+
+# Jaeger UI is not exposed via Tailscale Services in this setup; port-forward if needed:
+kubectl port-forward -n observability svc/jaeger-query 16686:16686
+curl -s http://localhost:16686/api/services | head
 ```
 
 ---

@@ -99,7 +99,7 @@ To be generated via `/speckit.tasks`. High-level task breakdown:
 #### Tailscale Admin Console (Manual, One-Time)
 
 1. Create ACL tag `tag:k8s-services`
-2. Define services: `svc:argocd`, `svc:langfuse`
+2. Define services: `svc:argocd-<cluster>`, `svc:langfuse-<cluster>`
 3. Add ACL auto-approvers
 4. Generate tagged auth key
 
@@ -137,7 +137,7 @@ tailscale serve --bg https+insecure://127.0.0.1:${PORT_FWD}
 
 ```bash
 # Updated command
-tailscale serve --service=svc:argocd --https=443 https+insecure://127.0.0.1:${PORT_FWD}
+tailscale serve --service=svc:argocd-<cluster> --https=443 https+insecure://127.0.0.1:${PORT_FWD}
 ```
 
 ### Chart Props Update

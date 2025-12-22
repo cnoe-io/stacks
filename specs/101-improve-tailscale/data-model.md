@@ -15,7 +15,7 @@ A stable service endpoint in the Tailscale control plane.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Service identifier (e.g., `svc:argocd`) |
+| `name` | string | Yes | Service identifier (e.g., `svc:argocd-<cluster>`) |
 | `description` | string | No | Human-readable description |
 | `endpoints` | object[] | Yes | Port-protocol mappings |
 | `endpoints[].protocol` | string | Yes | Transport protocol (`tcp`) |
@@ -23,7 +23,7 @@ A stable service endpoint in the Tailscale control plane.
 
 **Example**:
 ```
-Name: svc:argocd
+Name: svc:argocd-<cluster>
 Description: ArgoCD GitOps Dashboard
 Endpoints: tcp:443
 ```
@@ -34,7 +34,7 @@ Rules that automatically approve service registrations.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `serviceName` | string | Yes | Service to approve (e.g., `svc:argocd`) |
+| `serviceName` | string | Yes | Service to approve (e.g., `svc:argocd-<cluster>`) |
 | `allowedTags` | string[] | Yes | Tags that can advertise this service |
 
 **Example**:
@@ -42,7 +42,7 @@ Rules that automatically approve service registrations.
 {
   "autoApprovers": {
     "services": {
-      "svc:argocd": ["tag:k8s-services"]
+      "svc:argocd-<cluster>": ["tag:k8s-services"]
     }
   }
 }
@@ -105,7 +105,7 @@ interface TailscaleServeChartProps extends ChartProps {
 │                                                                  │
 │  ┌─────────────────┐    approves    ┌──────────────────────┐   │
 │  │ ACL Auto-       │───────────────▶│ Tailscale Service    │   │
-│  │ Approvers       │                │ (svc:argocd)         │   │
+│  │ Approvers       │                │ (svc:argocd-<cluster>) │   │
 │  │ tag:k8s-services│                │ - tcp:443            │   │
 │  └─────────────────┘                └──────────────────────┘   │
 │                                              ▲                  │
@@ -134,7 +134,7 @@ interface TailscaleServeChartProps extends ChartProps {
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    Tailscale Serve Pod                   │   │
 │  │  - Uses auth key from secret                            │   │
-│  │  - Runs: tailscale serve --service=svc:argocd           │   │
+│  │  - Runs: tailscale serve --service=svc:argocd-<cluster> │   │
 │  │  - Proxies to backend cluster service                   │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
@@ -183,7 +183,7 @@ interface TailscaleServeChartProps extends ChartProps {
 ### Tailscale Service Name
 - Must start with `svc:` prefix
 - Name portion: lowercase alphanumeric, hyphens allowed
-- Example: `svc:argocd`, `svc:langfuse`, `svc:k8s-api`
+- Example: `svc:argocd-ryzen`, `svc:langfuse-thinkpad`, `svc:k8s-api-ryzen`
 
 ### Auth Key
 - Must have `reusable: true` for multiple pods
@@ -201,6 +201,6 @@ interface TailscaleServeChartProps extends ChartProps {
 None - new service URLs coexist with existing device-hostname URLs during transition.
 
 ### Backward Compatibility
-- Old URLs (`argocd-ui-serve.tail286401.ts.net`) continue to work
-- New URLs (`svc:argocd.tail286401.ts.net`) added in parallel
-- Migration can be gradual - update bookmarks/scripts at user's pace
+- Old device-hostname URLs (e.g., `argocd-ui-serve-3.tail286401.ts.net`) may exist but are not stable/predictable
+- New stable URLs use Tailscale Services DNS: `https://argocd-<cluster>.tail286401.ts.net`
+- Prefer migrating bookmarks/scripts to the stable service URLs

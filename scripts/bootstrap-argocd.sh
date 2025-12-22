@@ -333,8 +333,8 @@ print_access_info() {
 
     if [[ -n "${TAILSCALE_TAILNET:-}" ]]; then
         echo "Tailscale URLs (after Tailscale services sync):"
-        echo "  ArgoCD:  https://svc-argocd.${TAILSCALE_TAILNET}.ts.net"
-        echo "  K8s API: https://svc-k8s-api.${TAILSCALE_TAILNET}.ts.net"
+        echo "  ArgoCD:  https://argocd-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET}.ts.net"
+        echo "  K8s API: https://k8s-api-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET}.ts.net"
         echo ""
     fi
 

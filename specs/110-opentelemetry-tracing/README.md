@@ -11,7 +11,7 @@ This specification covers the integration of OpenTelemetry (OTel) between NixOS 
         *   Forwards to `otel-ai-monitor` user service (port 4320) for local session tracking/EWW widgets.
         *   **NEW**: Exports to the Kubernetes OTel stack via Tailscale.
 2.  **Kubernetes Side**:
-    *   **Tailscale Serve**: Exposes the OTel Collector at `http://otel-collector.tail286401.ts.net:4318`.
+    *   **Tailscale Services**: Exposes the OTel Collector at `https://otel-collector-<cluster>.tail286401.ts.net` (tcp:443).
     *   **OTel Collector (Cluster)**: Receives telemetry from external hosts and internal pods.
     *   **ClickHouse**: High-performance persistence layer for traces, metrics, and logs.
     *   **Grafana**: Visualization dashboard with ClickHouse datasource (exposed via Tailscale).
@@ -31,14 +31,14 @@ This specification covers the integration of OpenTelemetry (OTel) between NixOS 
 *   **Module**: `modules/services/otel-ai-collector.nix`
 *   **New Options**:
     *   `services.otel-ai-collector.enableK8sExporter`: Defaults to `true`.
-    *   `services.otel-ai-collector.k8sExporterEndpoint`: Defaults to `http://otel-collector.tail286401.ts.net:4318`.
+    *   `services.otel-ai-collector.k8sExporterEndpoint`: Defaults to `https://otel-collector-<cluster>.tail286401.ts.net`.
 
 ## Accessing the Data
 
-1.  **Grafana**: [https://grafana.tail286401.ts.net](https://grafana.tail286401.ts.net)
+1.  **Grafana**: [https://grafana-<cluster>.tail286401.ts.net](https://grafana-ryzen.tail286401.ts.net)
     *   Datasource: ClickHouse
     *   Pre-configured with anonymous Admin access for ease of use.
-2.  **OTel Collector**: [http://otel-collector.tail286401.ts.net:4318](http://otel-collector.tail286401.ts.net:4318)
+2.  **OTel Collector**: [https://otel-collector-<cluster>.tail286401.ts.net](https://otel-collector-ryzen.tail286401.ts.net)
 
 ## Verification Steps
 

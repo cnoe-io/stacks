@@ -266,7 +266,7 @@ kubectl logs -n speckit -l app=orchestrator -f
 
 ### 7.1 Check Langfuse Traces
 
-1. Open Langfuse dashboard (e.g., `https://langfuse.cnoe.localtest.me:8443`)
+1. Open Langfuse dashboard (e.g., `https://langfuse-<cluster>.cnoe.localtest.me:8443`)
 2. Navigate to Traces
 3. Filter by session ID (workflow_id)
 4. Verify:
@@ -276,7 +276,7 @@ kubectl logs -n speckit -l app=orchestrator -f
 
 ### 7.2 Check Jaeger Traces
 
-1. Open Jaeger UI (e.g., `https://jaeger.cnoe.localtest.me:8443`)
+1. Open Jaeger UI (e.g., `https://jaeger-<cluster>.cnoe.localtest.me:8443`)
 2. Search by tag: `workflow.id=550e8400-...`
 3. Verify:
    - Distributed trace shows complete flow

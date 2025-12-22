@@ -83,7 +83,7 @@ image: langfuse/langfuse:3.123.1
 
 # Required Environment Variables
 DATABASE_URL: postgresql://langfuse:${password}@langfuse-postgres:5432/langfuse
-NEXTAUTH_URL: https://langfuse.cnoe.localtest.me:8443
+NEXTAUTH_URL: https://langfuse-<cluster>.cnoe.localtest.me:8443
 NEXTAUTH_SECRET: ${generated-secret}
 SALT: ${generated-salt}
 ENCRYPTION_KEY: ${generated-64-hex-chars}

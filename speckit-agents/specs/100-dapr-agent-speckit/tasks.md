@@ -68,7 +68,7 @@
 - [x] T010 [P] [FR1] Create Jaeger chart with PVC, Deployment, Services in `cdk8s/charts/infra/jaeger-chart.ts`
 - [x] T011 [FR1] Add JaegerChart application config to `cdk8s/config/applications.ts` with syncWave -65
 - [x] T012 [FR1] Register JaegerChart in `cdk8s/lib/idpbuilder-chart-factory.ts` (auto-registered)
-- [x] T013 [FR1] Add Jaeger Ingress resource to jaeger-chart.ts for `jaeger.cnoe.localtest.me`
+- [x] T013 [FR1] Add Jaeger Ingress resource to jaeger-chart.ts for `jaeger-<cluster>.cnoe.localtest.me`
 
 ### Completion Criteria
 - Jaeger deployment YAML includes: PVC (10Gi), Deployment (jaegertracing/all-in-one:1.66.0), Services (query:16686, collector:9411)
@@ -130,7 +130,7 @@
 - [x] T023 [FR5] Update ingress-tailscale-publish-chart.ts to add jaeger and langfuse hosts in `cdk8s/charts/platform/ingress-tailscale-publish-chart.ts`
 
 ### Completion Criteria
-- Ingresses created for jaeger.cnoe.localtest.me and langfuse.cnoe.localtest.me
+- Ingresses created for jaeger-<cluster>.cnoe.localtest.me and langfuse-<cluster>.cnoe.localtest.me
 - Tailscale LoadBalancer services created: ts-jaeger-ingress, ts-langfuse-ingress
 
 ---
@@ -163,8 +163,8 @@
 
 - [x] T028 Synthesize all charts with `npx ts-node main-v2.ts` in cdk8s directory
 - [x] T029 Deploy observability stack with `cluster-update` command
-- [x] T030 Verify Jaeger UI loads at https://jaeger.cnoe.localtest.me:8443 and shows services
-- [x] T031 Verify Langfuse UI loads at https://langfuse.cnoe.localtest.me:8443 and shows traces after workflow
+- [x] T030 Verify Jaeger UI loads at https://jaeger-<cluster>.cnoe.localtest.me:8443 and shows services
+- [x] T031 Verify Langfuse UI loads at https://langfuse-<cluster>.cnoe.localtest.me:8443 and shows traces after workflow
 
 ### Completion Criteria
 - All pods in observability namespace are Running

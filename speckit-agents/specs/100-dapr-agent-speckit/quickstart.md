@@ -85,7 +85,7 @@ kubectl port-forward -n observability svc/jaeger-query 16686:16686 &
 open http://localhost:16686
 
 # Or via ingress (if DNS configured)
-open https://jaeger.cnoe.localtest.me:8443
+open https://jaeger-<cluster>.cnoe.localtest.me:8443
 ```
 
 **Verification:**
@@ -153,13 +153,14 @@ kubectl run curl-test --rm -i --restart=Never --image=curlimages/curl -- \
 From any Tailscale-connected device:
 
 ```bash
-# Get Tailscale hostnames
-tailscale status | grep jaeger
-tailscale status | grep langfuse
+# Access Langfuse (stable Tailscale Service URL)
+export CLUSTER_NAME="${CLUSTER_NAME:-<cluster>}"     # e.g., ryzen | thinkpad
+export TAILSCALE_TAILNET="${TAILSCALE_TAILNET:-tail286401}"
+open "https://langfuse-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net"
 
-# Access UIs (replace with your tailnet)
-open https://jaeger.tail286401.ts.net
-open https://langfuse.tail286401.ts.net
+# Jaeger UI is not exposed via Tailscale Services in this setup; port-forward if needed:
+kubectl port-forward -n observability svc/jaeger-query 16686:16686
+open http://localhost:16686
 ```
 
 ---

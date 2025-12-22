@@ -17,7 +17,7 @@ The cluster is currently experiencing Let's Encrypt rate limits (5 certificates 
 
 **Target State**:
 - Stale devices removed from Tailscale network
-- Services exposed via stable Tailscale Services (`svc-argocd`, `svc-langfuse`, etc.)
+- Services exposed via stable Tailscale Services (`argocd-<cluster>`, `langfuse-<cluster>`, etc.)
 - No hostname drift on pod/cluster recreation
 
 ## User Scenarios & Testing *(mandatory)*
@@ -46,11 +46,11 @@ A platform engineer working remotely needs to access ArgoCD at a consistent URL 
 
 **Why this priority**: ArgoCD is the primary GitOps control plane. Stable URLs eliminate the need to discover new hostnames after each cluster recreation.
 
-**Independent Test**: Can be fully tested by accessing ArgoCD via `https://svc-argocd.<tailnet>.ts.net` from a Tailscale-connected device.
+**Independent Test**: Can be fully tested by accessing ArgoCD via `https://argocd-<cluster>.<tailnet>.ts.net` from a Tailscale-connected device.
 
 **Acceptance Scenarios**:
 
-1. **Given** ArgoCD is deployed with Tailscale Services, **When** a user navigates to `https://svc-argocd.<tailnet>.ts.net`, **Then** the ArgoCD login page loads within 10 seconds.
+1. **Given** ArgoCD is deployed with Tailscale Services, **When** a user navigates to `https://argocd-<cluster>.<tailnet>.ts.net`, **Then** the ArgoCD login page loads within 10 seconds.
 
 2. **Given** the cluster is deleted and recreated, **When** the user accesses the same ArgoCD URL, **Then** the URL continues to work without modification.
 
@@ -62,13 +62,13 @@ A platform engineer working remotely needs to access ArgoCD at a consistent URL 
 
 Platform engineers need stable URLs for all exposed services (Gitea, Langfuse, kagent, Kargo, Headlamp, Keycloak) that follow a consistent naming pattern.
 
-**Why this priority**: After ArgoCD, other services benefit from the same stability. A consistent pattern (`svc-<name>`) makes URLs predictable.
+**Why this priority**: After ArgoCD, other services benefit from the same stability. A consistent pattern (`<name>-<cluster>`) makes URLs predictable.
 
 **Independent Test**: Can be tested by accessing each service via its stable URL from a Tailscale-connected device.
 
 **Acceptance Scenarios**:
 
-1. **Given** all platform services are configured with Tailscale Services, **When** a user accesses any service via `https://svc-<service>.<tailnet>.ts.net`, **Then** the service responds appropriately.
+1. **Given** all platform services are configured with Tailscale Services, **When** a user accesses any service via `https://<service>-<cluster>.<tailnet>.ts.net`, **Then** the service responds appropriately.
 
 2. **Given** multiple services are exposed, **When** viewing Tailscale Admin Console Services page, **Then** all services appear as "Active".
 
@@ -138,7 +138,7 @@ Charts must be updated to remove legacy hostname mode support entirely, not main
 
 - **FR-002**: System MUST provide a mechanism to remove stale devices from the Tailscale network via API or CLI.
 
-- **FR-003**: System MUST configure services (ArgoCD, Langfuse, Gitea, kagent, Kargo, Headlamp, Keycloak) to register as Tailscale Services following the `svc-<service-name>` naming pattern per Constitution Principle V.
+- **FR-003**: System MUST configure services (ArgoCD, Langfuse, Gitea, kagent, Kargo, Headlamp, Keycloak) to register as Tailscale Services following the `<service>-<cluster>` naming pattern per Constitution Principle V.
 
 - **FR-004**: System MUST use tag-based auth keys with `tag:k8s-services` tag for service registration auto-approval per Constitution Principle V.
 
@@ -160,7 +160,7 @@ Charts must be updated to remove legacy hostname mode support entirely, not main
 
 - **Stale Device**: A Tailscale device that is offline and associated with a previous deployment (identified by hostname pattern matching cluster services).
 
-- **Tailscale Service**: A stable service endpoint (`svc-<name>`) that decouples service identity from device identity, per Constitution Principle V.
+- **Tailscale Service**: A stable service endpoint (`<name>-<cluster>`) that decouples service identity from device identity, per Constitution Principle V.
 
 - **Tagged Auth Key**: A reusable, ephemeral auth key with ACL tags enabling automatic service approval, stored in Azure Key Vault.
 
@@ -174,7 +174,7 @@ Charts must be updated to remove legacy hostname mode support entirely, not main
 
 - **SC-001**: All stale devices (matching cluster service patterns and marked offline) are removed within 5 minutes of running cleanup.
 
-- **SC-002**: ArgoCD is accessible via stable URL (`https://svc-argocd.<tailnet>.ts.net`) within 60 seconds of pod startup.
+- **SC-002**: ArgoCD is accessible via stable URL (`https://argocd-<cluster>.<tailnet>.ts.net`) within 60 seconds of pod startup.
 
 - **SC-003**: All 7 platform services (ArgoCD, Langfuse, Gitea, kagent, Kargo, Headlamp, Keycloak) are accessible via their stable service URLs.
 
@@ -221,7 +221,7 @@ This specification aligns with the following Constitution v2.0.0 principles:
 | I. CDK8s Typed Composition | Charts use typed imports from `cdk8s/imports/` |
 | III. Modular Chart Composition | Use helpers from `cdk8s/lib/tailscale-serve-helpers.ts` |
 | IV. ArgoCD Sync Wave Discipline | Configure appropriate sync waves for Tailscale deployments |
-| V. Tailscale Services Standards | `svc-<name>` pattern, `tag:k8s-services`, ACL auto-approvers |
+| V. Tailscale Services Standards | `<name>-<cluster>` naming, `tag:k8s-services`, ACL auto-approvers for `svc:<name>` |
 | VI. External Secrets Management | Auth keys stored in Azure Key Vault, synced via ESO |
 | IX. Forward-Only Development | Remove legacy hostname mode, no dual support |
 | X. Documentation as Code | Update CLAUDE.md with service URLs |
