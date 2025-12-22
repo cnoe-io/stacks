@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cleanup old offline Tailscale devices for platform services
+# Cleanup old offline Tailscale devices that reuse stable hostnames
 # Usage: ./cleanup-old-devices.sh [--wait]
 
 WAIT_FOR_GRACE_PERIOD=false
@@ -9,8 +9,9 @@ if [[ "${1:-}" == "--wait" ]]; then
   WAIT_FOR_GRACE_PERIOD=true
 fi
 
-# Service patterns to match (exact hostnames only, not suffixed versions)
+# Hostname patterns to match (base hostnames only; not suffixed DNS names like "-1", "-2", ...)
 SERVICE_PATTERNS=(
+  # Legacy (pre-services) hostnames that historically caused suffix drift on cluster recreation
   "^kagent$"
   "^gitea$"
   "^argocd$"
@@ -23,8 +24,25 @@ SERVICE_PATTERNS=(
   "^nixos-dev-vm$"
 )
 
+# Cluster-scoped stable hostnames (operator + subnet router + optional VM)
+# These are the names most likely to pick up "-1" / "-2" suffixes after cluster recreation.
+CLUSTER_ID_RAW="${CLUSTER_NAME:-${CLUSTER_HOST:-}}"
+CLUSTER_ID_SLUG="$(echo "${CLUSTER_ID_RAW}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//')"
+if [[ -n "$CLUSTER_ID_SLUG" ]]; then
+  SERVICE_PATTERNS+=(
+    "^${CLUSTER_ID_SLUG}-operator$"
+    "^subnet-router-${CLUSTER_ID_SLUG}$"
+    "^nixos-vm-${CLUSTER_ID_SLUG}$"
+  )
+fi
+
 echo "=== Tailscale Device Cleanup ==="
-echo "Looking for offline devices matching platform services..."
+echo "Looking for offline devices matching stable hostnames..."
+if [[ -n "$CLUSTER_ID_SLUG" ]]; then
+  echo "Cluster: $CLUSTER_ID_SLUG"
+else
+  echo "Cluster: <unknown> (set CLUSTER_NAME or CLUSTER_HOST to clean cluster-scoped hostnames)"
+fi
 
 # Check if running in cluster (kubectl available)
 IN_CLUSTER=false
