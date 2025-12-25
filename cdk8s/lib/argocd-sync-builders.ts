@@ -54,12 +54,10 @@ export const EXTERNAL_SECRET_IGNORE_DIFFERENCES = [
       '.spec.target.template.engineVersion',
       '.spec.target.template.mergePolicy'
     ]
-  },
-  {
-    group: 'external-secrets.io',
-    kind: 'ClusterSecretStore',
-    jsonPointers: ['/spec']
   }
+  // Note: ClusterSecretStore does not need ignoreDifferences - ESO controller
+  // only modifies status, not spec. Removed overly broad '/spec' ignore that
+  // was blocking legitimate changes like ServiceAccount name updates.
 ];
 
 /**
