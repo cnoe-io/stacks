@@ -260,7 +260,9 @@ export class KeycloakConfigChart extends Chart {
     });
 
     // ==========================================================================
-    // Job: config (PostSync hook)
+    // Job: config (PostSync hook - runs after keycloak is deployed and ready)
+    // PostSync ensures keycloak pods are running before the Job tries to configure.
+    // Note: backstage-secrets uses refreshInterval: 1m to retry until this completes.
     // ==========================================================================
 
     new k8s.KubeJob(this, 'config-job', {
@@ -276,7 +278,10 @@ export class KeycloakConfigChart extends Chart {
       },
       spec: {
         // Prevent a stuck hook from blocking ArgoCD indefinitely.
+        // 15 min timeout allows for keycloak startup + image pulls
         activeDeadlineSeconds: 900,
+        // Retry up to 10 times to handle keycloak startup delays
+        backoffLimit: 10,
         template: {
           metadata: {
             generateName: 'config',

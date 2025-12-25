@@ -118,7 +118,9 @@ export class BackstageSecretsChart extends Chart {
           name: 'keycloak',
           kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
         },
-        refreshInterval: '0',
+        // Use 1m refresh to handle race condition where keycloak-clients secret
+        // may not exist yet (created by keycloak-config PostSync Job)
+        refreshInterval: '1m',
         target: {
           name: 'backstage-env-vars',
           template: {
