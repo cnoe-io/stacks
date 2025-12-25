@@ -288,10 +288,42 @@ export function createStage(scope: Construct, id: string, config: StageConfig): 
 }
 
 /**
+ * Gitea host configuration
+ *
+ * GITEA can be configured via environment variables:
+ * - GITEA_TAILSCALE_HOST: Tailscale hostname for Gitea (e.g., 'gitea-thinkpad.tail286401.ts.net')
+ *   When set, uses Tailscale address which is accessible from cluster worker nodes.
+ * - Falls back to 'gitea.cnoe.localtest.me:8443' (only works in single-node clusters)
+ */
+const giteaTailscaleHost = process.env.GITEA_TAILSCALE_HOST;
+const giteaHost = giteaTailscaleHost || 'gitea.cnoe.localtest.me:8443';
+const giteaRegistry = `${giteaHost}/giteaadmin`;
+
+/**
+ * Gitea host URLs for Git and registry operations
+ */
+export const GITEA = {
+  /** Current Gitea host (Tailscale if set, otherwise local) */
+  HOST: giteaHost,
+  /** Tailscale host if configured, null otherwise */
+  TAILSCALE_HOST: giteaTailscaleHost || null,
+  /** Local Gitea host (always available, but may not work from worker nodes) */
+  LOCAL_HOST: 'gitea.cnoe.localtest.me:8443',
+  /** Git base URL for Gitea repositories */
+  GIT_BASE_URL: `https://${giteaHost}/giteaAdmin`,
+  /** Local Git base URL */
+  GIT_BASE_URL_LOCAL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin',
+  /** Whether we're using Tailscale */
+  IS_TAILSCALE: !!giteaTailscaleHost,
+};
+
+/**
  * Default registry URLs
  */
 export const REGISTRY = {
-  GITEA: 'gitea.cnoe.localtest.me:8443/giteaadmin',
+  GITEA: giteaRegistry,
+  GITEA_LOCAL: 'gitea.cnoe.localtest.me:8443/giteaadmin',
+  GITEA_TAILSCALE: giteaTailscaleHost ? `${giteaTailscaleHost}/giteaadmin` : null,
   GHCR: 'ghcr.io/pittampalliorg',
 };
 

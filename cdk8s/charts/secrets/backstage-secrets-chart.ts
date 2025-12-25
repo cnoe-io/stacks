@@ -11,6 +11,7 @@ import {
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
 import { Password } from '../../imports/generators.external-secrets.io';
+import { GITEA } from '../../lib/kargo-helpers';
 
 export interface BackstageSecretsChartProps extends ChartProps {
   // Namespace for Backstage secrets (default: backstage)
@@ -243,6 +244,21 @@ export class BackstageSecretsChart extends Chart {
     });
 
     // ExternalSecret: gitea-dockercfg-external (pull secret for the in-cluster Gitea OCI registry)
+    // When GITEA_TAILSCALE_HOST is set, includes both local and Tailscale registry hosts
+    // This allows pods to pull from either registry endpoint
+    const giteaTailscaleHost = GITEA.TAILSCALE_HOST;
+    const dockerConfigAuthsLocal = `"${giteaHost}": {
+      "username": "{{ .username }}",
+      "password": "{{ .password }}",
+      "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+    }`;
+    const dockerConfigAuthsTailscale = giteaTailscaleHost ? `,
+    "${giteaTailscaleHost}": {
+      "username": "{{ .username }}",
+      "password": "{{ .password }}",
+      "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+    }` : '';
+
     const giteaDockerCfg = new ExternalSecret(this, 'gitea-dockercfg-external', {
       metadata: {
         name: 'gitea-dockercfg-external',
@@ -266,11 +282,7 @@ export class BackstageSecretsChart extends Chart {
             data: {
               '.dockerconfigjson': `{
   "auths": {
-    "${giteaHost}": {
-      "username": "{{ .username }}",
-      "password": "{{ .password }}",
-      "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
-    }
+    ${dockerConfigAuthsLocal}${dockerConfigAuthsTailscale}
   }
 }`,
             },

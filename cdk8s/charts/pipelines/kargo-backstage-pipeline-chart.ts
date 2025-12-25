@@ -4,6 +4,7 @@ import {
   createWarehouse,
   createStage,
   REGISTRY,
+  GITEA,
   TAG_PATTERNS,
   IGNORE_TAGS,
 } from '../../lib/kargo-helpers';
@@ -80,8 +81,7 @@ export class KargoBackstagePipelineChart extends Chart {
 
       // Stage: backstage-local-dev
       // Auto-promotes new images from Gitea warehouse to local-dev deployment
-      // Note: Using actual Gitea URL for git operations (idpbuilder translates cnoe:// URLs)
-      const giteaBaseUrlInner = 'https://gitea.cnoe.localtest.me:8443/giteaAdmin';
+      // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
       createStage(this, 'backstage-local-dev-stage', {
         name: 'backstage-local-dev',
         namespace,
@@ -92,7 +92,7 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage-local-dev',
           namespace: 'argocd',
-          repoUrl: `${giteaBaseUrlInner}/idpbuilder-${clusterHost}-backstage-local-dev-manifests.git`,
+          repoUrl: `${GITEA.GIT_BASE_URL}/idpbuilder-${clusterHost}-backstage-local-dev-manifests.git`,
           imageRef: `${giteaRegistry}/${giteaImageName}`,
         },
         customVars: [
@@ -131,8 +131,7 @@ export class KargoBackstagePipelineChart extends Chart {
 
       // Stage: backstage-dev
       // Auto-promotes new CI images to dev deployment
-      // Note: Using actual Gitea URL for git operations (idpbuilder translates cnoe:// URLs)
-      const giteaBaseUrl = 'https://gitea.cnoe.localtest.me:8443/giteaAdmin';
+      // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
       createStage(this, 'backstage-dev-stage', {
         name: 'backstage-dev',
         namespace,
@@ -143,7 +142,7 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage-dev',
           namespace: 'argocd',
-          repoUrl: `${giteaBaseUrl}/idpbuilder-${clusterHost}-backstage-dev-manifests.git`,
+          repoUrl: `${GITEA.GIT_BASE_URL}/idpbuilder-${clusterHost}-backstage-dev-manifests.git`,
           imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         },
         customVars: [

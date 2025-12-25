@@ -10,7 +10,7 @@ import {
 } from '../../imports/external-secrets.io';
 import { createEnvExternalSecret } from '../../lib/eso-helpers';
 import { JsonPatch } from 'cdk8s';
-import { REGISTRY } from '../../lib/kargo-helpers';
+import { REGISTRY, GITEA } from '../../lib/kargo-helpers';
 
 /**
  * Kargo Pipelines Credentials Chart
@@ -142,7 +142,8 @@ export class KargoPipelinesCredentialsChart extends Chart {
       },
       templateData: {
         // Use regex to match all giteaAdmin repositories
-        repoURL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin/.*',
+        // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
+        repoURL: `${GITEA.GIT_BASE_URL}/.*`,
         repoURLIsRegex: 'true',
         username: '{{ .username }}',
         password: '{{ .token }}'
