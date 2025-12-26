@@ -49,8 +49,8 @@ export class KargoBackstagePipelineChart extends Chart {
     const appName = 'backstage';
     // Local (Gitea) image is published as 'backstage-cnoe' (different from app name)
     const giteaImageName = 'backstage-cnoe';
-    // GHCR image is published as 'backstage-cnoe' (different from app name)
-    const ghcrImageName = 'backstage-cnoe';
+    // GHCR image is now published as 'backstage-app' (vpittamp repo)
+    const ghcrImageName = 'backstage-app';
     const clusterHost = process.env.CLUSTER_HOST || 'localdev';
 
     // =========================================================================

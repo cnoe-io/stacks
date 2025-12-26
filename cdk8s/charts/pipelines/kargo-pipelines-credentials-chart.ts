@@ -73,9 +73,9 @@ export class KargoPipelinesCredentialsChart extends Chart {
         }
       },
       templateData: {
-        username: 'pittampalliorg',
+        username: 'vpittamp',
         password: '{{ .pat }}',
-        repoURL: 'ghcr.io/pittampalliorg/backstage-cnoe'
+        repoURL: 'ghcr.io/vpittamp/backstage-app'
       },
       mappings: [ { key: 'pat', remote: 'GITHUB-PAT' } ],
     });
@@ -141,9 +141,10 @@ export class KargoPipelinesCredentialsChart extends Chart {
         }
       },
       templateData: {
-        // Use regex to match all giteaAdmin repositories
-        // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
-        repoURL: `${GITEA.GIT_BASE_URL}/.*`,
+        // Use regex to match all giteaAdmin repositories from both local and Tailscale URLs
+        // The regex matches: https://gitea.cnoe.localtest.me:8443/giteaAdmin/*
+        // OR https://gitea-<cluster>.tail*.ts.net/giteaAdmin/*
+        repoURL: `https://gitea[^/]*/giteaAdmin/.*`,
         repoURLIsRegex: 'true',
         username: '{{ .username }}',
         password: '{{ .token }}'

@@ -756,11 +756,16 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'backstage',
         // Use GHCR image - Kargo will update the tag
-        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.2.2',
+        image: 'ghcr.io/vpittamp/backstage-app:v0.3.0',
         // Domain-based routing (consistent with other services)
         ingressHosts: ['backstage.cnoe.localtest.me'],
         basePath: '/',  // Root path, no /backstage prefix
         redirectRootToBasePath: false,  // No redirect needed at root
+        // Enable CAIPE agentForge plugin
+        agentForgeConfig: {
+          enabled: true,
+          botName: 'CAIPE',
+        },
       }
     },
     argocd: {
@@ -775,6 +780,52 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'backstage',
         'app.kubernetes.io/name': 'backstage',
         'kargo.akuity.io/loop': 'outer'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // =========================================================================
+  // CAIPE (AI Platform Engineering) - Multi-Agent System
+  // Provides AI assistant capabilities via supervisor-agent + sub-agents
+  // =========================================================================
+  {
+    name: 'caipe-secrets',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',  // KIND only for initial testing
+    chart: {
+      type: 'CaipeSecretsChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        clusterSecretStoreName: 'azure-keyvault-store',
+      },
+    },
+    argocd: {
+      syncWave: '-75',  // After ClusterSecretStore, before CAIPE deployment
+      labels: {
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-secrets'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+  {
+    name: 'ai-platform-engineering',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',  // KIND only for initial testing
+    chart: {
+      type: 'CaipeChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+      },
+    },
+    argocd: {
+      syncWave: '30',  // After Backstage (20), before SpecKit agents (50)
+      labels: {
+        'app.kubernetes.io/component': 'ai-agents',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'ai-platform-engineering'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
@@ -1001,6 +1052,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         enableInnerLoop: true,
         enableOuterLoop: true,
         enableStagingAndProdStages: false,
+        ghcrRegistry: 'ghcr.io/vpittamp',
       }
     },
     dependencies: {

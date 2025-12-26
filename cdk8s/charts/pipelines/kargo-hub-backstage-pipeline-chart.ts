@@ -71,7 +71,9 @@ export class KargoHubBackstagePipelineChart extends Chart {
     } = props;
 
     const namespace = 'kargo-pipelines';
-    const imageName = 'backstage-cnoe';
+    // Gitea image uses old name (local dev), GHCR uses new name (vpittamp repo)
+    const giteaImageName = 'backstage-cnoe';
+    const ghcrImageName = 'backstage-app';
 
     // =========================================================================
     // Inner Loop: KIND Gitea → thinkpad spoke
@@ -84,7 +86,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
       createHubWarehouse(this, 'hub-backstage-gitea-warehouse', {
         name: 'hub-backstage-gitea',
         namespace,
-        imageRepoUrl: `${kindGiteaRegistry}/${imageName}`,
+        imageRepoUrl: `${kindGiteaRegistry}/${giteaImageName}`,
         imageSelectionStrategy: WarehouseSpecSubscriptionsImageImageSelectionStrategy.LEXICAL,
         allowTags: HUB_TAG_PATTERNS.INNER_LOOP,
         ignoreTags: HUB_IGNORE_TAGS.INNER_LOOP,
@@ -103,7 +105,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
         targetSpoke: innerLoopSpoke,
         argocdAppName: 'backstage-local-dev',
         gitRepoUrl,
-        imageRef: `${kindGiteaRegistry}/${imageName}`,
+        imageRef: `${kindGiteaRegistry}/${giteaImageName}`,
         directFromWarehouse: true,
         syncWave: '30',
         loopType: 'inner',
@@ -121,7 +123,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
       createHubWarehouse(this, 'hub-backstage-ghcr-warehouse', {
         name: 'hub-backstage-ghcr',
         namespace,
-        imageRepoUrl: `${ghcrRegistry}/${imageName}`,
+        imageRepoUrl: `${ghcrRegistry}/${ghcrImageName}`,
         imageSelectionStrategy: WarehouseSpecSubscriptionsImageImageSelectionStrategy.SEM_VER,
         semverConstraint: '>=1.0.0',
         allowTags: HUB_TAG_PATTERNS.OUTER_LOOP,
@@ -141,7 +143,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
         targetSpoke: devSpoke,
         argocdAppName: 'backstage',
         gitRepoUrl,
-        imageRef: `${ghcrRegistry}/${imageName}`,
+        imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         directFromWarehouse: true,
         syncWave: '30',
         loopType: 'outer',
@@ -157,7 +159,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
         targetSpoke: stagingSpoke,
         argocdAppName: 'backstage-staging',
         gitRepoUrl,
-        imageRef: `${ghcrRegistry}/${imageName}`,
+        imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         directFromWarehouse: false,
         upstreamStages: ['hub-backstage'],
         // Optional soak time requirement
