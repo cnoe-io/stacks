@@ -7,17 +7,20 @@ import {
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
   ExternalSecretSpecTargetTemplateEngineVersion,
-  ExternalSecretSpecDataFromSourceRefGeneratorRefKind,
+  ExternalSecretSpecDataSourceRefStoreRefKind,
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
-import { Password } from '../../imports/generators.external-secrets.io';
-import { GITEA } from '../../lib/kargo-helpers';
 
 export interface BackstageSecretsChartProps extends ChartProps {
   // Namespace for Backstage secrets (default: backstage)
   namespace?: string;
   // Base host for Backstage URLs (default: cnoe.localtest.me)
   baseHost?: string;
+  // Full hostname for Backstage (e.g., 'backstage.cnoe.localtest.me')
+  // If not specified, defaults to baseHost with /backstage path for backwards compatibility
+  backstageHost?: string;
+  // Base path for Backstage (default: '/backstage', use '/' for root)
+  backstagePath?: string;
   // Sync wave for ArgoCD ordering (default: -10)
   syncWave?: string;
 }
@@ -25,17 +28,17 @@ export interface BackstageSecretsChartProps extends ChartProps {
 /**
  * BackstageSecretsChart - External Secrets for Backstage
  *
- * Creates 10 resources:
- * 1. Password generator: backstage (36 chars)
- * 2. Password generator: backstage-session (64 chars)
- * 3. ExternalSecret: backstage-oidc → backstage-env-vars Secret
- * 4. ExternalSecret: gitea-credentials
- * 5. ExternalSecret: ghcr-dockercfg-external
- * 6. ExternalSecret: argocd-credentials
- * 7. ServiceAccount: eso-store (in argocd namespace)
- * 8. Role: eso-store (in argocd namespace)
- * 9. RoleBinding: eso-store (in argocd namespace)
- * 10. ClusterSecretStore: argocd
+ * Creates 8 resources:
+ * 1. ExternalSecret: backstage-oidc → backstage-env-vars Secret
+ *    (PostgreSQL password & session secret from Azure Key Vault,
+ *     OIDC tokens from keycloak ClusterSecretStore)
+ * 2. ExternalSecret: gitea-credentials
+ * 3. ExternalSecret: ghcr-dockercfg-external
+ * 4. ExternalSecret: argocd-credentials
+ * 5. ServiceAccount: eso-store (in argocd namespace)
+ * 6. Role: eso-store (in argocd namespace)
+ * 7. RoleBinding: eso-store (in argocd namespace)
+ * 8. ClusterSecretStore: argocd
  */
 export class BackstageSecretsChart extends Chart {
   constructor(scope: Construct, id: string, props: BackstageSecretsChartProps = {}) {
@@ -46,41 +49,11 @@ export class BackstageSecretsChart extends Chart {
     const syncWave = props.syncWave ?? '-10';
     const clusterHost = process.env.CLUSTER_HOST || 'localdev';
 
-    // ==========================================================================
-    // Password Generators
-    // ==========================================================================
-
-    // Password generator: backstage (36 chars for PostgreSQL password)
-    new Password(this, 'backstage-password', {
-      metadata: {
-        name: 'backstage',
-        namespace,
-      },
-      spec: {
-        length: 36,
-        digits: 5,
-        symbols: 5,
-        symbolCharacters: '/-+',
-        noUpper: false,
-        allowRepeat: true,
-      },
-    });
-
-    // Password generator: backstage-session (64 chars for session secret)
-    new Password(this, 'backstage-session-password', {
-      metadata: {
-        name: 'backstage-session',
-        namespace,
-      },
-      spec: {
-        length: 64,
-        digits: 10,
-        symbols: 10,
-        symbolCharacters: '/-+=',
-        noUpper: false,
-        allowRepeat: true,
-      },
-    });
+    // Backstage URL configuration
+    // - backstageHost: full hostname (e.g., 'backstage.cnoe.localtest.me')
+    // - backstagePath: path component (e.g., '/' for root, '/backstage' for path-based)
+    const backstageHost = props.backstageHost;
+    const backstagePath = props.backstagePath ?? '/backstage';
 
     // ==========================================================================
     // ExternalSecrets
@@ -108,7 +81,7 @@ export class BackstageSecretsChart extends Chart {
       : `https://ai-platform-engineering.${baseHost}${portSuffix}`;
 
     // ExternalSecret: backstage-oidc → backstage-env-vars Secret
-    // Uses keycloak ClusterSecretStore + Password generators
+    // Uses keycloak ClusterSecretStore for OIDC tokens + Azure Key Vault for stable passwords
     new ExternalSecret(this, 'backstage-oidc', {
       metadata: {
         name: 'backstage-oidc',
@@ -128,7 +101,11 @@ export class BackstageSecretsChart extends Chart {
             engineVersion: ExternalSecretSpecTargetTemplateEngineVersion.V2,
             data: {
               // Core Backstage URLs
-              'BACKSTAGE_FRONTEND_URL': `https://${baseHost}${portSuffix}/backstage`,
+              // If backstageHost is provided, use it directly (domain-based routing)
+              // Otherwise, use baseHost with backstagePath (path-based routing)
+              'BACKSTAGE_FRONTEND_URL': backstageHost
+                ? `https://${backstageHost}${portSuffix}${backstagePath === '/' ? '' : backstagePath}`
+                : `https://${baseHost}${portSuffix}${backstagePath}`,
               // PostgreSQL - use namespace for service discovery
               'POSTGRES_HOST': `postgresql.${namespace}.svc.cluster.local`,
               'POSTGRES_PORT': '5432',
@@ -157,6 +134,7 @@ export class BackstageSecretsChart extends Chart {
           },
         },
         data: [
+          // OIDC tokens from keycloak ClusterSecretStore (default store)
           {
             secretKey: 'ARGOCD_SESSION_TOKEN',
             remoteRef: {
@@ -171,39 +149,30 @@ export class BackstageSecretsChart extends Chart {
               property: 'BACKSTAGE_CLIENT_SECRET',
             },
           },
-        ],
-        dataFrom: [
+          // Stable passwords from Azure Key Vault (sourceRef overrides default store)
           {
+            secretKey: 'POSTGRES_PASSWORD',
             sourceRef: {
-              generatorRef: {
-                apiVersion: 'generators.external-secrets.io/v1alpha1',
-                kind: ExternalSecretSpecDataFromSourceRefGeneratorRefKind.PASSWORD,
-                name: 'backstage',
+              storeRef: {
+                name: 'azure-keyvault-store',
+                kind: ExternalSecretSpecDataSourceRefStoreRefKind.CLUSTER_SECRET_STORE,
               },
             },
-            rewrite: [
-              {
-                transform: {
-                  template: 'POSTGRES_PASSWORD',
-                },
-              },
-            ],
+            remoteRef: {
+              key: 'BACKSTAGE-POSTGRES-PASSWORD',
+            },
           },
           {
+            secretKey: 'SESSION_SECRET',
             sourceRef: {
-              generatorRef: {
-                apiVersion: 'generators.external-secrets.io/v1alpha1',
-                kind: ExternalSecretSpecDataFromSourceRefGeneratorRefKind.PASSWORD,
-                name: 'backstage-session',
+              storeRef: {
+                name: 'azure-keyvault-store',
+                kind: ExternalSecretSpecDataSourceRefStoreRefKind.CLUSTER_SECRET_STORE,
               },
             },
-            rewrite: [
-              {
-                transform: {
-                  template: 'SESSION_SECRET',
-                },
-              },
-            ],
+            remoteRef: {
+              key: 'BACKSTAGE-SESSION-SECRET',
+            },
           },
         ],
       },

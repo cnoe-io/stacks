@@ -428,6 +428,7 @@ export const applicationConfigs: ApplicationConfig[] = [
 
   // Keycloak Config - OIDC client configuration Job
   // Creates CNOE realm, users, and OIDC clients for Backstage/ArgoWF
+  // Supports multiple hosts for different Backstage environments
   {
     name: 'keycloak-config',
     namespace: 'keycloak',
@@ -436,8 +437,21 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'KeycloakConfigChart',
       props: {
         namespace: 'keycloak',
-        hostname: process.env.CLUSTER_TYPE === 'talos' ? 'ai401kchat.com' : 'cnoe.localtest.me',
-        hostnamePort: process.env.CLUSTER_TYPE === 'talos' ? 443 : 8443
+        // Configure all Backstage hosts that need OIDC authentication
+        hosts: [
+          // KIND cluster (local development) - domain-based routing
+          { hostname: 'backstage.cnoe.localtest.me', port: 8443, backstagePath: '' },
+          { hostname: 'backstage-local-dev.cnoe.localtest.me', port: 8443, backstagePath: '' },
+          // Talos cluster (production) - path-based routing
+          { hostname: 'ai401kchat.com', port: 443, backstagePath: '/backstage' },
+          // Tailscale Services - domain-based routing (no path prefix)
+          // Pattern: backstage-<cluster>.tail286401.ts.net
+          { hostname: 'backstage-thinkpad.tail286401.ts.net', port: 443, backstagePath: '' },
+          { hostname: 'backstage-ryzen.tail286401.ts.net', port: 443, backstagePath: '' },
+          { hostname: 'backstage-hetzner.tail286401.ts.net', port: 443, backstagePath: '' },
+          // Add additional environments here as needed:
+          // { hostname: 'backstage-<cluster>.tail286401.ts.net', port: 443, backstagePath: '' },
+        ]
       }
     },
     dependencies: {
@@ -599,33 +613,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
-  // Backstage Application - KIND cluster (local development)
-  {
-    name: 'backstage',
-    namespace: 'backstage',
-    clusterType: 'kind',  // KIND uses local ingress with cnoe.localtest.me
-    chart: {
-      type: 'BackstageChart',
-      props: {
-        namespace: 'backstage',
-        ingressHosts: ['localhost', 'cnoe.localtest.me'],
-      }
-    },
-    dependencies: {
-      backstageSecrets: {
-        type: 'BackstageSecretsChart'
-      }
-    },
-    argocd: {
-      syncWave: '20',  // After secrets (-10), PostgreSQL starts at sync-wave 10
-      labels: {
-        'app.kubernetes.io/component': 'developer-portal',
-        'app.kubernetes.io/part-of': 'backstage',
-        'app.kubernetes.io/name': 'backstage'
-      },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
-    }
-  },
+  // NOTE: Static backstage for KIND removed - consolidated with outer loop backstage
+  // The outer loop backstage (previously backstage-dev) now serves as the primary instance
+  // at https://cnoe.localtest.me:8443/backstage using GHCR images managed by Kargo
   // Backstage Application - Talos cluster (production with public domain)
   // Note: image v1.1.0+ uses environment variables for all URLs (OIDC, proxy, ArgoCD, etc.)
   // These are set via BackstageSecretsChart based on baseHost
@@ -676,7 +666,10 @@ export const applicationConfigs: ApplicationConfig[] = [
         // Use the same image as production - Kargo will update the tag
         image: 'gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest',
         imagePullSecretName: 'gitea-dockercfg',
+        // Domain-based routing (consistent with other services)
         ingressHosts: ['backstage-local-dev.cnoe.localtest.me'],
+        basePath: '/',  // Root path, no /backstage prefix
+        redirectRootToBasePath: false,
       }
     },
     argocd: {
@@ -705,6 +698,9 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'backstage-local-dev',
         baseHost: 'cnoe.localtest.me',
+        // Domain-based routing: backstage-local-dev.cnoe.localtest.me at root path
+        backstageHost: 'backstage-local-dev.cnoe.localtest.me',
+        backstagePath: '/',
         syncWave: '-10'
       }
     },
@@ -719,16 +715,20 @@ export const applicationConfigs: ApplicationConfig[] = [
       ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
-  // Backstage Dev Secrets - Outer Loop environment secrets
+  // Backstage Secrets - Outer Loop environment secrets (primary KIND instance)
+  // This replaces the static backstage-secrets for KIND
   {
-    name: 'backstage-dev-secrets',
-    namespace: 'backstage-dev',
+    name: 'backstage-secrets',
+    namespace: 'backstage',
     clusterType: 'kind',
     chart: {
       type: 'BackstageSecretsChart',
       props: {
-        namespace: 'backstage-dev',
+        namespace: 'backstage',
         baseHost: 'cnoe.localtest.me',
+        // Domain-based routing: backstage.cnoe.localtest.me at root path
+        backstageHost: 'backstage.cnoe.localtest.me',
+        backstagePath: '/',
         syncWave: '-10'
       }
     },
@@ -737,38 +737,43 @@ export const applicationConfigs: ApplicationConfig[] = [
       labels: {
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'backstage',
-        'app.kubernetes.io/name': 'backstage-dev-secrets'
+        'app.kubernetes.io/name': 'backstage-secrets',
+        'kargo.akuity.io/loop': 'outer'
       },
       syncPolicy: externalSecretsAppSyncPolicy(),
       ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
     }
   },
-  // Backstage Dev - Outer Loop (Kargo Pipeline Target)
-  // This is a separate deployment for CI-built GHCR images
+  // Backstage - Primary KIND instance (Outer Loop / Kargo Pipeline Target)
+  // Uses GHCR images managed by Kargo, accessible at backstage.cnoe.localtest.me
+  // This consolidates the static backstage and backstage-dev into one deployment
   {
-    name: 'backstage-dev',
-    namespace: 'backstage-dev',
-    clusterType: 'kind',  // Deploy to KIND for outer loop dev stage
+    name: 'backstage',
+    namespace: 'backstage',
+    clusterType: 'kind',  // Primary KIND cluster backstage instance
     chart: {
       type: 'BackstageChart',
       props: {
-        namespace: 'backstage-dev',
+        namespace: 'backstage',
         // Use GHCR image - Kargo will update the tag
-        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.1.0',
-        ingressHosts: ['backstage-dev.cnoe.localtest.me'],
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.2.2',
+        // Domain-based routing (consistent with other services)
+        ingressHosts: ['backstage.cnoe.localtest.me'],
+        basePath: '/',  // Root path, no /backstage prefix
+        redirectRootToBasePath: false,  // No redirect needed at root
       }
     },
     argocd: {
-      syncWave: '25',  // After secrets (-10), PostgreSQL starts at sync-wave 10
+      syncWave: '20',  // After secrets (-10), PostgreSQL starts at sync-wave 10
       // CRITICAL: Kargo authorization annotation
-      // Allows Kargo stage 'backstage-dev' to update this application
+      // Allows Kargo stage 'backstage' to update this application
       annotations: {
-        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage-dev'
+        'kargo.akuity.io/authorized-stage': 'kargo-pipelines:backstage'
       },
       labels: {
         'app.kubernetes.io/component': 'developer-portal',
         'app.kubernetes.io/part-of': 'backstage',
-        'app.kubernetes.io/name': 'backstage-dev',
+        'app.kubernetes.io/name': 'backstage',
         'kargo.akuity.io/loop': 'outer'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
@@ -3302,7 +3307,7 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
 
   // =========================================================================
-  // KubeVirt + CDI (Kind-only)
+  // KubeVirt + CDI (Kind-only, ryzen cluster only - thinkpad lacks resources)
   // =========================================================================
 
   // KubeVirt Operator (installs CRDs + controllers)
@@ -3310,6 +3315,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'kubevirt-operator',
     namespace: 'kubevirt',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'KubeVirtOperatorChart',
       props: {
@@ -3332,6 +3338,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'kubevirt',
     namespace: 'kubevirt',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'KubeVirtCRChart',
       props: {
@@ -3354,6 +3361,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'cdi-operator',
     namespace: 'cdi',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'CDIOperatorChart',
       props: {
@@ -3376,6 +3384,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'cdi',
     namespace: 'cdi',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'CDICRChart',
     },
@@ -3395,6 +3404,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'kubevirt-cirros-vm',
     namespace: 'default',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'KubeVirtCirrosVmChart',
       props: {
@@ -3441,6 +3451,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'nixos-image-server',
     namespace: 'default',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'NixOsImageServerChart',
       props: {
@@ -3472,6 +3483,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'nixos-sway-datavolume',
     namespace: 'default',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'NixOsDataVolumeChart',
       props: {
@@ -3501,6 +3513,7 @@ export const applicationConfigs: ApplicationConfig[] = [
     name: 'nixos-sway-vm',
     namespace: 'default',
     clusterType: 'kind',
+    clusterNames: ['ryzen'],  // Suppress on thinkpad (resource constraints)
     chart: {
       type: 'NixOsSwayVmChart',
       props: {

@@ -66,10 +66,18 @@ export class KargoPipelinesProjectChart extends Chart {
             },
             autoPromotionEnabled: true
           },
-          // Outer Loop: Auto-promote to dev stages
+          // Outer Loop: Auto-promote to dev stages (e.g., backstage-dev, nextjs-dev)
           {
             stageSelector: {
               name: 'glob:*-dev'
+            },
+            autoPromotionEnabled: true
+          },
+          // Outer Loop: Auto-promote to primary app stages (first stage in pipeline)
+          // These are the first stage receiving GHCR images (e.g., backstage, nextjs)
+          {
+            stageSelector: {
+              name: 'backstage'
             },
             autoPromotionEnabled: true
           },

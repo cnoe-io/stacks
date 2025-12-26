@@ -18,6 +18,18 @@ import { Construct } from 'constructs';
 import { Chart, ChartProps } from 'cdk8s';
 import * as k8s from '../../imports/k8s';
 
+/**
+ * Host configuration for generating redirect URIs
+ */
+export interface HostConfig {
+  /** Hostname (e.g., 'cnoe.localtest.me' or 'ai401kchat.com') */
+  hostname: string;
+  /** Port number (default: 443, use 8443 for KIND clusters) */
+  port?: number;
+  /** Path prefix for Backstage (default: '/backstage' for path-based routing) */
+  backstagePath?: string;
+}
+
 export interface KeycloakConfigChartProps extends ChartProps {
   /**
    * Namespace for Keycloak config (default: keycloak)
@@ -26,13 +38,31 @@ export interface KeycloakConfigChartProps extends ChartProps {
 
   /**
    * Base hostname for redirect URIs (default: cnoe.localtest.me)
+   * @deprecated Use `hosts` array instead for multi-environment support
    */
   hostname?: string;
 
   /**
    * Port for redirect URIs (default: 8443)
+   * @deprecated Use `hosts` array instead for multi-environment support
    */
   hostnamePort?: number;
+
+  /**
+   * Array of host configurations for generating redirect URIs.
+   * Supports multiple Backstage environments (dev, staging, prod, etc.)
+   * Each host generates redirect URIs for both root and path-based routing.
+   *
+   * Example:
+   * ```typescript
+   * hosts: [
+   *   { hostname: 'cnoe.localtest.me', port: 8443, backstagePath: '/backstage' },
+   *   { hostname: 'ai401kchat.com', port: 443, backstagePath: '/backstage' },
+   *   { hostname: 'dev.example.com', port: 443, backstagePath: '' },  // Domain-based routing
+   * ]
+   * ```
+   */
+  hosts?: HostConfig[];
 }
 
 /**
@@ -52,11 +82,55 @@ export class KeycloakConfigChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace ?? 'keycloak';
-    const hostname = props.hostname ?? 'cnoe.localtest.me';
-    const hostnamePort = props.hostnamePort ?? 8443;
 
-    // Build base URL for redirect URIs
-    const baseUrl = hostnamePort === 443 ? `https://${hostname}` : `https://${hostname}:${hostnamePort}`;
+    // Build hosts configuration from either new hosts array or legacy props
+    const hosts: HostConfig[] = props.hosts ?? [
+      {
+        hostname: props.hostname ?? 'cnoe.localtest.me',
+        port: props.hostnamePort ?? 8443,
+        backstagePath: '/backstage',  // Default to path-based routing
+      }
+    ];
+
+    // Helper to build base URL from host config
+    const buildBaseUrl = (host: HostConfig): string => {
+      const port = host.port ?? 443;
+      return port === 443 ? `https://${host.hostname}` : `https://${host.hostname}:${port}`;
+    };
+
+    // Generate all redirect URIs for Backstage across all configured hosts
+    const generateBackstageRedirectUris = (): string[] => {
+      const uris: string[] = [];
+      for (const host of hosts) {
+        const baseUrl = buildBaseUrl(host);
+        const backstagePath = host.backstagePath ?? '/backstage';
+
+        // Always include the root API path (for domain-based routing)
+        uris.push(`${baseUrl}/api/auth/keycloak-oidc/handler/frame`);
+
+        // Include path-prefixed URI if backstagePath is set
+        if (backstagePath && backstagePath !== '') {
+          uris.push(`${baseUrl}${backstagePath}/api/auth/keycloak-oidc/handler/frame`);
+        }
+      }
+      // Always include localhost for development
+      uris.push('http://localhost:7007/api/auth/keycloak-oidc/handler/frame');
+      // Deduplicate
+      return [...new Set(uris)];
+    };
+
+    // Generate all redirect URIs for Argo Workflows across all configured hosts
+    const generateArgoRedirectUris = (): string[] => {
+      const uris: string[] = [];
+      for (const host of hosts) {
+        const baseUrl = buildBaseUrl(host);
+        uris.push(`${baseUrl}/argo-workflows/oauth2/callback`);
+      }
+      return [...new Set(uris)];
+    };
+
+    // For backward compatibility, keep baseUrl pointing to first host
+    const baseUrl = buildBaseUrl(hosts[0]);
 
     // ==========================================================================
     // ServiceAccount
@@ -225,7 +299,7 @@ export class KeycloakConfigChart extends Chart {
           alwaysDisplayInConsole: false,
           rootUrl: '',
           baseUrl: '',
-          redirectUris: [`${baseUrl}/argo-workflows/oauth2/callback`],
+          redirectUris: generateArgoRedirectUris(),
           webOrigins: ['/*'],
         }),
         'backstage-client-payload.json': JSON.stringify({
@@ -248,12 +322,7 @@ export class KeycloakConfigChart extends Chart {
           alwaysDisplayInConsole: false,
           rootUrl: '',
           baseUrl: '',
-          redirectUris: [
-            `${baseUrl}/api/auth/keycloak-oidc/handler/frame`,
-            // Backstage is hosted under /backstage behind the ingress in KIND by default
-            `${baseUrl}/backstage/api/auth/keycloak-oidc/handler/frame`,
-            'http://localhost:7007/api/auth/keycloak-oidc/handler/frame',
-          ],
+          redirectUris: generateBackstageRedirectUris(),
           webOrigins: ['/*'],
         }),
       },

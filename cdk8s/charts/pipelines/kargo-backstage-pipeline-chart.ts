@@ -9,6 +9,7 @@ import {
   IGNORE_TAGS,
 } from '../../lib/kargo-helpers';
 import { WarehouseSpecSubscriptionsImageImageSelectionStrategy } from '../../imports/kargo.akuity.io';
+import { getGiteaBaseUrl, getClusterId } from '../../lib/cluster-identity';
 
 /**
  * Props for KargoBackstagePipelineChart
@@ -129,20 +130,21 @@ export class KargoBackstagePipelineChart extends Chart {
         ],
       });
 
-      // Stage: backstage-dev
-      // Auto-promotes new CI images to dev deployment
-      // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
-      createStage(this, 'backstage-dev-stage', {
-        name: 'backstage-dev',
+      // Stage: backstage (primary)
+      // Auto-promotes new CI images to primary backstage deployment
+      // Note: Using actual Gitea URL for git operations (idpbuilder translates cnoe:// URLs)
+      const giteaBaseUrl = 'https://gitea.cnoe.localtest.me:8443/giteaAdmin';
+      createStage(this, 'backstage-stage', {
+        name: 'backstage',
         namespace,
         warehouseName: 'backstage-ghcr',
         directFromWarehouse: true,
         loopType: 'outer',
         syncWave: '30',
         argocdConfig: {
-          appName: 'backstage-dev',
+          appName: 'backstage',
           namespace: 'argocd',
-          repoUrl: `${GITEA.GIT_BASE_URL}/idpbuilder-${clusterHost}-backstage-dev-manifests.git`,
+          repoUrl: `${giteaBaseUrl}/idpbuilder-${clusterHost}-backstage-manifests.git`,
           imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         },
         customVars: [
@@ -152,13 +154,13 @@ export class KargoBackstagePipelineChart extends Chart {
 
       if (enableStagingAndProdStages) {
         // Stage: backstage-staging
-        // Manual promotion from dev stage to staging (Talos cluster)
+        // Manual promotion from primary backstage to staging (Talos cluster)
         createStage(this, 'backstage-staging-stage', {
           name: 'backstage-staging',
           namespace,
           warehouseName: 'backstage-ghcr',
           directFromWarehouse: false,
-          upstreamStages: ['backstage-dev'],
+          upstreamStages: ['backstage'],
           // Optional: requiredSoakTime: '24h',
           loopType: 'outer',
           syncWave: '30',

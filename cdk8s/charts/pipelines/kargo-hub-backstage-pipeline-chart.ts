@@ -9,6 +9,7 @@ import {
 } from '../../lib/kargo-cross-cluster-helpers';
 import { WarehouseSpecSubscriptionsImageImageSelectionStrategy } from '../../imports/kargo.akuity.io';
 import { SpokeClusterName } from '../../lib/cluster-registry';
+import { getGiteaRegistry } from '../../lib/cluster-identity';
 
 /**
  * Props for KargoHubBackstagePipelineChart
@@ -49,7 +50,7 @@ export interface KargoHubBackstagePipelineChartProps extends ChartProps {
  *
  * OUTER LOOP (CI-verified ~5min):
  * - Warehouse: backstage-ghcr (watches GHCR for semver tags)
- * - Stage: backstage-dev (auto) → ArgoCD App targeting thinkpad spoke
+ * - Stage: backstage (auto) → ArgoCD App targeting thinkpad spoke
  * - Stage: backstage-staging (manual) → ArgoCD App targeting talos spoke
  *
  * The hub ArgoCD manages applications that deploy to spoke clusters via
@@ -132,14 +133,14 @@ export class KargoHubBackstagePipelineChart extends Chart {
         loopType: 'outer',
       });
 
-      // Stage: backstage-dev
-      // Auto-promotes from GHCR to dev environment on thinkpad spoke
-      createSpokeTargetedStage(this, 'hub-backstage-dev-stage', {
-        name: 'hub-backstage-dev',
+      // Stage: backstage (primary)
+      // Auto-promotes from GHCR to primary backstage on thinkpad spoke
+      createSpokeTargetedStage(this, 'hub-backstage-stage', {
+        name: 'hub-backstage',
         namespace,
         warehouseName: 'hub-backstage-ghcr',
         targetSpoke: devSpoke,
-        argocdAppName: 'backstage-dev',
+        argocdAppName: 'backstage',
         gitRepoUrl,
         imageRef: `${ghcrRegistry}/${imageName}`,
         directFromWarehouse: true,
@@ -149,7 +150,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
       });
 
       // Stage: backstage-staging
-      // Manual promotion from dev to staging environment on talos spoke
+      // Manual promotion from primary backstage to staging environment on talos spoke
       createSpokeTargetedStage(this, 'hub-backstage-staging-stage', {
         name: 'hub-backstage-staging',
         namespace,
@@ -159,7 +160,7 @@ export class KargoHubBackstagePipelineChart extends Chart {
         gitRepoUrl,
         imageRef: `${ghcrRegistry}/${imageName}`,
         directFromWarehouse: false,
-        upstreamStages: ['hub-backstage-dev'],
+        upstreamStages: ['hub-backstage'],
         // Optional soak time requirement
         // requiredSoakTime: '24h',
         syncWave: '30',
