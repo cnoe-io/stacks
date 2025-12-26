@@ -9,7 +9,6 @@ import {
   IGNORE_TAGS,
 } from '../../lib/kargo-helpers';
 import { WarehouseSpecSubscriptionsImageImageSelectionStrategy } from '../../imports/kargo.akuity.io';
-import { getGiteaBaseUrl, getClusterId } from '../../lib/cluster-identity';
 
 /**
  * Props for KargoBackstagePipelineChart

@@ -10,6 +10,7 @@ import {
   ExternalSecretSpecDataSourceRefStoreRefKind,
   ClusterSecretStoreSpecProviderKubernetesServerCaProviderType,
 } from '../../imports/external-secrets.io';
+import { GITEA } from '../../lib/kargo-helpers';
 
 export interface BackstageSecretsChartProps extends ChartProps {
   // Namespace for Backstage secrets (default: backstage)

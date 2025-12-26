@@ -9,7 +9,6 @@ import {
 } from '../../lib/kargo-cross-cluster-helpers';
 import { WarehouseSpecSubscriptionsImageImageSelectionStrategy } from '../../imports/kargo.akuity.io';
 import { SpokeClusterName } from '../../lib/cluster-registry';
-import { getGiteaRegistry } from '../../lib/cluster-identity';
 
 /**
  * Props for KargoHubBackstagePipelineChart
