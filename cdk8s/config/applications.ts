@@ -755,8 +755,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'BackstageChart',
       props: {
         namespace: 'backstage',
-        // Use GHCR image - Kargo will update the tag
-        image: 'ghcr.io/vpittamp/backstage-app:v0.3.0',
+        // Use backstage-cnoe temporarily - backstage-app has Zod compatibility issues
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.2.9',
         // Domain-based routing (consistent with other services)
         ingressHosts: ['backstage.cnoe.localtest.me'],
         basePath: '/',  // Root path, no /backstage prefix
