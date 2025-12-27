@@ -12,6 +12,19 @@ export interface BackstageProxyConfig {
   https?: boolean;
 }
 
+export interface BackstageAgentForgeConfig {
+  // Enable agentForge plugin configuration
+  enabled: boolean;
+  // Bot name displayed in UI (default: 'CAIPE')
+  botName?: string;
+  // Header title (default: 'CAIPE')
+  headerTitle?: string;
+  // Header subtitle (default: 'AI Platform Engineer Assistant')
+  headerSubtitle?: string;
+  // Input placeholder text (default: 'Ask CAIPE anything...')
+  inputPlaceholder?: string;
+}
+
 export interface BackstageChartProps extends ChartProps {
   // Namespace for Backstage (default: backstage)
   namespace?: string;
@@ -43,6 +56,8 @@ export interface BackstageChartProps extends ChartProps {
   // Proxy configuration override for non-KIND clusters
   // When specified, creates a ConfigMap with app-config overlay to override proxy targets
   proxyConfig?: BackstageProxyConfig;
+  // agentForge plugin configuration for CAIPE integration
+  agentForgeConfig?: BackstageAgentForgeConfig;
   // Host aliases for DNS override (needed for Talos to resolve cnoe.localtest.me)
   // Maps hostnames to the ingress-nginx ClusterIP
   hostAliases?: Array<{
@@ -113,10 +128,11 @@ export class BackstageChart extends Chart {
     // ClusterRoles
     // ==========================================================================
 
-    // ClusterRole: backstage-argo-worfklows (typo maintained for ref-implementation compatibility)
+    // ClusterRole: {namespace}-argo-worfklows (namespace-prefixed for multi-deployment isolation)
+    // Note: typo "worfklows" maintained for ref-implementation compatibility
     new k8s.KubeClusterRole(this, 'backstage-argo-workflows-cr', {
       metadata: {
-        name: 'backstage-argo-worfklows',
+        name: `${namespace}-argo-worfklows`,
       },
       rules: [
         {
@@ -127,10 +143,10 @@ export class BackstageChart extends Chart {
       ],
     });
 
-    // ClusterRole: read-all
+    // ClusterRole: {namespace}-read-all (namespace-prefixed for multi-deployment isolation)
     new k8s.KubeClusterRole(this, 'backstage-read-all-cr', {
       metadata: {
-        name: 'read-all',
+        name: `${namespace}-read-all`,
       },
       rules: [
         {
@@ -145,15 +161,15 @@ export class BackstageChart extends Chart {
     // ClusterRoleBindings
     // ==========================================================================
 
-    // ClusterRoleBinding: backstage-argo-worfklows
+    // ClusterRoleBinding: {namespace}-argo-worfklows (namespace-prefixed for multi-deployment isolation)
     new k8s.KubeClusterRoleBinding(this, 'backstage-argo-workflows-crb', {
       metadata: {
-        name: 'backstage-argo-worfklows',
+        name: `${namespace}-argo-worfklows`,
       },
       roleRef: {
         apiGroup: 'rbac.authorization.k8s.io',
         kind: 'ClusterRole',
-        name: 'backstage-argo-worfklows',
+        name: `${namespace}-argo-worfklows`,
       },
       subjects: [
         {
@@ -164,15 +180,15 @@ export class BackstageChart extends Chart {
       ],
     });
 
-    // ClusterRoleBinding: backstage-read-all
+    // ClusterRoleBinding: {namespace}-read-all (namespace-prefixed for multi-deployment isolation)
     new k8s.KubeClusterRoleBinding(this, 'backstage-read-all-crb', {
       metadata: {
-        name: 'backstage-read-all',
+        name: `${namespace}-read-all`,
       },
       roleRef: {
         apiGroup: 'rbac.authorization.k8s.io',
         kind: 'ClusterRole',
-        name: 'read-all',
+        name: `${namespace}-read-all`,
       },
       subjects: [
         {
@@ -337,24 +353,23 @@ export class BackstageChart extends Chart {
     });
 
     // ==========================================================================
-    // ConfigMap: app-config-overlay (for proxy target overrides)
-    // Only created when proxyConfig is specified
+    // ConfigMap: app-config-overlay (for proxy target and agentForge overrides)
+    // Created when proxyConfig or agentForgeConfig is specified
     // ==========================================================================
 
     const hasProxyConfig = !!props.proxyConfig;
+    const hasAgentForgeConfig = !!props.agentForgeConfig?.enabled;
+    const hasAnyConfig = hasProxyConfig || hasAgentForgeConfig;
 
-    if (hasProxyConfig) {
-      const proxyPort = props.proxyConfig!.port ?? 8443;
-      const proxyScheme = props.proxyConfig!.https !== false ? 'https' : 'http';
-      const proxyBaseUrl = `${proxyScheme}://${props.proxyConfig!.baseHost}:${proxyPort}`;
+    if (hasAnyConfig) {
+      // Build proxy section if proxyConfig specified
+      let proxySection = '';
+      if (hasProxyConfig) {
+        const proxyPort = props.proxyConfig!.port ?? 8443;
+        const proxyScheme = props.proxyConfig!.https !== false ? 'https' : 'http';
+        const proxyBaseUrl = `${proxyScheme}://${props.proxyConfig!.baseHost}:${proxyPort}`;
 
-      // Create app-config overlay that overrides proxy targets
-      // This uses Backstage's config merging - later config files override earlier ones
-      const appConfigOverlay = `
-# Backstage app-config overlay for proxy target overrides
-# This file is auto-generated by BackstageChart
-# It overrides the default cnoe.localtest.me proxy targets with cluster-specific URLs
-
+        proxySection = `
 proxy:
   endpoints:
     '/agent-forge':
@@ -369,7 +384,66 @@ proxy:
         '^/api/proxy/kargo/?': '/'
       changeOrigin: true
       secure: false
+`;
+      }
 
+      // Build agentForge section if agentForgeConfig specified
+      let agentForgeSection = '';
+      if (hasAgentForgeConfig) {
+        const botName = props.agentForgeConfig!.botName ?? 'CAIPE';
+        const headerTitle = props.agentForgeConfig!.headerTitle ?? 'CAIPE';
+        const headerSubtitle = props.agentForgeConfig!.headerSubtitle ?? 'AI Platform Engineer Assistant';
+        const inputPlaceholder = props.agentForgeConfig!.inputPlaceholder ?? 'Ask CAIPE anything...';
+
+        agentForgeSection = `
+agentForge:
+  baseUrl: \${AGENT_FORGE_URL}
+  botName: ${botName}
+  infoPage: https://cnoe-io.github.io/ai-platform-engineering/
+  showOptions: true
+  useOpenIDToken: true
+  enableStreaming: false
+  requestTimeout: 300
+  headerTitle: ${headerTitle}
+  headerSubtitle: ${headerSubtitle}
+  inputPlaceholder: ${inputPlaceholder}
+  initialSuggestions:
+    - Create GitHub Repository
+    - Deploy ArgoCD Application
+    - Get LLM keys
+  thinkingMessagesInterval: 7000
+  thinkingMessages:
+    - "Processing query - even great thoughts start with a single thread."
+    - "Contacting agents - because collaboration beats computation."
+    - "Analyzing data - the truth hides between the averages."
+    - "Reflecting on the prompt - clarity is the best optimization."
+    - "Syncing thoughts across nodes - wisdom prefers low latency."
+    - "Assembling context - the art of not missing the missing piece."
+`;
+      }
+
+      // Database pool configuration to prevent migration lock race conditions
+      // See: https://github.com/backstage/backstage/issues/27186
+      // See: https://github.com/backstage/backstage/issues/24284
+      // Increase pool size and timeouts to handle concurrent plugin initialization
+      const databaseSection = `
+backend:
+  database:
+    knexConfig:
+      pool:
+        min: 2
+        max: 30
+        acquireTimeoutMillis: 60000
+        idleTimeoutMillis: 60000
+        createTimeoutMillis: 30000
+`;
+
+      // Create app-config overlay that combines all sections
+      // This uses Backstage's config merging - later config files override earlier ones
+      const appConfigOverlay = `# Backstage app-config overlay
+# This file is auto-generated by BackstageChart
+# It provides cluster-specific configuration overrides
+${databaseSection}${proxySection}${agentForgeSection}
 # Note: OIDC metadata URL is configured via KEYCLOAK_NAME_METADATA env var in backstage-env-vars secret
 `;
 
@@ -392,7 +466,7 @@ proxy:
     // ==========================================================================
 
     // Build volumes list - conditionally include config overlay
-    const volumes: k8s.Volume[] = hasProxyConfig ? [
+    const volumes: k8s.Volume[] = hasAnyConfig ? [
       {
         name: 'app-config-overlay',
         configMap: {
@@ -402,7 +476,7 @@ proxy:
     ] : [];
 
     // Build volume mounts - conditionally include config overlay mount
-    const volumeMounts: k8s.VolumeMount[] = hasProxyConfig ? [
+    const volumeMounts: k8s.VolumeMount[] = hasAnyConfig ? [
       {
         name: 'app-config-overlay',
         mountPath: '/app/config',
@@ -412,7 +486,7 @@ proxy:
 
     // Build additional env vars for config overlay
     // Backstage reads APP_CONFIG_app_config_<name>=/path/to/file to load additional config
-    const configEnvVars: k8s.EnvVar[] = hasProxyConfig ? [
+    const configEnvVars: k8s.EnvVar[] = hasAnyConfig ? [
       {
         name: 'APP_CONFIG_app_config_overlay',
         value: '/app/config/app-config.overlay.yaml',
@@ -429,6 +503,9 @@ proxy:
       },
       spec: {
         replicas: 1,
+        strategy: {
+          type: 'Recreate',
+        },
         selector: {
           matchLabels: {
             app: appName,
@@ -449,6 +526,12 @@ proxy:
                 },
               ],
             }),
+            // Run as root to allow env config injection into static files
+            securityContext: {
+              runAsUser: 0,
+              runAsGroup: 0,
+              fsGroup: 0,
+            },
             containers: [
               {
                 name: appName,

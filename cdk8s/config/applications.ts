@@ -755,8 +755,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'BackstageChart',
       props: {
         namespace: 'backstage',
-        // Use backstage-cnoe temporarily - backstage-app has Zod compatibility issues
-        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.2.9',
+        // Use GHCR image - Kargo will update the tag
+        image: 'ghcr.io/vpittamp/backstage-app:v0.15.0',
         // Domain-based routing (consistent with other services)
         ingressHosts: ['backstage.cnoe.localtest.me'],
         basePath: '/',  // Root path, no /backstage prefix
@@ -781,7 +781,11 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'backstage',
         'kargo.akuity.io/loop': 'outer'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      // TEMPORARY: Disable auto-sync to allow imperative image management
+      // while debugging migration lock issues with vpittamp image
+      syncPolicy: {
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+      }
     }
   },
   // =========================================================================

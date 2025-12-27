@@ -118,7 +118,7 @@ export class KargoBackstagePipelineChart extends Chart {
           {
             repoUrl: `${ghcrRegistry}/${ghcrImageName}`,
             imageSelectionStrategy: WarehouseSpecSubscriptionsImageImageSelectionStrategy.SEM_VER,
-            semverConstraint: '>=1.0.0',
+            semverConstraint: '>=0.1.0',
             allowTags: TAG_PATTERNS.OUTER_LOOP_SEMVER,
             ignoreTags: IGNORE_TAGS.OUTER_LOOP,
             discoveryLimit: 30,
