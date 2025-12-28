@@ -151,8 +151,7 @@ export class CaipeSupervisorChart extends Chart {
                   },
                 },
                 livenessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.supervisorAgent),
                   },
                   initialDelaySeconds: 30,
@@ -160,11 +159,10 @@ export class CaipeSupervisorChart extends Chart {
                   timeoutSeconds: 10,
                 },
                 readinessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.supervisorAgent),
                   },
-                  initialDelaySeconds: 10,
+                  initialDelaySeconds: 15,
                   periodSeconds: 10,
                   timeoutSeconds: 5,
                 },

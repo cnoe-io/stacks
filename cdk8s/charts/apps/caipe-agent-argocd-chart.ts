@@ -128,8 +128,7 @@ export class CaipeAgentArgocdChart extends Chart {
                   },
                 },
                 livenessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.mcpHttp),
                   },
                   initialDelaySeconds: 30,
@@ -137,11 +136,10 @@ export class CaipeAgentArgocdChart extends Chart {
                   timeoutSeconds: 10,
                 },
                 readinessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.mcpHttp),
                   },
-                  initialDelaySeconds: 10,
+                  initialDelaySeconds: 15,
                   periodSeconds: 10,
                   timeoutSeconds: 5,
                 },
