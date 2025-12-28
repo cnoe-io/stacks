@@ -221,12 +221,34 @@ export function getSupervisorAgentEnvVars(externalUrl: string): Record<string, s
 
 /**
  * Generate environment variables for RAG server
+ * Uses official CAIPE env var names from docker-compose.yaml
  */
 export function getRagServerEnvVars(namespace: string = CAIPE_NAMESPACE): Record<string, string> {
   return {
-    MILVUS_HOST: `milvus.${namespace}.svc.cluster.local`,
-    MILVUS_PORT: String(CAIPE_PORTS.milvus),
-    NEO4J_URI: `bolt://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
-    REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}`,
+    // Milvus connection - uses full URI format
+    MILVUS_URI: `http://milvus.${namespace}.svc.cluster.local:${CAIPE_PORTS.milvus}`,
+    // Neo4j connection - uses neo4j:// protocol and ADDR env var name
+    NEO4J_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
+    NEO4J_USERNAME: 'neo4j',
+    // Redis connection
+    REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}/0`,
+    // Agent ontology connection for GraphRAG
+    ONTOLOGY_AGENT_RESTAPI_ADDR: `http://nexigraph.${namespace}.svc.cluster.local:${CAIPE_PORTS.agentOntology}`,
+  };
+}
+
+/**
+ * Generate environment variables for Agent Ontology (nexigraph)
+ * Uses official CAIPE env var names from docker-compose.yaml
+ */
+export function getAgentOntologyEnvVars(namespace: string = CAIPE_NAMESPACE): Record<string, string> {
+  return {
+    // Neo4j connection
+    NEO4J_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
+    NEO4J_USERNAME: 'neo4j',
+    // Redis connection
+    REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}/0`,
+    // Sync interval in seconds (24 hours)
+    SYNC_INTERVAL: '86400',
   };
 }

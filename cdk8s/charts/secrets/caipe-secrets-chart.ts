@@ -269,8 +269,9 @@ export class CaipeSecretsChart extends Chart {
               labels: { ...commonLabels, 'app.kubernetes.io/component': 'neo4j' },
             },
             data: {
-              // Neo4j expects NEO4J_AUTH in format: username/password
+              // Neo4j expects NEO4J_AUTH in format: username/password (for neo4j server)
               'NEO4J_AUTH': 'neo4j/{{ .password }}',
+              // NEO4J_PASSWORD is for clients (rag-server, nexigraph) that need separate password
               'NEO4J_PASSWORD': '{{ .password }}',
             },
           },

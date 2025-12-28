@@ -16,6 +16,7 @@ import {
   CAIPE_PORTS,
   CAIPE_RESOURCE_LIMITS,
   getCaipeRagLabels,
+  getAgentOntologyEnvVars,
 } from '../../lib/caipe-helpers';
 
 export interface CaipeNexigraphChartProps extends ChartProps {
@@ -55,7 +56,8 @@ export class CaipeNexigraphChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
-    const image = props.image || 'ghcr.io/cnoe-io/nexigraph-clients:latest';
+    // Use official CAIPE agent-ontology image (not nexigraph-clients which is a client)
+    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-agent-ontology:stable';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const neo4jSecretName = props.neo4jSecretName || 'neo4j-secret';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.ragStack;
@@ -65,6 +67,9 @@ export class CaipeNexigraphChart extends Chart {
       'app.kubernetes.io/name': 'nexigraph',
       'app.kubernetes.io/instance': 'caipe-nexigraph',
     };
+
+    // Get environment variables from helper
+    const envVars = getAgentOntologyEnvVars(namespace);
 
     // Deployment for NexiGraph
     new k8s.KubeDeployment(this, 'nexigraph', {
@@ -97,25 +102,13 @@ export class CaipeNexigraphChart extends Chart {
                   },
                 ],
                 env: [
-                  // API key for LLM access (maps from secret)
-                  {
-                    name: 'API_KEY',
-                    valueFrom: {
-                      secretKeyRef: {
-                        name: llmSecretName,
-                        key: 'AZURE_OPENAI_API_KEY',
-                      },
-                    },
-                  },
-                  // Neo4j connection
-                  {
-                    name: 'NEO4J_URI',
-                    value: `bolt://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
-                  },
-                  // Entity extraction settings
-                  { name: 'EXTRACTION_MODEL', value: 'gpt-4o' },
-                  { name: 'MAX_ENTITIES_PER_DOCUMENT', value: '100' },
-                  { name: 'MAX_RELATIONSHIPS_PER_ENTITY', value: '10' },
+                  // Database connections from helper (official CAIPE env var names)
+                  { name: 'NEO4J_ADDR', value: envVars.NEO4J_ADDR },
+                  { name: 'NEO4J_USERNAME', value: envVars.NEO4J_USERNAME },
+                  { name: 'REDIS_URL', value: envVars.REDIS_URL },
+                  { name: 'SYNC_INTERVAL', value: envVars.SYNC_INTERVAL },
+                  // Log level
+                  { name: 'LOG_LEVEL', value: 'DEBUG' },
                 ],
                 envFrom: [
                   {
@@ -140,20 +133,19 @@ export class CaipeNexigraphChart extends Chart {
                   },
                 },
                 livenessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(CAIPE_PORTS.agentOntology),
+                  },
+                  initialDelaySeconds: 90,
+                  periodSeconds: 30,
+                  timeoutSeconds: 10,
+                  failureThreshold: 5,
+                },
+                readinessProbe: {
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.agentOntology),
                   },
                   initialDelaySeconds: 60,
-                  periodSeconds: 30,
-                  timeoutSeconds: 10,
-                },
-                readinessProbe: {
-                  httpGet: {
-                    path: '/health',
-                    port: k8s.IntOrString.fromNumber(CAIPE_PORTS.agentOntology),
-                  },
-                  initialDelaySeconds: 30,
                   periodSeconds: 10,
                   timeoutSeconds: 5,
                 },

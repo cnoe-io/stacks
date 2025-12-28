@@ -57,7 +57,8 @@ export class CaipeRagServerChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
-    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-server:latest';
+    // Use official CAIPE rag-server image with stable tag
+    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-server:stable';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const embeddingsSecretName = props.embeddingsSecretName || 'embeddings-secret';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.ragStack;
@@ -101,31 +102,21 @@ export class CaipeRagServerChart extends Chart {
                   },
                 ],
                 env: [
-                  // Database connections from helper
-                  { name: 'MILVUS_HOST', value: envVars.MILVUS_HOST },
-                  { name: 'MILVUS_PORT', value: envVars.MILVUS_PORT },
-                  { name: 'NEO4J_URI', value: envVars.NEO4J_URI },
+                  // Database connections from helper (official CAIPE env var names)
+                  { name: 'MILVUS_URI', value: envVars.MILVUS_URI },
+                  { name: 'NEO4J_ADDR', value: envVars.NEO4J_ADDR },
+                  { name: 'NEO4J_USERNAME', value: envVars.NEO4J_USERNAME },
                   { name: 'REDIS_URL', value: envVars.REDIS_URL },
+                  // Agent ontology connection for GraphRAG
+                  { name: 'ONTOLOGY_AGENT_RESTAPI_ADDR', value: envVars.ONTOLOGY_AGENT_RESTAPI_ADDR },
                   // Embedding model configuration
-                  { name: 'EMBEDDING_MODEL', value: 'text-embedding-3-small' },
-                  { name: 'EMBEDDING_DIMENSION', value: '1536' },
-                  // NexiGraph (agent-ontology) connection for GraphRAG
-                  { name: 'NEXIGRAPH_URL', value: `http://nexigraph.${namespace}.svc.cluster.local:${CAIPE_PORTS.agentOntology}` },
-                  // GraphRAG hybrid retrieval settings
-                  { name: 'ENABLE_GRAPHRAG', value: 'true' },
-                  { name: 'GRAPH_RETRIEVAL_DEPTH', value: '2' },
-                  { name: 'HYBRID_RETRIEVAL_WEIGHT', value: '0.5' },
-                  // Document ingestion settings
-                  { name: 'MAX_DOCUMENT_SIZE_MB', value: '10' },
-                  { name: 'ENABLE_PDF_PARSING', value: 'true' },
-                  { name: 'ENABLE_WEB_FETCHING', value: 'true' },
-                  { name: 'CHUNK_SIZE', value: '512' },
-                  { name: 'CHUNK_OVERLAP', value: '50' },
-                  // Observability - Prometheus metrics
-                  { name: 'METRICS_ENABLED', value: 'true' },
-                  // Observability - OpenTelemetry
-                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://otel-collector.observability.svc.cluster.local:4317' },
-                  { name: 'OTEL_SERVICE_NAME', value: 'rag-server' },
+                  { name: 'EMBEDDINGS_MODEL', value: 'text-embedding-3-large' },
+                  // GraphRAG settings
+                  { name: 'ENABLE_GRAPH_RAG', value: 'true' },
+                  // Cleanup interval in seconds (24 hours)
+                  { name: 'CLEANUP_INTERVAL', value: '86400' },
+                  // Log level
+                  { name: 'LOG_LEVEL', value: 'DEBUG' },
                 ],
                 envFrom: [
                   {
@@ -150,20 +141,19 @@ export class CaipeRagServerChart extends Chart {
                   },
                 },
                 livenessProbe: {
-                  httpGet: {
-                    path: '/health',
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(CAIPE_PORTS.ragServer),
+                  },
+                  initialDelaySeconds: 60,
+                  periodSeconds: 30,
+                  timeoutSeconds: 10,
+                  failureThreshold: 5,
+                },
+                readinessProbe: {
+                  tcpSocket: {
                     port: k8s.IntOrString.fromNumber(CAIPE_PORTS.ragServer),
                   },
                   initialDelaySeconds: 30,
-                  periodSeconds: 30,
-                  timeoutSeconds: 10,
-                },
-                readinessProbe: {
-                  httpGet: {
-                    path: '/health',
-                    port: k8s.IntOrString.fromNumber(CAIPE_PORTS.ragServer),
-                  },
-                  initialDelaySeconds: 10,
                   periodSeconds: 10,
                   timeoutSeconds: 5,
                 },

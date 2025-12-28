@@ -153,9 +153,17 @@ export class CaipeNeo4jChart extends Chart {
                       name: 'neo4j-config',
                     },
                   },
+                ],
+                // Only use NEO4J_AUTH from secret - neo4j 5.x crashes if it sees NEO4J_PASSWORD
+                // (it interprets any NEO4J_ prefix as a config setting)
+                env: [
                   {
-                    secretRef: {
-                      name: secretName,
+                    name: 'NEO4J_AUTH',
+                    valueFrom: {
+                      secretKeyRef: {
+                        name: secretName,
+                        key: 'NEO4J_AUTH',
+                      },
                     },
                   },
                 ],
