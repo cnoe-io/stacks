@@ -104,6 +104,7 @@ export class CaipeNexigraphChart extends Chart {
                 env: [
                   // Database connections from helper (official CAIPE env var names)
                   { name: 'NEO4J_ADDR', value: envVars.NEO4J_ADDR },
+                  { name: 'NEO4J_ONTOLOGY_ADDR', value: envVars.NEO4J_ONTOLOGY_ADDR },
                   { name: 'NEO4J_USERNAME', value: envVars.NEO4J_USERNAME },
                   { name: 'REDIS_URL', value: envVars.REDIS_URL },
                   { name: 'SYNC_INTERVAL', value: envVars.SYNC_INTERVAL },

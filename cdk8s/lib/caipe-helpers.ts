@@ -243,8 +243,11 @@ export function getRagServerEnvVars(namespace: string = CAIPE_NAMESPACE): Record
  */
 export function getAgentOntologyEnvVars(namespace: string = CAIPE_NAMESPACE): Record<string, string> {
   return {
-    // Neo4j connection
+    // Neo4j connection (main graph)
     NEO4J_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
+    // Neo4j ontology connection (using same instance as main for now)
+    // In docker-compose, this is a separate neo4j-ontology:7688 but we share one instance
+    NEO4J_ONTOLOGY_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
     NEO4J_USERNAME: 'neo4j',
     // Redis connection
     REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}/0`,
