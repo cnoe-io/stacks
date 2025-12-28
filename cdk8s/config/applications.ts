@@ -790,12 +790,35 @@ export const applicationConfigs: ApplicationConfig[] = [
   },
   // =========================================================================
   // CAIPE (AI Platform Engineering) - Multi-Agent System
-  // Provides AI assistant capabilities via supervisor-agent + sub-agents
+  // Full implementation with RAG stack, GraphRAG, and multi-agent coordination
+  // See specs/implement-caipe/ for full specification
   // =========================================================================
+
+  // Phase 2: Foundational Infrastructure
+  {
+    name: 'caipe-namespace',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',  // KIND only for initial development
+    chart: {
+      type: 'CaipeNamespaceChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+      },
+    },
+    argocd: {
+      syncWave: '-110',  // Namespace must exist first
+      labels: {
+        'app.kubernetes.io/component': 'namespace',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-namespace'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+    }
+  },
   {
     name: 'caipe-secrets',
     namespace: 'ai-platform-engineering',
-    clusterType: 'kind',  // KIND only for initial testing
+    clusterType: 'kind',
     chart: {
       type: 'CaipeSecretsChart',
       props: {
@@ -804,7 +827,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       },
     },
     argocd: {
-      syncWave: '-75',  // After ClusterSecretStore, before CAIPE deployment
+      syncWave: '-80',  // After ClusterSecretStore, before storage
       labels: {
         'app.kubernetes.io/component': 'secrets',
         'app.kubernetes.io/part-of': 'ai-platform-engineering',
@@ -815,25 +838,234 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
-    name: 'ai-platform-engineering',
+    name: 'caipe-milvus',
     namespace: 'ai-platform-engineering',
-    clusterType: 'kind',  // KIND only for initial testing
+    clusterType: 'kind',
     chart: {
-      type: 'CaipeChart',
+      type: 'CaipeMilvusChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        storageSize: '20Gi',
+      },
+    },
+    argocd: {
+      syncWave: '-50',  // Storage tier
+      labels: {
+        'app.kubernetes.io/component': 'milvus',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-milvus',
+        'tier': 'storage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  {
+    name: 'caipe-neo4j',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeNeo4jChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        storageSize: '10Gi',
+        secretName: 'neo4j-secret',
+      },
+    },
+    argocd: {
+      syncWave: '-50',  // Storage tier
+      labels: {
+        'app.kubernetes.io/component': 'neo4j',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-neo4j',
+        'tier': 'storage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  {
+    name: 'caipe-redis',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeRedisChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        storageSize: '1Gi',
+      },
+    },
+    argocd: {
+      syncWave: '-50',  // Storage tier
+      labels: {
+        'app.kubernetes.io/component': 'redis',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-redis',
+        'tier': 'storage'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Phase 3: RAG Stack (User Story 1)
+  {
+    name: 'caipe-rag-server',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeRagServerChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        llmSecretName: 'llm-secret',
+        embeddingsSecretName: 'embeddings-secret',
+      },
+    },
+    argocd: {
+      syncWave: '0',  // RAG tier
+      labels: {
+        'app.kubernetes.io/component': 'rag-server',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-rag-server',
+        'tier': 'rag'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  {
+    name: 'caipe-rag-webui',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeRagWebuiChart',
       props: {
         namespace: 'ai-platform-engineering',
       },
     },
     argocd: {
-      syncWave: '30',  // After Backstage (20), before SpecKit agents (50)
+      syncWave: '0',  // RAG tier
       labels: {
-        'app.kubernetes.io/component': 'ai-agents',
+        'app.kubernetes.io/component': 'rag-webui',
         'app.kubernetes.io/part-of': 'ai-platform-engineering',
-        'app.kubernetes.io/name': 'ai-platform-engineering'
+        'app.kubernetes.io/name': 'caipe-rag-webui',
+        'tier': 'rag'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
+  {
+    name: 'caipe-nexigraph',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeNexigraphChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        llmSecretName: 'llm-secret',
+        neo4jSecretName: 'neo4j-secret',
+      },
+    },
+    argocd: {
+      syncWave: '0',  // RAG tier
+      labels: {
+        'app.kubernetes.io/component': 'nexigraph',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-nexigraph',
+        'tier': 'rag'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Phase 4: User Story 2 - ArgoCD Operations via AI
+  {
+    name: 'caipe-supervisor',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeSupervisorChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        llmSecretName: 'llm-secret',
+      },
+    },
+    argocd: {
+      syncWave: '50',  // Supervisor tier - after RAG stack
+      labels: {
+        'app.kubernetes.io/component': 'supervisor-agent',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-supervisor',
+        'tier': 'agent'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  {
+    name: 'caipe-agent-argocd',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeAgentArgocdChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        argocdSecretName: 'agent-argocd-secret',
+        llmSecretName: 'llm-secret',
+      },
+    },
+    argocd: {
+      syncWave: '100',  // Agent tier - after supervisor
+      labels: {
+        'app.kubernetes.io/component': 'agent-argocd',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-agent-argocd',
+        'tier': 'agent'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Phase 5: User Story 3 - Multi-Agent Coordination
+  {
+    name: 'caipe-agent-github',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeAgentGithubChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        githubSecretName: 'agent-github-secret',
+        llmSecretName: 'llm-secret',
+      },
+    },
+    argocd: {
+      syncWave: '100',  // Agent tier - same wave as ArgoCD agent
+      labels: {
+        'app.kubernetes.io/component': 'agent-github',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-agent-github',
+        'tier': 'agent'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  {
+    name: 'caipe-agent-backstage',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeAgentBackstageChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        backstageSecretName: 'agent-backstage-secret',
+        llmSecretName: 'llm-secret',
+      },
+    },
+    argocd: {
+      syncWave: '100',  // Agent tier - same wave as other agents
+      labels: {
+        'app.kubernetes.io/component': 'agent-backstage',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-agent-backstage',
+        'tier': 'agent'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Phase 6+: GraphRAG enhancements, Document Ingestion, Optional agents
   // Backstage Staging - Outer Loop (Kargo Pipeline Target for Talos)
   // Manual promotion from dev stage to staging (Talos cluster)
   {
@@ -1779,6 +2011,36 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncWave: '-55',
       labels: {
         'app.kubernetes.io/name': 'backstage-tailscale-serve',
+        'app.kubernetes.io/component': 'tailscale-serve',
+        'app.kubernetes.io/part-of': 'tailscale'
+      },
+      syncPolicy: {
+        automated: { prune: true, selfHeal: true }
+      }
+    }
+  },
+
+  // CAIPE (AI Platform Engineering) Tailscale Serve
+  // Access: https://caipe-<cluster>.tail286401.ts.net
+  {
+    name: 'caipe-tailscale-serve',
+    namespace: 'tailscale',
+    clusterType: 'kind',
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: getTailscaleServiceName('caipe'),  // Host-aware: svc:caipe-<cluster>
+        backendHost: 'supervisor-agent.ai-platform-engineering.svc.cluster.local',
+        backendPort: 8000,
+        backendInsecure: false,
+        persistentStorage: true,  // Persist certificates to avoid Let's Encrypt rate limits
+        storageSize: '1Gi',
+      }
+    },
+    argocd: {
+      syncWave: '-55',
+      labels: {
+        'app.kubernetes.io/name': 'caipe-tailscale-serve',
         'app.kubernetes.io/component': 'tailscale-serve',
         'app.kubernetes.io/part-of': 'tailscale'
       },

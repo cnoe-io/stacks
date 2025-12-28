@@ -9,18 +9,27 @@
  * 2. agent-argocd-secret - ArgoCD API credentials for agent-argocd
  * 3. agent-github-secret - GitHub PAT for agent-github
  * 4. agent-backstage-secret - Backstage API credentials for agent-backstage
+ * 5. neo4j-secret - Neo4j database password
+ * 6. embeddings-secret - Embeddings provider (reuses Azure OpenAI)
  *
  * Uses Azure Workload Identity via ClusterSecretStore
  */
 
 import { Chart, ChartProps, JsonPatch } from 'cdk8s';
 import { Construct } from 'constructs';
-import * as k8s from '../../imports/k8s';
 import {
   ExternalSecret,
   ExternalSecretSpecSecretStoreRefKind,
   ExternalSecretSpecTargetCreationPolicy,
 } from '../../imports/external-secrets.io';
+import {
+  CAIPE_NAMESPACE,
+  CAIPE_SECRET_STORE,
+  CAIPE_REFRESH_INTERVAL,
+  CAIPE_SYNC_WAVES,
+  CAIPE_KEYVAULT_KEYS,
+  getCaipeCommonLabels,
+} from '../../lib/caipe-helpers';
 
 export interface CaipeSecretsChartProps extends ChartProps {
   /**
@@ -43,7 +52,7 @@ export interface CaipeSecretsChartProps extends ChartProps {
 
   /**
    * Sync wave for ArgoCD ordering
-   * @default '-75'
+   * @default '-80'
    */
   syncWave?: string;
 }
@@ -52,32 +61,12 @@ export class CaipeSecretsChart extends Chart {
   constructor(scope: Construct, id: string, props: CaipeSecretsChartProps = {}) {
     super(scope, id, props);
 
-    const namespace = props.namespace || 'ai-platform-engineering';
-    const clusterSecretStoreName = props.clusterSecretStoreName || 'azure-keyvault-store';
-    const refreshInterval = props.refreshInterval || '1h';
-    const syncWave = props.syncWave || '-75';
+    const namespace = props.namespace || CAIPE_NAMESPACE;
+    const clusterSecretStoreName = props.clusterSecretStoreName || CAIPE_SECRET_STORE;
+    const refreshInterval = props.refreshInterval || CAIPE_REFRESH_INTERVAL;
+    const syncWave = props.syncWave || CAIPE_SYNC_WAVES.secrets;
 
-    const commonLabels = {
-      'app.kubernetes.io/name': 'caipe',
-      'app.kubernetes.io/component': 'secrets',
-      'app.kubernetes.io/part-of': 'ai-platform-engineering',
-    };
-
-    // ==========================================================================
-    // Namespace
-    // ==========================================================================
-
-    new k8s.KubeNamespace(this, 'namespace', {
-      metadata: {
-        name: namespace,
-        labels: {
-          'app.kubernetes.io/managed-by': 'cdk8s',
-        },
-        annotations: {
-          'argocd.argoproj.io/sync-wave': syncWave,
-        },
-      },
-    });
+    const commonLabels = getCaipeCommonLabels('secrets');
 
     // ==========================================================================
     // LLM Secret - Azure OpenAI credentials
@@ -108,40 +97,27 @@ export class CaipeSecretsChart extends Chart {
         data: [
           {
             secretKey: 'LLM_PROVIDER',
-            remoteRef: {
-              key: 'CAIPE-LLM-PROVIDER',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.llmProvider },
           },
           {
             secretKey: 'AZURE_OPENAI_API_KEY',
-            remoteRef: {
-              key: 'AZURE-OPENAI-API-KEY',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.azureOpenaiApiKey },
           },
           {
             secretKey: 'AZURE_OPENAI_ENDPOINT',
-            remoteRef: {
-              key: 'AZURE-OPENAI-ENDPOINT',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.azureOpenaiEndpoint },
           },
           {
             secretKey: 'AZURE_OPENAI_API_VERSION',
-            remoteRef: {
-              key: 'AZURE-OPENAI-API-VERSION',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.azureOpenaiApiVersion },
           },
-          // Also set OPENAI_API_VERSION for compatibility
           {
             secretKey: 'OPENAI_API_VERSION',
-            remoteRef: {
-              key: 'AZURE-OPENAI-API-VERSION',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.azureOpenaiApiVersion },
           },
           {
             secretKey: 'AZURE_OPENAI_DEPLOYMENT',
-            remoteRef: {
-              key: 'AZURE-OPENAI-DEPLOYMENT',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.azureOpenaiDeployment },
           },
         ],
       },
@@ -156,7 +132,7 @@ export class CaipeSecretsChart extends Chart {
       metadata: {
         name: 'agent-argocd-secret',
         namespace: namespace,
-        labels: commonLabels,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-argocd' },
       },
       spec: {
         refreshInterval: refreshInterval,
@@ -170,28 +146,22 @@ export class CaipeSecretsChart extends Chart {
           template: {
             type: 'Opaque',
             metadata: {
-              labels: commonLabels,
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-argocd' },
             },
           },
         },
         data: [
           {
             secretKey: 'ARGOCD_TOKEN',
-            remoteRef: {
-              key: 'CAIPE-ARGOCD-TOKEN',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdToken },
           },
           {
             secretKey: 'ARGOCD_API_URL',
-            remoteRef: {
-              key: 'CAIPE-ARGOCD-API-URL',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdApiUrl },
           },
           {
             secretKey: 'ARGOCD_VERIFY_SSL',
-            remoteRef: {
-              key: 'CAIPE-ARGOCD-VERIFY-SSL',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdVerifySsl },
           },
         ],
       },
@@ -206,7 +176,7 @@ export class CaipeSecretsChart extends Chart {
       metadata: {
         name: 'agent-github-secret',
         namespace: namespace,
-        labels: commonLabels,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
       },
       spec: {
         refreshInterval: refreshInterval,
@@ -220,16 +190,14 @@ export class CaipeSecretsChart extends Chart {
           template: {
             type: 'Opaque',
             metadata: {
-              labels: commonLabels,
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
             },
           },
         },
         data: [
           {
             secretKey: 'GITHUB_PERSONAL_ACCESS_TOKEN',
-            remoteRef: {
-              key: 'CAIPE-GITHUB-PAT',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.githubPat },
           },
         ],
       },
@@ -244,7 +212,7 @@ export class CaipeSecretsChart extends Chart {
       metadata: {
         name: 'agent-backstage-secret',
         namespace: namespace,
-        labels: commonLabels,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-backstage' },
       },
       spec: {
         refreshInterval: refreshInterval,
@@ -258,26 +226,103 @@ export class CaipeSecretsChart extends Chart {
           template: {
             type: 'Opaque',
             metadata: {
-              labels: commonLabels,
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-backstage' },
             },
           },
         },
         data: [
           {
             secretKey: 'BACKSTAGE_API_TOKEN',
-            remoteRef: {
-              key: 'CAIPE-BACKSTAGE-API-TOKEN',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.backstageApiToken },
           },
           {
             secretKey: 'BACKSTAGE_URL',
-            remoteRef: {
-              key: 'CAIPE-BACKSTAGE-URL',
-            },
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.backstageUrl },
           },
         ],
       },
     });
     backstageSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+
+    // ==========================================================================
+    // Neo4j Secret
+    // ==========================================================================
+
+    const neo4jSecret = new ExternalSecret(this, 'neo4j-secret', {
+      metadata: {
+        name: 'neo4j-secret',
+        namespace: namespace,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'neo4j' },
+      },
+      spec: {
+        refreshInterval: refreshInterval,
+        secretStoreRef: {
+          name: clusterSecretStoreName,
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+        },
+        target: {
+          name: 'neo4j-secret',
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+          template: {
+            type: 'Opaque',
+            metadata: {
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'neo4j' },
+            },
+            data: {
+              // Neo4j expects NEO4J_AUTH in format: username/password
+              'NEO4J_AUTH': 'neo4j/{{ .password }}',
+              'NEO4J_PASSWORD': '{{ .password }}',
+            },
+          },
+        },
+        data: [
+          {
+            secretKey: 'password',
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.neo4jPassword },
+          },
+        ],
+      },
+    });
+    neo4jSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+
+    // ==========================================================================
+    // Embeddings Secret (reuses Azure OpenAI for text-embedding-3-small)
+    // ==========================================================================
+
+    const embeddingsSecret = new ExternalSecret(this, 'embeddings-secret', {
+      metadata: {
+        name: 'embeddings-secret',
+        namespace: namespace,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'embeddings' },
+      },
+      spec: {
+        refreshInterval: refreshInterval,
+        secretStoreRef: {
+          name: clusterSecretStoreName,
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+        },
+        target: {
+          name: 'embeddings-secret',
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+          template: {
+            type: 'Opaque',
+            metadata: {
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'embeddings' },
+            },
+          },
+        },
+        data: [
+          {
+            secretKey: 'EMBEDDINGS_API_KEY',
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.embeddingsApiKey },
+          },
+          {
+            secretKey: 'EMBEDDINGS_ENDPOINT',
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.embeddingsEndpoint },
+          },
+        ],
+      },
+    });
+    embeddingsSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
   }
 }
