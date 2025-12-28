@@ -73,9 +73,9 @@ export class KargoPipelinesCredentialsChart extends Chart {
         }
       },
       templateData: {
-        username: 'vpittamp',
+        username: 'pittampalliorg',
         password: '{{ .pat }}',
-        repoURL: 'ghcr.io/vpittamp/backstage-app'
+        repoURL: 'ghcr.io/pittampalliorg/backstage-cnoe'
       },
       mappings: [ { key: 'pat', remote: 'GITHUB-PAT' } ],
     });

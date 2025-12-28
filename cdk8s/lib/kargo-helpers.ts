@@ -324,7 +324,7 @@ export const REGISTRY = {
   GITEA: giteaRegistry,
   GITEA_LOCAL: 'gitea.cnoe.localtest.me:8443/giteaadmin',
   GITEA_TAILSCALE: giteaTailscaleHost ? `${giteaTailscaleHost}/giteaadmin` : null,
-  GHCR: 'ghcr.io/vpittamp',
+  GHCR: 'ghcr.io/pittampalliorg',
 };
 
 /**

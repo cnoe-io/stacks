@@ -290,8 +290,8 @@ export function createSpokeTargetedStage(
  * Hub registry URLs for cross-cluster pipelines
  */
 export const HUB_REGISTRY = {
-  /** GHCR for outer loop production builds (vpittamp/backstage-app) */
-  GHCR: 'ghcr.io/vpittamp',
+  /** GHCR for outer loop production builds (pittampalliorg/backstage-cnoe) */
+  GHCR: 'ghcr.io/pittampalliorg',
   /** GitHub Container Registry base */
   GITHUB: 'ghcr.io',
 };

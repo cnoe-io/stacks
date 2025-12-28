@@ -1288,7 +1288,7 @@ export const applicationConfigs: ApplicationConfig[] = [
         enableInnerLoop: true,
         enableOuterLoop: true,
         enableStagingAndProdStages: false,
-        ghcrRegistry: 'ghcr.io/vpittamp',
+        ghcrRegistry: 'ghcr.io/pittampalliorg',
       }
     },
     dependencies: {
