@@ -143,7 +143,6 @@ storage:
     insecure_skip_tls_verify: true
 
 # Authentication configuration
-# OIDC credentials provided via environment variables from secrets
 authentication:
   required: true
   session:
@@ -157,6 +156,17 @@ authentication:
       cleanup:
         interval: "10m"
         grace_period: "30m"
+      providers:
+        keycloak:
+          issuer_url: "https://${baseHost}${portSuffix}/keycloak/realms/cnoe"
+          client_id: "flipt"
+          # client_secret provided via FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET env var
+          redirect_address: "https://${ingressHost}"
+          scopes:
+            - openid
+            - profile
+            - email
+            - groups
 
 # Audit logging
 audit:

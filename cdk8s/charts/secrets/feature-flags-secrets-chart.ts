@@ -100,14 +100,8 @@ export class FeatureFlagsSecretsChart extends Chart {
               },
             },
             data: {
-              // Flipt OIDC configuration
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_ENABLED': 'true',
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_CLIENT_ID': 'flipt',
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_CLIENT_SECRET': '{{ .FLIPT_CLIENT_SECRET }}',
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_ISSUER_URL': keycloakUrl,
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_REDIRECT_ADDRESS': `https://flipt.${baseHost}${portSuffix}`,
-              // Scopes for role mapping
-              'FLIPT_AUTHENTICATION_METHODS_OIDC_METHOD_KEYCLOAK_SCOPES': 'openid,profile,email,roles',
+              // Flipt OIDC client secret - other config is in flipt.yml
+              'FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET': '{{ .FLIPT_CLIENT_SECRET }}',
             },
           },
         },

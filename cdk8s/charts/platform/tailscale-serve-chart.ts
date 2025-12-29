@@ -290,10 +290,12 @@ for i in $(seq 1 40); do
 done
 
 # Bring the node up with service registration
+# --reset: Force takeover of hostname if an orphaned node exists (prevents -1, -2 suffix drift)
+# This avoids Let's Encrypt rate limits from new hostnames on cluster recreation
 tailscale --socket=/run/tailscale/tailscaled.sock up \\
   --authkey="$TS_AUTHKEY" \\
   --hostname="${resolved.serviceName}" \\
-  --accept-dns=false --accept-routes=false --ssh=false
+  --accept-dns=false --accept-routes=false --ssh=false --reset
 
 # Clear any stale serve configuration (PVC-backed state can survive pod reschedules)
 tailscale --socket=/run/tailscale/tailscaled.sock serve reset || true
