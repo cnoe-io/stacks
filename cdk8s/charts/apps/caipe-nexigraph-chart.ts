@@ -56,8 +56,10 @@ export class CaipeNexigraphChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
-    // Use official CAIPE agent-ontology image (not nexigraph-clients which is a client)
-    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-agent-ontology:stable';
+    // Use official CAIPE agent-ontology image with fixed version
+    // Issue #439: stable tag has ImportError (fetch_entity vs graph_fetch_entity)
+    // Fixed in v0.2.5+ (PR #447 merged Dec 11, 2025)
+    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-agent-ontology:0.2.8';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const neo4jSecretName = props.neo4jSecretName || 'neo4j-secret';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.ragStack;
