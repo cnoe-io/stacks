@@ -756,7 +756,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'backstage',
         // Use GHCR image - Kargo will update the tag
-        image: 'ghcr.io/vpittamp/backstage-app:v0.15.0',
+        image: 'ghcr.io/pittampalliorg/backstage-cnoe:v1.4.1',
         // Domain-based routing (consistent with other services)
         ingressHosts: ['backstage.cnoe.localtest.me'],
         basePath: '/',  // Root path, no /backstage prefix

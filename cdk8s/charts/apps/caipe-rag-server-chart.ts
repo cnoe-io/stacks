@@ -46,6 +46,12 @@ export interface CaipeRagServerChartProps extends ChartProps {
   embeddingsSecretName?: string;
 
   /**
+   * Secret name for Neo4j credentials
+   * @default 'neo4j-secret'
+   */
+  neo4jSecretName?: string;
+
+  /**
    * Sync wave for ArgoCD ordering
    * @default '0'
    */
@@ -61,6 +67,7 @@ export class CaipeRagServerChart extends Chart {
     const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-server:stable';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const embeddingsSecretName = props.embeddingsSecretName || 'embeddings-secret';
+    const neo4jSecretName = props.neo4jSecretName || 'neo4j-secret';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.ragStack;
 
     const labels = getCaipeRagLabels('rag-server');
@@ -105,6 +112,7 @@ export class CaipeRagServerChart extends Chart {
                   // Database connections from helper (official CAIPE env var names)
                   { name: 'MILVUS_URI', value: envVars.MILVUS_URI },
                   { name: 'NEO4J_ADDR', value: envVars.NEO4J_ADDR },
+                  { name: 'NEO4J_ONTOLOGY_ADDR', value: envVars.NEO4J_ONTOLOGY_ADDR },
                   { name: 'NEO4J_USERNAME', value: envVars.NEO4J_USERNAME },
                   { name: 'REDIS_URL', value: envVars.REDIS_URL },
                   // Agent ontology connection for GraphRAG
@@ -127,6 +135,11 @@ export class CaipeRagServerChart extends Chart {
                   {
                     secretRef: {
                       name: embeddingsSecretName,
+                    },
+                  },
+                  {
+                    secretRef: {
+                      name: neo4jSecretName,
                     },
                   },
                 ],

@@ -30,7 +30,7 @@ export const CAIPE_IMAGE_VERSIONS = {
   ragServer: 'latest',
   ragWebui: 'latest',
   nexigraph: 'latest',
-  milvus: '2.4.6',
+  milvus: '2.6.0',
   neo4j: '5.18.0',
   redis: '7.2.4',
 } as const;
@@ -225,10 +225,12 @@ export function getSupervisorAgentEnvVars(externalUrl: string): Record<string, s
  */
 export function getRagServerEnvVars(namespace: string = CAIPE_NAMESPACE): Record<string, string> {
   return {
-    // Milvus connection - uses full URI format
+    // Milvus connection - pymilvus expects http:// prefix for URI format
     MILVUS_URI: `http://milvus.${namespace}.svc.cluster.local:${CAIPE_PORTS.milvus}`,
     // Neo4j connection - uses neo4j:// protocol and ADDR env var name
     NEO4J_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
+    // Neo4j ontology connection - using same instance as main (shares Neo4j with nexigraph)
+    NEO4J_ONTOLOGY_ADDR: `neo4j://neo4j.${namespace}.svc.cluster.local:${CAIPE_PORTS.neo4jBolt}`,
     NEO4J_USERNAME: 'neo4j',
     // Redis connection
     REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}/0`,
