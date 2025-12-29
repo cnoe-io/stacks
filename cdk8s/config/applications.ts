@@ -648,7 +648,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'backstage',
         'app.kubernetes.io/name': 'backstage'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      // Replace=true prevents strategic merge patch issues when switching
+      // deployment strategy from RollingUpdate to Recreate
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true'])
     }
   },
   // =========================================================================
@@ -685,7 +687,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'backstage-local-dev',
         'kargo.akuity.io/loop': 'inner'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      // Replace=true prevents strategic merge patch issues when switching
+      // deployment strategy from RollingUpdate to Recreate
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true'])
     }
   },
   // Backstage Local Dev Secrets - Inner Loop environment secrets (KIND)
@@ -786,7 +790,9 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         },
-        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+        // Replace=true prevents strategic merge patch issues when switching
+        // deployment strategy from RollingUpdate to Recreate
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true']
       }
     }
   },
