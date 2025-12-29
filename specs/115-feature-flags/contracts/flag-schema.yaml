@@ -1,0 +1,418 @@
+# Flag Configuration Schema
+# Used in the feature-flags Git repository for declarative flag definitions
+# Compatible with Flipt Git backend
+
+openapi: "3.0.0"
+info:
+  title: Feature Flags Configuration Schema
+  version: "1.0.0"
+  description: Schema for declarative feature flag YAML files
+
+components:
+  schemas:
+    # Root configuration file
+    FlagConfiguration:
+      type: object
+      required:
+        - version
+        - namespace
+        - flags
+      properties:
+        version:
+          type: string
+          enum: ["1.0"]
+          description: Schema version
+        namespace:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{0,62}$"
+          description: Target namespace (environment)
+        flags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flag"
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+
+    # Flag definition
+    Flag:
+      type: object
+      required:
+        - key
+        - name
+        - type
+        - enabled
+        - defaultVariant
+        - variants
+      properties:
+        key:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{0,126}$"
+          description: Unique flag identifier
+        name:
+          type: string
+          maxLength: 255
+          description: Human-readable name
+        type:
+          type: string
+          enum:
+            - BOOLEAN
+            - STRING
+            - INTEGER
+            - FLOAT
+            - OBJECT
+          description: Value type
+        description:
+          type: string
+          maxLength: 1000
+        enabled:
+          type: boolean
+          default: false
+          description: Master toggle
+        defaultVariant:
+          type: string
+          description: Fallback variant key
+        variants:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Variant"
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Custom metadata
+
+    # Variant definition
+    Variant:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{0,62}$"
+        value:
+          oneOf:
+            - type: boolean
+            - type: string
+            - type: integer
+            - type: number
+            - type: object
+          description: Value matching flag type
+        description:
+          type: string
+          maxLength: 255
+        attachment:
+          type: object
+          description: Additional variant data
+
+    # Targeting rule
+    Rule:
+      type: object
+      required:
+        - distributions
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Auto-generated if not provided
+        segment:
+          type: string
+          description: Reference to segment key
+        rank:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Priority (lower = higher priority)
+        distributions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Distribution"
+
+    # Variant distribution
+    Distribution:
+      type: object
+      required:
+        - variant
+        - rollout
+      properties:
+        variant:
+          type: string
+          description: Target variant key
+        rollout:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Percentage (0-100)
+
+    # Segment definition
+    Segment:
+      type: object
+      required:
+        - key
+        - name
+        - matchType
+        - constraints
+      properties:
+        key:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{0,62}$"
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        matchType:
+          type: string
+          enum:
+            - ALL    # All constraints must match (AND)
+            - ANY    # Any constraint matches (OR)
+        constraints:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Constraint"
+
+    # Segment constraint
+    Constraint:
+      type: object
+      required:
+        - property
+        - operator
+        - value
+      properties:
+        property:
+          type: string
+          maxLength: 64
+          description: Context property name
+        operator:
+          type: string
+          enum:
+            - EQ            # Equals
+            - NEQ           # Not equals
+            - LT            # Less than
+            - LTE           # Less than or equal
+            - GT            # Greater than
+            - GTE           # Greater than or equal
+            - CONTAINS      # Contains substring
+            - NOT_CONTAINS  # Does not contain
+            - STARTS_WITH   # Prefix match
+            - ENDS_WITH     # Suffix match
+            - MATCHES       # Regex match
+            - IN            # In comma-separated list
+            - NOT_IN        # Not in list
+            - IS_ONE_OF     # Array member
+            - IS_NOT_ONE_OF # Not array member
+        value:
+          type: string
+          maxLength: 1024
+          description: Comparison value
+        type:
+          type: string
+          enum:
+            - STRING
+            - NUMBER
+            - BOOLEAN
+            - DATETIME
+          default: STRING
+          description: Type hint for comparison
+
+---
+# Example Configuration
+
+examples:
+  complete:
+    version: "1.0"
+    namespace: development
+
+    flags:
+      # Boolean flag with simple targeting
+      - key: dark-mode-enabled
+        name: Dark Mode
+        type: BOOLEAN
+        description: Enable dark mode UI theme
+        enabled: true
+        defaultVariant: "off"
+        variants:
+          - key: "on"
+            value: true
+          - key: "off"
+            value: false
+        rules:
+          - segment: beta-users
+            rank: 0
+            distributions:
+              - variant: "on"
+                rollout: 100
+          - rank: 1
+            distributions:
+              - variant: "on"
+                rollout: 20
+              - variant: "off"
+                rollout: 80
+
+      # Integer flag for rate limiting
+      - key: api-rate-limit
+        name: API Rate Limit
+        type: INTEGER
+        description: Requests per minute limit
+        enabled: true
+        defaultVariant: default
+        variants:
+          - key: default
+            value: 100
+          - key: premium
+            value: 1000
+          - key: unlimited
+            value: -1
+        rules:
+          - segment: premium-tier
+            rank: 0
+            distributions:
+              - variant: premium
+                rollout: 100
+          - segment: vip-users
+            rank: 1
+            distributions:
+              - variant: unlimited
+                rollout: 100
+
+      # String flag for A/B testing
+      - key: checkout-flow
+        name: Checkout Flow Version
+        type: STRING
+        description: Which checkout flow to use
+        enabled: true
+        defaultVariant: control
+        variants:
+          - key: control
+            value: original
+            description: Original checkout
+          - key: variant-a
+            value: streamlined
+            description: Streamlined flow
+          - key: variant-b
+            value: one-page
+            description: Single page checkout
+        rules:
+          - rank: 0
+            distributions:
+              - variant: control
+                rollout: 34
+              - variant: variant-a
+                rollout: 33
+              - variant: variant-b
+                rollout: 33
+
+      # Object flag for complex configuration
+      - key: feature-config
+        name: Feature Configuration
+        type: OBJECT
+        description: Complex feature settings
+        enabled: true
+        defaultVariant: default
+        variants:
+          - key: default
+            value:
+              maxItems: 10
+              enableCache: false
+              timeout: 5000
+          - key: performance
+            value:
+              maxItems: 100
+              enableCache: true
+              timeout: 1000
+
+    segments:
+      # Beta users segment
+      - key: beta-users
+        name: Beta Program
+        description: Users in the beta testing program
+        matchType: ANY
+        constraints:
+          - property: groups
+            operator: IS_ONE_OF
+            value: "beta-testers,early-adopters"
+          - property: email
+            operator: ENDS_WITH
+            value: "@beta.example.com"
+
+      # Premium tier segment
+      - key: premium-tier
+        name: Premium Users
+        description: Premium subscription users
+        matchType: ALL
+        constraints:
+          - property: tier
+            operator: EQ
+            value: premium
+
+      # VIP users segment
+      - key: vip-users
+        name: VIP Users
+        description: VIP customers
+        matchType: ALL
+        constraints:
+          - property: tier
+            operator: EQ
+            value: enterprise
+          - property: accountAge
+            operator: GTE
+            value: "365"
+            type: NUMBER
+
+---
+# Validation Rules
+
+validation:
+  flag:
+    - Variant keys must be unique within a flag
+    - defaultVariant must match an existing variant key
+    - All variant values must match the flag type
+    - Distribution rollouts must sum to 100 for each rule
+
+  segment:
+    - Segment keys must be unique within namespace
+    - At least one constraint required
+    - Referenced segments in rules must exist
+
+  namespace:
+    - Namespace key must match target directory/branch
+    - Protected namespaces require elevated permissions
+
+---
+# File Organization
+
+structure:
+  option1_directory:
+    description: Directory per environment
+    layout: |
+      feature-flags/
+      ├── .flipt.yml
+      ├── flags/
+      │   ├── default.yaml        # Shared definitions
+      │   ├── development/
+      │   │   └── flags.yaml      # Dev overrides
+      │   ├── staging/
+      │   │   └── flags.yaml      # Staging overrides
+      │   └── production/
+      │       └── flags.yaml      # Prod overrides
+      └── README.md
+
+  option2_branch:
+    description: Branch per environment
+    layout: |
+      feature-flags/
+      ├── main (development)
+      │   └── flags.yaml
+      ├── staging
+      │   └── flags.yaml
+      └── production
+          └── flags.yaml

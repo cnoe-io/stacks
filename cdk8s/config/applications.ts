@@ -426,7 +426,43 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
 
-  // Keycloak Config - OIDC client configuration Job
+  // Keycloak Clients - Declarative OIDC client configuration via realm import
+  // Provides ConfigMap with realm JSON and ExternalSecret for client secrets
+  // Used by Keycloak --import-realm for declarative client management
+  {
+    name: 'keycloak-clients',
+    namespace: 'keycloak',
+    clusterType: 'both',
+    chart: {
+      type: 'KeycloakClientsChart',
+      props: {
+        namespace: 'keycloak',
+        hosts: [
+          // KIND cluster (local development)
+          { hostname: 'cnoe.localtest.me', port: 8443, backstagePath: '/backstage' },
+          { hostname: 'backstage.cnoe.localtest.me', port: 8443, backstagePath: '' },
+          { hostname: 'backstage-local-dev.cnoe.localtest.me', port: 8443, backstagePath: '' },
+          // Talos cluster (production)
+          { hostname: 'ai401kchat.com', port: 443, backstagePath: '/backstage' },
+          // Tailscale Services
+          { hostname: 'backstage-thinkpad.tail286401.ts.net', port: 443, backstagePath: '' },
+          { hostname: 'backstage-ryzen.tail286401.ts.net', port: 443, backstagePath: '' },
+          { hostname: 'backstage-hetzner.tail286401.ts.net', port: 443, backstagePath: '' },
+        ],
+      }
+    },
+    argocd: {
+      syncWave: '-47',  // After keycloak-secrets (-50), before keycloak (-45)
+      labels: {
+        'app.kubernetes.io/component': 'oidc-clients',
+        'app.kubernetes.io/part-of': 'keycloak',
+        'app.kubernetes.io/name': 'keycloak-clients'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true'])
+    }
+  },
+
+  // Keycloak Config - OIDC client configuration Job (fallback/reconciliation)
   // Creates CNOE realm, users, and OIDC clients for Backstage/ArgoWF
   // Supports multiple hosts for different Backstage environments
   {
@@ -3881,5 +3917,150 @@ export const applicationConfigs: ApplicationConfig[] = [
       ],
       syncPolicy: automatedSyncWithOptions(['ServerSideApply=true']),
     },
+  },
+
+  // =========================================================================
+  // Feature Flags - OpenFeature/flagd + Flipt
+  // =========================================================================
+
+  // Feature Flags Namespace - Both clusters
+  {
+    name: 'feature-flags-namespace',
+    namespace: 'feature-flags',
+    clusterType: 'both',
+    chart: {
+      type: 'FeatureFlagsNamespaceChart',
+      props: {
+        namespaceName: 'feature-flags'
+      }
+    },
+    argocd: {
+      syncWave: '-110',
+      labels: {
+        'app.kubernetes.io/name': 'feature-flags-namespace',
+        'app.kubernetes.io/component': 'infrastructure',
+        'app.kubernetes.io/part-of': 'feature-flags'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
+        syncOptions: ['CreateNamespace=true']
+      }
+    }
+  },
+
+  // Feature Flags Secrets (Flipt OIDC credentials from Azure Key Vault)
+  {
+    name: 'feature-flags-secrets',
+    namespace: 'feature-flags',
+    clusterType: 'both',
+    chart: {
+      type: 'FeatureFlagsSecretsChart',
+      props: {
+        namespace: 'feature-flags'
+      }
+    },
+    argocd: {
+      syncWave: '-85',
+      labels: {
+        'app.kubernetes.io/name': 'feature-flags-secrets',
+        'app.kubernetes.io/component': 'secrets',
+        'app.kubernetes.io/part-of': 'feature-flags'
+      },
+      syncPolicy: externalSecretsAppSyncPolicy(['CreateNamespace=false']),
+      ignoreDifferences: EXTERNAL_SECRET_IGNORE_DIFFERENCES
+    }
+  },
+
+  // flagd - Feature flag evaluation service (OpenFeature)
+  {
+    name: 'flagd',
+    namespace: 'feature-flags',
+    clusterType: 'both',
+    chart: {
+      type: 'FlagdChart',
+      props: {
+        namespace: 'feature-flags',
+        imageVersion: '0.10.4',
+        fliptHost: 'flipt.feature-flags.svc.cluster.local',
+        fliptPort: 8080
+      }
+    },
+    argocd: {
+      syncWave: '-75',
+      labels: {
+        'app.kubernetes.io/name': 'flagd',
+        'app.kubernetes.io/component': 'evaluation-engine',
+        'app.kubernetes.io/part-of': 'feature-flags'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Flipt - Feature flag management UI and API
+  {
+    name: 'flipt',
+    namespace: 'feature-flags',
+    clusterType: 'both',
+    chart: {
+      type: 'FliptChart',
+      props: {
+        namespace: 'feature-flags',
+        imageVersion: '2.5.0',
+        ingressHost: getIngressHost('flipt')
+      }
+    },
+    argocd: {
+      syncWave: '-75',
+      labels: {
+        'app.kubernetes.io/name': 'flipt',
+        'app.kubernetes.io/component': 'management-ui',
+        'app.kubernetes.io/part-of': 'feature-flags'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+
+  // Flipt Tailscale Service (remote access)
+  {
+    name: 'flipt-tailscale',
+    namespace: 'tailscale',  // Tailscale charts deploy to tailscale namespace
+    clusterType: 'talos',  // Only for Talos clusters with Tailscale
+    chart: {
+      type: 'TailscaleServeChart',
+      props: {
+        serviceName: getTailscaleServiceName('flipt'),
+        backendHost: 'flipt.feature-flags.svc.cluster.local',
+        backendPort: 8080,
+        backendInsecure: false,  // Flipt uses HTTP
+        namespace: 'tailscale'
+      }
+    },
+    argocd: {
+      syncWave: '-60',
+      labels: {
+        'app.kubernetes.io/name': 'flipt-tailscale',
+        'app.kubernetes.io/component': 'networking',
+        'app.kubernetes.io/part-of': 'feature-flags'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
   },
 ];

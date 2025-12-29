@@ -66,6 +66,20 @@ export interface KeycloakChartProps extends ChartProps {
    * Ingress hosts (default: ['localhost', 'cnoe.localtest.me'])
    */
   ingressHosts?: string[];
+
+  /**
+   * Enable declarative realm import from ConfigMap
+   * When enabled, mounts keycloak-realm-import ConfigMap and imports on startup
+   * @default true
+   */
+  enableRealmImport?: boolean;
+
+  /**
+   * Secret name containing client secrets for realm import
+   * These are injected as environment variables for ${env.VAR} substitution
+   * @default 'keycloak-client-secrets'
+   */
+  clientSecretsSecretName?: string;
 }
 
 /**
@@ -94,6 +108,8 @@ export class KeycloakChart extends Chart {
     const postgresImage = props.postgresImage ?? 'docker.io/library/postgres:15.3-alpine3.18';
     const postgresStorageSize = props.postgresStorageSize ?? '500Mi';
     const ingressHosts = props.ingressHosts ?? ['localhost', hostname];
+    const enableRealmImport = props.enableRealmImport ?? true;
+    const clientSecretsSecretName = props.clientSecretsSecretName ?? 'keycloak-client-secrets';
 
     // ==========================================================================
     // Namespace
@@ -287,6 +303,108 @@ hostname-strict-backchannel=false
     // Deployment: Keycloak (sync-wave: 10)
     // ==========================================================================
 
+    // Build container args based on realm import setting
+    const keycloakArgs = enableRealmImport
+      ? ['start-dev', '--import-realm']
+      : ['start-dev'];
+
+    // Build envFrom array - always include keycloak-config, optionally add client secrets
+    const envFromRefs: k8s.EnvFromSource[] = [
+      {
+        secretRef: {
+          name: 'keycloak-config',
+        },
+      },
+    ];
+    if (enableRealmImport) {
+      envFromRefs.push({
+        secretRef: {
+          name: clientSecretsSecretName,
+          optional: true, // Optional to allow graceful degradation if secret doesn't exist yet
+        },
+      });
+    }
+
+    // Build volume mounts - always include config, optionally add realm import
+    const volumeMounts: k8s.VolumeMount[] = [
+      {
+        name: 'keycloak-config',
+        mountPath: '/opt/keycloak/conf',
+        readOnly: true,
+      },
+    ];
+    if (enableRealmImport) {
+      volumeMounts.push({
+        name: 'realm-import',
+        mountPath: '/opt/keycloak/data/import',
+        readOnly: true,
+      });
+    }
+
+    // Build volumes - always include config, optionally add realm import
+    const volumes: k8s.Volume[] = [
+      {
+        name: 'keycloak-config',
+        configMap: {
+          name: 'keycloak-config',
+        },
+      },
+    ];
+    if (enableRealmImport) {
+      // Template volume from ConfigMap (read by init container)
+      volumes.push({
+        name: 'realm-import-template',
+        configMap: {
+          name: 'keycloak-realm-import',
+        },
+      });
+      // Processed volume (written by init container, read by Keycloak)
+      volumes.push({
+        name: 'realm-import',
+        emptyDir: {},
+      });
+    }
+
+    // Init containers for realm import (envsubst to substitute secrets)
+    const initContainers: k8s.Container[] = [];
+    if (enableRealmImport) {
+      initContainers.push({
+        name: 'realm-import-envsubst',
+        image: 'docker.io/library/alpine:3.19',
+        command: ['/bin/sh', '-c'],
+        args: [
+          // Install gettext for envsubst, then process the realm JSON
+          `apk add --no-cache gettext && \
+           envsubst < /realm-template/cnoe-realm.json > /realm-import/cnoe-realm.json && \
+           echo "Realm import file processed successfully"`,
+        ],
+        envFrom: [
+          {
+            secretRef: {
+              name: clientSecretsSecretName,
+              optional: true,
+            },
+          },
+          {
+            secretRef: {
+              name: 'keycloak-config',
+            },
+          },
+        ],
+        volumeMounts: [
+          {
+            name: 'realm-import-template',
+            mountPath: '/realm-template',
+            readOnly: true,
+          },
+          {
+            name: 'realm-import',
+            mountPath: '/realm-import',
+          },
+        ],
+      });
+    }
+
     new k8s.KubeDeployment(this, 'keycloak-deployment', {
       metadata: {
         name: 'keycloak',
@@ -312,11 +430,12 @@ hostname-strict-backchannel=false
             },
           },
           spec: {
+            ...(initContainers.length > 0 && { initContainers }),
             containers: [
               {
                 name: 'keycloak',
                 image: keycloakImage,
-                args: ['start-dev'],
+                args: keycloakArgs,
                 env: [
                   {
                     name: 'KEYCLOAK_ADMIN',
@@ -331,13 +450,7 @@ hostname-strict-backchannel=false
                     value: 'true',
                   },
                 ],
-                envFrom: [
-                  {
-                    secretRef: {
-                      name: 'keycloak-config',
-                    },
-                  },
-                ],
+                envFrom: envFromRefs,
                 ports: [
                   {
                     containerPort: 8080,
@@ -350,23 +463,10 @@ hostname-strict-backchannel=false
                     port: k8s.IntOrString.fromNumber(8080),
                   },
                 },
-                volumeMounts: [
-                  {
-                    name: 'keycloak-config',
-                    mountPath: '/opt/keycloak/conf',
-                    readOnly: true,
-                  },
-                ],
+                volumeMounts: volumeMounts,
               },
             ],
-            volumes: [
-              {
-                name: 'keycloak-config',
-                configMap: {
-                  name: 'keycloak-config',
-                },
-              },
-            ],
+            volumes: volumes,
           },
         },
       },

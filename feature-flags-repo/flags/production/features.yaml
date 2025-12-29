@@ -1,0 +1,57 @@
+# Production Environment Feature Flags
+# Stable configurations with careful rollout strategies
+version: "1.0"
+namespace: production
+
+segments:
+  # VIP users segment
+  - key: vip-users
+    name: VIP Users
+    description: High-value customers
+    matchType: ALL
+    constraints:
+      - property: tier
+        operator: EQ
+        value: enterprise
+
+flags:
+  # Dark mode fully rolled out in production
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN
+    description: Enable dark mode UI theme
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+    # No rules needed - default to on for everyone
+
+  # New dashboard disabled in production
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN
+    description: Experimental new dashboard layout
+    enabled: false
+    defaultVariant: "off"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+    # Feature not yet ready for production
+
+  # Original checkout only in production
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: STRING
+    description: Which checkout flow to display
+    enabled: true
+    defaultVariant: control
+    variants:
+      - key: control
+        value: original
+        description: Original checkout flow
+    # Only original flow in production until A/B test concludes
