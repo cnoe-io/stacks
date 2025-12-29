@@ -16,6 +16,7 @@ import {
   CAIPE_SYNC_WAVES,
   CAIPE_PORTS,
   CAIPE_RESOURCE_LIMITS,
+  CAIPE_OBSERVABILITY,
   getCaipeAgentLabels,
   getSupervisorAgentEnvVars,
   getCaipeSupervisorUrl,
@@ -124,19 +125,28 @@ export class CaipeSupervisorChart extends Chart {
                   { name: 'AGENT_ARGOCD_URL', value: `http://agent-argocd.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
                   { name: 'AGENT_GITHUB_URL', value: `http://agent-github.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
                   { name: 'AGENT_BACKSTAGE_URL', value: `http://agent-backstage.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
+                  // Observability - cnoe-agent-utils tracing control
+                  { name: 'ENABLE_TRACING', value: CAIPE_OBSERVABILITY.tracing.enabled },
                   // Observability - Prometheus metrics
-                  { name: 'METRICS_ENABLED', value: 'true' },
+                  { name: 'METRICS_ENABLED', value: CAIPE_OBSERVABILITY.metrics.enabled },
                   { name: 'METRICS_PORT', value: String(CAIPE_PORTS.supervisorAgent) },
-                  // Observability - OpenTelemetry for Langfuse
-                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://otel-collector.observability.svc.cluster.local:4317' },
-                  { name: 'OTEL_SERVICE_NAME', value: 'supervisor-agent' },
-                  { name: 'LANGFUSE_ENABLED', value: 'true' },
-                  { name: 'LANGFUSE_HOST', value: 'http://langfuse.observability.svc.cluster.local:3000' },
+                  // Observability - OpenTelemetry for distributed tracing (Tempo)
+                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: CAIPE_OBSERVABILITY.otel.grpcEndpoint },
+                  { name: 'OTEL_SERVICE_NAME', value: 'caipe-supervisor-agent' },
+                  // Observability - Langfuse for LLM-specific tracing
+                  { name: 'LANGFUSE_ENABLED', value: CAIPE_OBSERVABILITY.langfuse.enabled },
+                  { name: 'LANGFUSE_HOST', value: CAIPE_OBSERVABILITY.langfuse.host },
                 ],
                 envFrom: [
                   {
                     secretRef: {
                       name: llmSecretName,
+                    },
+                  },
+                  {
+                    // Langfuse API credentials for tracing
+                    secretRef: {
+                      name: 'caipe-langfuse-credentials',
                     },
                   },
                 ],

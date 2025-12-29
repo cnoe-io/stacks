@@ -11,6 +11,7 @@
  * 4. agent-backstage-secret - Backstage API credentials for agent-backstage
  * 5. neo4j-secret - Neo4j database password
  * 6. embeddings-secret - Embeddings provider (reuses Azure OpenAI)
+ * 7. caipe-langfuse-credentials - Langfuse API keys for observability
  *
  * Uses Azure Workload Identity via ClusterSecretStore
  */
@@ -325,5 +326,47 @@ export class CaipeSecretsChart extends Chart {
       },
     });
     embeddingsSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+
+    // ==========================================================================
+    // Langfuse Observability Credentials
+    // ==========================================================================
+    // Syncs Langfuse API keys from Azure Key Vault to enable tracing
+    // across all CAIPE agents. Used by cnoe-agent-utils TracingManager.
+
+    const langfuseSecret = new ExternalSecret(this, 'langfuse-credentials', {
+      metadata: {
+        name: 'caipe-langfuse-credentials',
+        namespace: namespace,
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'observability' },
+      },
+      spec: {
+        refreshInterval: refreshInterval,
+        secretStoreRef: {
+          name: clusterSecretStoreName,
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+        },
+        target: {
+          name: 'caipe-langfuse-credentials',
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+          template: {
+            type: 'Opaque',
+            metadata: {
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'observability' },
+            },
+          },
+        },
+        data: [
+          {
+            secretKey: 'LANGFUSE_PUBLIC_KEY',
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.langfusePublicKey },
+          },
+          {
+            secretKey: 'LANGFUSE_SECRET_KEY',
+            remoteRef: { key: CAIPE_KEYVAULT_KEYS.langfuseSecretKey },
+          },
+        ],
+      },
+    });
+    langfuseSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
   }
 }

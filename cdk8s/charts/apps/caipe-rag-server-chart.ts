@@ -16,6 +16,7 @@ import {
   CAIPE_SYNC_WAVES,
   CAIPE_PORTS,
   CAIPE_RESOURCE_LIMITS,
+  CAIPE_OBSERVABILITY,
   getCaipeRagLabels,
   getRagServerEnvVars,
 } from '../../lib/caipe-helpers';
@@ -125,6 +126,14 @@ export class CaipeRagServerChart extends Chart {
                   { name: 'CLEANUP_INTERVAL', value: '86400' },
                   // Log level
                   { name: 'LOG_LEVEL', value: 'DEBUG' },
+                  // Observability - cnoe-agent-utils tracing control
+                  { name: 'ENABLE_TRACING', value: CAIPE_OBSERVABILITY.tracing.enabled },
+                  // Observability - OpenTelemetry for distributed tracing (Tempo)
+                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: CAIPE_OBSERVABILITY.otel.grpcEndpoint },
+                  { name: 'OTEL_SERVICE_NAME', value: 'caipe-rag-server' },
+                  // Observability - Langfuse for LLM-specific tracing
+                  { name: 'LANGFUSE_ENABLED', value: CAIPE_OBSERVABILITY.langfuse.enabled },
+                  { name: 'LANGFUSE_HOST', value: CAIPE_OBSERVABILITY.langfuse.host },
                 ],
                 envFrom: [
                   {
@@ -140,6 +149,12 @@ export class CaipeRagServerChart extends Chart {
                   {
                     secretRef: {
                       name: neo4jSecretName,
+                    },
+                  },
+                  {
+                    // Langfuse API credentials for tracing
+                    secretRef: {
+                      name: 'caipe-langfuse-credentials',
                     },
                   },
                 ],

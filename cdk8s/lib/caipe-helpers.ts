@@ -127,6 +127,10 @@ export const CAIPE_KEYVAULT_KEYS = {
   // Embeddings (reuses Azure OpenAI)
   embeddingsApiKey: 'AZURE-OPENAI-API-KEY',
   embeddingsEndpoint: 'AZURE-OPENAI-ENDPOINT',
+
+  // Langfuse Observability (reuses existing Langfuse keys from observability namespace)
+  langfusePublicKey: 'LANGFUSE-PUBLIC-KEY',
+  langfuseSecretKey: 'LANGFUSE-SECRET-KEY',
 } as const;
 
 // =============================================================================
@@ -255,5 +259,62 @@ export function getAgentOntologyEnvVars(namespace: string = CAIPE_NAMESPACE): Re
     REDIS_URL: `redis://redis.${namespace}.svc.cluster.local:${CAIPE_PORTS.redis}/0`,
     // Sync interval in seconds (24 hours)
     SYNC_INTERVAL: '86400',
+  };
+}
+
+// =============================================================================
+// Observability Configuration
+// =============================================================================
+
+/**
+ * CAIPE Observability configuration for Langfuse and OpenTelemetry
+ *
+ * Traces are routed to BOTH:
+ * - Langfuse: LLM-specific insights (token usage, costs, conversation flows)
+ * - Tempo: Infrastructure correlation via OTEL Collector
+ */
+export const CAIPE_OBSERVABILITY = {
+  /** Langfuse LLM observability platform */
+  langfuse: {
+    /** Internal Langfuse service URL */
+    host: 'http://langfuse.observability.svc.cluster.local:3000',
+    /** Enable Langfuse tracing */
+    enabled: 'true',
+  },
+  /** OpenTelemetry Collector endpoints */
+  otel: {
+    /** gRPC endpoint for OTEL SDK (port 4317) */
+    grpcEndpoint: 'http://otel-collector.observability.svc.cluster.local:4317',
+    /** HTTP endpoint for OTEL SDK (port 4318) */
+    httpEndpoint: 'http://otel-collector.observability.svc.cluster.local:4318',
+  },
+  /** Tracing configuration */
+  tracing: {
+    /** Enable distributed tracing via cnoe-agent-utils */
+    enabled: 'true',
+  },
+  /** Metrics configuration */
+  metrics: {
+    /** Enable Prometheus metrics export */
+    enabled: 'true',
+  },
+} as const;
+
+/**
+ * Generate observability environment variables for CAIPE agents
+ * @param serviceName The OTEL service name (e.g., 'caipe-supervisor-agent')
+ */
+export function getCaipeObservabilityEnvVars(serviceName: string): Record<string, string> {
+  return {
+    // cnoe-agent-utils tracing control
+    ENABLE_TRACING: CAIPE_OBSERVABILITY.tracing.enabled,
+    // OpenTelemetry configuration
+    OTEL_EXPORTER_OTLP_ENDPOINT: CAIPE_OBSERVABILITY.otel.grpcEndpoint,
+    OTEL_SERVICE_NAME: serviceName,
+    // Langfuse configuration
+    LANGFUSE_ENABLED: CAIPE_OBSERVABILITY.langfuse.enabled,
+    LANGFUSE_HOST: CAIPE_OBSERVABILITY.langfuse.host,
+    // Prometheus metrics
+    METRICS_ENABLED: CAIPE_OBSERVABILITY.metrics.enabled,
   };
 }
