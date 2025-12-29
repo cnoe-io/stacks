@@ -3056,7 +3056,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'SpecKitAgentsChart',
       props: {
         namespace: 'dapr-agents',
-        agentImage: 'vpittamp/speckit-agents',  // Local image loaded into kind
+        agentImage: 'vpittamp23/speckit-agents',  // Docker Hub image
         imageTag: 'claude-sdk-v9',  // Fixed: all directory creation issues
         teamName: 'speckit',
         pubsubName: 'messagepubsub',
