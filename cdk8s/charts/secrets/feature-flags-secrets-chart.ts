@@ -225,5 +225,51 @@ export class FeatureFlagsSecretsChart extends Chart {
         ],
       },
     });
+
+    // ExternalSecret: Copy idpbuilder-cert CA from default namespace
+    // This allows Flipt to trust the self-signed TLS certificates used by Gitea
+    new ExternalSecret(this, 'idpbuilder-cert', {
+      metadata: {
+        name: 'idpbuilder-cert',
+        namespace: namespace,
+        labels: {
+          'app.kubernetes.io/name': 'idpbuilder',
+          'app.kubernetes.io/component': 'ca-cert',
+          'app.kubernetes.io/part-of': 'feature-flags',
+        },
+        annotations: {
+          'argocd.argoproj.io/sync-wave': syncWave,
+        },
+      },
+      spec: {
+        refreshInterval: '24h',  // CA cert doesn't change often
+        secretStoreRef: {
+          name: 'default-namespace',
+          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+        },
+        target: {
+          name: 'idpbuilder-cert',
+          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+          template: {
+            type: 'Opaque',
+            metadata: {
+              labels: {
+                'app.kubernetes.io/name': 'idpbuilder',
+                'app.kubernetes.io/component': 'ca-cert',
+              },
+            },
+          },
+        },
+        data: [
+          {
+            secretKey: 'ca.crt',
+            remoteRef: {
+              key: 'idpbuilder-cert',
+              property: 'ca.crt',
+            },
+          },
+        ],
+      },
+    });
   }
 }

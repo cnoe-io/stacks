@@ -223,6 +223,7 @@ telemetry:
               {
                 name: 'flipt',
                 image: `ghcr.io/flipt-io/flipt:v${imageVersion}`,
+                command: ['/flipt'],
                 args: [
                   '--config', '/etc/flipt/flipt.yml',
                 ],
@@ -239,6 +240,9 @@ telemetry:
                 env: [
                   // Additional environment variables
                   { name: 'FLIPT_LOG_LEVEL', value: 'info' },
+                  // Use idpbuilder CA for TLS verification
+                  { name: 'GIT_SSL_CAINFO', value: '/etc/ssl/certs/idpbuilder-ca.crt' },
+                  { name: 'SSL_CERT_FILE', value: '/etc/ssl/certs/idpbuilder-ca.crt' },
                 ],
                 volumeMounts: [
                   {
@@ -249,6 +253,12 @@ telemetry:
                   {
                     name: 'data',
                     mountPath: '/var/opt/flipt',
+                  },
+                  {
+                    name: 'idpbuilder-ca',
+                    mountPath: '/etc/ssl/certs/idpbuilder-ca.crt',
+                    subPath: 'ca.crt',
+                    readOnly: true,
                   },
                 ],
                 resources: {
@@ -298,6 +308,12 @@ telemetry:
                 name: 'data',
                 persistentVolumeClaim: {
                   claimName: 'flipt-data',
+                },
+              },
+              {
+                name: 'idpbuilder-ca',
+                secret: {
+                  secretName: 'idpbuilder-cert',
                 },
               },
             ],

@@ -3983,7 +3983,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'FlagdChart',
       props: {
         namespace: 'feature-flags',
-        imageVersion: '0.10.4',
+        imageVersion: '0.11.0',
         fliptHost: 'flipt.feature-flags.svc.cluster.local',
         fliptPort: 8080
       }
@@ -4013,7 +4013,7 @@ export const applicationConfigs: ApplicationConfig[] = [
       type: 'FliptChart',
       props: {
         namespace: 'feature-flags',
-        imageVersion: '2.5.0',
+        imageVersion: '1.56.0',
         ingressHost: getIngressHost('flipt')
       }
     },

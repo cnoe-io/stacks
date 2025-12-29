@@ -107,8 +107,24 @@ export class FlagdChart extends Chart {
       data: {
         'flagd.json': JSON.stringify({
           '$schema': 'https://flagd.dev/schema/v0/flags.json',
-          // Default empty flags - will be synced from Flipt
-          'flags': {},
+          'flags': {
+            'new-checkout-flow': {
+              'state': 'ENABLED',
+              'variants': {
+                'on': true,
+                'off': false,
+              },
+              'defaultVariant': 'off',
+            },
+            'dark-mode': {
+              'state': 'ENABLED',
+              'variants': {
+                'on': true,
+                'off': false,
+              },
+              'defaultVariant': 'on',
+            },
+          },
         }, null, 2),
       },
     });
@@ -153,7 +169,8 @@ export class FlagdChart extends Chart {
                 image: `ghcr.io/open-feature/flagd:v${imageVersion}`,
                 args: [
                   'start',
-                  '--uri', `grpc://${fliptHost}:9000`,  // Flipt gRPC endpoint for sync
+                  // Use ConfigMap as flag source - Flipt is for management UI only
+                  '--uri', 'file:/etc/flagd/flagd.json',
                   '--management-port', '8015',
                   '--port', '8013',
                   '--ofrep-port', '8016',
@@ -180,6 +197,13 @@ export class FlagdChart extends Chart {
                     memory: k8s.Quantity.fromString(memoryLimit),
                   },
                 },
+                volumeMounts: [
+                  {
+                    name: 'flagd-config',
+                    mountPath: '/etc/flagd',
+                    readOnly: true,
+                  },
+                ],
                 securityContext: {
                   allowPrivilegeEscalation: false,
                   readOnlyRootFilesystem: true,
@@ -188,22 +212,28 @@ export class FlagdChart extends Chart {
                   },
                 },
                 livenessProbe: {
-                  httpGet: {
-                    path: '/healthz',
-                    port: k8s.IntOrString.fromNumber(8015),
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(8013),
                   },
                   initialDelaySeconds: 10,
                   periodSeconds: 10,
                   failureThreshold: 3,
                 },
                 readinessProbe: {
-                  httpGet: {
-                    path: '/readyz',
-                    port: k8s.IntOrString.fromNumber(8015),
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(8013),
                   },
                   initialDelaySeconds: 5,
                   periodSeconds: 5,
                   failureThreshold: 3,
+                },
+              },
+            ],
+            volumes: [
+              {
+                name: 'flagd-config',
+                configMap: {
+                  name: 'flagd-config',
                 },
               },
             ],
