@@ -781,9 +781,11 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'backstage',
         'kargo.akuity.io/loop': 'outer'
       },
-      // TEMPORARY: Disable auto-sync to allow imperative image management
-      // while debugging migration lock issues with vpittamp image
       syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        },
         syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
       }
     }
