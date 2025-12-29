@@ -1047,12 +1047,494 @@ export function generateLgtmOverviewDashboard(): object {
 }
 
 /**
+ * Generate CAIPE (AI Platform Engineering) Dashboard
+ * Shows agent performance, token usage, errors, and trace volume
+ */
+export function generateCaipeDashboard(): object {
+  return {
+    title: 'CAIPE Platform Monitor',
+    uid: 'caipe-platform',
+    editable: true,
+    tags: ['caipe', 'ai-platform', 'agents', 'rag', 'llm'],
+    time: { from: 'now-1h', to: 'now' },
+    refresh: '30s',
+    templating: {
+      list: [
+        {
+          name: 'service',
+          type: 'query',
+          datasource: { type: 'prometheus', uid: 'mimir' },
+          query: 'label_values(up{namespace="ai-platform-engineering"}, service)',
+          refresh: 2,
+          includeAll: true,
+          allValue: '.*',
+          current: { text: 'All', value: '$__all' },
+        },
+      ],
+    },
+    panels: [
+      // =======================================================================
+      // Row 1: Overview Stats
+      // =======================================================================
+      {
+        id: 1,
+        title: 'Active Agents',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 0, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'count(up{namespace="ai-platform-engineering", job=~".*agent.*"} == 1)',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'red', value: null },
+                { color: 'yellow', value: 1 },
+                { color: 'green', value: 4 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 2,
+        title: 'RAG Components',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 4, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'count(up{namespace="ai-platform-engineering", job=~".*(rag|nexigraph).*"} == 1)',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'red', value: null },
+                { color: 'yellow', value: 1 },
+                { color: 'green', value: 2 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 3,
+        title: 'Traces (1h)',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 8, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(increase(traces_spanmetrics_calls_total{service_name=~"caipe-.*"}[1h]))',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'short',
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'blue', value: null },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 4,
+        title: 'Error Rate (5m)',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 12, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*", status_code="STATUS_CODE_ERROR"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*"}[5m])) * 100',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'percent',
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'green', value: null },
+                { color: 'yellow', value: 1 },
+                { color: 'red', value: 5 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 5,
+        title: 'Total Tokens (24h)',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 16, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(increase(gen_ai_client_token_usage_total{service_name=~"caipe-.*"}[24h]))',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'short',
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'blue', value: null },
+                { color: 'yellow', value: 100000 },
+                { color: 'red', value: 500000 },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 6,
+        title: 'Avg Latency (P95)',
+        type: 'stat',
+        gridPos: { h: 4, w: 4, x: 20, y: 0 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~"caipe-.*"}[5m])) by (le))',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 's',
+            thresholds: {
+              mode: 'absolute',
+              steps: [
+                { color: 'green', value: null },
+                { color: 'yellow', value: 5 },
+                { color: 'red', value: 30 },
+              ],
+            },
+          },
+        },
+      },
+      // =======================================================================
+      // Row 2: Agent Latency and Request Rate
+      // =======================================================================
+      {
+        id: 7,
+        title: 'Agent Request Latency (P50, P95, P99)',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 0, y: 4 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{service_name=~"caipe-.*agent.*"}[5m])) by (le, service_name))',
+            legendFormat: '{{service_name}} P50',
+            refId: 'A',
+          },
+          {
+            expr: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~"caipe-.*agent.*"}[5m])) by (le, service_name))',
+            legendFormat: '{{service_name}} P95',
+            refId: 'B',
+          },
+          {
+            expr: 'histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket{service_name=~"caipe-.*agent.*"}[5m])) by (le, service_name))',
+            legendFormat: '{{service_name}} P99',
+            refId: 'C',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 's',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 8,
+        title: 'Request Rate by Agent',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 12, y: 4 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*"}[5m])) by (service_name)',
+            legendFormat: '{{service_name}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'reqps',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      // =======================================================================
+      // Row 3: Token Usage
+      // =======================================================================
+      {
+        id: 9,
+        title: 'Token Usage by Agent',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 0, y: 12 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(gen_ai_client_token_usage_total{service_name=~"caipe-.*"}[5m])) by (service_name, type)',
+            legendFormat: '{{service_name}} - {{type}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'tokens/s',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 10,
+        title: 'Token Usage Distribution (24h)',
+        type: 'piechart',
+        gridPos: { h: 8, w: 6, x: 12, y: 12 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum by (service_name) (increase(gen_ai_client_token_usage_total{service_name=~"caipe-.*"}[24h]))',
+            legendFormat: '{{service_name}}',
+            refId: 'A',
+          },
+        ],
+        options: {
+          pieType: 'pie',
+          legend: { displayMode: 'table', placement: 'right' },
+        },
+      },
+      {
+        id: 11,
+        title: 'Input vs Output Tokens (24h)',
+        type: 'piechart',
+        gridPos: { h: 8, w: 6, x: 18, y: 12 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum by (type) (increase(gen_ai_client_token_usage_total{service_name=~"caipe-.*"}[24h]))',
+            legendFormat: '{{type}}',
+            refId: 'A',
+          },
+        ],
+        options: {
+          pieType: 'pie',
+          legend: { displayMode: 'table', placement: 'right' },
+        },
+      },
+      // =======================================================================
+      // Row 4: Errors and Traces
+      // =======================================================================
+      {
+        id: 12,
+        title: 'Error Rate by Agent',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 0, y: 20 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*", status_code="STATUS_CODE_ERROR"}[5m])) by (service_name)',
+            legendFormat: '{{service_name}} errors',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'reqps',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+            color: { mode: 'palette-classic' },
+          },
+        },
+      },
+      {
+        id: 13,
+        title: 'Trace Volume Over Time',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 12, y: 20 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*"}[5m])) by (service_name)',
+            legendFormat: '{{service_name}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'short',
+            custom: { lineWidth: 2, fillOpacity: 20, stacking: { mode: 'normal' } },
+          },
+        },
+      },
+      // =======================================================================
+      // Row 5: RAG Components
+      // =======================================================================
+      {
+        id: 14,
+        title: 'RAG Server Latency',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 8, x: 0, y: 28 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{service_name="caipe-rag-server"}[5m])) by (le, span_name))',
+            legendFormat: '{{span_name}} P50',
+            refId: 'A',
+          },
+          {
+            expr: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name="caipe-rag-server"}[5m])) by (le, span_name))',
+            legendFormat: '{{span_name}} P95',
+            refId: 'B',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 's',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 15,
+        title: 'NexiGraph (Ontology) Latency',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 8, x: 8, y: 28 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{service_name="caipe-nexigraph"}[5m])) by (le, span_name))',
+            legendFormat: '{{span_name}} P50',
+            refId: 'A',
+          },
+          {
+            expr: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name="caipe-nexigraph"}[5m])) by (le, span_name))',
+            legendFormat: '{{span_name}} P95',
+            refId: 'B',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 's',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 16,
+        title: 'Tool Call Frequency',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 8, x: 16, y: 28 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(traces_spanmetrics_calls_total{service_name=~"caipe-.*", span_name=~".*tool.*"}[5m])) by (span_name)',
+            legendFormat: '{{span_name}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'reqps',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      // =======================================================================
+      // Row 6: Resource Usage
+      // =======================================================================
+      {
+        id: 17,
+        title: 'CPU Usage by Pod',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 0, y: 36 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(rate(container_cpu_usage_seconds_total{namespace="ai-platform-engineering", container!=""}[5m])) by (pod)',
+            legendFormat: '{{pod}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'percentunit',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      {
+        id: 18,
+        title: 'Memory Usage by Pod',
+        type: 'timeseries',
+        gridPos: { h: 8, w: 12, x: 12, y: 36 },
+        datasource: { type: 'prometheus', uid: 'mimir' },
+        targets: [
+          {
+            expr: 'sum(container_memory_working_set_bytes{namespace="ai-platform-engineering", container!=""}) by (pod)',
+            legendFormat: '{{pod}}',
+            refId: 'A',
+          },
+        ],
+        fieldConfig: {
+          defaults: {
+            unit: 'bytes',
+            custom: { lineWidth: 2, fillOpacity: 10 },
+          },
+        },
+      },
+      // =======================================================================
+      // Row 7: Logs Panel with Trace Link
+      // =======================================================================
+      {
+        id: 19,
+        title: 'Recent CAIPE Logs (click trace_id to view trace)',
+        type: 'logs',
+        gridPos: { h: 10, w: 24, x: 0, y: 44 },
+        datasource: { type: 'loki', uid: 'loki' },
+        targets: [
+          {
+            expr: '{namespace="ai-platform-engineering"} |= "$service"',
+            refId: 'A',
+          },
+        ],
+        options: {
+          showTime: true,
+          showLabels: true,
+          wrapLogMessage: true,
+          enableLogDetails: true,
+          dedupStrategy: 'none',
+        },
+      },
+    ],
+  };
+}
+
+/**
  * Generate all custom dashboards as a map of filename to JSON content
  */
 export function generateDashboardConfigs(): Record<string, string> {
   return {
     'genai-monitor.json': JSON.stringify(generateGenAiDashboard(), null, 2),
     'lgtm-overview.json': JSON.stringify(generateLgtmOverviewDashboard(), null, 2),
+    'caipe-platform.json': JSON.stringify(generateCaipeDashboard(), null, 2),
   };
 }
 

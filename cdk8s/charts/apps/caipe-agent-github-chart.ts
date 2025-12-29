@@ -15,6 +15,7 @@ import {
   CAIPE_NAMESPACE,
   CAIPE_SYNC_WAVES,
   CAIPE_PORTS,
+  CAIPE_OBSERVABILITY,
   getCaipeAgentLabels,
 } from '../../lib/caipe-helpers';
 
@@ -104,6 +105,14 @@ export class CaipeAgentGithubChart extends Chart {
                   // Agent identification
                   { name: 'AGENT_NAME', value: 'agent-github' },
                   { name: 'AGENT_DESCRIPTION', value: 'GitHub agent for repository operations' },
+                  // Observability - cnoe-agent-utils tracing control
+                  { name: 'ENABLE_TRACING', value: CAIPE_OBSERVABILITY.tracing.enabled },
+                  // Observability - OpenTelemetry for distributed tracing (Tempo)
+                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: CAIPE_OBSERVABILITY.otel.grpcEndpoint },
+                  { name: 'OTEL_SERVICE_NAME', value: 'caipe-agent-github' },
+                  // Observability - Langfuse for LLM-specific tracing
+                  { name: 'LANGFUSE_ENABLED', value: CAIPE_OBSERVABILITY.langfuse.enabled },
+                  { name: 'LANGFUSE_HOST', value: CAIPE_OBSERVABILITY.langfuse.host },
                 ],
                 envFrom: [
                   {
@@ -114,6 +123,12 @@ export class CaipeAgentGithubChart extends Chart {
                   {
                     secretRef: {
                       name: llmSecretName,
+                    },
+                  },
+                  {
+                    // Langfuse API credentials for tracing
+                    secretRef: {
+                      name: 'caipe-langfuse-credentials',
                     },
                   },
                 ],

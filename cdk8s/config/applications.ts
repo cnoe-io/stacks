@@ -1067,6 +1067,29 @@ export const applicationConfigs: ApplicationConfig[] = [
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
   },
+  // Phase 5: CAIPE Observability - ServiceMonitors for Prometheus metrics
+  {
+    name: 'caipe-servicemonitor',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeServiceMonitorChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        scrapeInterval: '30s',
+      },
+    },
+    argocd: {
+      syncWave: '110',  // After all agents are deployed
+      labels: {
+        'app.kubernetes.io/component': 'observability',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-servicemonitor',
+        'tier': 'observability'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
   // Phase 6+: GraphRAG enhancements, Document Ingestion, Optional agents
   // Backstage Staging - Outer Loop (Kargo Pipeline Target for Talos)
   // Manual promotion from dev stage to staging (Talos cluster)
