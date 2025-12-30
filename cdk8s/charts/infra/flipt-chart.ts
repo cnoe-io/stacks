@@ -14,6 +14,7 @@ import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
 import { getClusterSuffix } from '../../lib/cluster-identity';
+import { GITEA } from '../../lib/kargo-helpers';
 
 export interface FliptChartProps extends ChartProps {
   /**
@@ -86,11 +87,13 @@ export class FliptChart extends Chart {
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const isKind = baseHost === 'cnoe.localtest.me';
     const portSuffix = isKind ? ':8443' : '';
-    const ingressHost = props?.ingressHost || `flipt${getClusterSuffix()}.${baseHost}`;
+    // Use simple flipt.{baseHost} - no cluster suffix needed for local dev
+    const ingressHost = props?.ingressHost || `flipt.${baseHost}`;
 
-    // Git repository URL
-    const giteaHost = isKind ? `gitea.${baseHost}${portSuffix}` : `gitea.${baseHost}`;
-    const gitRepositoryUrl = props?.gitRepositoryUrl || `https://${giteaHost}/giteaAdmin/feature-flags.git`;
+    // Git repository URL - use internal cluster DNS for in-cluster operations
+    // This avoids external network hops via ingress/Tailscale
+    // Note: Internal Gitea service uses HTTP on port 3000, so we use http:// here
+    const gitRepositoryUrl = props?.gitRepositoryUrl || `http://${GITEA.INTERNAL_HOST}/giteaAdmin/feature-flags.git`;
     const gitBranch = props?.gitBranch || 'main';
     const gitPollInterval = props?.gitPollInterval || '30s';
 
@@ -161,7 +164,7 @@ authentication:
           issuer_url: "https://${baseHost}${portSuffix}/keycloak/realms/cnoe"
           client_id: "flipt"
           # client_secret provided via FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET env var
-          redirect_address: "https://${ingressHost}"
+          redirect_address: "https://${ingressHost}${portSuffix}"
           scopes:
             - openid
             - profile

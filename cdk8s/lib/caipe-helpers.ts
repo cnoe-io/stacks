@@ -127,6 +127,10 @@ export const CAIPE_KEYVAULT_KEYS = {
   // Embeddings (reuses Azure OpenAI)
   embeddingsApiKey: 'AZURE-OPENAI-API-KEY',
   embeddingsEndpoint: 'AZURE-OPENAI-ENDPOINT',
+
+  // Langfuse (reuses observability Langfuse keys)
+  langfusePublicKey: 'LANGFUSE-PUBLIC-KEY',
+  langfuseSecretKey: 'LANGFUSE-SECRET-KEY',
 } as const;
 
 // =============================================================================

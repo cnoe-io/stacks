@@ -127,16 +127,23 @@ export class CaipeSupervisorChart extends Chart {
                   // Observability - Prometheus metrics
                   { name: 'METRICS_ENABLED', value: 'true' },
                   { name: 'METRICS_PORT', value: String(CAIPE_PORTS.supervisorAgent) },
-                  // Observability - OpenTelemetry for Langfuse
+                  // Observability - OpenTelemetry
                   { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://otel-collector.observability.svc.cluster.local:4317' },
                   { name: 'OTEL_SERVICE_NAME', value: 'supervisor-agent' },
-                  { name: 'LANGFUSE_ENABLED', value: 'true' },
+                  // Langfuse tracing - ENABLE_TRACING is what TracingManager checks
+                  { name: 'ENABLE_TRACING', value: 'true' },
                   { name: 'LANGFUSE_HOST', value: 'http://langfuse.observability.svc.cluster.local:3000' },
                 ],
                 envFrom: [
                   {
                     secretRef: {
                       name: llmSecretName,
+                    },
+                  },
+                  // Langfuse API credentials from Azure Key Vault
+                  {
+                    secretRef: {
+                      name: 'langfuse-api-keys',
                     },
                   },
                 ],

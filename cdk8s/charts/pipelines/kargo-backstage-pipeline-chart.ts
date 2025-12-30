@@ -81,7 +81,7 @@ export class KargoBackstagePipelineChart extends Chart {
 
       // Stage: backstage-local-dev
       // Auto-promotes new images from Gitea warehouse to local-dev deployment
-      // Uses GITEA.GIT_BASE_URL which respects GITEA_TAILSCALE_HOST env var
+      // Uses GITEA.GIT_BASE_URL which now defaults to internal cluster DNS
       createStage(this, 'backstage-local-dev-stage', {
         name: 'backstage-local-dev',
         namespace,
@@ -131,8 +131,7 @@ export class KargoBackstagePipelineChart extends Chart {
 
       // Stage: backstage (primary)
       // Auto-promotes new CI images to primary backstage deployment
-      // Note: Using actual Gitea URL for git operations (idpbuilder translates cnoe:// URLs)
-      const giteaBaseUrl = 'https://gitea.cnoe.localtest.me:8443/giteaAdmin';
+      // Uses internal cluster DNS for in-cluster git operations
       createStage(this, 'backstage-stage', {
         name: 'backstage',
         namespace,
@@ -143,7 +142,7 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage',
           namespace: 'argocd',
-          repoUrl: `${giteaBaseUrl}/idpbuilder-${clusterHost}-backstage-manifests.git`,
+          repoUrl: `${GITEA.GIT_BASE_URL_INTERNAL}/idpbuilder-${clusterHost}-backstage-manifests.git`,
           imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         },
         customVars: [

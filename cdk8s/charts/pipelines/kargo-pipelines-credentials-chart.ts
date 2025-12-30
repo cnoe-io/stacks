@@ -141,10 +141,12 @@ export class KargoPipelinesCredentialsChart extends Chart {
         }
       },
       templateData: {
-        // Use regex to match all giteaAdmin repositories from both local and Tailscale URLs
-        // The regex matches: https://gitea.cnoe.localtest.me:8443/giteaAdmin/*
-        // OR https://gitea-<cluster>.tail*.ts.net/giteaAdmin/*
-        repoURL: `https://gitea[^/]*/giteaAdmin/.*`,
+        // Use regex to match all giteaAdmin repositories from internal, local, and Tailscale URLs
+        // The regex matches:
+        // - https://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/* (internal - PREFERRED)
+        // - https://gitea.cnoe.localtest.me:8443/giteaAdmin/* (external local)
+        // - https://gitea-<cluster>.tail*.ts.net/giteaAdmin/* (external Tailscale)
+        repoURL: `https://(my-gitea-http\\.gitea\\.svc\\.cluster\\.local:\\d+|gitea[^/]*)/giteaAdmin/.*`,
         repoURLIsRegex: 'true',
         username: '{{ .username }}',
         password: '{{ .token }}'
@@ -162,7 +164,7 @@ export class KargoPipelinesCredentialsChart extends Chart {
     giteaGitCreds.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': '-15' }));
 
     // Create image credentials for Kargo to discover/pull from Gitea OCI registry
-    // Required for warehouses that subscribe to gitea.cnoe.localtest.me:8443/giteaadmin/*
+    // Required for warehouses that subscribe to internal cluster DNS (my-gitea-http.gitea.svc.cluster.local:3000)
     const giteaImageRepoUrl = `${REGISTRY.GITEA}/backstage-cnoe`;
     const giteaImageCreds = createEnvExternalSecret(this, 'kargo-gitea-image-credentials-external', {
       externalName: 'kargo-gitea-image-credentials-external',

@@ -4014,7 +4014,8 @@ export const applicationConfigs: ApplicationConfig[] = [
       props: {
         namespace: 'feature-flags',
         imageVersion: '1.56.0',
-        ingressHost: getIngressHost('flipt')
+        // Use simple flipt.{baseHost} - no cluster suffix for local dev simplicity
+        ingressHost: `flipt.${ingressBaseHost}`
       }
     },
     argocd: {

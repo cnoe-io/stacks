@@ -117,10 +117,50 @@ export class KeycloakClientsChart extends Chart {
 
     const generateFliptRedirectUris = (): string[] => {
       const uris: string[] = [];
+
+      // Extract base domains from hosts (remove leading subdomain like 'backstage.')
+      // e.g., 'backstage.cnoe.localtest.me' -> 'cnoe.localtest.me'
+      // e.g., 'backstage-thinkpad.tail286401.ts.net' -> 'tail286401.ts.net'
+      const extractBaseDomain = (hostname: string): string => {
+        const prefixes = ['backstage.', 'backstage-local-dev.', 'backstage-thinkpad.', 'backstage-ryzen.', 'backstage-hetzner.'];
+        for (const prefix of prefixes) {
+          if (hostname.startsWith(prefix)) {
+            return hostname.slice(prefix.length);
+          }
+        }
+        return hostname;
+      };
+
+      // Collect unique base domains with their ports
+      const baseDomains = new Map<string, number>();
       for (const host of hosts) {
-        const baseUrl = buildBaseUrl(host);
-        uris.push(`${baseUrl}/flipt/auth/v1/method/oidc/keycloak/callback`);
+        const baseDomain = extractBaseDomain(host.hostname);
+        const port = host.port ?? 443;
+        if (!baseDomains.has(baseDomain)) {
+          baseDomains.set(baseDomain, port);
+        }
       }
+
+      // Generate redirect URIs for each unique base domain
+      for (const [baseDomain, port] of baseDomains) {
+        const portSuffix = port === 443 ? '' : `:${port}`;
+        // Cluster-specific prefixes only for Tailscale (multi-cluster remote access)
+        const isTailscale = baseDomain.endsWith('.ts.net');
+
+        // Path-based routing (e.g., /flipt/auth/...)
+        uris.push(`https://${baseDomain}${portSuffix}/flipt/auth/v1/method/oidc/keycloak/callback`);
+
+        // Subdomain-based routing (flipt.{domain})
+        uris.push(`https://flipt.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+
+        // Cluster-specific prefixes only for Tailscale domains
+        if (isTailscale) {
+          uris.push(`https://flipt-thinkpad.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-ryzen.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-hetzner.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+        }
+      }
+
       // Internal cluster access
       uris.push('http://flipt.feature-flags.svc.cluster.local:8080/auth/v1/method/oidc/keycloak/callback');
       return [...new Set(uris)];

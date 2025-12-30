@@ -536,7 +536,7 @@ runcmd:
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
     echo "Authenticating Tailscale with injected auth key..."
-    tailscale up --authkey="${tailscaleAuthKey}" --ssh --advertise-tags=tag:vm && \\
+    tailscale up --authkey="${tailscaleAuthKey}" --ssh --advertise-tags=tag:vm --reset && \\
       echo "✓ Tailscale authenticated successfully" || \\
       echo "✗ Tailscale authentication failed"`;
     } else {
@@ -547,7 +547,7 @@ runcmd:
     # Wait for tailscaled to be ready
     timeout 30 sh -c 'until tailscale status 2>&1 | grep -q "Logged out\\|100\\."; do sleep 1; done'
     echo "No auth key provided - attempting OAuth (one-time setup)..."
-    tailscale up --ssh --advertise-tags=tag:vm || \\
+    tailscale up --ssh --advertise-tags=tag:vm --reset || \\
       echo "Tailscale OAuth required - visit the URL shown above"`;
     }
   }

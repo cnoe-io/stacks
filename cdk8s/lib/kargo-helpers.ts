@@ -290,38 +290,77 @@ export function createStage(scope: Construct, id: string, config: StageConfig): 
 /**
  * Gitea host configuration
  *
- * GITEA can be configured via environment variables:
- * - GITEA_TAILSCALE_HOST: Tailscale hostname for Gitea (e.g., 'gitea-thinkpad.tail286401.ts.net')
- *   When set, uses Tailscale address which is accessible from cluster worker nodes.
- * - Falls back to 'gitea.cnoe.localtest.me:8443' (only works in single-node clusters)
+ * IMPORTANT: For in-cluster operations (Kargo pipelines, etc.), always use INTERNAL_HOST
+ * to avoid unnecessary external network hops via Tailscale or ingress.
+ *
+ * Host hierarchy:
+ * 1. INTERNAL_HOST: Use for all in-cluster K8s operations (Kargo, pipelines, pods)
+ * 2. EXTERNAL_HOST: Use only for external/browser access (Tailscale if set, otherwise local ingress)
+ *
+ * GITEA_TAILSCALE_HOST env var is now only used for external access scenarios.
  */
 const giteaTailscaleHost = process.env.GITEA_TAILSCALE_HOST;
-const giteaHost = giteaTailscaleHost || 'gitea.cnoe.localtest.me:8443';
-const giteaRegistry = `${giteaHost}/giteaadmin`;
+
+/** Internal cluster DNS for Gitea - works from any pod in the cluster */
+const giteaInternalHost = 'my-gitea-http.gitea.svc.cluster.local:3000';
+
+/** External host for browser/user access (Tailscale preferred, fallback to local ingress) */
+const giteaExternalHost = giteaTailscaleHost || 'gitea.cnoe.localtest.me:8443';
+
+/** Registry host - use internal for in-cluster operations */
+const giteaInternalRegistry = `${giteaInternalHost}/giteaadmin`;
+const giteaExternalRegistry = `${giteaExternalHost}/giteaadmin`;
 
 /**
  * Gitea host URLs for Git and registry operations
+ *
+ * BEST PRACTICE:
+ * - Use GITEA.INTERNAL_* for Kargo warehouses, pipelines, and any in-cluster operations
+ * - Use GITEA.EXTERNAL_* only for URLs that users access in browsers
  */
 export const GITEA = {
-  /** Current Gitea host (Tailscale if set, otherwise local) */
-  HOST: giteaHost,
+  /** Internal host for in-cluster operations (Kargo, pipelines) - PREFERRED */
+  INTERNAL_HOST: giteaInternalHost,
+  /** Internal Git base URL for in-cluster operations - PREFERRED for Kargo */
+  GIT_BASE_URL_INTERNAL: `https://${giteaInternalHost}/giteaAdmin`,
+  /** Internal registry for in-cluster operations - PREFERRED for Kargo warehouses */
+  REGISTRY_INTERNAL: giteaInternalRegistry,
+
+  /** External host for browser/user access (Tailscale or local ingress) */
+  EXTERNAL_HOST: giteaExternalHost,
+  /** External Git base URL for browser access */
+  GIT_BASE_URL_EXTERNAL: `https://${giteaExternalHost}/giteaAdmin`,
+  /** External registry for browser access */
+  REGISTRY_EXTERNAL: giteaExternalRegistry,
+
   /** Tailscale host if configured, null otherwise */
   TAILSCALE_HOST: giteaTailscaleHost || null,
-  /** Local Gitea host (always available, but may not work from worker nodes) */
+  /** Local ingress host (may not work from worker nodes in multi-node clusters) */
   LOCAL_HOST: 'gitea.cnoe.localtest.me:8443',
-  /** Git base URL for Gitea repositories */
-  GIT_BASE_URL: `https://${giteaHost}/giteaAdmin`,
-  /** Local Git base URL */
+
+  // Legacy aliases - DEPRECATED, use INTERNAL_* or EXTERNAL_* instead
+  /** @deprecated Use INTERNAL_HOST for in-cluster, EXTERNAL_HOST for browser access */
+  HOST: giteaInternalHost,
+  /** @deprecated Use GIT_BASE_URL_INTERNAL for in-cluster operations */
+  GIT_BASE_URL: `https://${giteaInternalHost}/giteaAdmin`,
+  /** @deprecated Use GIT_BASE_URL_EXTERNAL for browser access */
   GIT_BASE_URL_LOCAL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin',
-  /** Whether we're using Tailscale */
+  /** Whether Tailscale is configured for external access */
   IS_TAILSCALE: !!giteaTailscaleHost,
 };
 
 /**
  * Default registry URLs
+ *
+ * BEST PRACTICE: Use GITEA_INTERNAL for Kargo warehouses and in-cluster operations
  */
 export const REGISTRY = {
-  GITEA: giteaRegistry,
+  /** Internal Gitea registry - PREFERRED for Kargo warehouses */
+  GITEA_INTERNAL: giteaInternalRegistry,
+  /** External Gitea registry (Tailscale or local ingress) */
+  GITEA_EXTERNAL: giteaExternalRegistry,
+  /** @deprecated Use GITEA_INTERNAL for in-cluster operations */
+  GITEA: giteaInternalRegistry,
   GITEA_LOCAL: 'gitea.cnoe.localtest.me:8443/giteaadmin',
   GITEA_TAILSCALE: giteaTailscaleHost ? `${giteaTailscaleHost}/giteaadmin` : null,
   GHCR: 'ghcr.io/pittampalliorg',

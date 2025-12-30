@@ -132,13 +132,55 @@ export class KeycloakConfigChart extends Chart {
     // Generate all redirect URIs for Flipt across all configured hosts
     const generateFliptRedirectUris = (): string[] => {
       const uris: string[] = [];
+
+      // Extract base domains from hosts (remove leading subdomain like 'backstage.')
+      // e.g., 'backstage.cnoe.localtest.me' -> 'cnoe.localtest.me'
+      // e.g., 'backstage-thinkpad.tail286401.ts.net' -> 'tail286401.ts.net'
+      const extractBaseDomain = (hostname: string): string => {
+        // Known patterns to strip from the beginning
+        const prefixes = ['backstage.', 'backstage-local-dev.', 'backstage-thinkpad.', 'backstage-ryzen.', 'backstage-hetzner.'];
+        for (const prefix of prefixes) {
+          if (hostname.startsWith(prefix)) {
+            return hostname.slice(prefix.length);
+          }
+        }
+        // For domains like ai401kchat.com, return as-is
+        return hostname;
+      };
+
+      // Collect unique base domains with their ports
+      const baseDomains = new Map<string, number>();
       for (const host of hosts) {
-        const baseUrl = buildBaseUrl(host);
-        // Flipt uses /auth/v1/method/oidc/callback for OIDC callback
-        uris.push(`${baseUrl}/flipt/auth/v1/method/oidc/callback`);
-        // Also support direct access without path prefix
-        uris.push(`http://flipt.feature-flags.svc.cluster.local:8080/auth/v1/method/oidc/callback`);
+        const baseDomain = extractBaseDomain(host.hostname);
+        const port = host.port ?? 443;
+        // Use the port from the first occurrence of each base domain
+        if (!baseDomains.has(baseDomain)) {
+          baseDomains.set(baseDomain, port);
+        }
       }
+
+      // Generate redirect URIs for each unique base domain
+      for (const [baseDomain, port] of baseDomains) {
+        const portSuffix = port === 443 ? '' : `:${port}`;
+        // Cluster-specific prefixes only for Tailscale (multi-cluster remote access)
+        const isTailscale = baseDomain.endsWith('.ts.net');
+
+        // Path-based routing (e.g., /flipt/auth/...)
+        uris.push(`https://${baseDomain}${portSuffix}/flipt/auth/v1/method/oidc/keycloak/callback`);
+
+        // Subdomain-based routing (flipt.{domain})
+        uris.push(`https://flipt.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+
+        // Cluster-specific prefixes only for Tailscale domains
+        if (isTailscale) {
+          uris.push(`https://flipt-thinkpad.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-ryzen.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-hetzner.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+        }
+      }
+
+      // Internal cluster access
+      uris.push('http://flipt.feature-flags.svc.cluster.local:8080/auth/v1/method/oidc/keycloak/callback');
       return [...new Set(uris)];
     };
 
@@ -493,6 +535,18 @@ set -e
 	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
 	    -X PUT --data "$updated_json" \\
 	    \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id} >/dev/null
+
+	  # Ensure groups scope is added to client (idempotent - no error if already exists)
+	  echo "ensuring groups scope for client '\${client_name}'"
+	  local groups_scope_id
+	  groups_scope_id=$(curl -sS -H "Content-Type: application/json" \\
+	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+	  if [ -n "$groups_scope_id" ] && [ "$groups_scope_id" != "null" ]; then
+	    curl -sS -H "Content-Type: application/json" \\
+	      -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	      -X PUT \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id}/default-client-scopes/\${groups_scope_id} 2>/dev/null || true
+	  fi
 	}
 
 	# If realm exists, check if keycloak-clients secret exists
