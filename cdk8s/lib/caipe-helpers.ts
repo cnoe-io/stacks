@@ -100,38 +100,56 @@ export function getCaipeAgentLabels(agentName: string): Record<string, string> {
 // Azure Key Vault Secret Keys
 // =============================================================================
 
-/** Azure Key Vault secret key names for CAIPE */
+/** Azure Key Vault secret key names for CAIPE (shared across clusters) */
 export const CAIPE_KEYVAULT_KEYS = {
-  // LLM Provider
+  // LLM Provider (shared - same Azure OpenAI instance)
   llmProvider: 'CAIPE-LLM-PROVIDER',
   azureOpenaiApiKey: 'AZURE-OPENAI-API-KEY',
   azureOpenaiEndpoint: 'AZURE-OPENAI-ENDPOINT',
   azureOpenaiApiVersion: 'AZURE-OPENAI-API-VERSION',
   azureOpenaiDeployment: 'AZURE-OPENAI-DEPLOYMENT',
 
-  // ArgoCD Agent
+  // ArgoCD Agent (cluster-specific - use getClusterSpecificKeyVaultKey())
   argocdToken: 'CAIPE-ARGOCD-TOKEN',
   argocdApiUrl: 'CAIPE-ARGOCD-API-URL',
   argocdVerifySsl: 'CAIPE-ARGOCD-VERIFY-SSL',
 
-  // GitHub Agent
+  // GitHub Agent (shared - same GitHub PAT)
   githubPat: 'CAIPE-GITHUB-PAT',
 
-  // Backstage Agent
+  // Backstage Agent (cluster-specific - use getClusterSpecificKeyVaultKey())
   backstageApiToken: 'CAIPE-BACKSTAGE-API-TOKEN',
   backstageUrl: 'CAIPE-BACKSTAGE-URL',
 
-  // Neo4j
+  // Neo4j (shared - same password across clusters)
   neo4jPassword: 'CAIPE-NEO4J-PASSWORD',
 
   // Embeddings (reuses Azure OpenAI)
   embeddingsApiKey: 'AZURE-OPENAI-API-KEY',
   embeddingsEndpoint: 'AZURE-OPENAI-ENDPOINT',
 
-  // Langfuse Observability (reuses existing Langfuse keys from observability namespace)
+  // Langfuse (reuses observability Langfuse keys)
   langfusePublicKey: 'LANGFUSE-PUBLIC-KEY',
   langfuseSecretKey: 'LANGFUSE-SECRET-KEY',
 } as const;
+
+/**
+ * Get cluster-specific Key Vault key name
+ * Appends cluster identifier to avoid naming collisions when multiple clusters
+ * push to the same Azure Key Vault.
+ *
+ * @param baseKey Base key name (e.g., 'CAIPE-ARGOCD-TOKEN')
+ * @param clusterId Cluster identifier (e.g., 'localdev', 'talos')
+ * @returns Cluster-specific key (e.g., 'CAIPE-ARGOCD-TOKEN-LOCALDEV')
+ */
+export function getClusterSpecificKeyVaultKey(baseKey: string, clusterId: string): string {
+  if (!clusterId) {
+    return baseKey;
+  }
+  // Normalize cluster ID to uppercase for Key Vault naming convention
+  const normalizedClusterId = clusterId.toUpperCase().replace(/[^A-Z0-9-]/g, '-');
+  return `${baseKey}-${normalizedClusterId}`;
+}
 
 // =============================================================================
 // URL Helpers
@@ -220,6 +238,10 @@ export function getSupervisorAgentEnvVars(externalUrl: string): Record<string, s
     FORCE_DEEP_AGENT_ORCHESTRATION: 'true',
     STREAM_SUB_AGENT_TOOL_OUTPUT: 'true',
     ENABLE_ARTIFACT_STREAMING: 'true',
+    // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+    ENABLE_ARGOCD: 'true',
+    ENABLE_GITHUB: 'true',
+    ENABLE_BACKSTAGE: 'true',
   };
 }
 

@@ -49,7 +49,8 @@ export class CaipeRagWebuiChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
-    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-webui:latest';
+    // Using 0.2.8 - Note: All versions have a date parsing bug that crashes UI when displaying datasources
+    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-webui:0.2.8';
     const baseHost = props.baseHost || process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.ragStack;
 
@@ -96,6 +97,11 @@ export class CaipeRagWebuiChart extends Chart {
                   {
                     name: 'RAG_SERVER_URL',
                     value: `http://rag-server.${namespace}.svc.cluster.local:${CAIPE_PORTS.ragServer}`,
+                  },
+                  // Enable nginx envsubst to process config templates and create proxy
+                  {
+                    name: 'NGINX_ENVSUBST_TEMPLATE_SUFFIX',
+                    value: '.conf',
                   },
                 ],
                 resources: {
@@ -157,7 +163,7 @@ export class CaipeRagWebuiChart extends Chart {
       },
     });
 
-    // Ingress for RAG WebUI
+    // Ingress for RAG WebUI (static frontend)
     new k8s.KubeIngress(this, 'rag-webui-ingress', {
       metadata: {
         name: 'rag-webui',
@@ -184,6 +190,97 @@ export class CaipeRagWebuiChart extends Chart {
                       name: 'rag-webui',
                       port: {
                         number: CAIPE_PORTS.ragWebui,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // Ingress for API proxy - routes /v1/* and /healthz to rag-server backend
+    new k8s.KubeIngress(this, 'rag-webui-api-ingress', {
+      metadata: {
+        name: 'rag-webui-api',
+        namespace: namespace,
+        labels: labels,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': syncWave,
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          'nginx.ingress.kubernetes.io/proxy-body-size': '50m',
+          'nginx.ingress.kubernetes.io/proxy-read-timeout': '300',
+          'nginx.ingress.kubernetes.io/proxy-send-timeout': '300',
+        },
+      },
+      spec: {
+        ingressClassName: 'nginx',
+        rules: [
+          {
+            host: ingressHost,
+            http: {
+              paths: [
+                {
+                  path: '/v1',
+                  pathType: 'Prefix',
+                  backend: {
+                    service: {
+                      name: 'rag-server',
+                      port: {
+                        number: CAIPE_PORTS.ragServer,
+                      },
+                    },
+                  },
+                },
+                {
+                  path: '/healthz',
+                  pathType: 'Exact',
+                  backend: {
+                    service: {
+                      name: 'rag-server',
+                      port: {
+                        number: CAIPE_PORTS.ragServer,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // Ingress for API endpoint rewrite - maps old UI endpoint to new server endpoint
+    // WebUI 0.2.8 calls /v1/datasource/ingest/url but server 0.2.8 has /v1/ingest/webloader/url
+    new k8s.KubeIngress(this, 'rag-webui-api-rewrite-ingress', {
+      metadata: {
+        name: 'rag-webui-api-rewrite',
+        namespace: namespace,
+        labels: labels,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': syncWave,
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          'nginx.ingress.kubernetes.io/rewrite-target': '/v1/ingest/webloader/url',
+        },
+      },
+      spec: {
+        ingressClassName: 'nginx',
+        rules: [
+          {
+            host: ingressHost,
+            http: {
+              paths: [
+                {
+                  path: '/v1/datasource/ingest/url',
+                  pathType: 'Exact',
+                  backend: {
+                    service: {
+                      name: 'rag-server',
+                      port: {
+                        number: CAIPE_PORTS.ragServer,
                       },
                     },
                   },

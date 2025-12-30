@@ -431,15 +431,7 @@ if [ -f "$STACKS_DIR/scripts/certificates/setup-browser-certs.sh" ]; then
     "$STACKS_DIR/scripts/certificates/setup-browser-certs.sh" 2>&1 | grep -E "(✓|Warning:|Error:)" || true
 fi
 
-# Step 13: Refresh ArgoCD token in 1Password
-if [ -x "$STACKS_DIR/scripts/cluster/update-argocd-token.sh" ]; then
-    echo -e "${GREEN}Updating ArgoCD token in 1Password...${NC}"
-    if ! "$STACKS_DIR/scripts/cluster/update-argocd-token.sh"; then
-        echo -e "${YELLOW}⚠️  Unable to store ArgoCD token automatically; check logs above.${NC}"
-    fi
-fi
-
-# Step 14: Show summary
+# Step 13: Show summary
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Cluster created successfully with SSH support!${NC}"

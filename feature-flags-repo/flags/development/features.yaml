@@ -1,0 +1,107 @@
+# Development Environment Feature Flags
+# Safe for experimentation and testing new features
+version: "1.0"
+namespace: development
+
+segments:
+  # Beta testers segment - users in beta program
+  - key: beta-users
+    name: Beta Program Users
+    description: Users enrolled in the beta testing program
+    matchType: ANY
+    constraints:
+      - property: groups
+        operator: IS_ONE_OF
+        value: "beta-testers,early-adopters"
+      - property: email
+        operator: ENDS_WITH
+        value: "@beta.example.com"
+
+  # Internal users segment
+  - key: internal-users
+    name: Internal Users
+    description: Company employees and contractors
+    matchType: ANY
+    constraints:
+      - property: email
+        operator: ENDS_WITH
+        value: "@company.com"
+      - property: groups
+        operator: IS_ONE_OF
+        value: "employees,contractors"
+
+flags:
+  # Example: Dark mode toggle
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN
+    description: Enable dark mode UI theme
+    enabled: true
+    defaultVariant: "off"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+    rules:
+      # Beta users get dark mode enabled
+      - segment: beta-users
+        rank: 0
+        distributions:
+          - variant: "on"
+            rollout: 100
+      # Everyone else: 20% rollout
+      - rank: 1
+        distributions:
+          - variant: "on"
+            rollout: 20
+          - variant: "off"
+            rollout: 80
+
+  # Example: Feature under development
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN
+    description: Experimental new dashboard layout
+    enabled: true
+    defaultVariant: "off"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+    rules:
+      # Only internal users see new dashboard
+      - segment: internal-users
+        rank: 0
+        distributions:
+          - variant: "on"
+            rollout: 100
+
+  # Example: String flag for A/B testing
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: STRING
+    description: Which checkout flow to display
+    enabled: true
+    defaultVariant: control
+    variants:
+      - key: control
+        value: original
+        description: Original checkout flow
+      - key: variant-a
+        value: streamlined
+        description: Streamlined checkout
+      - key: variant-b
+        value: one-page
+        description: Single page checkout
+    rules:
+      # A/B test with equal distribution
+      - rank: 0
+        distributions:
+          - variant: control
+            rollout: 34
+          - variant: variant-a
+            rollout: 33
+          - variant: variant-b
+            rollout: 33

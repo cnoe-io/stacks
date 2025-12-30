@@ -121,21 +121,26 @@ export class CaipeSupervisorChart extends Chart {
                   // RAG configuration
                   { name: 'RAG_AGENT_PORT', value: envVars.RAG_AGENT_PORT },
                   { name: 'RAG_SERVER_URL', value: `http://rag-server.${namespace}.svc.cluster.local:${CAIPE_PORTS.ragServer}` },
-                  // Sub-agent endpoints
-                  { name: 'AGENT_ARGOCD_URL', value: `http://agent-argocd.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
-                  { name: 'AGENT_GITHUB_URL', value: `http://agent-github.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
-                  { name: 'AGENT_BACKSTAGE_URL', value: `http://agent-backstage.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
-                  // Observability - cnoe-agent-utils tracing control
-                  { name: 'ENABLE_TRACING', value: CAIPE_OBSERVABILITY.tracing.enabled },
+                  // Sub-agent endpoints - format: {AGENT_NAME}_AGENT_HOST + {AGENT_NAME}_AGENT_PORT (per get_agent_address_mapping)
+                  { name: 'ARGOCD_AGENT_HOST', value: `agent-argocd.${namespace}.svc.cluster.local` },
+                  { name: 'ARGOCD_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
+                  { name: 'GITHUB_AGENT_HOST', value: `agent-github.${namespace}.svc.cluster.local` },
+                  { name: 'GITHUB_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
+                  { name: 'BACKSTAGE_AGENT_HOST', value: `agent-backstage.${namespace}.svc.cluster.local` },
+                  { name: 'BACKSTAGE_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
+                  // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+                  { name: 'ENABLE_ARGOCD', value: envVars.ENABLE_ARGOCD },
+                  { name: 'ENABLE_GITHUB', value: envVars.ENABLE_GITHUB },
+                  { name: 'ENABLE_BACKSTAGE', value: envVars.ENABLE_BACKSTAGE },
                   // Observability - Prometheus metrics
                   { name: 'METRICS_ENABLED', value: CAIPE_OBSERVABILITY.metrics.enabled },
                   { name: 'METRICS_PORT', value: String(CAIPE_PORTS.supervisorAgent) },
-                  // Observability - OpenTelemetry for distributed tracing (Tempo)
-                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: CAIPE_OBSERVABILITY.otel.grpcEndpoint },
-                  { name: 'OTEL_SERVICE_NAME', value: 'caipe-supervisor-agent' },
-                  // Observability - Langfuse for LLM-specific tracing
-                  { name: 'LANGFUSE_ENABLED', value: CAIPE_OBSERVABILITY.langfuse.enabled },
-                  { name: 'LANGFUSE_HOST', value: CAIPE_OBSERVABILITY.langfuse.host },
+                  // Observability - OpenTelemetry
+                  { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://otel-collector.observability.svc.cluster.local:4317' },
+                  { name: 'OTEL_SERVICE_NAME', value: 'supervisor-agent' },
+                  // Langfuse tracing - ENABLE_TRACING is what TracingManager checks
+                  { name: 'ENABLE_TRACING', value: 'true' },
+                  { name: 'LANGFUSE_HOST', value: 'http://langfuse.observability.svc.cluster.local:3000' },
                 ],
                 envFrom: [
                   {
@@ -143,10 +148,10 @@ export class CaipeSupervisorChart extends Chart {
                       name: llmSecretName,
                     },
                   },
+                  // Langfuse API credentials from Azure Key Vault
                   {
-                    // Langfuse API credentials for tracing
                     secretRef: {
-                      name: 'caipe-langfuse-credentials',
+                      name: 'langfuse-api-keys',
                     },
                   },
                 ],

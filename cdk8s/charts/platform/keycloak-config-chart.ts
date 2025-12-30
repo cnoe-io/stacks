@@ -129,6 +129,61 @@ export class KeycloakConfigChart extends Chart {
       return [...new Set(uris)];
     };
 
+    // Generate all redirect URIs for Flipt across all configured hosts
+    const generateFliptRedirectUris = (): string[] => {
+      const uris: string[] = [];
+
+      // Extract base domains from hosts (remove leading subdomain like 'backstage.')
+      // e.g., 'backstage.cnoe.localtest.me' -> 'cnoe.localtest.me'
+      // e.g., 'backstage-thinkpad.tail286401.ts.net' -> 'tail286401.ts.net'
+      const extractBaseDomain = (hostname: string): string => {
+        // Known patterns to strip from the beginning
+        const prefixes = ['backstage.', 'backstage-local-dev.', 'backstage-thinkpad.', 'backstage-ryzen.', 'backstage-hetzner.'];
+        for (const prefix of prefixes) {
+          if (hostname.startsWith(prefix)) {
+            return hostname.slice(prefix.length);
+          }
+        }
+        // For domains like ai401kchat.com, return as-is
+        return hostname;
+      };
+
+      // Collect unique base domains with their ports
+      const baseDomains = new Map<string, number>();
+      for (const host of hosts) {
+        const baseDomain = extractBaseDomain(host.hostname);
+        const port = host.port ?? 443;
+        // Use the port from the first occurrence of each base domain
+        if (!baseDomains.has(baseDomain)) {
+          baseDomains.set(baseDomain, port);
+        }
+      }
+
+      // Generate redirect URIs for each unique base domain
+      for (const [baseDomain, port] of baseDomains) {
+        const portSuffix = port === 443 ? '' : `:${port}`;
+        // Cluster-specific prefixes only for Tailscale (multi-cluster remote access)
+        const isTailscale = baseDomain.endsWith('.ts.net');
+
+        // Path-based routing (e.g., /flipt/auth/...)
+        uris.push(`https://${baseDomain}${portSuffix}/flipt/auth/v1/method/oidc/keycloak/callback`);
+
+        // Subdomain-based routing (flipt.{domain})
+        uris.push(`https://flipt.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+
+        // Cluster-specific prefixes only for Tailscale domains
+        if (isTailscale) {
+          uris.push(`https://flipt-thinkpad.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-ryzen.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+          uris.push(`https://flipt-hetzner.${baseDomain}${portSuffix}/auth/v1/method/oidc/keycloak/callback`);
+        }
+      }
+
+      // Internal cluster access
+      uris.push('http://flipt.feature-flags.svc.cluster.local:8080/auth/v1/method/oidc/keycloak/callback');
+      return [...new Set(uris)];
+    };
+
     // For backward compatibility, keep baseUrl pointing to first host
     const baseUrl = buildBaseUrl(hosts[0]);
 
@@ -325,6 +380,29 @@ export class KeycloakConfigChart extends Chart {
           redirectUris: generateBackstageRedirectUris(),
           webOrigins: ['/*'],
         }),
+        'flipt-client-payload.json': JSON.stringify({
+          protocol: 'openid-connect',
+          clientId: 'flipt',
+          name: 'Flipt Feature Flag Management',
+          description: 'Used for Flipt Feature Flag UI SSO',
+          publicClient: false,
+          authorizationServicesEnabled: false,
+          serviceAccountsEnabled: false,
+          implicitFlowEnabled: false,
+          directAccessGrantsEnabled: true,
+          standardFlowEnabled: true,
+          frontchannelLogout: true,
+          attributes: {
+            saml_idp_initiated_sso_url_name: '',
+            'oauth2.device.authorization.grant.enabled': false,
+            'oidc.ciba.grant.enabled': false,
+          },
+          alwaysDisplayInConsole: false,
+          rootUrl: '',
+          baseUrl: '',
+          redirectUris: generateFliptRedirectUris(),
+          webOrigins: ['/*'],
+        }),
       },
     });
 
@@ -457,6 +535,18 @@ set -e
 	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
 	    -X PUT --data "$updated_json" \\
 	    \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id} >/dev/null
+
+	  # Ensure groups scope is added to client (idempotent - no error if already exists)
+	  echo "ensuring groups scope for client '\${client_name}'"
+	  local groups_scope_id
+	  groups_scope_id=$(curl -sS -H "Content-Type: application/json" \\
+	    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+	  if [ -n "$groups_scope_id" ] && [ "$groups_scope_id" != "null" ]; then
+	    curl -sS -H "Content-Type: application/json" \\
+	      -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+	      -X PUT \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${existing_client_id}/default-client-scopes/\${groups_scope_id} 2>/dev/null || true
+	  fi
 	}
 
 	# If realm exists, check if keycloak-clients secret exists
@@ -464,6 +554,7 @@ set -e
 	  # Realm exists: still ensure redirect URIs match the desired payloads
 	  patch_client_redirects "argo-workflows" "/var/config/argo-client-payload.json"
 	  patch_client_redirects "backstage" "/var/config/backstage-client-payload.json"
+	  patch_client_redirects "flipt" "/var/config/flipt-client-payload.json"
 
 	  # Check if secret already exists
 	  if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
@@ -496,6 +587,14 @@ set -e
     -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
     -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
 
+  # Get Flipt client secret
+  CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "flipt") | .id')
+  FLIPT_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \\
+    -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+    -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
+
   # Get ArgoCD session token
   ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
   ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\\"username\\":\\"admin\\",\\"password\\":\\"\${ARGOCD_PASSWORD}\\"}" | jq -r .token)
@@ -514,6 +613,8 @@ stringData:
   ARGOCD_SESSION_TOKEN: \${ARGOCD_SESSION_TOKEN}
   BACKSTAGE_CLIENT_SECRET: \${BACKSTAGE_CLIENT_SECRET}
   BACKSTAGE_CLIENT_ID: backstage
+  FLIPT_CLIENT_SECRET: \${FLIPT_CLIENT_SECRET}
+  FLIPT_CLIENT_ID: flipt
 " > /tmp/secret.yaml
 
   ./kubectl apply -f /tmp/secret.yaml
@@ -618,6 +719,23 @@ BACKSTAGE_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \\
   -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
   -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
 
+echo "creating Flipt client"
+curl -sS -H "Content-Type: application/json" \\
+  -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+  -X POST --data @/var/config/flipt-client-payload.json \\
+    \${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \\
+  -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+  -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "flipt") | .id')
+
+CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer \${KEYCLOAK_TOKEN}" -X GET  \${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+curl -sS -H "Content-Type: application/json" -H "Authorization: bearer \${KEYCLOAK_TOKEN}" -X PUT  \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID}/default-client-scopes/\${CLIENT_SCOPE_GROUPS_ID}
+
+FLIPT_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \\
+  -H "Authorization: bearer \${KEYCLOAK_TOKEN}" \\
+  -X GET \${KEYCLOAK_URL}/admin/realms/cnoe/clients/\${CLIENT_ID} | jq -e -r '.secret')
+
 ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
 
 ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\\"username\\":\\"admin\\",\\"password\\":\\"\${ARGOCD_PASSWORD}\\"}" | jq -r .token)
@@ -635,6 +753,8 @@ stringData:
   ARGOCD_SESSION_TOKEN: \${ARGOCD_SESSION_TOKEN}
   BACKSTAGE_CLIENT_SECRET: \${BACKSTAGE_CLIENT_SECRET}
   BACKSTAGE_CLIENT_ID: backstage
+  FLIPT_CLIENT_SECRET: \${FLIPT_CLIENT_SECRET}
+  FLIPT_CLIENT_ID: flipt
 " > /tmp/secret.yaml
 
 ./kubectl apply -f /tmp/secret.yaml

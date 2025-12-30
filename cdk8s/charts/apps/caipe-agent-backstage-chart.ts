@@ -1,11 +1,14 @@
 /**
  * CaipeAgentBackstageChart - Backstage Agent for CAIPE
  *
- * Deploys the Backstage agent that provides:
+ * Deploys the Backstage agent with MCP sidecar pattern:
+ * - Agent container connects to MCP sidecar via HTTP
+ * - MCP sidecar runs the Backstage MCP server
  * - Software catalog queries
  * - Service discovery
  * - Component relationship exploration
- * - MCP HTTP mode for supervisor communication
+ *
+ * Reference: https://github.com/cnoe-io/ai-platform-engineering
  */
 
 import { Chart, ChartProps } from 'cdk8s';
@@ -28,9 +31,15 @@ export interface CaipeAgentBackstageChartProps extends ChartProps {
 
   /**
    * Backstage Agent image
-   * @default 'ghcr.io/cnoe-io/agent-backstage:0.2.4'
+   * @default 'ghcr.io/cnoe-io/agent-backstage:latest'
    */
   image?: string;
+
+  /**
+   * MCP Backstage server image
+   * @default 'ghcr.io/cnoe-io/mcp-backstage:stable'
+   */
+  mcpImage?: string;
 
   /**
    * Secret name for Backstage credentials
@@ -57,9 +66,13 @@ export class CaipeAgentBackstageChart extends Chart {
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
     const image = props.image || 'ghcr.io/cnoe-io/agent-backstage:latest';
+    const mcpImage = props.mcpImage || 'ghcr.io/cnoe-io/mcp-backstage:stable';
     const backstageSecretName = props.backstageSecretName || 'agent-backstage-secret';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.agents;
+
+    // MCP sidecar port - agent connects to this internally
+    const mcpSidecarPort = 3000;
 
     const labels = getCaipeAgentLabels('agent-backstage');
     const selectorLabels = {
@@ -68,7 +81,7 @@ export class CaipeAgentBackstageChart extends Chart {
       'app': 'agent-backstage',
     };
 
-    // Deployment for Backstage Agent
+    // Deployment for Backstage Agent with MCP sidecar
     new k8s.KubeDeployment(this, 'agent-backstage', {
       metadata: {
         name: 'agent-backstage',
@@ -89,18 +102,23 @@ export class CaipeAgentBackstageChart extends Chart {
           },
           spec: {
             containers: [
+              // Main agent container
               {
                 name: 'agent-backstage',
                 image: image,
                 ports: [
                   {
-                    name: 'mcp-http',
+                    name: 'a2a-http',
                     containerPort: CAIPE_PORTS.mcpHttp,
                   },
                 ],
                 env: [
-                  // MCP HTTP mode configuration
+                  // MCP HTTP mode - connects to MCP sidecar
                   { name: 'MCP_MODE', value: 'http' },
+                  // Connect to MCP sidecar running in the same pod
+                  { name: 'MCP_HOST', value: 'localhost' },
+                  { name: 'MCP_PORT', value: String(mcpSidecarPort) },
+                  // A2A server listens on port 8000
                   { name: 'MCP_HTTP_PORT', value: String(CAIPE_PORTS.mcpHttp) },
                   // Agent identification
                   { name: 'AGENT_NAME', value: 'agent-backstage' },
@@ -159,6 +177,55 @@ export class CaipeAgentBackstageChart extends Chart {
                   timeoutSeconds: 5,
                 },
               },
+              // MCP sidecar container - runs the Backstage MCP server
+              {
+                name: 'mcp-backstage',
+                image: mcpImage,
+                ports: [
+                  {
+                    name: 'mcp',
+                    containerPort: mcpSidecarPort,
+                  },
+                ],
+                env: [
+                  { name: 'MCP_MODE', value: 'http' },
+                  { name: 'MCP_HOST', value: '0.0.0.0' },
+                  { name: 'MCP_PORT', value: String(mcpSidecarPort) },
+                ],
+                envFrom: [
+                  {
+                    secretRef: {
+                      name: backstageSecretName,
+                    },
+                  },
+                ],
+                resources: {
+                  requests: {
+                    memory: k8s.Quantity.fromString('64Mi'),
+                    cpu: k8s.Quantity.fromString('25m'),
+                  },
+                  limits: {
+                    memory: k8s.Quantity.fromString('256Mi'),
+                    cpu: k8s.Quantity.fromString('100m'),
+                  },
+                },
+                livenessProbe: {
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(mcpSidecarPort),
+                  },
+                  initialDelaySeconds: 15,
+                  periodSeconds: 10,
+                  timeoutSeconds: 5,
+                },
+                readinessProbe: {
+                  tcpSocket: {
+                    port: k8s.IntOrString.fromNumber(mcpSidecarPort),
+                  },
+                  initialDelaySeconds: 10,
+                  periodSeconds: 5,
+                  timeoutSeconds: 3,
+                },
+              },
             ],
           },
         },
@@ -179,7 +246,7 @@ export class CaipeAgentBackstageChart extends Chart {
         selector: selectorLabels,
         ports: [
           {
-            name: 'mcp-http',
+            name: 'a2a-http',
             port: CAIPE_PORTS.mcpHttp,
             targetPort: k8s.IntOrString.fromNumber(CAIPE_PORTS.mcpHttp),
             protocol: 'TCP',

@@ -4,1069 +4,224 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a GitOps infrastructure repository using CDK8s (TypeScript) to define Kubernetes manifests, deployed via IdpBuilder and managed by ArgoCD. The stack includes platform services like Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment VClusters.
+GitOps infrastructure repository using CDK8s (TypeScript) to define Kubernetes manifests, deployed via IdpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment VClusters.
 
-### What is CNOE?
+**CNOE** (Cloud Native Operational Excellence): Open-source-first, Kubernetes-powered platform framework. See `docs/cnoe-overview.md`.
 
-CNOE (Cloud Native Operational Excellence, pronounced "Kuh.noo") brings together enterprises to navigate operational technology decisions, de-risk tooling bets, and provide guidance on which CNCF technologies to use together for cloud efficiencies. Key principles:
+**cdk8s**: TypeScript framework generating Kubernetes YAML. App → Charts → Constructs → Resources. Pure YAML generation, no runtime component.
 
-- **Open source first:** Prioritize open source over proprietary technology
-- **Community driven:** Decisions driven by community and governing body
-- **Tools and not Practices:** Offers suggestions on which tools to use and configurations
-- **Powered by Kubernetes:** Uses Kubernetes as the de-facto operating environment
-- **Standardized to infrastructure, customizable by developers:** Balance between enforcement and usability
-
-### What is cdk8s?
-
-cdk8s is a software development framework for defining Kubernetes applications using familiar programming languages and rich object-oriented APIs. Key concepts:
-
-- **App → Charts → Constructs → Resources:** Apps contain Charts (synthesized to separate manifests), Charts contain Constructs, Constructs represent Kubernetes resources
-- **Pure YAML generation:** cdk8s generates standard Kubernetes YAML that can be applied via `kubectl` or GitOps tools
-- **Language native:** Full TypeScript type system, IDE support, testing capabilities
-- **No runtime component:** Only generates manifests, doesn't apply them
-
-### What is idpBuilder?
-
-idpBuilder simplifies spinning up a complete internal developer platform (IDP) on local machines with only Docker as dependency. When you run `idpbuilder create`:
-
-1. Creates local kind cluster (if needed)
-2. Installs core packages: ArgoCD (GitOps), Gitea (in-cluster Git server + OCI registry), ingress-nginx
-3. Configures self-signed certificate and CoreDNS for name resolution
-4. Passes control to ArgoCD by storing manifests in Gitea repositories
-
-**Key Features:**
-- **cnoe:// URL syntax:** Special protocol for local packages (see below)
-- **Local OCI registry:** Built-in container registry in Gitea
-- **Two routing modes:** Domain-based (default) or path-based (for Codespaces)
-- **GitOps workflow:** Gitea allows anonymous read access; no pull secrets needed
+**idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages.
 
 ## Common Commands
 
-### Talos Linux Cluster Bootstrap
-
-**Purpose**: Bootstrap a Talos Linux cluster with ArgoCD GitOps, External Secrets Operator with Azure Workload Identity, and Tailscale for secure remote access.
-
-```bash
-# Quick start - fresh setup (creates Azure resources automatically)
-cd scripts
-cp .env.template .env  # Set AZURE_SUBSCRIPTION_ID and AZURE_TENANT_ID
-./bootstrap-cluster.sh --setup-azure
-
-# Quick start - existing Azure infrastructure
-cd scripts
-cp .env.template .env  # Fill in all Azure values
-./bootstrap-cluster.sh
-
-# Resume after failure (idempotent)
-./bootstrap-cluster.sh
-
-# Force full re-bootstrap
-./bootstrap-cluster.sh --force
-
-# Skip JWKS sync (if Azure Storage already configured)
-./bootstrap-cluster.sh --skip-jwks
-
-# Setup Azure infrastructure only (without cluster bootstrap)
-./00-bootstrap-azure-infra.sh
-```
-
-**Bootstrap Phases**:
-
-0. **Azure Infrastructure** (optional, with `--setup-azure`)
-   - Create OIDC storage account for JWKS hosting
-   - Create Azure AD application for Workload Identity
-   - Create federated identity credentials
-   - Configure Key Vault access
-1. **Validate Prerequisites** - Check tools, cluster, Azure access
-2. **Install ArgoCD** - Deploy via Helm with custom values
-3. **Sync JWKS** - Upload OIDC discovery documents to Azure Storage
-4. **Apply GitOps** - Deploy ArgoCD root application (App-of-Apps)
-
-**Bootstrap Scripts**:
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/bootstrap-cluster.sh` | Main orchestrator - runs all phases |
-| `scripts/00-bootstrap-azure-infra.sh` | Create Azure infrastructure (storage, AD app, federated creds) |
-| `scripts/01-install-argocd.sh` | Install ArgoCD via Helm chart |
-| `scripts/02-sync-jwks.sh` | Sync OIDC JWKS to Azure Storage |
-| `scripts/03-apply-base-apps.sh` | Apply ArgoCD root application |
-| `scripts/generate-remote-kubeconfig.sh` | Generate kubeconfig for Tailscale access |
-
-**Azure Workload Identity Architecture**:
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Kubernetes Cluster                               │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │  ServiceAccount: external-secrets/external-secrets              │    │
-│  │  Labels: azure.workload.identity/use: "true"                    │    │
-│  │  Annotations:                                                    │    │
-│  │    azure.workload.identity/client-id: <AZURE_CLIENT_ID>         │    │
-│  │    azure.workload.identity/tenant-id: <AZURE_TENANT_ID>         │    │
-│  └──────────────────────────┬──────────────────────────────────────┘    │
-│                             │ JWT Token                                  │
-└─────────────────────────────┼───────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Azure Storage (OIDC Issuer)                          │
-│  URL: https://oidcissuerXXXXXX.z13.web.core.windows.net/                │
-│  ├── .well-known/openid-configuration                                   │
-│  └── openid/v1/jwks  ◄── Contains cluster signing keys                  │
-└─────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ Validates JWT against JWKS
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Azure AD Application                            │
-│  Client ID: <AZURE_CLIENT_ID>                                           │
-│  Federated Credentials:                                                  │
-│    - external-secrets-external-secrets                                   │
-│      Subject: system:serviceaccount:external-secrets:external-secrets   │
-└──────────────────────────────┬──────────────────────────────────────────┘
-                              │ Issues Azure token
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Azure Key Vault                                  │
-│  Role Assignment: Key Vault Secrets User → Azure AD App                 │
-│  Secrets: ANTHROPIC-API-KEY, OPENAI-API-KEY, LANGFUSE-*, etc.          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**CDK8s Synthesis** (Unified - Feature 106):
-```bash
-# From cdk8s/ directory:
-npm run synth                    # Default synthesis (uses CLUSTER_TYPE from env or defaults to 'kind')
-npm run synth:kind               # Synthesize for KIND clusters (cnoe:// URLs)
-npm run synth:talos              # Synthesize for Talos clusters (GitHub URLs)
-
-# Environment-driven synthesis
-CLUSTER_TYPE=kind npm run synth   # Explicit KIND synthesis
-CLUSTER_TYPE=talos npm run synth  # Explicit Talos synthesis
-
-# Output: cdk8s/dist/<app>/manifests/
-```
-
-**Verify Deployment**:
-```bash
-# Check ArgoCD applications
-kubectl get applications -n argocd
-
-# Check External Secrets
-kubectl get clustersecretstore azure-keyvault-store
-kubectl get externalsecrets -A
-
-# Check Tailscale services
-kubectl get pods -n tailscale
-
-# Access ArgoCD UI via Tailscale Services
-# Example: https://argocd-ryzen.tail286401.ts.net
-open "https://argocd-${CLUSTER_NAME:-<cluster>}.${TAILSCALE_TAILNET:-<tailnet>}.ts.net"
-
-# Get ArgoCD admin password
-kubectl get secret argocd-initial-admin-secret -n argocd \
-  -o jsonpath="{.data.password}" | base64 -d
-```
-
-**Troubleshooting**:
-```bash
-# Re-sync JWKS after cluster rebuild
-./scripts/02-sync-jwks.sh --force
-
-# Check ClusterSecretStore status
-kubectl describe clustersecretstore azure-keyvault-store
-
-# Verify ServiceAccount annotations for Workload Identity
-kubectl get sa external-secrets -n external-secrets -o yaml | grep azure
-
-# Check Tailscale serve pod logs
-kubectl logs -n tailscale deploy/argocd-tailscale-serve
-```
-
-**Key Files** (Unified - Feature 106):
-- CDK8s entry point: `cdk8s/main.ts` (unified for both KIND and Talos)
-- Application config: `cdk8s/config/applications.ts` (clusterType field filters apps)
-- Source URL utility: `cdk8s/lib/source-url.ts` (generates cnoe:// or GitHub URLs)
-- ArgoCD Helm values: `cdk8s/values/argocd-values.yaml`
-- Environment template: `scripts/.env.template`
-- Documentation: `specs/102-bootstrap-talos-argocd/quickstart.md`
-
 ### CDK8s Development
-
 ```bash
-# From the cdk8s/ directory:
 cd cdk8s
-
-# Install dependencies
 npm install
-
-# Synthesize all packages (generates dist/)
-npm run synth         # Uses CLUSTER_TYPE from env (default: kind)
-npm run synth:kind    # Explicit KIND synthesis
-npm run synth:talos   # Explicit Talos synthesis
-
-# Type check
-npm run compile
-# or
-npx tsc --noEmit
-
-# Import/update CRDs
-npm run import
-
-# Watch mode (auto-synthesize on file changes)
-npm run watch:synth
+npm run synth              # Default (CLUSTER_TYPE from env, default: kind)
+npm run synth:kind         # KIND clusters (cnoe:// URLs)
+npm run synth:talos        # Talos clusters (GitHub URLs)
+npm run compile            # Type check
+npm run import             # Import/update CRDs
 ```
 
 ### IdpBuilder Deployment
-
 ```bash
-# Deploy all synthesized packages
-idpbuilder create --package cdk8s/dist/
-
-# Deploy specific package
-idpbuilder create --package cdk8s/dist/<app-name>
-
-# Deploy with path-based routing (for Codespaces or single domain)
-idpbuilder create --use-path-routing --package cdk8s/dist/
-
-# Get secrets (e.g., Gitea token)
-idpbuilder get secrets
-idpbuilder get secrets -p gitea
-idpbuilder get secrets -p gitea -o json | jq -r '.[0].data.token'
-
-# Get cluster info
-idpbuilder get clusters
-
-# Delete cluster
-idpbuilder delete --name localdev
+idpbuilder create --package cdk8s/dist/              # Deploy all
+idpbuilder create --package cdk8s/dist/<app>         # Deploy specific
+idpbuilder create --use-path-routing --package ...   # Path-based routing
+idpbuilder get secrets -p gitea                      # Get secrets
+idpbuilder delete --name localdev                    # Delete cluster
 ```
 
-### Working with Local OCI Registry
-
+### Talos Linux Cluster Bootstrap
 ```bash
-# Login to Gitea registry
-idpbuilder get secrets -p gitea -o json | jq '.[0].password' -r | \
-  docker login -u giteaAdmin --password-stdin gitea.cnoe.localtest.me:8443
-
-# Push image to local registry
-docker pull ubuntu:24.04
-docker tag ubuntu:24.04 gitea.cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
-docker push gitea.cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
-
-# Pull image from local registry (no auth needed for pulls)
-docker pull gitea.cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
+cd scripts
+cp .env.template .env  # Set AZURE_SUBSCRIPTION_ID and AZURE_TENANT_ID
+./bootstrap-cluster.sh --setup-azure  # Fresh setup with Azure resources
+./bootstrap-cluster.sh                # Existing Azure infrastructure
+./bootstrap-cluster.sh --force        # Force re-bootstrap
 ```
 
-**Note:** Gitea OCI registry allows anonymous read access. Image naming convention: `{registry}/{owner}/{image}`
+**Bootstrap phases**: Azure Infrastructure → Validate Prerequisites → Install ArgoCD → Sync JWKS → Apply GitOps
+
+**Key scripts**: `bootstrap-cluster.sh` (orchestrator), `00-bootstrap-azure-infra.sh`, `01-install-argocd.sh`, `02-sync-jwks.sh`, `03-apply-base-apps.sh`
+
+**Azure Workload Identity**: ServiceAccount with azure.workload.identity labels → JWT validated against JWKS in Azure Storage → Azure AD App issues token → Key Vault access. See `docs/AZURE_WORKLOAD_IDENTITY.md`.
 
 ### ArgoCD CLI
-
 ```bash
-# Source cluster management functions (sets ARGOCD_AUTH_TOKEN automatically)
-source ~/stacks/deployment/scripts/cluster-menu.sh
-
-# Use native argocd CLI - always add --insecure flag for local dev
-argocd app list --insecure
-argocd app get argocd/backstage --insecure
+source ~/stacks/deployment/scripts/cluster-menu.sh  # Sets ARGOCD_AUTH_TOKEN
+argocd app list --insecure                          # Always use --insecure for local dev
 argocd app sync argocd/my-app --prune --insecure
-
-# Or use helper functions (--insecure added automatically)
-argocd-status              # Show formatted application status
-argocd-sync argocd/my-app  # Sync specific application
-argocd-list-outofsync      # List out-of-sync applications
+argocd-status                                       # Helper function
 ```
 
-**Required Flag:** Always use `--insecure` for local development (self-signed certificates)
-**Authentication:** Automatic via `ARGOCD_AUTH_TOKEN` environment variable (set by cluster-menu.sh)
-**Documentation:** See `deployment/docs/ARGOCD_AUTOMATION.md` for details
-
-### Kargo Progressive Delivery Pipelines
-
-**Purpose**: Automated image promotion through environments using Kargo.
-
+### Kargo Pipelines
 ```bash
-# Check Kargo resources
-kubectl get projects,projectconfigs -n kargo-pipelines
-kubectl get warehouses,stages -n kargo-pipelines
-kubectl get freights,promotions -n kargo-pipelines
-
-# View pipeline status
-kubectl get stages -n kargo-pipelines -o wide
-
-# Watch for new Freight (image versions)
-kubectl get freights -n kargo-pipelines -w
-
-# Filter by loop type
-kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=inner
-kubectl get warehouses,stages -n kargo-pipelines -l kargo.akuity.io/loop=outer
-
-# Manual promotion to staging
-kargo promote --project kargo-pipelines --stage backstage-staging --freight <freight-name>
-
-# View promotion history
-kubectl get promotions -n kargo-pipelines --selector stage=backstage-staging
-
-# Force warehouse refresh
-kubectl annotate warehouse backstage-gitea -n kargo-pipelines refresh=$(date +%s) --overwrite
+kubectl get warehouses,stages,freights -n kargo-pipelines
+kargo promote --project kargo-pipelines --stage backstage-staging --freight <name>
 ```
 
-**Key Files:**
-- Pipeline chart: `cdk8s/charts/pipelines/kargo-backstage-pipeline-chart.ts`
-- Pipeline factory: `cdk8s/charts/pipelines/kargo-pipeline-factory.ts`
-- Helpers: `cdk8s/lib/kargo-helpers.ts`
-- Project config: `cdk8s/charts/pipelines/kargo-pipelines-project-chart.ts`
-- Documentation: `specs/105-setup-kargo-pipelines/quickstart.md`
+**Architecture**: Inner Loop (Gitea → local-dev, auto, <60s) | Outer Loop (GHCR → dev → staging → prod)
 
-**Pipeline Architecture:**
-- **Inner Loop**: Gitea → local-dev (auto-promote, <60s)
-- **Outer Loop**: GHCR → dev (auto) → staging (manual) → prod (manual)
-
-**Adding New Application Pipeline:**
-```typescript
-// In cdk8s/config/applications.ts
-{
-  name: 'kargo-myapp-pipeline',
-  namespace: 'kargo-pipelines',
-  chart: {
-    type: 'KargoPipelineFactoryChart',
-    props: {
-      appName: 'myapp',
-      enableInnerLoop: true,
-      enableOuterLoop: true,
-    }
-  }
-}
-```
-
-### Testing
-
-```bash
-# Dry-run/validation
-cd cdk8s
-npm run synth
-kubectl diff -f dist/<app>/manifests/
-
-# Local testing with Kind
-kind create cluster --name test
-kubectl apply -f dist/<app>/manifests/
-kubectl get all -n <namespace>
-```
+See `specs/105-setup-kargo-pipelines/quickstart.md`.
 
 ### Nix Binary Cache (Attic + MinIO)
-
-**Purpose**: In-cluster Nix binary cache for accelerating NixOS builds
-
 ```bash
-# Deploy MinIO + Attic (via cluster-update)
-source deployment/scripts/cluster-menu.sh
-cluster-update  # Deploys all packages including nix-cache
-
-# Check deployment status
-kubectl get pods -n nix-cache
-# Expected: minio-xxx (Running), attic-xxx (Running)
-
-# Initialize cache (generates admin token, creates "nixos" cache namespace)
+source deployment/scripts/cluster-menu.sh && cluster-update
 ./deployment/scripts/nix-cache/init-attic-cache.sh
-# Save the admin token and NixOS configuration snippet displayed
-
-# Push packages from Hetzner host (requires Attic CLI and port-forward/Tailscale)
 ./deployment/scripts/nix-cache/push-to-cache.sh /run/current-system
-
-# Verify cache contents
-kubectl port-forward -n nix-cache svc/attic 8080:8080 &
-curl http://localhost:8080/nixos/nix-cache-info
-# Expected: HTTP/1.1 200 OK
 ```
-
-**Key Files**:
-- Charts: `cdk8s/charts/infra/nix-cache-namespace-chart.ts`, `minio-chart.ts`, `attic-chart.ts`
-- Scripts: `deployment/scripts/nix-cache/init-attic-cache.sh`, `push-to-cache.sh`
-- Docs: `specs/003-implement-attic-minio/quickstart.md` (complete deployment guide)
-
-**Architecture**:
-- **MinIO**: S3-compatible object storage (100Gi PVC, sync wave -100)
-- **Attic**: Nix binary cache server (sync wave -90, depends on MinIO)
-- **Cache Namespace**: Logical grouping ("nixos") with unique signing key for package verification
-
-**Troubleshooting**:
-- MinIO CrashLoopBackOff: Check disk space (`docker exec kind-control-plane df -h`)
-- Attic connection errors: Verify MinIO is Running (`kubectl get pods -n nix-cache -l app=minio`)
-- Cache push 401: Regenerate admin token via init-attic-cache.sh
-
-For full documentation, see `specs/003-implement-attic-minio/quickstart.md`.
+See `specs/003-implement-attic-minio/quickstart.md`.
 
 ### kagent/kmcp (AI Agent Platform)
-
 ```bash
-# Synthesis
-cd cdk8s
-npx ts-node main-v2.ts  # Synthesizes kagent, kmcp, kagent-secrets, kagent-agents packages
-
-# Deployment (use cluster-menu.sh wrapper - see constitution)
-source ~/stacks/deployment/scripts/cluster-menu.sh
-cluster-update  # Deploys all packages including kagent
-
-# Check pod status
 kubectl get pods -n kagent
-# Expected: kagent-controller, kagent-dashboard, kagent-tools, kmcp-controller, mcp-website-fetcher
-
-# Check custom resources
-kubectl get agents,modelconfigs,mcpservers,remotemcpservers -n kagent
-
-# Access dashboard (via ingress - domain-based routing)
-# Open https://kagent.cnoe.localtest.me:8443
-# Or via port-forward: kubectl port-forward -n kagent svc/kagent-dashboard 8082:8082 then http://localhost:8082
-
-# Test controller API
-kubectl port-forward -n kagent svc/kagent-controller 8083:8083
-curl http://localhost:8083/api/v1/agents  # List agents
-
-# Check ArgoCD applications
-argocd app list --insecure | grep kagent
-# Expected: kagent, kmcp, kagent-secrets, kagent-agents all Synced/Healthy
-
-# Troubleshooting
-kubectl logs -n kagent deploy/kagent-controller --tail=50  # Controller logs
-kubectl logs -n kagent deploy/kmcp-controller --tail=50    # kmcp logs
-kubectl describe agent -n kagent <agent-name>              # Agent status
-kubectl describe mcpserver -n kagent <server-name>         # MCP server status
-
-# Common issues:
-# - Agents not ready: Check modelconfig exists and API keys in kagent-llm-providers secret
-# - MCP server not ready: Check kmcp-controller has ServiceAccount permissions
-# - Dashboard ingress: Access via https://kagent.cnoe.localtest.me:8443 (domain-based routing)
-# - Controller errors: Ensure RBAC includes configmaps, secrets, deployments, agents CRDs
-
-# KNOWN ISSUE (kagent v0.6.3):
-# The kagent-controller has upstream bugs causing nil pointer dereferences during initialization:
-#   - findAgentsUsingMCPService (line 261): crashes when indexing MCP servers
-#   - findAgentsUsingModelConfig (line 302): crashes when indexing model configs
-# The controller enters CrashLoopBackOff on startup even with empty cluster (no resources).
-# Workaround: Use kagent-dashboard directly (works without controller) or wait for upstream fix.
-# Dashboard remains fully functional at https://kagent.cnoe.localtest.me:8443
+kubectl get agents,modelconfigs,mcpservers -n kagent
+# Dashboard: https://kagent.cnoe.localtest.me:8443
 ```
 
-**kagent Architecture**:
-- **kagent-controller**: Manages Agent, ModelConfig, RemoteMCPServer CRDs; runs HTTP API on port 8083
-- **kagent-dashboard**: Next.js UI for agent management (port 8080)
-- **kagent-tools**: Built-in Kubernetes tools MCP server (RemoteMCPServer)
-- **kmcp-controller**: Manages MCPServer CRDs, creates deployments for MCP servers
-- **kagent-secrets**: External Secrets syncing LLM API keys from Azure Key Vault (ANTHROPIC-API-KEY, OPENAI-API-KEY, GEMINI-API-KEY)
+**Note**: kagent-controller v0.6.3 has upstream bugs causing CrashLoopBackOff. Dashboard works independently.
 
-**Access URLs**:
-- **kagent Dashboard**: https://kagent.cnoe.localtest.me:8443 (domain-based routing)
-- **ArgoCD Applications**:
-  - kagent platform: https://argocd.cnoe.localtest.me:8443/applications/kagent
-  - kmcp controller: https://argocd.cnoe.localtest.me:8443/applications/kmcp
-  - kagent secrets: https://argocd.cnoe.localtest.me:8443/applications/kagent-secrets
-  - kagent agents: https://argocd.cnoe.localtest.me:8443/applications/kagent-agents
+### Tailscale (Remote Access & Services)
 
-### Tailscale Operator (Remote Cluster Access)
-
-**Purpose**: Provides secure remote kubectl access to the cluster from any Tailscale-connected device via HTTPS with automatic Let's Encrypt certificates.
-
+**Operator** (kubectl access):
 ```bash
-# Deployment (via cluster-update)
-source deployment/scripts/cluster-menu.sh
-cluster-update  # Deploys tailscale-operator package
-
-# Check operator status
-kubectl get pods -n tailscale -l app=tailscale-operator
-# Expected: tailscale-operator-xxx Running
-
-# Check operator hostname (unique suffix may be appended)
-kubectl logs -n tailscale deployment/tailscale-operator | grep -i hostname
-# Example output: kind-operator-13.tail286401.ts.net [100.104.62.112]
-
-# Generate remote kubeconfig (from cluster host)
 ./deployment/scripts/tailscale/generate-kubeconfig.sh
-# Outputs: remote-kubeconfig.yaml
-
-# Copy to remote machine (Mac, laptop, etc.)
-scp remote-kubeconfig.yaml user@remote-machine:~/
-
-# Test from remote machine
 kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes
-# First connection may take 30-60s for Let's Encrypt certificate provisioning
-# Subsequent commands: <2s response time
 ```
 
-**Key Features**:
-- **APISERVER_PROXY mode**: In-process API proxy (no ProxyGroup needed)
-- **Automatic HTTPS**: Let's Encrypt certificates via Tailscale HTTPS
-- **MagicDNS**: Automatic DNS resolution (`kind-operator.tail286401.ts.net` → Tailscale IP)
-- **Security**: TLS validation, client certificate authentication
-- **Performance**: <2s kubectl response time, <500ms port-forward latency
+**Service URLs** (cluster-scoped pattern: `https://<service>-<cluster>.<tailnet>.ts.net`):
+| Service | Purpose |
+|---------|---------|
+| argocd-\<cluster\> | GitOps Dashboard |
+| langfuse-\<cluster\> | LLM Observability |
+| gitea-\<cluster\> | Git Server |
+| kagent-\<cluster\> | AI Agent Dashboard |
+| kargo-\<cluster\> | Progressive Delivery |
+| headlamp-\<cluster\> | Kubernetes Dashboard |
+| keycloak-\<cluster\> | Identity Provider |
 
-**Architecture**:
-```
-kubectl (remote) → Tailscale Network → Operator (100.x.x.x:443) → Kubernetes API (cluster IP)
-      ↓                                      ↓                            ↓
-  Let's Encrypt TLS                    In-process proxy              Cluster CA TLS
-```
+See `docs/tailscale-cluster-access.md` and `specs/103-tailscale-services/quickstart.md`.
 
-**Chart Configuration**:
-- File: `cdk8s/charts/infra/tailscale-operator-chart.ts`
-- Environment variable: `APISERVER_PROXY=true`
-- Hostname pattern: `${clusterName}-operator` (unique suffix may be appended by Tailscale)
-- Security: `readOnlyRootFilesystem: false`, `allowPrivilegeEscalation: false` (no runAsNonRoot - operator requires root)
-- Resources: CPU (500m/100m), Memory (256Mi/128Mi)
-- ProxyGroup: Only created in production with `enableHA=true` (prevents dual-mode conflicts)
+### Hub-and-Spoke Architecture (Feature 108)
 
-**Scripts**:
-- `deployment/scripts/tailscale/generate-kubeconfig.sh`: Generate remote kubeconfig
-- `deployment/scripts/tailscale/export-cluster-ca.sh`: Export cluster CA (alternative to Tailscale HTTPS)
-- `deployment/scripts/tailscale/test-port-forward.sh`: Test port-forwarding (ArgoCD, Gitea, MinIO)
-- `deployment/scripts/tailscale/verify-dns-resolution.sh`: Verify DNS resolution (external + internal)
-
-**Documentation**:
-- **Primary**: `docs/tailscale-cluster-access.md` (750+ lines, comprehensive guide)
-- **Quickstart**: `specs/005-remote-kubernetes-cluster/quickstart.md` (test results, benchmarks)
-- **Feature Spec**: `specs/005-remote-kubernetes-cluster/spec.md` (requirements, design)
-
-**Common Tasks**:
+Multi-cluster GitOps: Hub cluster (Hetzner) manages spoke clusters (thinkpad, ryzen, talos) via Tailscale.
 
 ```bash
-# Generate kubeconfig with custom cluster/tailnet
-./deployment/scripts/tailscale/generate-kubeconfig.sh my-cluster tail123456
+# Hub provisioning (in talos-cluster repo)
+./scripts/provision-hub.sh && ./scripts/gen-hub-config.sh && ./scripts/bootstrap-hub.sh $IP
 
-# Port-forward ArgoCD from remote machine
-kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n argocd svc/argocd-server 8080:443 &
-# Access: https://localhost:8080
-
-# Port-forward multiple services
-kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n gitea svc/gitea-http 8081:3000 &
-kubectl --kubeconfig=~/remote-kubeconfig.yaml port-forward -n nix-cache svc/minio 8082:9000 &
-
-# Export cluster CA (for environments without Tailscale HTTPS)
-./deployment/scripts/tailscale/export-cluster-ca.sh cluster-ca.crt
-
-# Verify DNS resolution
-./deployment/scripts/tailscale/verify-dns-resolution.sh ~/remote-kubeconfig.yaml
-```
-
-**Troubleshooting**:
-```bash
-# Operator not starting: Check secrets
-kubectl get secret -n tailscale tailscale-operator-oauth
-# Should have client-id and client-secret keys from Azure Key Vault
-
-# Certificate provisioning slow: Increase timeout on first connection
-kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes --request-timeout=60s
-
-# Connection refused: Verify APISERVER_PROXY enabled
-kubectl get deployment -n tailscale tailscale-operator \
-  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="APISERVER_PROXY")].value}'
-# Should show: true
-
-# Check operator logs
-kubectl logs -n tailscale deployment/tailscale-operator --tail=50 | grep -i "proxy\|error"
-```
-
-**Security Best Practices**:
-- Use Tailscale HTTPS (Let's Encrypt) for production (automatic renewal)
-- Distribute cluster CA only for environments without Tailscale HTTPS
-- Avoid `--insecure-skip-tls-verify` except for temporary testing (<10 minutes)
-- Use dedicated ServiceAccounts with limited RBAC for CI/CD access
-- Tag CI/CD devices with `tag:ci` and use Tailscale ACLs for isolation
-
-**CI/CD Integration**:
-For GitHub Actions, GitLab CI, or Jenkins pipelines, use cluster CA distribution approach:
-1. Export cluster CA: `./deployment/scripts/tailscale/export-cluster-ca.sh`
-2. Embed CA in kubeconfig: Add `certificate-authority-data` field
-3. Store kubeconfig in CI secrets
-4. Use Tailscale OAuth client (GitHub Actions) or auth keys (GitLab CI/Jenkins)
-
-See `docs/tailscale-cluster-access.md` section "CI/CD Integration" for complete examples.
-
-**Performance Benchmarks** (from quickstart.md):
-| Metric | Target | Actual | Status |
-|--------|--------|--------|--------|
-| First connection | <60s | ~15s | ✅ PASS |
-| Subsequent commands | <2s | 0.469s | ✅ PASS |
-| Authentication | Works | vpittamp@github | ✅ PASS |
-| TLS validation | Valid | Let's Encrypt | ✅ PASS |
-
-### Tailscale Services (Stable Service URLs)
-
-**Purpose**: Provides stable URLs for all platform services that survive cluster recreation without hostname suffix drift (-1, -2, etc.).
-
-**Service URLs** (cluster-scoped pattern):
-
-| Service | URL | Purpose |
-|---------|-----|---------|
-| ArgoCD | `https://argocd-<cluster>.<tailnet>.ts.net` | GitOps Dashboard |
-| Langfuse | `https://langfuse-<cluster>.<tailnet>.ts.net` | LLM Observability |
-| Gitea | `https://gitea-<cluster>.<tailnet>.ts.net` | Git Server |
-| kagent | `https://kagent-<cluster>.<tailnet>.ts.net` | AI Agent Dashboard |
-| Kargo | `https://kargo-<cluster>.<tailnet>.ts.net` | Progressive Delivery |
-| Headlamp | `https://headlamp-<cluster>.<tailnet>.ts.net` | Kubernetes Dashboard |
-| Keycloak | `https://keycloak-<cluster>.<tailnet>.ts.net` | Identity Provider |
-
-**kubectl Access** (via Tailscale Operator API Proxy):
-```bash
-# Remote kubectl access with OAuth identity
-export KUBECONFIG=/tmp/tailscale-kubeconfig.yaml
-kubectl auth whoami  # Returns: vpittamp@github
-```
-
-**How It Works**:
-- Uses Tailscale Services feature with `--service` flag
-- Devices register to stable service names instead of ephemeral hostnames
-- ACL auto-approvers automatically approve service registrations from tagged devices
-- Tag-based auth keys (`tag:k8s-services`) enable automatic approval
-
-**Chart Configuration**:
-```typescript
-// In cdk8s/config/applications.ts
-{
-  name: 'argocd-tailscale-serve',
-  namespace: 'tailscale',
-  chart: {
-    type: 'TailscaleServeChart',  // Generic chart for all services
-    props: {
-      serviceName: getTailscaleServiceName('argocd'), // → svc:argocd-<cluster>
-      backendHost: 'argocd-server.argocd.svc.cluster.local',
-      backendPort: 443,
-      backendInsecure: true,
-    }
-  },
-  argocd: { syncWave: '-60' }
-}
-```
-
-**Key Files**:
-- Chart: `cdk8s/charts/platform/tailscale-serve-chart.ts` (generic chart for all services)
-- Helpers: `cdk8s/lib/tailscale-serve-helpers.ts`
-- Config: `cdk8s/config/applications.ts` (7 serve chart entries)
-- Spec: `specs/103-tailscale-services/` (implementation specification)
-
-**Verification**:
-```bash
-# Check pod logs for service registration
-kubectl logs -n tailscale -l app.kubernetes.io/component=tailscale-serve --tail=10
-
-# Test all service URLs (from Tailscale-connected device)
-export CLUSTER_NAME="${CLUSTER_NAME:-<cluster>}"     # e.g., ryzen | thinkpad
-export TAILSCALE_TAILNET="${TAILSCALE_TAILNET:-tail286401}"
-
-curl -sI "https://argocd-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200
-curl -sI "https://langfuse-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
-curl -sI "https://gitea-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 200
-curl -sI "https://kagent-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1    # HTTP/2 200
-curl -sI "https://kargo-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1     # HTTP/2 405 (API)
-curl -sI "https://headlamp-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
-curl -sI "https://keycloak-${CLUSTER_NAME}.${TAILSCALE_TAILNET}.ts.net" | head -1  # HTTP/2 200
-```
-
-**Troubleshooting**:
-- **Service not appearing**: Check auth key has `tag:k8s-services` tag
-- **ACL denied**: Verify ACL auto-approver rules in Tailscale Admin Console
-- **Langfuse auth fails**: Ensure `nextAuthUrl` matches service URL exactly
-- **Pod stuck waiting**: Check `kubectl get externalsecret -n tailscale` for auth key sync status
-
-**Requirements**:
-- Tailscale v1.86.0+ (Services feature)
-- Tag-based auth key with `tag:k8s-services`
-- ACL auto-approvers for each cluster-scoped service (`svc:argocd-ryzen`, `svc:argocd-thinkpad`, etc.)
-
-See `specs/103-tailscale-services/quickstart.md` for complete setup and validation guide.
-
-### Hub-and-Spoke ArgoCD Architecture (Feature 108)
-
-**Purpose**: Multi-cluster GitOps management with a dedicated hub cluster running ArgoCD that manages spoke clusters via Tailscale connectivity.
-
-**Architecture Overview**:
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Hub Cluster (Hetzner CX32)                            │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐               │
-│  │    ArgoCD     │  │     Kargo     │  │      ESO      │               │
-│  │  (Management) │  │  (Promotion)  │  │   (Secrets)   │               │
-│  └───────┬───────┘  └───────────────┘  └───────────────┘               │
-│          │                                                               │
-│          │ Tailscale k8s-api-<spoke>.tail286401.ts.net                  │
-└──────────┼──────────────────────────────────────────────────────────────┘
-           │
-     ┌─────┴─────┬─────────────┬─────────────┐
-     ▼           ▼             ▼             ▼
-┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-│ hetzner │ │thinkpad │ │  ryzen  │ │  talos  │
-│ (prod)  │ │  (dev)  │ │(staging)│ │ (prod)  │
-└─────────┘ └─────────┘ └─────────┘ └─────────┘
-   Spoke        Spoke       Spoke       Spoke
-```
-
-**Key Concepts**:
-- **Hub Cluster**: Single-node Talos Linux cluster running centralized management workloads
-- **Spoke Clusters**: Existing clusters (hetzner, thinkpad, ryzen, talos) running application workloads
-- **targetCluster Field**: ApplicationConfig property that routes deployments to specific clusters
-- **ArgoCD Cluster Secrets**: Secrets with `argocd.argoproj.io/secret-type: cluster` label
-
-**Hub Provisioning**:
-```bash
-# Navigate to talos-cluster repo
-cd ~/repos/PittampalliOrg/talos-cluster
-
-# Set required environment variables
-export HCLOUD_TOKEN="your-hetzner-api-token"
-
-# Step 1: Provision Hetzner infrastructure
-./scripts/provision-hub.sh
-
-# Step 2: Generate Talos machine configuration
-./scripts/gen-hub-config.sh
-
-# Step 3: Bootstrap the cluster
-./scripts/bootstrap-hub.sh $HUB_PUBLIC_IP
-
-# Access hub ArgoCD
-open https://argocd-hub.tail286401.ts.net
-```
-
-**Spoke Registration**:
-```bash
-# Source spoke helpers
+# Spoke registration
 source scripts/lib/spoke-helpers.sh
-export AZURE_KEYVAULT_NAME="idp-kv"
-
-# Register a spoke cluster
-kubectl config use-context thinkpad
-create_spoke_service_account thinkpad
-export_credentials_to_keyvault thinkpad
-
-# Or use the bootstrap script
 ./scripts/bootstrap-spoke.sh thinkpad
-./scripts/bootstrap-spoke.sh --all  # Bootstrap all spokes
 ```
 
-**Using targetCluster**:
-```typescript
-// In cdk8s/config/applications.ts
-{
-  name: 'backstage-dev',
-  namespace: 'backstage',
-  chart: { type: 'BackstageChart' },
-  argocd: {
-    syncWave: '50',
-    targetCluster: 'thinkpad',  // Deploy to thinkpad spoke
-    labels: {
-      'app.kubernetes.io/environment': 'dev'
-    }
-  }
-}
-```
+**targetCluster values**: `'hub'`, `'hetzner'`, `'thinkpad'`, `'ryzen'`, `'talos'`
 
-**Valid targetCluster Values**:
-- `'hub'` - Deploy to hub cluster (in-cluster)
-- `'hetzner'` - Deploy to hetzner spoke
-- `'thinkpad'` - Deploy to thinkpad spoke
-- `'ryzen'` - Deploy to ryzen spoke
-- `'talos'` - Deploy to talos spoke
-
-**Key Files**:
-- Cluster registry: `cdk8s/lib/cluster-registry.ts`
-- ApplicationConfig types: `cdk8s/lib/idpbuilder-types.ts`
-- ArgoCD destination: `cdk8s/charts/platform/argo-applications-chart-v2.ts`
-- Cluster secret chart: `cdk8s/charts/platform/argocd-cluster-secret-chart.ts`
-- Credentials chart: `cdk8s/charts/secrets/argocd-cluster-credentials-chart.ts`
-- Spoke helpers: `scripts/lib/spoke-helpers.sh`
-- Hub provisioning: `talos-cluster/scripts/provision-hub.sh`
-- Recovery runbook: `docs/hub-recovery-runbook.md`
-- Feature spec: `specs/108-hub-and-spoke/`
-
-**Recovery**:
-```bash
-# If hub cluster fails, spokes continue running
-# To restore hub:
-./scripts/provision-hub.sh --force
-./scripts/gen-hub-config.sh
-./scripts/bootstrap-hub.sh $HUB_PUBLIC_IP
-
-# Validate recovery
-./scripts/validate-hub-recovery.sh
-```
+See `specs/108-hub-and-spoke/` and `docs/hub-recovery-runbook.md`.
 
 ## Architecture
 
 ### Code Organization
 
-**Main Entry Point:**
-- `cdk8s/main-v2.ts`: Loads `config/applications.ts`, uses `IdpBuilderChartFactory` to create charts, synthesizes per-app packages to `cdk8s/dist/<app>/manifests`, writes kustomization.yaml, emits `cdk8s/dist/<app>.yaml` ArgoCD Application manifests.
+- **Entry point**: `cdk8s/main-v2.ts` - loads config, creates charts, synthesizes to `cdk8s/dist/<app>/manifests/`
+- **Config**: `cdk8s/config/applications.ts` - declarative ApplicationConfig[]
+- **Charts**: `cdk8s/charts/{apps,platform,pipelines,secrets,infra}/`
+- **Libraries**: `cdk8s/lib/` - factory, sync builders, ESO helpers, Kargo RBAC
+- **Imports**: `cdk8s/imports/` - k8s.ts, argoproj.io.ts, external-secrets.io.ts, kargo.akuity.io.ts
 
-**Configuration:**
-- `cdk8s/config/applications.ts`: Declarative `ApplicationConfig[]` driving chart type, namespace, sync wave, labels/annotations, dependencies.
+### CDK8s Pattern
 
-**Charts by Domain:**
-- `cdk8s/charts/apps/`: Application workloads (Next.js, Postgres, Redis)
-- `cdk8s/charts/platform/`: Platform apps (ArgoCD Application builders, Headlamp, Namespaces)
-- `cdk8s/charts/pipelines/`: Kargo pipeline resources (Projects, Warehouses, Stages, RBAC)
-- `cdk8s/charts/secrets/`: External Secrets definitions and Workload Identity patches
-- `cdk8s/charts/infra/`: Infrastructure charts (Dagger, Vault)
+TypeScript over YAML templating for type safety, IDE support, reusability.
 
-**Shared Libraries:**
-- `cdk8s/lib/idpbuilder-chart-factory.ts`: Registers/creates chart instances by name
-- `cdk8s/lib/argocd-sync-builders.ts`: Sync-wave, hook, and Argo-specific annotations helpers
-- `cdk8s/lib/eso-helpers.ts`: Reusable builders for ExternalSecret patterns (env secrets, dockerconfigjson, TLS)
-- `cdk8s/lib/kargo-rbac.ts`: Helper for Kargo pipeline ServiceAccount + RoleBinding
-- `cdk8s/lib/auto-register-charts.ts`: Auto-registration of chart classes
-- `cdk8s/lib/kustomization-generator.ts`: Generates kustomization.yaml for packages
+**Resource APIs**:
+- `imports/k8s` (low-level): Exact YAML control, CRDs, precise specs
+- `cdk8s-plus-32` (high-level): Standard resources with ergonomics
 
-**Typed Imports:**
-- `cdk8s/imports/k8s.ts`: Kubernetes core types (KubeDeployment, KubeService, KubeIngress, etc.)
-- `cdk8s/imports/argoproj.io.ts`: Argo resources (Application, WorkflowTemplate, etc.)
-- `cdk8s/imports/external-secrets.io.ts`: External Secrets CRDs
-- `cdk8s/imports/kargo.akuity.io.ts`: Kargo CRDs
+This repo primarily uses `imports/k8s` for consistency.
 
-**Other Directories:**
-- `ref-implementation/`: CNOE reference implementation with example packages
-- `deployment/`: Deployment configurations
-- `scripts/`: Utility scripts (cluster setup, certificate management)
-- `docs/`: Comprehensive documentation (architecture, workflow, troubleshooting)
+### IdpBuilder Packages & cnoe:// URLs
 
-### CDK8s Pattern: Typed TypeScript over YAML Templating
-
-We use CDK8s with TypeScript to solve YAML templating issues (Helm, Kustomize):
-- **Type Safety:** Compile-time validation of Kubernetes resources
-- **IDE Support:** Full autocomplete, refactoring, error detection
-- **Reusability:** Shared functions and classes
-- **Complex Logic:** Full programming language capabilities
-
-**Resource Definition Approaches:**
-
-1. **Low-level API (imports/k8s):** For exact YAML control
-   ```typescript
-   import * as k8s from './imports/k8s';
-
-   new k8s.KubeDeployment(this, 'my-deployment', {
-     spec: {
-       replicas: 3,
-       selector: { matchLabels: { app: 'my-app' } },
-       template: {
-         metadata: { labels: { app: 'my-app' } },
-         spec: {
-           containers: [{
-             name: 'app-container',
-             image: 'nginx:1.19.10',
-             ports: [{ containerPort: 80 }]
-           }]
-         }
-       }
-     }
-   });
-   ```
-
-2. **High-level API (cdk8s-plus-32):** For ergonomics and reduced complexity
-   ```typescript
-   import * as kplus from 'cdk8s-plus-32';
-
-   const deployment = new kplus.Deployment(this, 'Deployment', {
-     replicas: 3,
-     containers: [{ image: 'nginx:1.19.10', port: 80 }]
-   });
-
-   deployment.exposeViaService({
-     serviceType: kplus.ServiceType.LOAD_BALANCER
-   });
-   ```
-
-**When to use each:**
-- **imports/k8s:** When you need exact YAML output, working with CRDs, or precise control over resource specifications
-- **cdk8s-plus-32:** When defining standard Kubernetes resources (Deployments, Services, ConfigMaps) and ergonomics improve productivity without sacrificing clarity
-
-**Note:** This repository primarily uses `imports/k8s` for consistency and exact YAML control. Use `cdk8s-plus-32` selectively when it improves ergonomics without altering YAML semantics.
-
-### IdpBuilder Packages & cnoe:// URL Syntax
-
-Synthesis produces IdpBuilder-ready packages:
-- `cdk8s/dist/<app>/manifests/`: All resource YAMLs (FILE_PER_RESOURCE mode) + `kustomization.yaml`
-- `cdk8s/dist/<app>.yaml`: ArgoCD Application referencing `cnoe://<app>/manifests` for local dev
-
-**How `cnoe://` works:**
-1. `cnoe://<package>/manifests` in Application source indicates local package path
-2. IdpBuilder creates Gitea repository: `idpbuilder-localdev-<package>-manifests`
-3. Pushes `dist/<package>/manifests/` contents to Gitea
-4. Rewrites Application source URL to Gitea URL
-5. ArgoCD syncs from Gitea repository
-
-### ArgoCD Applications Architecture
-
-- **Single-source vs multi-source:**
-  - Single-source: one `source` pointing to `cnoe://<package>/manifests` during local dev
-  - Multi-source: `sources[]` when pulling from both Helm and local files
-- **Destinations:**
-  - Dev/Staging Apps target named vclusters (e.g., `dev-vcluster`, `staging-vcluster`)
-  - Others target in-cluster `https://kubernetes.default.svc`
-- **Sync waves:** Use `argocd.argoproj.io/sync-wave` annotations to control ordering (namespaces < secrets < apps)
-- **Kargo integration:** Some apps include `kargo.akuity.io/authorized-stage` annotations
+1. `cnoe://<package>/manifests` in ArgoCD Application source
+2. IdpBuilder creates Gitea repo, pushes manifests
+3. Rewrites URL to Gitea, ArgoCD syncs
 
 ### Secrets Management
 
-Uses External Secrets Operator (ESO) with Azure Key Vault:
-- **ClusterSecretStore:** Points to Azure Key Vault via Workload Identity
-- **ExternalSecret:** Per-namespace resources syncing specific secrets
-- **Patterns:** Environment secrets, dockerconfigjson (GHCR), TLS certificates
-
-Workload Identity for ESO is configured via charts in `cdk8s/charts/secrets/`.
+ESO with Azure Key Vault via Workload Identity:
+- ClusterSecretStore → Key Vault
+- ExternalSecret per namespace
+- Patterns: env secrets, dockerconfigjson, TLS
 
 ## Adding New Applications
 
-1. **Create Chart:**
-   ```typescript
-   // cdk8s/charts/apps/my-new-app-chart.ts
-   import { Chart, ChartProps } from 'cdk8s';
-   import { Construct } from 'constructs';
-   import * as k8s from '../../imports/k8s';
-
-   export class MyNewAppChart extends Chart {
-     constructor(scope: Construct, id: string, props?: ChartProps) {
-       super(scope, id, props);
-       // Define resources...
-     }
-   }
-   ```
-
-2. **Register Chart:**
-   ```typescript
-   // cdk8s/main-v2.ts
-   import { MyNewAppChart } from './charts/apps/my-new-app-chart';
-   IdpBuilderChartFactory.register('MyNewAppChart', MyNewAppChart);
-   ```
-
-3. **Add to Configuration:**
-   ```typescript
-   // cdk8s/config/applications.ts
-   {
-     name: 'my-new-app',
-     namespace: 'my-new-app',
-     chart: {
-       type: 'MyNewAppChart',
-       props: { /* chart-specific properties */ }
-     },
-     argocd: {
-       syncWave: '100',
-       labels: { 'app.kubernetes.io/name': 'my-new-app' },
-       syncPolicy: { automated: { prune: true, selfHeal: true } }
-     }
-   }
-   ```
-
-4. **Synthesize and Deploy:**
-   ```bash
-   cd cdk8s
-   npx ts-node main-v2.ts
-   idpbuilder create --package dist/my-new-app
-   ```
-
-## Multi-Environment Patterns
-
-**Parameterized Charts:**
 ```typescript
-export interface MyAppParameterizedChartProps extends ChartProps {
-  environmentName: string;
-  replicas?: number;
+// 1. Create chart: cdk8s/charts/apps/my-app-chart.ts
+export class MyAppChart extends Chart {
+  constructor(scope: Construct, id: string, props?: ChartProps) {
+    super(scope, id, props);
+    // Define resources...
+  }
 }
 
-export class MyAppParameterizedChart extends Chart {
-  constructor(scope: Construct, id: string, props: MyAppParameterizedChartProps) {
-    super(scope, id, props);
-    const envName = props.environmentName;
-    const replicas = props.replicas || (envName === 'production' ? 3 : 1);
-    // Environment-specific configuration...
-  }
+// 2. Add to config/applications.ts
+{
+  name: 'my-app',
+  namespace: 'my-app',
+  chart: { type: 'MyAppChart', props: {} },
+  argocd: { syncWave: '100', syncPolicy: { automated: { prune: true, selfHeal: true } } }
 }
 ```
 
-Generate separate applications per environment in `config/applications.ts`.
+```bash
+# 3. Synthesize and deploy
+cd cdk8s && npm run synth
+idpbuilder create --package dist/my-app
+```
 
 ## Best Practices
 
-1. **Type Safety:** Use interfaces for chart props, validate configurations
-2. **Resource Naming:** `<app>-<env>-<resource>` pattern
-3. **Dependencies:** Declare explicitly via sync waves or dependencies config
-4. **Sync Waves:** Typical order:
-   - `-110` to `-100`: Namespaces, CRDs
-   - `-90` to `-80`: RBAC, ServiceAccounts
-   - `-70` to `-50`: Secrets, ConfigMaps
-   - `0` to `50`: Deployments, StatefulSets
-   - `100+`: Applications, Ingresses
-5. **Error Handling:** Graceful degradation, validation checks
-6. **Security:** Use External Secrets for sensitive data, set SecurityContext, resource limits, NetworkPolicies
-7. **Documentation:** Comment complex logic, document chart props
+1. **Sync Waves**: `-110` namespaces → `-90` RBAC → `-70` secrets → `0` deployments → `100+` ingresses
+2. **Resource Naming**: `<app>-<env>-<resource>` pattern
+3. **Security**: External Secrets for sensitive data, SecurityContext, resource limits
+4. **Type Safety**: Interfaces for chart props, validate configurations
 
 ## Troubleshooting
 
-### TypeScript Errors
 ```bash
-rm -rf cdk8s/node_modules/.cache
-cd cdk8s && npm run compile
+# TypeScript errors
+rm -rf cdk8s/node_modules/.cache && cd cdk8s && npm run compile
+
+# Synthesis failures
+cd cdk8s && rm -rf dist/ && npm run synth
+
+# Import issues
+cd cdk8s && npm run import
 ```
-
-### Synthesis Failures
-```bash
-cd cdk8s
-rm -rf dist/
-npx ts-node main-v2.ts
-```
-
-### Import Issues
-```bash
-cd cdk8s
-npm run import
-```
-
-### CNOE URL Not Resolving
-Ensure deployment is via IdpBuilder (not direct `kubectl apply`).
-
-### Sync Out of Order
-Check `argocd.argoproj.io/sync-wave` annotations.
 
 ## CNOE Technology Stack
 
-This repository implements CNOE-endorsed technologies for internal developer platforms:
-
-| Category | Tool(s) | Implementation |
-|----------|---------|----------------|
-| Code Repository | Git | Gitea (local), GitHub (external) |
-| Artifact Registry | Container Registries | Gitea OCI registry (local), GHCR (external) |
-| Secret Repository | External Secrets | Azure Key Vault via Workload Identity |
-| Secret Management | External Secrets | ESO with ClusterSecretStore |
-| Continuous Delivery | Argo CD | GitOps for all platform services |
-| Workflow Orchestration | Argo Workflows | CI/CD pipelines, Spark jobs |
-| Identity & Access | Keycloak | SSO for Backstage, Argo, other services |
-| Developer Portal | Backstage | Software catalog, templates, self-service |
-| Packaging & Templating | cdk8s | TypeScript-based K8s manifest generation |
-| Deployment Orchestration | Kargo | Progressive delivery pipelines |
-
-**Platform Capabilities:**
-- **Compute Platform:** Kubernetes (kind for local, EKS/AKS for production)
-- **Multi-tenancy:** VClusters for environment isolation (dev, staging)
-- **Service Discovery:** Kubernetes DNS, ingress-nginx
-- **Observability:** Integration points for Prometheus, Grafana (not included in base)
-- **Validation:** ArgoCD admission control, External Secrets validation
+| Category | Tool | Implementation |
+|----------|------|----------------|
+| Code Repository | Git | Gitea (local), GitHub |
+| Artifact Registry | OCI | Gitea registry, GHCR |
+| Secrets | External Secrets | Azure Key Vault |
+| CD | ArgoCD | GitOps |
+| Identity | Keycloak | SSO |
+| Portal | Backstage | Catalog, templates |
+| Packaging | cdk8s | TypeScript manifests |
+| Deployment | Kargo | Progressive delivery |
 
 ## Documentation
 
-See `docs/` directory for detailed information:
-- `README.md`: Documentation index
-- `cnoe-overview.md`: CNOE philosophy, technology capabilities, idpBuilder reference
-- `cdk8s-typescript-docs.md`: CDK8s fundamentals, cdk8s+ usage, CLI commands
-- `cdk8s-architecture-and-packaging.md`: CDK8s architecture, code organization, IdpBuilder packaging
-- `development-workflow.md`: Development patterns, testing, deployment process
-- `gitops-architecture-overview.md`: GitOps architecture, design decisions
-- `secrets-management.md`: External Secrets Operator, Azure Key Vault integration
-- `AZURE_WORKLOAD_IDENTITY.md`: Azure Workload Identity setup
+See `docs/` for detailed guides:
+- `cnoe-overview.md`, `cdk8s-typescript-docs.md`, `cdk8s-architecture-and-packaging.md`
+- `development-workflow.md`, `gitops-architecture-overview.md`
+- `secrets-management.md`, `AZURE_WORKLOAD_IDENTITY.md`, `tailscale-cluster-access.md`
 
 ## Reference Implementation
-
-The `ref-implementation/` directory contains a CNOE reference implementation with:
-- **Argo Workflows:** Workflow orchestration (CI/CD, Spark jobs)
-- **Backstage:** Developer portal (software catalog, templates, self-service)
-- **External Secrets:** Secrets management with Azure Key Vault integration
-- **Keycloak:** Identity provider (SSO for all services)
-- **Spark Operator:** Example data processing workload
-
-### Installation
 
 ```bash
 idpbuilder create --use-path-routing \
@@ -1074,68 +229,5 @@ idpbuilder create --use-path-routing \
   --package https://github.com/cnoe-io/stacks//ref-implementation
 ```
 
-This takes ~6 minutes. Track progress at ArgoCD UI.
-
-### Access UIs
-
-**Default (domain-based routing):**
-- Argo CD: https://argocd.cnoe.localtest.me:8443
-- Argo Workflows: https://argo-workflows.cnoe.localtest.me:8443
-- Backstage: https://cnoe.localtest.me:8443
-- Gitea: https://gitea.cnoe.localtest.me:8443
-- Keycloak: https://keycloak.cnoe.localtest.me:8443/admin/master/console/
-
-**Path-based routing (with `--use-path-routing`):**
-- Argo CD: https://cnoe.localtest.me:8443/argocd
-- Argo Workflows: https://cnoe.localtest.me:8443/argo-workflows
-- Backstage: https://cnoe.localtest.me:8443/
-- Gitea: https://cnoe.localtest.me:8443/gitea
-- Keycloak: https://cnoe.localtest.me:8443/keycloak/admin/master/console/
-
-### Default Credentials
-
-```bash
-# Get all secrets
-idpbuilder get secrets
-
-# Backstage login: user1 (admin) or user2 (regular user)
-# Password: USER_PASSWORD from secrets output
-
-# Keycloak admin: cnoe-admin
-# Password: KEYCLOAK_ADMIN_PASSWORD from secrets output
-```
-
-### Example Use Cases
-
-1. **Basic Deployment:** Create simple nginx deployment via Backstage template
-2. **Argo Workflows + Spark:** Deploy Spark job through workflow template
-3. **App with Cloud Resources:** Create app with S3 bucket (requires Crossplane setup)
-
-**What happens when you create via Backstage:**
-1. Backstage creates Git repository in Gitea, pushes templated contents
-2. Backstage creates ArgoCD Application pointing to Git repository
-3. Backstage registers component in catalog (catalog-info.yaml)
-4. ArgoCD deploys manifests to cluster
-5. Backstage retrieves health status from ArgoCD API
-
-### DNS Resolution
-
-- **External:** `cnoe.localtest.me` and subdomains resolve to `127.0.0.1`
-- **In-cluster:** CoreDNS rewrites to `ingress-nginx-controller.ingress-nginx.svc.cluster.local`
-- **Traffic flow:** localhost:8443 → kind container:443 → ingress-nginx → service
-
-### Running on Remote Host
-
-**Option 1 (SSH port forwarding):**
-```bash
-# On server
-idpbuilder create
-
-# On local machine
-ssh -L 8443:server:8443 -L 32222:server:32222 -L 36091:server:36091 user@server
-```
-
-**Option 2 (Change ingress host):**
-```bash
-idpbuilder create --host SERVER.DOMAIN.NAME --use-path-routing
-```
+**URLs** (domain-based): `https://{argocd,argo-workflows,gitea,keycloak}.cnoe.localtest.me:8443`
+**Credentials**: `idpbuilder get secrets` (user1/user2 for Backstage, cnoe-admin for Keycloak)

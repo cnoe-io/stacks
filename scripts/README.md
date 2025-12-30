@@ -50,8 +50,7 @@ scripts/
 └── cluster/               Cluster-specific operations and utilities
     ├── fix-docker-nixos.sh            Fix Docker socket permissions on NixOS
     ├── remove-core-dns-package.sh     Clean up legacy CoreDNS overrides
-    ├── setup-headlamp-access.sh       Configure Headlamp service account
-    └── update-argocd-token.sh         Sync ArgoCD token to 1Password
+    └── setup-headlamp-access.sh       Configure Headlamp service account
 ```
 
 ## Certificates Module
@@ -159,11 +158,6 @@ Operations specific to Kind cluster management and Kubernetes utilities.
 - Generates long-lived token for Headlamp UI
 - Configures RBAC for dashboard access
 
-**update-argocd-token.sh**
-- Extracts ArgoCD admin token from cluster
-- Stores in 1Password CLI (`op` command)
-- Useful for CI/CD and automation
-
 ### Usage Examples
 
 Fix Docker permissions (NixOS):
@@ -181,11 +175,6 @@ Setup Headlamp access:
 ./scripts/cluster/setup-headlamp-access.sh
 ```
 
-Update ArgoCD token in 1Password:
-```bash
-./scripts/cluster/update-argocd-token.sh
-```
-
 ## Integration with Deployment
 
 The deployment scripts (`deployment/scripts/`) automatically reference these utility scripts:
@@ -194,7 +183,6 @@ The deployment scripts (`deployment/scripts/`) automatically reference these uti
 - `scripts/cluster/remove-core-dns-package.sh` (cleanup)
 - `scripts/certificates/sync-cluster-certificates.sh` (post-deployment)
 - `scripts/certificates/setup-browser-certs.sh` (browser trust)
-- `scripts/cluster/update-argocd-token.sh` (1Password sync)
 
 **cluster-menu.sh** uses:
 - `scripts/certificates/system/ca-bundle-with-idpbuilder.crt` (SSL_CERT_FILE)

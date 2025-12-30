@@ -11,7 +11,7 @@
  * 4. agent-backstage-secret - Backstage API credentials for agent-backstage
  * 5. neo4j-secret - Neo4j database password
  * 6. embeddings-secret - Embeddings provider (reuses Azure OpenAI)
- * 7. caipe-langfuse-credentials - Langfuse API keys for observability
+ * 7. langfuse-api-keys - Langfuse tracing API credentials
  *
  * Uses Azure Workload Identity via ClusterSecretStore
  */
@@ -30,6 +30,7 @@ import {
   CAIPE_SYNC_WAVES,
   CAIPE_KEYVAULT_KEYS,
   getCaipeCommonLabels,
+  getClusterSpecificKeyVaultKey,
 } from '../../lib/caipe-helpers';
 
 export interface CaipeSecretsChartProps extends ChartProps {
@@ -56,6 +57,21 @@ export interface CaipeSecretsChartProps extends ChartProps {
    * @default '-80'
    */
   syncWave?: string;
+
+  /**
+   * Cluster identifier for Key Vault secret naming
+   * Used to pull cluster-specific secrets (ArgoCD token, Backstage token)
+   * Must match the clusterId used by token sync charts
+   * @example 'localdev', 'talos', 'kind'
+   */
+  clusterId?: string;
+
+  /**
+   * Skip creating agent-github-secret when using GithubTokenGeneratorChart
+   * The generator chart creates the secret with short-lived tokens instead
+   * @default false
+   */
+  useGithubTokenGenerator?: boolean;
 }
 
 export class CaipeSecretsChart extends Chart {
@@ -66,6 +82,12 @@ export class CaipeSecretsChart extends Chart {
     const clusterSecretStoreName = props.clusterSecretStoreName || CAIPE_SECRET_STORE;
     const refreshInterval = props.refreshInterval || CAIPE_REFRESH_INTERVAL;
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.secrets;
+    const clusterId = props.clusterId || '';
+    const useGithubTokenGenerator = props.useGithubTokenGenerator || false;
+
+    // Cluster-specific Key Vault keys for tokens pushed by token sync charts
+    const argocdTokenKey = getClusterSpecificKeyVaultKey(CAIPE_KEYVAULT_KEYS.argocdToken, clusterId);
+    const backstageTokenKey = getClusterSpecificKeyVaultKey(CAIPE_KEYVAULT_KEYS.backstageApiToken, clusterId);
 
     const commonLabels = getCaipeCommonLabels('secrets');
 
@@ -129,6 +151,11 @@ export class CaipeSecretsChart extends Chart {
     // Agent ArgoCD Secret
     // ==========================================================================
 
+    // ArgoCD API URL - must NOT include /api/v1/ as the MCP server adds it
+    // The MCP server constructs URLs like: {base_url}/api/v1/applications
+    // Use HTTPS as ArgoCD redirects HTTP to HTTPS (307)
+    const argocdApiUrl = 'https://argocd-server.argocd';
+
     const argocdSecret = new ExternalSecret(this, 'agent-argocd-secret', {
       metadata: {
         name: 'agent-argocd-secret',
@@ -149,20 +176,19 @@ export class CaipeSecretsChart extends Chart {
             metadata: {
               labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-argocd' },
             },
+            // Use template data to set the correct ArgoCD API URL
+            // The MCP server adds /api/v1/ to all requests, so base URL should NOT include it
+            data: {
+              'ARGOCD_TOKEN': '{{ .argocdToken }}',
+              'ARGOCD_API_URL': argocdApiUrl,
+              'ARGOCD_VERIFY_SSL': 'false',
+            },
           },
         },
         data: [
           {
-            secretKey: 'ARGOCD_TOKEN',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdToken },
-          },
-          {
-            secretKey: 'ARGOCD_API_URL',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdApiUrl },
-          },
-          {
-            secretKey: 'ARGOCD_VERIFY_SSL',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdVerifySsl },
+            secretKey: 'argocdToken',
+            remoteRef: { key: argocdTokenKey },
           },
         ],
       },
@@ -171,39 +197,42 @@ export class CaipeSecretsChart extends Chart {
 
     // ==========================================================================
     // Agent GitHub Secret
+    // Skip when using GithubTokenGeneratorChart (it creates the secret instead)
     // ==========================================================================
 
-    const githubSecret = new ExternalSecret(this, 'agent-github-secret', {
-      metadata: {
-        name: 'agent-github-secret',
-        namespace: namespace,
-        labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
-      },
-      spec: {
-        refreshInterval: refreshInterval,
-        secretStoreRef: {
-          name: clusterSecretStoreName,
-          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
-        },
-        target: {
+    if (!useGithubTokenGenerator) {
+      const githubSecret = new ExternalSecret(this, 'agent-github-secret', {
+        metadata: {
           name: 'agent-github-secret',
-          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
-          template: {
-            type: 'Opaque',
-            metadata: {
-              labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+          namespace: namespace,
+          labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+        },
+        spec: {
+          refreshInterval: refreshInterval,
+          secretStoreRef: {
+            name: clusterSecretStoreName,
+            kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+          },
+          target: {
+            name: 'agent-github-secret',
+            creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+            template: {
+              type: 'Opaque',
+              metadata: {
+                labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+              },
             },
           },
+          data: [
+            {
+              secretKey: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+              remoteRef: { key: CAIPE_KEYVAULT_KEYS.githubPat },
+            },
+          ],
         },
-        data: [
-          {
-            secretKey: 'GITHUB_PERSONAL_ACCESS_TOKEN',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.githubPat },
-          },
-        ],
-      },
-    });
-    githubSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+      });
+      githubSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+    }
 
     // ==========================================================================
     // Agent Backstage Secret
@@ -234,7 +263,7 @@ export class CaipeSecretsChart extends Chart {
         data: [
           {
             secretKey: 'BACKSTAGE_API_TOKEN',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.backstageApiToken },
+            remoteRef: { key: backstageTokenKey },
           },
           {
             secretKey: 'BACKSTAGE_URL',
@@ -328,16 +357,14 @@ export class CaipeSecretsChart extends Chart {
     embeddingsSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
 
     // ==========================================================================
-    // Langfuse Observability Credentials
+    // Langfuse API Keys - For LLM observability/tracing
     // ==========================================================================
-    // Syncs Langfuse API keys from Azure Key Vault to enable tracing
-    // across all CAIPE agents. Used by cnoe-agent-utils TracingManager.
 
-    const langfuseSecret = new ExternalSecret(this, 'langfuse-credentials', {
+    const langfuseSecret = new ExternalSecret(this, 'langfuse-api-keys', {
       metadata: {
-        name: 'caipe-langfuse-credentials',
+        name: 'langfuse-api-keys',
         namespace: namespace,
-        labels: { ...commonLabels, 'app.kubernetes.io/component': 'observability' },
+        labels: { ...commonLabels, 'app.kubernetes.io/component': 'tracing' },
       },
       spec: {
         refreshInterval: refreshInterval,
@@ -346,12 +373,12 @@ export class CaipeSecretsChart extends Chart {
           kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
         },
         target: {
-          name: 'caipe-langfuse-credentials',
+          name: 'langfuse-api-keys',
           creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
           template: {
             type: 'Opaque',
             metadata: {
-              labels: { ...commonLabels, 'app.kubernetes.io/component': 'observability' },
+              labels: { ...commonLabels, 'app.kubernetes.io/component': 'tracing' },
             },
           },
         },

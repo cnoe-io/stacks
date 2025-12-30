@@ -345,5 +345,93 @@ export class KeycloakSecretsChart extends Chart {
         },
       },
     });
+
+    // ==========================================================================
+    // ClusterSecretStore: default-namespace (Kubernetes provider)
+    // For accessing idpbuilder-cert CA certificate from default namespace
+    // ==========================================================================
+
+    const defaultNamespace = 'default';
+
+    // ServiceAccount for accessing default namespace secrets
+    new k8s.KubeServiceAccount(this, 'default-eso-sa', {
+      metadata: {
+        name: 'eso-store-default',
+        namespace: defaultNamespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-100',
+        },
+      },
+    });
+
+    // Role for reading secrets in default namespace
+    new k8s.KubeRole(this, 'default-eso-role', {
+      metadata: {
+        name: 'eso-store-default',
+        namespace: defaultNamespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-100',
+        },
+      },
+      rules: [
+        {
+          apiGroups: [''],
+          resources: ['secrets'],
+          verbs: ['get', 'list', 'watch'],
+          resourceNames: ['idpbuilder-cert'],
+        },
+      ],
+    });
+
+    // RoleBinding for ESO to access default namespace
+    new k8s.KubeRoleBinding(this, 'default-eso-rolebinding', {
+      metadata: {
+        name: 'eso-store-default',
+        namespace: defaultNamespace,
+        annotations: {
+          'argocd.argoproj.io/sync-wave': '-100',
+        },
+      },
+      subjects: [
+        {
+          kind: 'ServiceAccount',
+          name: 'eso-store-default',
+          namespace: defaultNamespace,
+        },
+      ],
+      roleRef: {
+        kind: 'Role',
+        name: 'eso-store-default',
+        apiGroup: 'rbac.authorization.k8s.io',
+      },
+    });
+
+    // ClusterSecretStore for default namespace
+    new ClusterSecretStore(this, 'default-clustersecretstore', {
+      metadata: {
+        name: 'default-namespace',
+      },
+      spec: {
+        provider: {
+          kubernetes: {
+            remoteNamespace: defaultNamespace,
+            server: {
+              caProvider: {
+                type: ClusterSecretStoreSpecProviderKubernetesServerCaProviderType.CONFIG_MAP,
+                name: 'kube-root-ca.crt',
+                namespace: defaultNamespace,
+                key: 'ca.crt',
+              },
+            },
+            auth: {
+              serviceAccount: {
+                name: 'eso-store-default',
+                namespace: defaultNamespace,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 }
