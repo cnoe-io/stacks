@@ -31,7 +31,7 @@ export const CAIPE_IMAGE_VERSIONS = {
   ragWebui: 'latest',
   nexigraph: 'latest',
   milvus: '2.6.0',
-  neo4j: '5.18.0',
+  neo4j: '5.26.0',
   redis: '7.2.4',
 } as const;
 
