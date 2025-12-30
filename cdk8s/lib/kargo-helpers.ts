@@ -321,8 +321,9 @@ const giteaExternalRegistry = `${giteaExternalHost}/giteaadmin`;
 export const GITEA = {
   /** Internal host for in-cluster operations (Kargo, pipelines) - PREFERRED */
   INTERNAL_HOST: giteaInternalHost,
-  /** Internal Git base URL for in-cluster operations - PREFERRED for Kargo */
-  GIT_BASE_URL_INTERNAL: `https://${giteaInternalHost}/giteaAdmin`,
+  /** Internal Git base URL for in-cluster operations - PREFERRED for Kargo
+   *  NOTE: Uses HTTP because port 3000 is the internal HTTP service, not HTTPS */
+  GIT_BASE_URL_INTERNAL: `http://${giteaInternalHost}/giteaAdmin`,
   /** Internal registry for in-cluster operations - PREFERRED for Kargo warehouses */
   REGISTRY_INTERNAL: giteaInternalRegistry,
 
@@ -342,7 +343,7 @@ export const GITEA = {
   /** @deprecated Use INTERNAL_HOST for in-cluster, EXTERNAL_HOST for browser access */
   HOST: giteaInternalHost,
   /** @deprecated Use GIT_BASE_URL_INTERNAL for in-cluster operations */
-  GIT_BASE_URL: `https://${giteaInternalHost}/giteaAdmin`,
+  GIT_BASE_URL: `http://${giteaInternalHost}/giteaAdmin`,
   /** @deprecated Use GIT_BASE_URL_EXTERNAL for browser access */
   GIT_BASE_URL_LOCAL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin',
   /** Whether Tailscale is configured for external access */
