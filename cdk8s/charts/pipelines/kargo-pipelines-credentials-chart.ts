@@ -143,10 +143,10 @@ export class KargoPipelinesCredentialsChart extends Chart {
       templateData: {
         // Use regex to match all giteaAdmin repositories from internal, local, and Tailscale URLs
         // The regex matches:
-        // - https://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/* (internal - PREFERRED)
-        // - https://gitea.cnoe.localtest.me:8443/giteaAdmin/* (external local)
-        // - https://gitea-<cluster>.tail*.ts.net/giteaAdmin/* (external Tailscale)
-        repoURL: `https://(my-gitea-http\\.gitea\\.svc\\.cluster\\.local:\\d+|gitea[^/]*)/giteaAdmin/.*`,
+        // - http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/* (internal HTTP - PREFERRED)
+        // - https://gitea.cnoe.localtest.me:8443/giteaAdmin/* (external local HTTPS)
+        // - https://gitea-<cluster>.tail*.ts.net/giteaAdmin/* (external Tailscale HTTPS)
+        repoURL: `https?://(my-gitea-http\\.gitea\\.svc\\.cluster\\.local:\\d+|gitea[^/]*)/giteaAdmin/.*`,
         repoURLIsRegex: 'true',
         username: '{{ .username }}',
         password: '{{ .token }}'
