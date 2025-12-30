@@ -120,10 +120,13 @@ export class CaipeSupervisorChart extends Chart {
                   // RAG configuration
                   { name: 'RAG_AGENT_PORT', value: envVars.RAG_AGENT_PORT },
                   { name: 'RAG_SERVER_URL', value: `http://rag-server.${namespace}.svc.cluster.local:${CAIPE_PORTS.ragServer}` },
-                  // Sub-agent endpoints - format: {AGENT_NAME}_AGENT_URL (per agent_registry._infer_agent_url_from_env_var)
-                  { name: 'ARGOCD_AGENT_URL', value: `http://agent-argocd.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
-                  { name: 'GITHUB_AGENT_URL', value: `http://agent-github.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
-                  { name: 'BACKSTAGE_AGENT_URL', value: `http://agent-backstage.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
+                  // Sub-agent endpoints - format: {AGENT_NAME}_AGENT_HOST + {AGENT_NAME}_AGENT_PORT (per get_agent_address_mapping)
+                  { name: 'ARGOCD_AGENT_HOST', value: `agent-argocd.${namespace}.svc.cluster.local` },
+                  { name: 'ARGOCD_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
+                  { name: 'GITHUB_AGENT_HOST', value: `agent-github.${namespace}.svc.cluster.local` },
+                  { name: 'GITHUB_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
+                  { name: 'BACKSTAGE_AGENT_HOST', value: `agent-backstage.${namespace}.svc.cluster.local` },
+                  { name: 'BACKSTAGE_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
                   // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
                   { name: 'ENABLE_ARGOCD', value: envVars.ENABLE_ARGOCD },
                   { name: 'ENABLE_GITHUB', value: envVars.ENABLE_GITHUB },
