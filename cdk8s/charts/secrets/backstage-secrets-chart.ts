@@ -77,8 +77,9 @@ export class BackstageSecretsChart extends Chart {
     // Agent Forge (A2A) endpoint:
     // - KIND: use the in-cluster kagent service (Backstage reaches it via backend proxy)
     // - Talos: use the external host
+    // Use CAIPE supervisor-agent for all clusters
     const agentForgeUrl = isKind
-      ? 'http://k8s-agent.kagent:8080'
+      ? 'http://supervisor-agent.ai-platform-engineering.svc.cluster.local:8000'
       : `https://ai-platform-engineering.${baseHost}${portSuffix}`;
 
     // ExternalSecret: backstage-oidc → backstage-env-vars Secret
