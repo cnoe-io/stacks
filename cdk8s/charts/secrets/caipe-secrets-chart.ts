@@ -129,6 +129,11 @@ export class CaipeSecretsChart extends Chart {
     // Agent ArgoCD Secret
     // ==========================================================================
 
+    // ArgoCD API URL - must NOT include /api/v1/ as the MCP server adds it
+    // The MCP server constructs URLs like: {base_url}/api/v1/applications
+    // Use HTTPS as ArgoCD redirects HTTP to HTTPS (307)
+    const argocdApiUrl = 'https://argocd-server.argocd';
+
     const argocdSecret = new ExternalSecret(this, 'agent-argocd-secret', {
       metadata: {
         name: 'agent-argocd-secret',
@@ -149,20 +154,19 @@ export class CaipeSecretsChart extends Chart {
             metadata: {
               labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-argocd' },
             },
+            // Use template data to set the correct ArgoCD API URL
+            // The MCP server adds /api/v1/ to all requests, so base URL should NOT include it
+            data: {
+              'ARGOCD_TOKEN': '{{ .argocdToken }}',
+              'ARGOCD_API_URL': argocdApiUrl,
+              'ARGOCD_VERIFY_SSL': 'false',
+            },
           },
         },
         data: [
           {
-            secretKey: 'ARGOCD_TOKEN',
+            secretKey: 'argocdToken',
             remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdToken },
-          },
-          {
-            secretKey: 'ARGOCD_API_URL',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdApiUrl },
-          },
-          {
-            secretKey: 'ARGOCD_VERIFY_SSL',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdVerifySsl },
           },
         ],
       },

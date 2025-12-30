@@ -131,7 +131,8 @@ export class KargoBackstagePipelineChart extends Chart {
 
       // Stage: backstage (primary)
       // Auto-promotes new CI images to primary backstage deployment
-      // Uses internal cluster DNS for in-cluster git operations
+      // Uses external HTTPS URL (required - Kargo refuses credentials over HTTP)
+      // KIND clusters: CoreDNS rewrites external URLs to ingress-nginx internally
       createStage(this, 'backstage-stage', {
         name: 'backstage',
         namespace,
@@ -142,7 +143,7 @@ export class KargoBackstagePipelineChart extends Chart {
         argocdConfig: {
           appName: 'backstage',
           namespace: 'argocd',
-          repoUrl: `${GITEA.GIT_BASE_URL_INTERNAL}/idpbuilder-${clusterHost}-backstage-manifests.git`,
+          repoUrl: `${GITEA.GIT_BASE_URL}/idpbuilder-${clusterHost}-backstage-manifests.git`,
           imageRef: `${ghcrRegistry}/${ghcrImageName}`,
         },
         customVars: [

@@ -876,6 +876,34 @@ export const applicationConfigs: ApplicationConfig[] = [
     }
   },
   {
+    name: 'caipe-token-sync',
+    namespace: 'argocd',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeTokenSyncChart',
+      props: {
+        argocdNamespace: 'argocd',
+        argocdAccount: 'developer',
+        clusterSecretStoreName: 'azure-keyvault-store',
+        keyVaultSecretName: 'CAIPE-ARGOCD-TOKEN',
+      },
+    },
+    argocd: {
+      syncWave: '50',  // After ArgoCD is ready, before CAIPE agents
+      labels: {
+        'app.kubernetes.io/component': 'token-sync',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-token-sync'
+      },
+      syncPolicy: {
+        automated: {
+          prune: true,
+          selfHeal: true
+        }
+      }
+    }
+  },
+  {
     name: 'caipe-milvus',
     namespace: 'ai-platform-engineering',
     clusterType: 'kind',

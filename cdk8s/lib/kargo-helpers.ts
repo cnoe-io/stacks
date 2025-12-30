@@ -307,6 +307,11 @@ const giteaInternalHost = 'my-gitea-http.gitea.svc.cluster.local:3000';
 /** External host for browser/user access (Tailscale preferred, fallback to local ingress) */
 const giteaExternalHost = giteaTailscaleHost || 'gitea.cnoe.localtest.me:8443';
 
+/** Kargo host - ALWAYS use localtest.me for in-cluster operations
+ *  KIND clusters: CoreDNS rewrites this to ingress-nginx service
+ *  This is more reliable than Tailscale URLs from within the cluster */
+const giteaKargoHost = 'gitea.cnoe.localtest.me:8443';
+
 /** Registry host - use internal for in-cluster operations */
 const giteaInternalRegistry = `${giteaInternalHost}/giteaadmin`;
 const giteaExternalRegistry = `${giteaExternalHost}/giteaadmin`;
@@ -319,33 +324,31 @@ const giteaExternalRegistry = `${giteaExternalHost}/giteaadmin`;
  * - Use GITEA.EXTERNAL_* only for URLs that users access in browsers
  */
 export const GITEA = {
-  /** Internal host for in-cluster operations (Kargo, pipelines) - PREFERRED */
+  /** Internal host for in-cluster operations (registry, non-authenticated reads) */
   INTERNAL_HOST: giteaInternalHost,
-  /** Internal Git base URL for in-cluster operations - PREFERRED for Kargo
-   *  NOTE: Uses HTTP because port 3000 is the internal HTTP service, not HTTPS */
-  GIT_BASE_URL_INTERNAL: `http://${giteaInternalHost}/giteaAdmin`,
   /** Internal registry for in-cluster operations - PREFERRED for Kargo warehouses */
   REGISTRY_INTERNAL: giteaInternalRegistry,
 
   /** External host for browser/user access (Tailscale or local ingress) */
   EXTERNAL_HOST: giteaExternalHost,
-  /** External Git base URL for browser access */
+  /** External Git base URL - REQUIRED for Kargo (credentials need HTTPS)
+   *  KIND clusters: CoreDNS rewrites to ingress-nginx, so this works in-cluster
+   *  Talos clusters: Uses Tailscale host if available */
   GIT_BASE_URL_EXTERNAL: `https://${giteaExternalHost}/giteaAdmin`,
   /** External registry for browser access */
   REGISTRY_EXTERNAL: giteaExternalRegistry,
 
   /** Tailscale host if configured, null otherwise */
   TAILSCALE_HOST: giteaTailscaleHost || null,
-  /** Local ingress host (may not work from worker nodes in multi-node clusters) */
+  /** Local ingress host (works from worker nodes via CoreDNS rewrite) */
   LOCAL_HOST: 'gitea.cnoe.localtest.me:8443',
 
-  // Legacy aliases - DEPRECATED, use INTERNAL_* or EXTERNAL_* instead
-  /** @deprecated Use INTERNAL_HOST for in-cluster, EXTERNAL_HOST for browser access */
-  HOST: giteaInternalHost,
-  /** @deprecated Use GIT_BASE_URL_INTERNAL for in-cluster operations */
-  GIT_BASE_URL: `http://${giteaInternalHost}/giteaAdmin`,
-  /** @deprecated Use GIT_BASE_URL_EXTERNAL for browser access */
-  GIT_BASE_URL_LOCAL: 'https://gitea.cnoe.localtest.me:8443/giteaAdmin',
+  /** Git base URL for Kargo pipelines - MUST use HTTPS for credential security
+   *  ALWAYS uses localtest.me because:
+   *  - Kargo refuses credentials over HTTP
+   *  - KIND CoreDNS rewrites localtest.me to ingress-nginx (works in-cluster)
+   *  - More reliable than Tailscale URLs from within pods */
+  GIT_BASE_URL: `https://${giteaKargoHost}/giteaAdmin`,
   /** Whether Tailscale is configured for external access */
   IS_TAILSCALE: !!giteaTailscaleHost,
 };

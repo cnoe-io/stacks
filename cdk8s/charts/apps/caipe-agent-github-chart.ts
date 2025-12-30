@@ -98,8 +98,9 @@ export class CaipeAgentGithubChart extends Chart {
                   },
                 ],
                 env: [
-                  // Remote MCP Server mode configuration
-                  { name: 'MCP_MODE', value: 'remote' },
+                  // HTTP mode - connects to GitHub Copilot API MCP server
+                  { name: 'MCP_MODE', value: 'http' },
+                  // MCP_HTTP_PORT: A2A server listens on this port (8000)
                   { name: 'MCP_HTTP_PORT', value: String(CAIPE_PORTS.mcpHttp) },
                   // Agent identification
                   { name: 'AGENT_NAME', value: 'agent-github' },

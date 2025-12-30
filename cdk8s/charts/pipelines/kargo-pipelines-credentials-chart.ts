@@ -141,12 +141,12 @@ export class KargoPipelinesCredentialsChart extends Chart {
         }
       },
       templateData: {
-        // Use regex to match all giteaAdmin repositories from internal, local, and Tailscale URLs
+        // Use regex to match all giteaAdmin repositories via HTTPS (required for Kargo credentials)
         // The regex matches:
-        // - http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/* (internal HTTP - PREFERRED)
         // - https://gitea.cnoe.localtest.me:8443/giteaAdmin/* (external local HTTPS)
         // - https://gitea-<cluster>.tail*.ts.net/giteaAdmin/* (external Tailscale HTTPS)
-        repoURL: `https?://(my-gitea-http\\.gitea\\.svc\\.cluster\\.local:\\d+|gitea[^/]*)/giteaAdmin/.*`,
+        // NOTE: Kargo refuses credentials over HTTP, so internal HTTP URLs are not supported
+        repoURL: `https://gitea[^/]*/giteaAdmin/.*`,
         repoURLIsRegex: 'true',
         username: '{{ .username }}',
         password: '{{ .token }}'
