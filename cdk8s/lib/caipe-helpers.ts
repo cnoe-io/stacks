@@ -220,6 +220,10 @@ export function getSupervisorAgentEnvVars(externalUrl: string): Record<string, s
     FORCE_DEEP_AGENT_ORCHESTRATION: 'true',
     STREAM_SUB_AGENT_TOOL_OUTPUT: 'true',
     ENABLE_ARTIFACT_STREAMING: 'true',
+    // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+    ENABLE_ARGOCD: 'true',
+    ENABLE_GITHUB: 'true',
+    ENABLE_BACKSTAGE: 'true',
   };
 }
 

@@ -124,6 +124,10 @@ export class CaipeSupervisorChart extends Chart {
                   { name: 'AGENT_ARGOCD_URL', value: `http://agent-argocd.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
                   { name: 'AGENT_GITHUB_URL', value: `http://agent-github.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
                   { name: 'AGENT_BACKSTAGE_URL', value: `http://agent-backstage.${namespace}.svc.cluster.local:${CAIPE_PORTS.mcpHttp}` },
+                  // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+                  { name: 'ENABLE_ARGOCD', value: envVars.ENABLE_ARGOCD },
+                  { name: 'ENABLE_GITHUB', value: envVars.ENABLE_GITHUB },
+                  { name: 'ENABLE_BACKSTAGE', value: envVars.ENABLE_BACKSTAGE },
                   // Observability - Prometheus metrics
                   { name: 'METRICS_ENABLED', value: 'true' },
                   { name: 'METRICS_PORT', value: String(CAIPE_PORTS.supervisorAgent) },
