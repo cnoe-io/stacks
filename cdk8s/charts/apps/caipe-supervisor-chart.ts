@@ -16,6 +16,7 @@ import {
   CAIPE_SYNC_WAVES,
   CAIPE_PORTS,
   CAIPE_RESOURCE_LIMITS,
+  CAIPE_OBSERVABILITY,
   getCaipeAgentLabels,
   getSupervisorAgentEnvVars,
   getCaipeSupervisorUrl,
@@ -132,7 +133,7 @@ export class CaipeSupervisorChart extends Chart {
                   { name: 'ENABLE_GITHUB', value: envVars.ENABLE_GITHUB },
                   { name: 'ENABLE_BACKSTAGE', value: envVars.ENABLE_BACKSTAGE },
                   // Observability - Prometheus metrics
-                  { name: 'METRICS_ENABLED', value: 'true' },
+                  { name: 'METRICS_ENABLED', value: CAIPE_OBSERVABILITY.metrics.enabled },
                   { name: 'METRICS_PORT', value: String(CAIPE_PORTS.supervisorAgent) },
                   // Observability - OpenTelemetry
                   { name: 'OTEL_EXPORTER_OTLP_ENDPOINT', value: 'http://otel-collector.observability.svc.cluster.local:4317' },

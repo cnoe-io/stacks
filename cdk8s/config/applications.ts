@@ -684,7 +684,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'backstage',
         'app.kubernetes.io/name': 'backstage'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      // Replace=true prevents strategic merge patch issues when switching
+      // deployment strategy from RollingUpdate to Recreate
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true'])
     }
   },
   // =========================================================================
@@ -721,7 +723,9 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/name': 'backstage-local-dev',
         'kargo.akuity.io/loop': 'inner'
       },
-      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+      // Replace=true prevents strategic merge patch issues when switching
+      // deployment strategy from RollingUpdate to Recreate
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true'])
     }
   },
   // Backstage Local Dev Secrets - Inner Loop environment secrets (KIND)
@@ -829,7 +833,9 @@ export const applicationConfigs: ApplicationConfig[] = [
           prune: true,
           selfHeal: true
         },
-        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true']
+        // Replace=true prevents strategic merge patch issues when switching
+        // deployment strategy from RollingUpdate to Recreate
+        syncOptions: ['CreateNamespace=true', 'ServerSideApply=true', 'Replace=true']
       }
     }
   },
@@ -1263,6 +1269,29 @@ export const applicationConfigs: ApplicationConfig[] = [
         'app.kubernetes.io/part-of': 'ai-platform-engineering',
         'app.kubernetes.io/name': 'caipe-agent-backstage',
         'tier': 'agent'
+      },
+      syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
+    }
+  },
+  // Phase 5: CAIPE Observability - ServiceMonitors for Prometheus metrics
+  {
+    name: 'caipe-servicemonitor',
+    namespace: 'ai-platform-engineering',
+    clusterType: 'kind',
+    chart: {
+      type: 'CaipeServiceMonitorChart',
+      props: {
+        namespace: 'ai-platform-engineering',
+        scrapeInterval: '30s',
+      },
+    },
+    argocd: {
+      syncWave: '110',  // After all agents are deployed
+      labels: {
+        'app.kubernetes.io/component': 'observability',
+        'app.kubernetes.io/part-of': 'ai-platform-engineering',
+        'app.kubernetes.io/name': 'caipe-servicemonitor',
+        'tier': 'observability'
       },
       syncPolicy: automatedSyncWithOptions(['CreateNamespace=true', 'ServerSideApply=true'])
     }
