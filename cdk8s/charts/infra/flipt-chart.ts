@@ -25,7 +25,7 @@ export interface FliptChartProps extends ChartProps {
 
   /**
    * Flipt image version
-   * @default '1.56.0'
+   * @default '2.4.0'
    */
   imageVersion?: string;
 
@@ -83,7 +83,7 @@ export class FliptChart extends Chart {
     super(scope, id, props);
 
     const namespace = props?.namespace || 'feature-flags';
-    const imageVersion = props?.imageVersion || '1.56.0';
+    const imageVersion = props?.imageVersion || '2.4.0';
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
     const isKind = baseHost === 'cnoe.localtest.me';
     const portSuffix = isKind ? ':8443' : '';
@@ -126,7 +126,7 @@ export class FliptChart extends Chart {
 # https://docs.flipt.io/configuration/overview
 
 log:
-  level: info
+  level: debug
   encoding: json
 
 server:
@@ -134,16 +134,16 @@ server:
   http_port: 8080
   grpc_port: 9000
 
+# Declarative Git storage (v2 format)
+# https://docs.flipt.io/configuration/storage
 storage:
-  type: git
-  git:
-    repository: "${gitRepositoryUrl}"
+  default:
+    remote: "${gitRepositoryUrl}"
     ref: "${gitBranch}"
     poll_interval: "${gitPollInterval}"
-    # Authentication is provided via environment variables:
-    # FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME
-    # FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD
-    insecure_skip_tls_verify: true
+    insecure_skip_tls: true
+    backend:
+      type: memory
 
 # Authentication configuration
 authentication:
@@ -236,10 +236,9 @@ telemetry:
               {
                 name: 'flipt',
                 image: `ghcr.io/flipt-io/flipt:v${imageVersion}`,
+                // Flipt v2 requires 'server' subcommand
                 command: ['/flipt'],
-                args: [
-                  '--config', '/etc/flipt/flipt.yml',
-                ],
+                args: ['server', '--config', '/etc/flipt/flipt.yml'],
                 ports: [
                   { containerPort: 8080, name: 'http', protocol: 'TCP' },
                   { containerPort: 9000, name: 'grpc', protocol: 'TCP' },
@@ -251,8 +250,8 @@ telemetry:
                   { secretRef: { name: 'flipt-git-credentials' } },
                 ],
                 env: [
-                  // Additional environment variables
-                  { name: 'FLIPT_LOG_LEVEL', value: 'info' },
+                  // Logging
+                  { name: 'FLIPT_LOG_LEVEL', value: 'debug' },
                   // Use idpbuilder CA for TLS verification
                   { name: 'GIT_SSL_CAINFO', value: '/etc/ssl/certs/idpbuilder-ca.crt' },
                   { name: 'SSL_CERT_FILE', value: '/etc/ssl/certs/idpbuilder-ca.crt' },

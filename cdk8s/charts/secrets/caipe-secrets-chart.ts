@@ -30,6 +30,7 @@ import {
   CAIPE_SYNC_WAVES,
   CAIPE_KEYVAULT_KEYS,
   getCaipeCommonLabels,
+  getClusterSpecificKeyVaultKey,
 } from '../../lib/caipe-helpers';
 
 export interface CaipeSecretsChartProps extends ChartProps {
@@ -56,6 +57,21 @@ export interface CaipeSecretsChartProps extends ChartProps {
    * @default '-80'
    */
   syncWave?: string;
+
+  /**
+   * Cluster identifier for Key Vault secret naming
+   * Used to pull cluster-specific secrets (ArgoCD token, Backstage token)
+   * Must match the clusterId used by token sync charts
+   * @example 'localdev', 'talos', 'kind'
+   */
+  clusterId?: string;
+
+  /**
+   * Skip creating agent-github-secret when using GithubTokenGeneratorChart
+   * The generator chart creates the secret with short-lived tokens instead
+   * @default false
+   */
+  useGithubTokenGenerator?: boolean;
 }
 
 export class CaipeSecretsChart extends Chart {
@@ -66,6 +82,12 @@ export class CaipeSecretsChart extends Chart {
     const clusterSecretStoreName = props.clusterSecretStoreName || CAIPE_SECRET_STORE;
     const refreshInterval = props.refreshInterval || CAIPE_REFRESH_INTERVAL;
     const syncWave = props.syncWave || CAIPE_SYNC_WAVES.secrets;
+    const clusterId = props.clusterId || '';
+    const useGithubTokenGenerator = props.useGithubTokenGenerator || false;
+
+    // Cluster-specific Key Vault keys for tokens pushed by token sync charts
+    const argocdTokenKey = getClusterSpecificKeyVaultKey(CAIPE_KEYVAULT_KEYS.argocdToken, clusterId);
+    const backstageTokenKey = getClusterSpecificKeyVaultKey(CAIPE_KEYVAULT_KEYS.backstageApiToken, clusterId);
 
     const commonLabels = getCaipeCommonLabels('secrets');
 
@@ -166,7 +188,7 @@ export class CaipeSecretsChart extends Chart {
         data: [
           {
             secretKey: 'argocdToken',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.argocdToken },
+            remoteRef: { key: argocdTokenKey },
           },
         ],
       },
@@ -175,39 +197,42 @@ export class CaipeSecretsChart extends Chart {
 
     // ==========================================================================
     // Agent GitHub Secret
+    // Skip when using GithubTokenGeneratorChart (it creates the secret instead)
     // ==========================================================================
 
-    const githubSecret = new ExternalSecret(this, 'agent-github-secret', {
-      metadata: {
-        name: 'agent-github-secret',
-        namespace: namespace,
-        labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
-      },
-      spec: {
-        refreshInterval: refreshInterval,
-        secretStoreRef: {
-          name: clusterSecretStoreName,
-          kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
-        },
-        target: {
+    if (!useGithubTokenGenerator) {
+      const githubSecret = new ExternalSecret(this, 'agent-github-secret', {
+        metadata: {
           name: 'agent-github-secret',
-          creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
-          template: {
-            type: 'Opaque',
-            metadata: {
-              labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+          namespace: namespace,
+          labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+        },
+        spec: {
+          refreshInterval: refreshInterval,
+          secretStoreRef: {
+            name: clusterSecretStoreName,
+            kind: ExternalSecretSpecSecretStoreRefKind.CLUSTER_SECRET_STORE,
+          },
+          target: {
+            name: 'agent-github-secret',
+            creationPolicy: ExternalSecretSpecTargetCreationPolicy.OWNER,
+            template: {
+              type: 'Opaque',
+              metadata: {
+                labels: { ...commonLabels, 'app.kubernetes.io/component': 'agent-github' },
+              },
             },
           },
+          data: [
+            {
+              secretKey: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+              remoteRef: { key: CAIPE_KEYVAULT_KEYS.githubPat },
+            },
+          ],
         },
-        data: [
-          {
-            secretKey: 'GITHUB_PERSONAL_ACCESS_TOKEN',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.githubPat },
-          },
-        ],
-      },
-    });
-    githubSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+      });
+      githubSecret.addJsonPatch(JsonPatch.add('/metadata/annotations', { 'argocd.argoproj.io/sync-wave': syncWave }));
+    }
 
     // ==========================================================================
     // Agent Backstage Secret
@@ -238,7 +263,7 @@ export class CaipeSecretsChart extends Chart {
         data: [
           {
             secretKey: 'BACKSTAGE_API_TOKEN',
-            remoteRef: { key: CAIPE_KEYVAULT_KEYS.backstageApiToken },
+            remoteRef: { key: backstageTokenKey },
           },
           {
             secretKey: 'BACKSTAGE_URL',

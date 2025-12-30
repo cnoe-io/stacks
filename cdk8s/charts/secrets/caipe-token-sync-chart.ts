@@ -26,7 +26,7 @@ import {
   PushSecretSpecUpdatePolicy,
   PushSecretSpecSecretStoreRefsKind,
 } from '../../imports/external-secrets.io';
-import { CAIPE_SECRET_STORE } from '../../lib/caipe-helpers';
+import { CAIPE_SECRET_STORE, CAIPE_KEYVAULT_KEYS, getClusterSpecificKeyVaultKey } from '../../lib/caipe-helpers';
 
 export interface CaipeTokenSyncChartProps extends ChartProps {
   /**
@@ -48,10 +48,17 @@ export interface CaipeTokenSyncChartProps extends ChartProps {
   clusterSecretStoreName?: string;
 
   /**
-   * Key Vault secret name for the ArgoCD token
+   * Key Vault secret name for the ArgoCD token (base name, will be suffixed with clusterId)
    * @default 'CAIPE-ARGOCD-TOKEN'
    */
   keyVaultSecretName?: string;
+
+  /**
+   * Cluster identifier for Key Vault secret naming
+   * Used to avoid collisions when multiple clusters push to the same Key Vault
+   * @example 'localdev', 'talos', 'kind'
+   */
+  clusterId?: string;
 
   /**
    * Sync wave for ArgoCD ordering (should run after ArgoCD is ready)
@@ -78,7 +85,10 @@ export class CaipeTokenSyncChart extends Chart {
     const argocdNamespace = props.argocdNamespace || 'argocd';
     const argocdAccount = props.argocdAccount || 'developer';
     const clusterSecretStoreName = props.clusterSecretStoreName || CAIPE_SECRET_STORE;
-    const keyVaultSecretName = props.keyVaultSecretName || 'CAIPE-ARGOCD-TOKEN';
+    const clusterId = props.clusterId || '';
+    const baseKeyVaultSecretName = props.keyVaultSecretName || CAIPE_KEYVAULT_KEYS.argocdToken;
+    // Apply cluster-specific suffix to avoid Key Vault naming collisions
+    const keyVaultSecretName = getClusterSpecificKeyVaultKey(baseKeyVaultSecretName, clusterId);
     const syncWave = props.syncWave || '50';
 
     const labels = {
@@ -167,10 +177,10 @@ export class CaipeTokenSyncChart extends Chart {
         labels: labels,
         annotations: {
           'argocd.argoproj.io/sync-wave': syncWave,
-          // PostSync hook - runs after all resources are synced and healthy
-          'argocd.argoproj.io/hook': 'PostSync',
-          // Delete job after completion (will be recreated on next sync)
-          'argocd.argoproj.io/hook-delete-policy': 'BeforeHookCreation',
+          // Sync hook - runs during sync (not every sync due to HookSucceeded)
+          'argocd.argoproj.io/hook': 'Sync',
+          // Delete job after successful completion - won't run again until app is recreated
+          'argocd.argoproj.io/hook-delete-policy': 'HookSucceeded',
         },
       },
       spec: {
@@ -186,27 +196,54 @@ export class CaipeTokenSyncChart extends Chart {
             containers: [
               {
                 name: 'token-generator',
-                // Use ArgoCD image which has the CLI
-                image: 'quay.io/argoproj/argocd:v2.11.0',
-                command: ['/bin/sh', '-c'],
+                // Use bitnami kubectl image with argocd CLI installed
+                image: 'bitnami/kubectl:latest',
+                command: ['/bin/bash', '-c'],
                 args: [
                   `
 set -e
 
-echo "Generating ArgoCD API token for account '${argocdAccount}'..."
+# Install argocd CLI
+echo "Installing ArgoCD CLI..."
+curl -sSL -o /tmp/argocd https://github.com/argoproj/argo-cd/releases/download/v2.11.0/argocd-linux-amd64
+chmod +x /tmp/argocd
+
+echo "Checking if ArgoCD token secret already exists..."
+
+# Check if the secret already exists and has a valid token
+EXISTING_TOKEN=$(kubectl get secret ${secretName} -n ${argocdNamespace} -o jsonpath='{.data.token}' 2>/dev/null | base64 -d || echo "")
+
+if [ -n "$EXISTING_TOKEN" ]; then
+  echo "Token secret already exists. Validating token..."
+
+  # Test if the existing token is valid by making an API call
+  RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \\
+    -H "Authorization: Bearer $EXISTING_TOKEN" \\
+    "https://argocd-server.${argocdNamespace}/api/v1/account" \\
+    --insecure 2>/dev/null || echo "000")
+
+  if [ "$RESPONSE" = "200" ]; then
+    echo "Existing token is valid. Skipping regeneration."
+    exit 0
+  fi
+
+  echo "Existing token is invalid (HTTP $RESPONSE). Regenerating..."
+fi
+
+echo "Generating new ArgoCD API token for account '${argocdAccount}'..."
 
 # Get admin password from secret
 ADMIN_PASSWORD=$(cat /var/run/secrets/argocd/password)
 
 # Login to ArgoCD
-argocd login argocd-server.${argocdNamespace} \\
+/tmp/argocd login argocd-server.${argocdNamespace} \\
   --username admin \\
   --password "$ADMIN_PASSWORD" \\
   --insecure \\
   --grpc-web
 
 # Generate token for the target account
-TOKEN=$(argocd account generate-token --account ${argocdAccount})
+TOKEN=$(/tmp/argocd account generate-token --account ${argocdAccount})
 
 if [ -z "$TOKEN" ]; then
   echo "ERROR: Failed to generate token"

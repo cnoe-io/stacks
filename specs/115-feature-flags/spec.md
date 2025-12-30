@@ -130,6 +130,50 @@ A release manager needs to manage feature flags across multiple environments (de
 
 ---
 
+### User Story 7 - CAIPE/Backstage Feature Flag Integration (Priority: P1)
+
+A platform operator needs to control CAIPE agent capabilities and Backstage UI features dynamically via feature flags, enabling safe rollout and quick disable of AI-powered functionality.
+
+**Why this priority**: CAIPE is a critical AI platform component. Feature flags enable safe experimentation, gradual rollout, and emergency kill switches for AI agents without redeployment.
+
+**Independent Test**: Can be tested by toggling CAIPE agent flags and verifying agents enable/disable dynamically; toggling Backstage flags and verifying UI changes.
+
+**Acceptance Scenarios**:
+
+1. **Given** the CAIPE supervisor is running with feature flag SDK integrated, **When** the `caipe-agents-enabled` flag is set to false, **Then** the supervisor stops routing requests to sub-agents and returns a "service temporarily disabled" response
+2. **Given** individual agent flags exist (`caipe-agent-argocd`, `caipe-agent-github`, `caipe-agent-backstage`), **When** one agent flag is disabled, **Then** only that specific agent is excluded from orchestration while others continue functioning
+3. **Given** Backstage is running with feature flag SDK integrated, **When** the `backstage-agentforge-enabled` flag is disabled, **Then** the AgentForge chat UI is hidden from all users
+4. **Given** observability flags exist (`langfuse-tracing-enabled`, `otel-trace-sampling-rate`), **When** `langfuse-tracing-enabled` is disabled, **Then** CAIPE agents stop sending traces to Langfuse, reducing costs during non-debug periods
+5. **Given** rate limit flags exist (`caipe-rate-limit`, `llm-token-limit`), **When** rate limits are reduced via flag, **Then** users exceeding the new limit receive appropriate throttling responses
+6. **Given** a critical bug is discovered in an agent, **When** the platform team disables that agent's flag, **Then** the agent is disabled within 30 seconds without requiring deployment changes
+
+**CAIPE Feature Flags Specification**:
+
+| Flag Key | Type | Default | Purpose |
+|----------|------|---------|---------|
+| `caipe-agents-enabled` | BOOLEAN | true | Master toggle for all CAIPE agents |
+| `caipe-agent-argocd` | BOOLEAN | true | Enable ArgoCD agent for CD operations |
+| `caipe-agent-github` | BOOLEAN | true | Enable GitHub agent for repo management |
+| `caipe-agent-backstage` | BOOLEAN | true | Enable Backstage catalog agent |
+| `caipe-deep-orchestration` | BOOLEAN | false | Enable multi-agent deep orchestration mode |
+| `caipe-artifact-streaming` | BOOLEAN | true | Enable streaming responses |
+| `backstage-agentforge-enabled` | BOOLEAN | true | Show/hide AgentForge chat UI |
+| `langfuse-tracing-enabled` | BOOLEAN | true | Enable Langfuse LLM observability |
+| `otel-trace-sampling-rate` | FLOAT | 1.0 | Trace sampling rate (0.0-1.0) |
+| `caipe-rate-limit` | INTEGER | 100 | Requests per minute per user |
+| `llm-token-limit` | INTEGER | 4096 | Max tokens per LLM request |
+| `agent-timeout-seconds` | INTEGER | 120 | Agent request timeout |
+
+**Targeting Segments**:
+
+| Segment | Match Criteria | Use Case |
+|---------|----------------|----------|
+| `platform-team` | groups contains "platform-team" | Full access to all features |
+| `caipe-testers` | groups contains "caipe-testers" | Early access to experimental features |
+| `high-volume-users` | tier = "premium" | Higher rate limits |
+
+---
+
 ### Edge Cases
 
 - What happens when flagd cannot connect to the flag source? (Applications use cached/default values)

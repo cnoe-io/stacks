@@ -95,6 +95,259 @@ export class FlagdChart extends Chart {
     const syncWave = '-75';
 
     // ConfigMap for flagd configuration
+    // Includes CAIPE/Backstage feature flags (User Story 7)
+    const flagConfig = {
+      '$schema': 'https://flagd.dev/schema/v0/flags.json',
+      'flags': {
+        // ==========================================
+        // Example flags (existing)
+        // ==========================================
+        'new-checkout-flow': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'off',
+        },
+        'dark-mode': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+        },
+
+        // ==========================================
+        // CAIPE Agent Control Flags (T067)
+        // ==========================================
+        'caipe-agents-enabled': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Master toggle for all CAIPE agent functionality',
+            'owner': 'platform-team',
+          },
+        },
+        'caipe-agent-argocd': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable ArgoCD agent for deployment operations',
+            'owner': 'platform-team',
+          },
+        },
+        'caipe-agent-github': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable GitHub agent for repository operations',
+            'owner': 'platform-team',
+          },
+        },
+        'caipe-agent-backstage': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable Backstage catalog agent',
+            'owner': 'platform-team',
+          },
+        },
+
+        // ==========================================
+        // CAIPE Feature Flags (T068)
+        // ==========================================
+        'caipe-deep-orchestration': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'off',
+          'metadata': {
+            'description': 'Enable multi-agent deep orchestration mode',
+            'owner': 'platform-team',
+          },
+          // Targeting: Enable for caipe-testers group
+          'targeting': {
+            'if': [
+              {
+                'in': ['caipe-testers', { 'var': 'groups' }],
+              },
+              'on',
+              null,
+            ],
+          },
+        },
+        'caipe-artifact-streaming': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable streaming responses from agents',
+            'owner': 'platform-team',
+          },
+        },
+
+        // ==========================================
+        // Observability Flags (T069)
+        // ==========================================
+        'langfuse-tracing-enabled': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable Langfuse LLM observability tracing',
+            'owner': 'platform-team',
+          },
+        },
+        'otel-trace-sampling-rate': {
+          'state': 'ENABLED',
+          'variants': {
+            'full': 1.0,
+            'half': 0.5,
+            'tenth': 0.1,
+            'off': 0.0,
+          },
+          'defaultVariant': 'full',
+          'metadata': {
+            'description': 'OpenTelemetry trace sampling rate (0.0 to 1.0)',
+            'owner': 'platform-team',
+          },
+        },
+        'verbose-agent-logging': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'off',
+          'metadata': {
+            'description': 'Enable verbose logging for CAIPE agents',
+            'owner': 'platform-team',
+          },
+        },
+
+        // ==========================================
+        // Rate Limiting Flags (T070)
+        // ==========================================
+        'caipe-rate-limit': {
+          'state': 'ENABLED',
+          'variants': {
+            'low': 20,
+            'standard': 100,
+            'high': 500,
+            'unlimited': -1,
+          },
+          'defaultVariant': 'standard',
+          'metadata': {
+            'description': 'Requests per minute per user',
+            'owner': 'platform-team',
+          },
+          // Targeting: Premium users get high rate limit
+          'targeting': {
+            'if': [
+              { '==': [{ 'var': 'tier' }, 'premium'] },
+              'high',
+              null,
+            ],
+          },
+        },
+        'llm-token-limit': {
+          'state': 'ENABLED',
+          'variants': {
+            'small': 1024,
+            'standard': 4096,
+            'large': 8192,
+            'xlarge': 16384,
+          },
+          'defaultVariant': 'standard',
+          'metadata': {
+            'description': 'Maximum tokens per LLM request',
+            'owner': 'platform-team',
+          },
+        },
+        'agent-timeout-seconds': {
+          'state': 'ENABLED',
+          'variants': {
+            'short': 30,
+            'standard': 120,
+            'long': 300,
+            'extended': 600,
+          },
+          'defaultVariant': 'standard',
+          'metadata': {
+            'description': 'Agent request timeout in seconds',
+            'owner': 'platform-team',
+          },
+        },
+
+        // ==========================================
+        // Backstage Flags (T071)
+        // ==========================================
+        'backstage-agentforge-enabled': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Show/hide AgentForge chat UI in Backstage',
+            'owner': 'platform-team',
+          },
+        },
+        'backstage-agentforge-suggestions': {
+          'state': 'ENABLED',
+          'variants': {
+            'default': 'Create a repo,Deploy an app,Check status',
+            'minimal': 'Help me',
+            'advanced': 'Create a repo,Deploy an app,Check status,Run pipeline,Analyze logs',
+          },
+          'defaultVariant': 'default',
+          'metadata': {
+            'description': 'Suggestion chips shown in AgentForge chat',
+            'owner': 'platform-team',
+          },
+        },
+        'backstage-external-api-access': {
+          'state': 'ENABLED',
+          'variants': {
+            'on': true,
+            'off': false,
+          },
+          'defaultVariant': 'on',
+          'metadata': {
+            'description': 'Enable service-to-service API access for CAIPE agents',
+            'owner': 'platform-team',
+          },
+        },
+      },
+    };
+
     new k8s.KubeConfigMap(this, 'config', {
       metadata: {
         name: 'flagd-config',
@@ -105,27 +358,7 @@ export class FlagdChart extends Chart {
         },
       },
       data: {
-        'flagd.json': JSON.stringify({
-          '$schema': 'https://flagd.dev/schema/v0/flags.json',
-          'flags': {
-            'new-checkout-flow': {
-              'state': 'ENABLED',
-              'variants': {
-                'on': true,
-                'off': false,
-              },
-              'defaultVariant': 'off',
-            },
-            'dark-mode': {
-              'state': 'ENABLED',
-              'variants': {
-                'on': true,
-                'off': false,
-              },
-              'defaultVariant': 'on',
-            },
-          },
-        }, null, 2),
+        'flagd.json': JSON.stringify(flagConfig, null, 2),
       },
     });
 

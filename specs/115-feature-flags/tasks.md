@@ -106,11 +106,11 @@ Based on plan.md structure:
 - [X] T031 [P] [US3] Document SDK integration for Go applications in specs/115-feature-flags/quickstart.md
 - [X] T032 [P] [US3] Document SDK integration for TypeScript applications in quickstart.md
 - [X] T033 [P] [US3] Document SDK integration for Python applications in quickstart.md
-- [ ] T034 [US3] Create sample test script to verify flagd gRPC endpoint connectivity
-- [ ] T035 [US3] Create sample test script to verify flagd OFREP endpoint connectivity
-- [ ] T036 [US3] Verify flag evaluation returns correct value based on targeting rules
-- [ ] T037 [US3] Verify SDK fallback to default values when flagd unavailable
-- [ ] T038 [US3] Verify flag changes propagate within 30 seconds (SC-004)
+- [X] T034 [US3] Create sample test script to verify flagd gRPC endpoint connectivity
+- [X] T035 [US3] Create sample test script to verify flagd OFREP endpoint connectivity
+- [X] T036 [US3] Verify flag evaluation returns correct value based on targeting rules
+- [X] T037 [US3] Verify SDK fallback to default values when flagd unavailable
+- [X] T038 [US3] Verify flag changes propagate within 30 seconds (SC-004)
 
 **Checkpoint**: Applications can connect to flagd and evaluate flags with correct values
 
@@ -197,6 +197,56 @@ Based on plan.md structure:
 
 ---
 
+## Phase 11: User Story 7 - CAIPE/Backstage Feature Flag Integration (Priority: P1)
+
+**Goal**: Enable dynamic control of CAIPE agents and Backstage features via feature flags
+
+**Independent Test**: Toggle CAIPE agent flags and verify behavior changes; toggle Backstage flags and verify UI changes
+
+### Phase 11a: Flag Definitions (Infrastructure)
+
+- [X] T067 [US7] Add CAIPE agent flags to flagd ConfigMap (caipe-agents-enabled, caipe-agent-argocd, caipe-agent-github, caipe-agent-backstage)
+- [X] T068 [US7] Add CAIPE feature flags to flagd ConfigMap (caipe-deep-orchestration, caipe-artifact-streaming)
+- [X] T069 [US7] Add observability flags to flagd ConfigMap (langfuse-tracing-enabled, otel-trace-sampling-rate, verbose-agent-logging)
+- [X] T070 [US7] Add rate limit flags to flagd ConfigMap (caipe-rate-limit, llm-token-limit, agent-timeout-seconds)
+- [X] T071 [US7] Add Backstage flags to flagd ConfigMap (backstage-agentforge-enabled, backstage-agentforge-suggestions, backstage-external-api-access)
+- [X] T072 [US7] Add targeting segments to flagd ConfigMap (caipe-testers group, premium tier)
+
+**Checkpoint**: All CAIPE/Backstage flags defined and evaluable via flagd ✓
+
+### Phase 11b: Test Scripts & Validation
+
+- [X] T073 [US7] Create test script to verify CAIPE flags evaluate correctly: scripts/feature-flags/test-caipe-flags.sh
+- [X] T074 [US7] Create test script to verify Backstage flags evaluate correctly (included in test-caipe-flags.sh)
+- [X] T075 [US7] Verify flag changes for CAIPE propagate within 30 seconds (flagd file watcher confirmed)
+- [X] T076 [US7] Document flag toggle procedures for emergency agent disable: scripts/feature-flags/EMERGENCY-PROCEDURES.md
+
+**Checkpoint**: All CAIPE/Backstage flags tested and documented ✓
+
+### Phase 11c: SDK Integration Documentation
+
+- [ ] T077 [P] [US7] Document Python SDK integration for CAIPE supervisor in quickstart.md
+- [ ] T078 [P] [US7] Add Python code example for agent routing with flags
+- [ ] T079 [P] [US7] Document TypeScript SDK integration for Backstage backend in quickstart.md
+- [ ] T080 [P] [US7] Add TypeScript code example for AgentForge feature toggle
+
+**Checkpoint**: SDK integration fully documented for both CAIPE and Backstage
+
+### Phase 11d: Future Code Integration (Separate PR)
+
+These tasks require changes to CAIPE and Backstage codebases:
+
+- [ ] T081 [US7] [FUTURE] Add openfeature-sdk-python to CAIPE supervisor requirements.txt
+- [ ] T082 [US7] [FUTURE] Implement flag provider initialization in CAIPE supervisor startup
+- [ ] T083 [US7] [FUTURE] Add flag checks in CAIPE supervisor agent routing logic
+- [ ] T084 [US7] [FUTURE] Add @openfeature/server-sdk to Backstage package.json
+- [ ] T085 [US7] [FUTURE] Implement flag provider in Backstage backend
+- [ ] T086 [US7] [FUTURE] Add AgentForge visibility toggle based on flag
+
+**Checkpoint**: CAIPE and Backstage consume feature flags at runtime
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -211,6 +261,7 @@ Based on plan.md structure:
 - **User Story 6 (Phase 8)**: Depends on US1-US2 complete - multi-environment
 - **Tailscale (Phase 9)**: Depends on US1 (services exist) - external access
 - **Polish (Phase 10)**: Depends on desired user stories complete
+- **User Story 7 (Phase 11)**: Depends on US1+US3 complete - CAIPE/Backstage integration
 
 ### User Story Dependencies
 
@@ -220,6 +271,7 @@ Based on plan.md structure:
 - **User Story 4 (P2)**: US2 → GitOps workflow
 - **User Story 5 (P2)**: US1 → Observability integration
 - **User Story 6 (P3)**: US1+US2 → Multi-environment
+- **User Story 7 (P1)**: US1+US3 → CAIPE/Backstage feature flag integration
 
 ### Within Each User Story
 

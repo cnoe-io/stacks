@@ -29,7 +29,7 @@ export interface CaipeRagServerChartProps extends ChartProps {
 
   /**
    * RAG Server image
-   * @default 'ghcr.io/cnoe-io/rag-server:0.2.4'
+   * @default 'ghcr.io/cnoe-io/caipe-rag-server:0.2.8'
    */
   image?: string;
 
@@ -63,8 +63,8 @@ export class CaipeRagServerChart extends Chart {
     super(scope, id, props);
 
     const namespace = props.namespace || CAIPE_NAMESPACE;
-    // Use official CAIPE rag-server image with stable tag
-    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-server:stable';
+    // Use official CAIPE rag-server image - must match rag-webui version for API compatibility
+    const image = props.image || 'ghcr.io/cnoe-io/caipe-rag-server:0.2.8';
     const llmSecretName = props.llmSecretName || 'llm-secret';
     const embeddingsSecretName = props.embeddingsSecretName || 'embeddings-secret';
     const neo4jSecretName = props.neo4jSecretName || 'neo4j-secret';
@@ -121,6 +121,9 @@ export class CaipeRagServerChart extends Chart {
                   { name: 'EMBEDDINGS_MODEL', value: 'text-embedding-3-large' },
                   // GraphRAG settings
                   { name: 'ENABLE_GRAPH_RAG', value: 'true' },
+                  // Batch size for embeddings to avoid rate limits
+                  { name: 'EMBEDDING_BATCH_SIZE', value: '5' },
+                  { name: 'MAX_DOCUMENTS_PER_INGEST', value: '20' },
                   // Cleanup interval in seconds (24 hours)
                   { name: 'CLEANUP_INTERVAL', value: '86400' },
                   // Log level

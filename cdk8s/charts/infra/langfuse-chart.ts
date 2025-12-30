@@ -10,7 +10,7 @@
  * - Worker container: Background job processing
  *
  * Auth secrets from langfuse-auth, headless initialization via langfuse-init.
- * Ingress for local access via langfuse-<cluster>.cnoe.localtest.me
+ * Ingress for local access via langfuse.cnoe.localtest.me
  *
  * Sync wave: -60 (after infrastructure at -70)
  */
@@ -18,7 +18,6 @@
 import { Chart, ChartProps } from 'cdk8s';
 import { Construct } from 'constructs';
 import * as k8s from '../../imports/k8s';
-import { getClusterSuffix } from '../../lib/cluster-identity';
 
 export interface LangfuseChartProps extends ChartProps {
   /**
@@ -125,13 +124,13 @@ export interface LangfuseChartProps extends ChartProps {
 
   /**
    * Ingress hostname
-   * @default 'langfuse-<cluster>.<INGRESS_HOST>'
+   * @default 'langfuse.<INGRESS_HOST>'
    */
   ingressHost?: string;
 
   /**
    * NEXTAUTH_URL base URL
-   * @default 'https://langfuse-<cluster>.<INGRESS_HOST>:8443'
+   * @default 'https://langfuse.<INGRESS_HOST>:8443'
    */
   nextAuthUrl?: string;
 }
@@ -158,8 +157,7 @@ export class LangfuseChart extends Chart {
     const authSecretName = props?.authSecretName || 'langfuse-auth';
     const initSecretName = props?.initSecretName || 'langfuse-init';
     const baseHost = process.env.INGRESS_HOST || 'cnoe.localtest.me';
-    const defaultIngressHost = `langfuse${getClusterSuffix()}.${baseHost}`;
-    const ingressHost = props?.ingressHost || defaultIngressHost;
+    const ingressHost = props?.ingressHost || `langfuse.${baseHost}`;
     const portSuffix = baseHost === 'cnoe.localtest.me' ? ':8443' : '';
     const nextAuthUrl = props?.nextAuthUrl || `https://${ingressHost}${portSuffix}`;
 

@@ -233,6 +233,296 @@ const client = OpenFeature.getClient('my-service');
 const darkMode = await client.getBooleanValue('dark-mode-enabled', false);
 ```
 
+## CAIPE/Backstage Integration
+
+### User Story 7 Implementation
+
+This section details the integration of feature flags into the CAIPE AI agent platform and Backstage developer portal.
+
+### CAIPE Feature Flags
+
+| Flag Key | Type | Default | Target Component | Environment Variable |
+|----------|------|---------|------------------|---------------------|
+| `caipe-agents-enabled` | BOOLEAN | true | Supervisor | `CAIPE_AGENTS_ENABLED` |
+| `caipe-agent-argocd` | BOOLEAN | true | Supervisor | `ENABLE_ARGOCD` |
+| `caipe-agent-github` | BOOLEAN | true | Supervisor | `ENABLE_GITHUB` |
+| `caipe-agent-backstage` | BOOLEAN | true | Supervisor | `ENABLE_BACKSTAGE` |
+| `caipe-deep-orchestration` | BOOLEAN | false | Supervisor | `ENABLE_DEEP_ORCHESTRATION` |
+| `caipe-artifact-streaming` | BOOLEAN | true | Supervisor | `ENABLE_ARTIFACT_STREAMING` |
+| `langfuse-tracing-enabled` | BOOLEAN | true | All Agents | `LANGFUSE_ENABLED` |
+| `otel-trace-sampling-rate` | FLOAT | 1.0 | All Agents | `OTEL_TRACES_SAMPLER_ARG` |
+| `caipe-rate-limit` | INTEGER | 100 | Supervisor | `RATE_LIMIT_PER_MINUTE` |
+| `llm-token-limit` | INTEGER | 4096 | All Agents | `LLM_MAX_TOKENS` |
+| `agent-timeout-seconds` | INTEGER | 120 | All Agents | `AGENT_TIMEOUT` |
+
+### Backstage Feature Flags
+
+| Flag Key | Type | Default | Target Component |
+|----------|------|---------|------------------|
+| `backstage-agentforge-enabled` | BOOLEAN | true | AgentForge Plugin |
+| `backstage-agentforge-suggestions` | STRING | "default" | AgentForge Plugin |
+| `backstage-external-api-access` | BOOLEAN | true | Backend Auth |
+
+### Integration Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CAIPE Supervisor (Python)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    OpenFeature Python SDK                            │   │
+│  │                                                                      │   │
+│  │  from openfeature import api                                         │   │
+│  │  from openfeature.contrib.provider.flagd import FlagdProvider        │   │
+│  │                                                                      │   │
+│  │  api.set_provider(FlagdProvider(                                     │   │
+│  │      host="flagd.feature-flags.svc.cluster.local",                   │   │
+│  │      port=8013                                                       │   │
+│  │  ))                                                                  │   │
+│  │                                                                      │   │
+│  │  client = api.get_client("caipe-supervisor")                         │   │
+│  │                                                                      │   │
+│  │  # Check if agents enabled before routing                            │   │
+│  │  if client.get_boolean_value("caipe-agents-enabled", True):          │   │
+│  │      # Route to agents                                               │   │
+│  │  else:                                                               │   │
+│  │      return "Service temporarily disabled"                           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                   │                                        │
+│                                   ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    Agent Routing Logic                               │   │
+│  │                                                                      │   │
+│  │  enabled_agents = []                                                 │   │
+│  │  if client.get_boolean_value("caipe-agent-argocd", True):           │   │
+│  │      enabled_agents.append("argocd")                                 │   │
+│  │  if client.get_boolean_value("caipe-agent-github", True):           │   │
+│  │      enabled_agents.append("github")                                 │   │
+│  │  if client.get_boolean_value("caipe-agent-backstage", True):        │   │
+│  │      enabled_agents.append("backstage")                              │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Backstage (TypeScript)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                  OpenFeature TypeScript SDK                          │   │
+│  │                                                                      │   │
+│  │  import { OpenFeature } from '@openfeature/server-sdk';              │   │
+│  │  import { FlagdProvider } from '@openfeature/flagd-provider';        │   │
+│  │                                                                      │   │
+│  │  OpenFeature.setProvider(new FlagdProvider({                         │   │
+│  │      host: 'flagd.feature-flags.svc.cluster.local',                  │   │
+│  │      port: 8013,                                                     │   │
+│  │  }));                                                                │   │
+│  │                                                                      │   │
+│  │  const client = OpenFeature.getClient('backstage');                  │   │
+│  │                                                                      │   │
+│  │  // Check if AgentForge should be shown                              │   │
+│  │  const showAgentForge = await client.getBooleanValue(                │   │
+│  │      'backstage-agentforge-enabled', true, context                   │   │
+│  │  );                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Flag Configuration Files
+
+New flag definitions to be added to the `feature-flags` Git repository:
+
+```yaml
+# flags/development/caipe.yaml
+version: "1.0"
+namespace: development
+
+flags:
+  # Master agent toggle
+  - key: caipe-agents-enabled
+    name: CAIPE Agents Master Toggle
+    type: BOOLEAN
+    description: Enable or disable all CAIPE agent functionality
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+
+  # Individual agent toggles
+  - key: caipe-agent-argocd
+    name: ArgoCD Agent
+    type: BOOLEAN
+    description: Enable ArgoCD agent for deployment operations
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+
+  - key: caipe-agent-github
+    name: GitHub Agent
+    type: BOOLEAN
+    description: Enable GitHub agent for repository operations
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+
+  - key: caipe-agent-backstage
+    name: Backstage Agent
+    type: BOOLEAN
+    description: Enable Backstage catalog agent
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+
+  # Feature toggles
+  - key: caipe-deep-orchestration
+    name: Deep Orchestration Mode
+    type: BOOLEAN
+    description: Enable multi-agent deep orchestration
+    enabled: true
+    defaultVariant: "off"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+    rules:
+      - segment: caipe-testers
+        rank: 0
+        distributions:
+          - variant: "on"
+            rollout: 100
+
+  # Observability toggles
+  - key: langfuse-tracing-enabled
+    name: Langfuse LLM Tracing
+    type: BOOLEAN
+    description: Enable Langfuse observability for LLM calls
+    enabled: true
+    defaultVariant: "on"
+    variants:
+      - key: "on"
+        value: true
+      - key: "off"
+        value: false
+
+  - key: otel-trace-sampling-rate
+    name: OpenTelemetry Sampling Rate
+    type: FLOAT
+    description: Trace sampling rate (0.0 to 1.0)
+    enabled: true
+    defaultVariant: "full"
+    variants:
+      - key: "full"
+        value: 1.0
+      - key: "half"
+        value: 0.5
+      - key: "tenth"
+        value: 0.1
+      - key: "off"
+        value: 0.0
+
+  # Rate limits
+  - key: caipe-rate-limit
+    name: CAIPE Rate Limit
+    type: INTEGER
+    description: Requests per minute per user
+    enabled: true
+    defaultVariant: "standard"
+    variants:
+      - key: "low"
+        value: 20
+      - key: "standard"
+        value: 100
+      - key: "high"
+        value: 500
+      - key: "unlimited"
+        value: -1
+    rules:
+      - segment: high-volume-users
+        rank: 0
+        distributions:
+          - variant: "high"
+            rollout: 100
+
+  - key: llm-token-limit
+    name: LLM Token Limit
+    type: INTEGER
+    description: Maximum tokens per LLM request
+    enabled: true
+    defaultVariant: "standard"
+    variants:
+      - key: "small"
+        value: 1024
+      - key: "standard"
+        value: 4096
+      - key: "large"
+        value: 8192
+      - key: "xlarge"
+        value: 16384
+
+segments:
+  - key: platform-team
+    name: Platform Team
+    description: Platform engineering team with full access
+    matchType: ANY
+    constraints:
+      - property: groups
+        operator: IS_ONE_OF
+        value: "platform-team,admins"
+
+  - key: caipe-testers
+    name: CAIPE Beta Testers
+    description: Users testing experimental CAIPE features
+    matchType: ANY
+    constraints:
+      - property: groups
+        operator: IS_ONE_OF
+        value: "caipe-testers,beta-testers"
+
+  - key: high-volume-users
+    name: High Volume Users
+    description: Premium tier users with higher rate limits
+    matchType: ALL
+    constraints:
+      - property: tier
+        operator: EQ
+        value: "premium"
+```
+
+### Implementation Approach
+
+1. **Add flag definitions to flagd ConfigMap** (immediate, no code changes)
+2. **Document SDK integration patterns** for CAIPE (Python) and Backstage (TypeScript)
+3. **Create integration guide** with code examples for each service
+4. **Future**: Modify CAIPE supervisor to consume flags at runtime (requires Python code changes)
+5. **Future**: Modify Backstage backend to consume flags (requires TypeScript code changes)
+
+### Rollout Strategy
+
+| Phase | Flags | Action |
+|-------|-------|--------|
+| 1 | Add flag definitions | Define all flags in flagd ConfigMap |
+| 2 | Document integration | Create SDK integration examples |
+| 3 | Test with defaults | Verify flags evaluate correctly |
+| 4 | Code integration | Implement flag checks in CAIPE/Backstage (future PR) |
+
 ## Phase Summary
 
 | Phase | Artifacts | Status |
