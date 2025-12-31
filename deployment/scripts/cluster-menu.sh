@@ -275,6 +275,27 @@ ensure-cdk8s-dependencies() {
   return 0
 }
 
+# Generate kind-config.yaml from template with STACKS_DIR substitution
+generate-kind-config() {
+  local TEMPLATE_FILE="$STACKS_DIR/deployment/config/kind-config.yaml.template"
+  local OUTPUT_FILE="$STACKS_DIR/deployment/config/kind-config.yaml"
+
+  if [ ! -f "$TEMPLATE_FILE" ]; then
+    echo "⚠️  kind-config.yaml.template not found, using existing kind-config.yaml"
+    return 0
+  fi
+
+  echo "📝 Generating kind-config.yaml from template..."
+
+  # Ensure containerd config directory exists
+  mkdir -p "$STACKS_DIR/deployment/config/containerd"
+
+  # Substitute STACKS_DIR in template using sed (envsubst not always available)
+  sed "s|\${STACKS_DIR}|$STACKS_DIR|g" "$TEMPLATE_FILE" > "$OUTPUT_FILE"
+
+  echo "✅ Generated kind-config.yaml with STACKS_DIR=$STACKS_DIR"
+}
+
 # Base functions - always non-interactive
 cluster-deploy() {
   # Check if being called internally (skip auth check if SKIP_AZURE_CHECK is set)
@@ -325,6 +346,9 @@ cluster-deploy() {
   # the Kind config with containerd registry mounts from 1Password credentials
 
   echo "🚀 Creating cluster with idpbuilder..."
+
+  # Generate kind-config.yaml from template with current STACKS_DIR
+  generate-kind-config
 
   # Allow idpbuilder to manage its own self-signed certificates
   # Check if Linux deployment script exists and use it
@@ -615,6 +639,9 @@ cluster-update-gum() {
 
   gum style --foreground 82 "✅ Synthesis complete"
 
+  # Generate kind-config.yaml from template with current STACKS_DIR
+  generate-kind-config
+
   # Step 2: Update cluster with spinner
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
     bash -lc "cd '$REF_DIR' && idpbuilder create --name '$CLUSTER_NAME' -p '$REF_DIR/' -p '$CDK8S_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
@@ -790,6 +817,9 @@ cluster-update() {
   # Step 2: Update cluster using idpbuilder
   echo "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..."
   echo ""
+
+  # Generate kind-config.yaml from template with current STACKS_DIR
+  generate-kind-config
 
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   cd "$REF_DIR"

@@ -37,13 +37,17 @@ cdk8s/dist/*
 !cdk8s/dist/talos/
 cdk8s/imports/
 
+# Nixidy build artifacts (generated from nixidy/)
+nixidy-dist/
+
 # NixOS VM images (large binary files, built from Nix configs)
 nixos-images/*.qcow2
 nixos-images/*.iso
 nixos-images/*.img
 
-# Deployment runtime-generated config
-deployment/config/
+# Deployment runtime-generated config (keep templates, ignore generated files)
+deployment/config/*
+!deployment/config/kind-config.yaml.template
 
 # Logs
 *.log
