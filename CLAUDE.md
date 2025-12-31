@@ -4,31 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-GitOps infrastructure repository using CDK8s (TypeScript) to define Kubernetes manifests, deployed via IdpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment VClusters.
+GitOps infrastructure repository using **nixidy** (Nix-based) to define Kubernetes manifests, deployed via IdpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
 
 **CNOE** (Cloud Native Operational Excellence): Open-source-first, Kubernetes-powered platform framework. See `docs/cnoe-overview.md`.
 
-**cdk8s**: TypeScript framework generating Kubernetes YAML. App → Charts → Constructs → Resources. Pure YAML generation, no runtime component.
+**nixidy**: Nix-based GitOps framework for generating Kubernetes YAML. Uses NixOS module system for type-safe configuration. Environments → Applications → Resources → YAML manifests.
 
 **idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages.
 
 ## Common Commands
 
-### CDK8s Development
+### Nixidy Development
 ```bash
-cd cdk8s
-npm install
-npm run synth              # Default (CLUSTER_TYPE from env, default: kind)
-npm run synth:kind         # KIND clusters (cnoe:// URLs)
-npm run synth:talos        # Talos clusters (GitHub URLs)
-npm run compile            # Type check
-npm run import             # Import/update CRDs
+cd nixidy
+nix develop                        # Enter dev shell with nixidy CLI
+nixidy build .#kind                # Build manifests for KIND cluster
+nixidy build .#talos               # Build manifests for Talos cluster
+nixidy build .#hub                 # Build manifests for Hub cluster
+ls result/                         # View generated applications
+ls result/<app>/                   # View manifests for specific app
+```
+
+### Legacy CDK8s (Archived)
+```bash
+# CDK8s has been replaced by nixidy. See cdk8s/ for historical reference.
+# Use nixidy for all new manifest generation.
 ```
 
 ### IdpBuilder Deployment
 ```bash
-idpbuilder create --package cdk8s/dist/              # Deploy all
-idpbuilder create --package cdk8s/dist/<app>         # Deploy specific
+idpbuilder create --package nixidy-dist/             # Deploy all from nixidy
+idpbuilder create --package nixidy-dist/<app>        # Deploy specific
 idpbuilder create --use-path-routing --package ...   # Path-based routing
 idpbuilder get secrets -p gitea                      # Get secrets
 idpbuilder delete --name localdev                    # Delete cluster

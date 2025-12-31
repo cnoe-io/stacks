@@ -1,5 +1,8 @@
 # CDK8s GitOps Infrastructure
 
+> ⚠️ **DEPRECATED**: This CDK8s implementation is being replaced by [nixidy](/nixidy).
+> New development should use nixidy. See [Feature 114 Migration](../specs/114-nixidy/quickstart.md).
+
 TypeScript-based Kubernetes manifest generation using CDK8s for CNOE-compliant Internal Developer Platform.
 
 ## Prerequisites

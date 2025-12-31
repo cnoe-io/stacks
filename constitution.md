@@ -1,67 +1,78 @@
 <!--
-SYNC IMPACT REPORT - 2025-12-07
+SYNC IMPACT REPORT - 2025-12-31
 
-Version Change: 1.2.0 → 1.3.0
-- Minor version bump: Integrated elements from talos-cluster constitution
+Version Change: 1.3.0 → 1.4.0
+- Minor version bump: Expanded Principle I to allow nixidy as alternative to CDK8s
 
 Modified Principles:
-- Principle VII (Security by Default): Added mTLS, certificate rotation, SOPS encryption patterns
-- Principle IX (Unified Cluster Bootstrap): Added Talos-specific talosctl commands and patterns
+- Principle I (Type-Safe Infrastructure as Code): NOW ALLOWS BOTH CDK8s (TypeScript) AND nixidy (Nix)
+- Principle V (CNOE Technology Alignment): Updated Packaging entry for nixidy
+- Principle VI (Package-Based Architecture): Updated paths for nixidy output
+- Principle IX (Unified Cluster Bootstrap): Updated synthesis workflow for nixidy
 
 Added Sections:
-- Principle X: Immutable Infrastructure for Talos (NEW - from talos-cluster)
-- Principle XI: High Availability & Disaster Recovery (NEW - from talos-cluster)
-- Principle XII: Upgrade & Rollback Discipline (NEW - from talos-cluster)
-- Principle XIII: Observability & Monitoring (NEW - from talos-cluster)
-- Tailscale Network Security section with ACL patterns
-- Certificate rotation schedule
-- SOPS encryption pattern for Talos secrets
+- nixidy workflow documentation
+- Nix flake synthesis commands
 
 Removed Sections:
 - None
 
 Templates Status:
-✅ plan-template.md - Constitution Check section aligns with all 13 principles
+✅ plan-template.md - Constitution Check section aligns with all 14 principles
 ✅ spec-template.md - Requirements structure supports functional requirements for all principles
 ✅ tasks-template.md - Task organization supports infrastructure, security, GitOps, HA, and monitoring
-⚠ Commands in .specify/templates/commands/ - Need verification for Talos patterns
 
 Follow-up TODOs:
-- Verify cluster-menu.sh references after main.ts migration
-- Update CLAUDE.md synthesis section after feature implementation
-- Add talosctl command reference to CLAUDE.md for Talos clusters
+- Archive cdk8s/ directory after nixidy migration complete
+- Update CI/CD pipelines for nixidy build
 
-Rationale for Version 1.3.0:
-- MINOR version: Four new principles added from talos-cluster constitution
-- Material expansion of Principle VII (Security) with mTLS and certificate patterns
-- Material expansion of Principle IX (Bootstrap) with talosctl commands
-- Integrates operational excellence patterns for Talos production clusters
-- Adds HA, upgrade discipline, and observability requirements
+Rationale for Version 1.4.0:
+- MINOR version: Material expansion of Principle I to include nixidy
+- nixidy provides equivalent type safety via Nix module system
+- Both approaches satisfy GitOps and declarative configuration requirements
+- Migration from CDK8s to nixidy enables NixOS ecosystem integration
+
+Previous Version History:
+- 1.3.0 (2025-12-07): Integrated elements from talos-cluster constitution
+- 1.2.0: Initial multi-cluster support
 -->
 
-# Stacks CDK8s GitOps Platform Constitution
+# Stacks GitOps Platform Constitution
 
 ## Core Principles
 
-### I. Type-Safe Infrastructure as Code (TypeScript over YAML Templating)
+### I. Type-Safe Infrastructure as Code (Nix/nixidy or TypeScript/CDK8s over YAML Templating)
 
-All Kubernetes manifests MUST be defined using CDK8s with TypeScript, not YAML templating (Helm, Kustomize).
+All Kubernetes manifests MUST be defined using type-safe infrastructure tools, not YAML templating (Helm, Kustomize). Two approved approaches:
 
-**Rationale**: Type safety provides compile-time validation, IDE autocomplete, refactoring capabilities, and eliminates entire classes of YAML syntax/indentation errors. TypeScript enables reusable functions, libraries, and complex logic that YAML templating cannot achieve.
+1. **nixidy (Nix)** - Preferred for new development
+2. **CDK8s (TypeScript)** - Legacy, being migrated to nixidy
 
-**Requirements**:
+**Rationale**: Type safety provides compile-time validation, IDE autocomplete, refactoring capabilities, and eliminates entire classes of YAML syntax/indentation errors. Both Nix and TypeScript enable reusable functions, libraries, and complex logic that YAML templating cannot achieve. nixidy additionally integrates with the NixOS ecosystem for reproducible builds.
+
+**Requirements (nixidy)**:
+- Use NixOS module system for type-safe resource definitions
+- All resources MUST be defined in `nixidy/apps/*.nix` files
+- Application modules MUST use `applications.<name>` attribute pattern
+- Environment-specific filtering MUST use `lib.mkIf` with `config.cluster.environmentType`
+- Use `resources` attribute for inline Kubernetes resources
+- Use `yamls` attribute for CRDs and complex YAML (ExternalSecrets, ClusterSecretStore)
+- Use `helm` attribute for Helm chart deployments
+- Resource naming MUST follow pattern: `<app>-<env>-<resource>`
+- **Unified Entry Point**: Synthesis MUST use flake selector `.#<environment>` (e.g., `.#kind`, `.#talos`, `.#hub`)
+
+**Requirements (CDK8s - Legacy)**:
 - Use `imports/k8s` (low-level API) for exact YAML control and CRD definitions
-- Use `cdk8s-plus-32` (high-level API) selectively when ergonomics improve productivity without altering YAML semantics
+- Use `cdk8s-plus-32` (high-level API) selectively when ergonomics improve productivity
 - All resource definitions MUST pass TypeScript type checking before synthesis
 - Chart classes MUST extend `Chart` from `cdk8s` library
-- Resource naming MUST follow pattern: `<app>-<env>-<resource>`
-- **Unified Entry Point**: Synthesis MUST use a single `main.ts` entry point with `CLUSTER_TYPE` environment variable for cluster-specific behavior
 
 **Enforcement**:
-- Run `npm run compile` or `npx tsc --noEmit` before synthesis
-- CI/CD pipeline MUST fail on TypeScript compilation errors
-- Code reviews MUST reject raw YAML manifests in `cdk8s/` directory
-- Code reviews MUST reject cluster-specific entry points (use single `main.ts`)
+- **nixidy**: Run `nix build .#nixidyEnvs.x86_64-linux.<env>.result` for synthesis
+- **nixidy**: CI/CD pipeline MUST fail on Nix evaluation errors
+- **CDK8s**: Run `npm run compile` or `npx tsc --noEmit` before synthesis
+- Code reviews MUST reject raw YAML manifests in source directories
+- Code reviews MUST reject cluster-specific entry points
 
 ### II. GitOps-First Deployment
 
@@ -155,7 +166,7 @@ Platform technology choices MUST align with CNOE (Cloud Native Operational Excel
 - **Identity & Access**: Keycloak
 - **Developer Portal**: Backstage
 - **Secret Management**: External Secrets Operator
-- **Packaging & Templating**: cdk8s (TypeScript)
+- **Packaging & Templating**: nixidy (Nix) - preferred; cdk8s (TypeScript) - legacy
 - **Deployment Orchestration**: Kargo
 - **Compute Platform**: Kubernetes (kind for local, EKS/AKS for cloud, Talos for bare-metal)
 
@@ -171,11 +182,19 @@ Platform technology choices MUST align with CNOE (Cloud Native Operational Excel
 
 ### VI. Package-Based Architecture
 
-All applications and platform services MUST be organized as self-contained packages with manifests, kustomization.yaml, and ArgoCD Application definitions.
+All applications and platform services MUST be organized as self-contained packages with manifests and ArgoCD Application definitions.
 
 **Rationale**: Package-based architecture enables modular deployment, independent versioning, and clear dependency management. IdpBuilder's `cnoe://` URL syntax requires this structure for local development workflow.
 
-**Requirements**:
+**Requirements (nixidy)**:
+- Each application MUST synthesize to `nixidy-dist/<app>/manifests/` directory
+- Each package MUST have corresponding `nixidy-dist/<app>.yaml` ArgoCD Application
+- Application modules MUST be organized in `nixidy/apps/<name>.nix`
+- Environment configuration MUST be in `nixidy/env/<env>.nix`
+- Shared logic MUST be extracted to `nixidy/lib/` helpers
+- Custom modules MUST be in `nixidy/modules/`
+
+**Requirements (CDK8s - Legacy)**:
 - Each application MUST synthesize to `cdk8s/dist/<app>/manifests/` directory
 - Each package MUST include `kustomization.yaml` (generated by `KustomizationGenerator`)
 - Each package MUST have corresponding `cdk8s/dist/<app>.yaml` ArgoCD Application
@@ -189,7 +208,6 @@ All applications and platform services MUST be organized as self-contained packa
 
 **Enforcement**:
 - Synthesis MUST fail if package structure is invalid
-- CI MUST verify kustomization.yaml exists and references all manifests
 - Package deployments MUST be independent (no inter-package file dependencies)
 
 ### VII. Security by Default
@@ -484,15 +502,25 @@ Network access MUST follow zero-trust principles with Tailscale as the secure ac
 
 ### Synthesis Workflow
 
+**nixidy (Preferred)**:
+1. Navigate to `nixidy/` directory
+2. Edit application in `nixidy/apps/<name>.nix`
+3. Import new applications in `nixidy/apps/default.nix`
+4. Build manifests: `nix build .#nixidyEnvs.x86_64-linux.<env>.result`
+5. Copy to dist: `rm -rf ../nixidy-dist/* && cp -rL result/* ../nixidy-dist/`
+6. Deploy via appropriate orchestrator:
+   - KIND: `source ~/stacks/deployment/scripts/cluster-menu.sh && cluster-update`
+   - Talos: `./scripts/bootstrap-cluster.sh`
+7. Validate in ArgoCD UI and `kubectl get all -n <namespace>`
+
+**CDK8s (Legacy)**:
 1. Set `CLUSTER_TYPE` environment variable (or source appropriate `.env-files/*.env`)
 2. Edit chart code in `cdk8s/charts/`
 3. Update `config/applications.ts` if adding/removing applications (include `clusterType` field)
 4. Run `npm run synth` to synthesize all packages for current cluster type
 5. Verify output in `cdk8s/dist/<app>/manifests/`
-6. Deploy via appropriate orchestrator:
-   - KIND: `source ~/stacks/deployment/scripts/cluster-menu.sh && cluster-update`
-   - Talos: `./scripts/bootstrap-cluster.sh`
-7. Validate in ArgoCD UI and `kubectl get all -n <namespace>`
+6. Deploy via appropriate orchestrator
+7. Validate in ArgoCD UI
 
 ### ArgoCD CLI Usage
 
@@ -603,4 +631,4 @@ For day-to-day development guidance, refer to `CLAUDE.md` which provides:
 
 This constitution supersedes `CLAUDE.md` when principles conflict. `CLAUDE.md` provides implementation details; the constitution provides non-negotiable rules.
 
-**Version**: 1.3.0 | **Ratified**: 2025-10-08 | **Last Amended**: 2025-12-07
+**Version**: 1.4.0 | **Ratified**: 2025-10-08 | **Last Amended**: 2025-12-31
