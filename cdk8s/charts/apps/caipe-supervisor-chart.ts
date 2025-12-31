@@ -129,6 +129,7 @@ export class CaipeSupervisorChart extends Chart {
                   { name: 'BACKSTAGE_AGENT_HOST', value: `agent-backstage.${namespace}.svc.cluster.local` },
                   { name: 'BACKSTAGE_AGENT_PORT', value: String(CAIPE_PORTS.mcpHttp) },
                   // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+                  { name: 'ENABLE_RAG', value: envVars.ENABLE_RAG },
                   { name: 'ENABLE_ARGOCD', value: envVars.ENABLE_ARGOCD },
                   { name: 'ENABLE_GITHUB', value: envVars.ENABLE_GITHUB },
                   { name: 'ENABLE_BACKSTAGE', value: envVars.ENABLE_BACKSTAGE },

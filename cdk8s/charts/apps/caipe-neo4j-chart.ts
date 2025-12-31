@@ -142,7 +142,7 @@ export class CaipeNeo4jChart extends Chart {
             containers: [
               {
                 name: 'neo4j',
-                image: `neo4j:${CAIPE_RESOURCE_LIMITS.neo4j ? '5.18.0' : '5.18.0'}-community`,
+                image: `neo4j:${CAIPE_RESOURCE_LIMITS.neo4j ? '5.26.0' : '5.26.0'}-community`,
                 ports: [
                   { name: 'bolt', containerPort: CAIPE_PORTS.neo4jBolt },
                   { name: 'http', containerPort: CAIPE_PORTS.neo4jHttp },

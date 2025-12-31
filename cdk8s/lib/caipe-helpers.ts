@@ -31,7 +31,7 @@ export const CAIPE_IMAGE_VERSIONS = {
   ragWebui: 'latest',
   nexigraph: 'latest',
   milvus: '2.6.0',
-  neo4j: '5.18.0',
+  neo4j: '5.26.0',
   redis: '7.2.4',
 } as const;
 
@@ -239,6 +239,7 @@ export function getSupervisorAgentEnvVars(externalUrl: string): Record<string, s
     STREAM_SUB_AGENT_TOOL_OUTPUT: 'true',
     ENABLE_ARTIFACT_STREAMING: 'true',
     // Enable sub-agents - agent registry checks for ENABLE_<AGENT_NAME>
+    ENABLE_RAG: 'true',
     ENABLE_ARGOCD: 'true',
     ENABLE_GITHUB: 'true',
     ENABLE_BACKSTAGE: 'true',

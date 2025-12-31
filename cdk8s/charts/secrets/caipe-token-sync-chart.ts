@@ -199,6 +199,10 @@ export class CaipeTokenSyncChart extends Chart {
                 // Use bitnami kubectl image with argocd CLI installed
                 image: 'bitnami/kubectl:latest',
                 command: ['/bin/bash', '-c'],
+                env: [
+                  // Set HOME to /tmp so argocd CLI can write config
+                  { name: 'HOME', value: '/tmp' },
+                ],
                 args: [
                   `
 set -e
