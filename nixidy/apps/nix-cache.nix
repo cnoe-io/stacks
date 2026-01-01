@@ -188,6 +188,11 @@ in
             access_key_id = "admin"
             secret_access_key = "minioadmin"
 
+            # JWT signing configuration (required for authentication)
+            # Using HMAC secret for testing - use RSA keys in production
+            [jwt.signing]
+            token-hs256-secret-base64 = "dGVzdC1zZWNyZXQtZm9yLWF0dGljLWJpbmFyeS1jYWNoZS1zZXJ2ZXI="
+
             [chunking]
             nar-size-threshold = 65536
             min-size = 16384

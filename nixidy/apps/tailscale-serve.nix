@@ -64,6 +64,8 @@ in
                   { name = "TS_HOSTNAME"; value = "langfuse${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -164,6 +166,8 @@ in
                   { name = "TS_HOSTNAME"; value = "gitea${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -264,6 +268,8 @@ in
                   { name = "TS_HOSTNAME"; value = "kagent${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -364,6 +370,8 @@ in
                   { name = "TS_HOSTNAME"; value = "kargo${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -464,6 +472,8 @@ in
                   { name = "TS_HOSTNAME"; value = "headlamp${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -564,6 +574,8 @@ in
                   { name = "TS_HOSTNAME"; value = "keycloak${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -666,6 +678,8 @@ in
                   { name = "TS_HOSTNAME"; value = "grafana${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -766,6 +780,8 @@ in
                   { name = "TS_HOSTNAME"; value = "otel${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -856,6 +872,8 @@ in
                   { name = "TS_HOSTNAME"; value = "mimir${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -956,6 +974,8 @@ in
                   { name = "TS_HOSTNAME"; value = "loki${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
@@ -1056,6 +1076,8 @@ in
                   { name = "TS_HOSTNAME"; value = "flipt${clusterSuffix}"; }
                   { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
                   { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  # Reset state on restart to avoid conflicts with existing Tailscale node
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
                 ];
                 volumeMounts = [
                   { name = "state"; mountPath = "/var/lib/tailscale"; }
