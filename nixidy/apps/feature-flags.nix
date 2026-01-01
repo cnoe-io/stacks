@@ -315,6 +315,10 @@ in
                 ref: "main"
                 poll_interval: "30s"
                 insecure_skip_tls: true
+                authentication:
+                  basic:
+                    username: "$(FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME)"
+                    password: "$(FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD)"
                 backend:
                   type: memory
 
