@@ -11,6 +11,58 @@ let
   kgatewayNamespace = "kgateway-system";
 in
 {
+  # Gateway API CRDs (standard Kubernetes Gateway API) - MUST be installed before kgateway
+  # These are the core gateway.networking.k8s.io CRDs required by kgateway controller
+  applications.gateway-api-crds = {
+    namespace = kgatewayNamespace;
+    createNamespace = true;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-130";  # Before kgateway-crds
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = false;  # Never auto-delete CRDs
+        selfHeal = true;
+      };
+      syncOptions = {
+        createNamespace = true;
+        serverSideApply = true;
+      };
+    };
+
+    # Install standard Gateway API CRDs from official source (raw GitHub manifests)
+    yamls = [
+      ''
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: gateway-api-crds-helm
+          namespace: argocd
+          annotations:
+            argocd.argoproj.io/sync-wave: "-130"
+        spec:
+          project: default
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: ${kgatewayNamespace}
+          source:
+            repoURL: https://github.com/kubernetes-sigs/gateway-api
+            path: config/crd/standard
+            targetRevision: v1.2.0
+          syncPolicy:
+            automated:
+              prune: false
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+              - ServerSideApply=true
+      ''
+    ];
+  };
+
   # kgateway CRDs - via ArgoCD OCI Helm Application
   applications.kgateway-crds = {
     namespace = kgatewayNamespace;
