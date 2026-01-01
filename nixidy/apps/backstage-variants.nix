@@ -45,56 +45,147 @@ in
     };
 
     yamls = [
+      # backstage-env-vars - uses keycloak ClusterSecretStore for OIDC + Azure for stable passwords
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
-          name: backstage-secrets
+          name: backstage-oidc
           namespace: backstage-local-dev
         spec:
-          refreshInterval: 1h
+          refreshInterval: 1m
           secretStoreRef:
             kind: ClusterSecretStore
-            name: azure-keyvault-store
+            name: keycloak
           target:
-            name: backstage-secrets
-            creationPolicy: Owner
+            name: backstage-env-vars
+            template:
+              engineVersion: v2
+              data:
+                BACKSTAGE_FRONTEND_URL: "https://${ingressHost}:8443/backstage"
+                POSTGRES_HOST: "postgresql.backstage-local-dev.svc.cluster.local"
+                POSTGRES_PORT: "5432"
+                POSTGRES_DB: backstage
+                POSTGRES_USER: backstage
+                POSTGRES_PASSWORD: "{{.POSTGRES_PASSWORD}}"
+                BACKSTAGE_SESSION_SECRET: "{{.SESSION_SECRET}}"
+                ARGO_WORKFLOWS_URL: "https://${ingressHost}:8443/argo-workflows"
+                ARGO_CD_URL: "https://argocd.${ingressHost}:8443"
+                ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
+                KEYCLOAK_NAME_METADATA: "https://${ingressHost}:8443/keycloak/realms/cnoe/.well-known/openid-configuration"
+                KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
+                GITEA_URL: "https://gitea.${ingressHost}:8443"
+                GITEA_HOST: "gitea.${ingressHost}:8443"
           data:
+            # OIDC tokens from keycloak ClusterSecretStore
+            - secretKey: ARGOCD_SESSION_TOKEN
+              remoteRef:
+                key: keycloak-clients
+                property: ARGOCD_SESSION_TOKEN
+            - secretKey: BACKSTAGE_CLIENT_SECRET
+              remoteRef:
+                key: keycloak-clients
+                property: BACKSTAGE_CLIENT_SECRET
+            # Stable passwords from Azure Key Vault
             - secretKey: POSTGRES_PASSWORD
+              sourceRef:
+                storeRef:
+                  name: azure-keyvault-store
+                  kind: ClusterSecretStore
               remoteRef:
                 key: BACKSTAGE-POSTGRES-PASSWORD
-            - secretKey: GITHUB_TOKEN
+            - secretKey: SESSION_SECRET
+              sourceRef:
+                storeRef:
+                  name: azure-keyvault-store
+                  kind: ClusterSecretStore
               remoteRef:
-                key: GITHUB-PAT
-            - secretKey: AUTH_GITHUB_CLIENT_ID
-              remoteRef:
-                key: AUTH-GITHUB-CLIENT-ID
-            - secretKey: AUTH_GITHUB_CLIENT_SECRET
-              remoteRef:
-                key: AUTH-GITHUB-CLIENT-SECRET
+                key: BACKSTAGE-SESSION-SECRET
       ''
+      # gitea-dockercfg - uses gitea ClusterSecretStore (Kubernetes provider)
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
-          name: gitea-dockercfg
+          name: gitea-dockercfg-external
           namespace: backstage-local-dev
+          labels:
+            app.kubernetes.io/name: gitea-dockercfg
+            app.kubernetes.io/part-of: backstage
         spec:
-          refreshInterval: 1h
+          refreshInterval: "0"
           secretStoreRef:
             kind: ClusterSecretStore
-            name: azure-keyvault-store
+            name: gitea
           target:
             name: gitea-dockercfg
             creationPolicy: Owner
             template:
               type: kubernetes.io/dockerconfigjson
               data:
-                .dockerconfigjson: '{{ .dockerconfigjson }}'
+                .dockerconfigjson: |
+                  {
+                    "auths": {
+                      "gitea.${ingressHost}:8443": {
+                        "username": "{{ .username }}",
+                        "password": "{{ .password }}",
+                        "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+                      }
+                    }
+                  }
           data:
-            - secretKey: dockerconfigjson
+            - secretKey: username
               remoteRef:
-                key: GITEA-DOCKERCFG
+                key: gitea-credential
+                property: username
+            - secretKey: password
+              remoteRef:
+                key: gitea-credential
+                property: password
+      ''
+      # gitea-credentials - for Backstage to access Gitea API
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: gitea-credentials
+          namespace: backstage-local-dev
+        spec:
+          refreshInterval: "0"
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: gitea
+          target:
+            name: gitea-credentials
+          data:
+            - secretKey: GITEA_USERNAME
+              remoteRef:
+                key: gitea-credential
+                property: username
+            - secretKey: GITEA_PASSWORD
+              remoteRef:
+                key: gitea-credential
+                property: password
+      ''
+      # argocd-credentials - for Backstage to access ArgoCD
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: argocd-credentials
+          namespace: backstage-local-dev
+        spec:
+          refreshInterval: "0"
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: argocd
+          target:
+            name: argocd-credentials
+          data:
+            - secretKey: ARGOCD_ADMIN_PASSWORD
+              remoteRef:
+                key: argocd-initial-admin-secret
+                property: password
       ''
     ];
   };
@@ -143,7 +234,7 @@ in
                 env = [
                   { name = "POSTGRES_DB"; value = "backstage"; }
                   { name = "POSTGRES_USER"; value = "backstage"; }
-                  { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "POSTGRES_PASSWORD"; }; }
+                  { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-env-vars"; key = "POSTGRES_PASSWORD"; }; }
                 ];
                 volumeMounts = [{
                   name = "data";
@@ -193,14 +284,12 @@ in
                 name = "backstage";
                 image = "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest";
                 ports = [{ containerPort = 7007; name = "http"; }];
+                envFrom = [{
+                  secretRef.name = "backstage-env-vars";
+                }];
                 env = [
-                  { name = "POSTGRES_HOST"; value = "postgresql.backstage-local-dev.svc.cluster.local"; }
-                  { name = "POSTGRES_PORT"; value = "5432"; }
-                  { name = "POSTGRES_USER"; value = "backstage"; }
-                  { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "POSTGRES_PASSWORD"; }; }
-                  { name = "GITHUB_TOKEN"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "GITHUB_TOKEN"; }; }
-                  { name = "AUTH_GITHUB_CLIENT_ID"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "AUTH_GITHUB_CLIENT_ID"; }; }
-                  { name = "AUTH_GITHUB_CLIENT_SECRET"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "AUTH_GITHUB_CLIENT_SECRET"; }; }
+                  { name = "GITEA_USERNAME"; valueFrom.secretKeyRef = { name = "gitea-credentials"; key = "GITEA_USERNAME"; }; }
+                  { name = "GITEA_PASSWORD"; valueFrom.secretKeyRef = { name = "gitea-credentials"; key = "GITEA_PASSWORD"; }; }
                 ];
                 resources = {
                   requests = {
@@ -250,10 +339,111 @@ in
     };
   };
 
+  # Backstage Staging Secrets
+  applications.backstage-staging-secrets = lib.mkIf isKind {
+    namespace = "backstage-staging";
+    createNamespace = true;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-75";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        createNamespace = true;
+        serverSideApply = true;
+      };
+      retry = {
+        limit = 10;
+        backoff = {
+          duration = "5s";
+          factor = 2;
+          maxDuration = "3m";
+        };
+      };
+    };
+
+    yamls = [
+      # backstage-env-vars for staging - uses Azure Key Vault (GHCR doesn't need Keycloak OIDC)
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: backstage-staging-secrets
+          namespace: backstage-staging
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: backstage-env-vars
+            template:
+              engineVersion: v2
+              data:
+                BACKSTAGE_FRONTEND_URL: "https://${ingressHost}:8443/backstage-staging"
+                POSTGRES_HOST: "postgresql.backstage-staging.svc.cluster.local"
+                POSTGRES_PORT: "5432"
+                POSTGRES_DB: backstage
+                POSTGRES_USER: backstage
+                POSTGRES_PASSWORD: "{{.POSTGRES_PASSWORD}}"
+                GITHUB_TOKEN: "{{.GITHUB_TOKEN}}"
+          data:
+            - secretKey: POSTGRES_PASSWORD
+              remoteRef:
+                key: BACKSTAGE-POSTGRES-PASSWORD
+            - secretKey: GITHUB_TOKEN
+              remoteRef:
+                key: GITHUB-PAT
+      ''
+      # ghcr-dockercfg for pulling from GHCR
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: ghcr-dockercfg-external
+          namespace: backstage-staging
+          labels:
+            app.kubernetes.io/name: ghcr-dockercfg
+            app.kubernetes.io/part-of: backstage
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: ghcr-dockercfg
+            creationPolicy: Owner
+            template:
+              type: kubernetes.io/dockerconfigjson
+              data:
+                .dockerconfigjson: |
+                  {
+                    "auths": {
+                      "ghcr.io": {
+                        "username": "pittampalliorg",
+                        "password": "{{ .pat }}",
+                        "auth": "{{ printf "%s:%s" "pittampalliorg" .pat | b64enc }}"
+                      }
+                    }
+                  }
+          data:
+            - secretKey: pat
+              remoteRef:
+                key: GITHUB-PAT
+      ''
+    ];
+  };
+
   # Backstage Staging
   applications.backstage-staging = lib.mkIf isKind {
     namespace = "backstage-staging";
-    createNamespace = true;
+    createNamespace = false;
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "90";
@@ -267,18 +457,11 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = true;
         serverSideApply = true;
       };
     };
 
     resources = {
-      namespaces.backstage-staging = {
-        metadata.labels = {
-          "app.kubernetes.io/managed-by" = "nixidy";
-        };
-      };
-
       # PostgreSQL for staging
       statefulSets.postgresql = {
         metadata = {
@@ -300,7 +483,7 @@ in
               env = [
                 { name = "POSTGRES_DB"; value = "backstage"; }
                 { name = "POSTGRES_USER"; value = "backstage"; }
-                { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "POSTGRES_PASSWORD"; }; }
+                { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-env-vars"; key = "POSTGRES_PASSWORD"; }; }
               ];
               volumeMounts = [{
                 name = "data";
@@ -343,27 +526,26 @@ in
           template = {
             metadata.labels.app = "backstage";
 
-            spec.containers = [{
-              name = "backstage";
-              image = "ghcr.io/pittampalliorg/backstage-cnoe:latest";
-              ports = [{ containerPort = 7007; name = "http"; }];
-              env = [
-                { name = "POSTGRES_HOST"; value = "postgresql.backstage-staging.svc.cluster.local"; }
-                { name = "POSTGRES_PORT"; value = "5432"; }
-                { name = "POSTGRES_USER"; value = "backstage"; }
-                { name = "POSTGRES_PASSWORD"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "POSTGRES_PASSWORD"; }; }
-                { name = "GITHUB_TOKEN"; valueFrom.secretKeyRef = { name = "backstage-secrets"; key = "GITHUB_TOKEN"; }; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "200m";
-                  memory = "512Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-dockercfg"; }];
+              containers = [{
+                name = "backstage";
+                image = "ghcr.io/pittampalliorg/backstage:v1.0.0";
+                ports = [{ containerPort = 7007; name = "http"; }];
+                envFrom = [{
+                  secretRef.name = "backstage-env-vars";
+                }];
+                resources = {
+                  requests = {
+                    cpu = "200m";
+                    memory = "512Mi";
+                  };
+                  limits = {
+                    memory = "1Gi";
+                  };
                 };
-                limits = {
-                  memory = "1Gi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };

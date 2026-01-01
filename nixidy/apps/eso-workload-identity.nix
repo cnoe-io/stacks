@@ -1,16 +1,18 @@
-# External Secrets Workload Identity - Talos only
+# External Secrets Workload Identity
 # This app configures Azure Workload Identity for External Secrets Operator
-# Only needed in Talos (production) where we use Azure Key Vault
+# Needed for any environment using Azure Key Vault (talos, kind clusters with Azure access)
 # Mirrors: cdk8s/charts/secrets/external-secrets-workload-identity-chart.ts
 { config, lib, ... }:
 let
-  # Only include for talos environment
+  # Include for talos and kind environments (thinkpad, ryzen use Azure Workload Identity)
   isTalos = config.environmentType == "talos";
+  isKind = config.environmentType == "kind";
+  enableAzureWorkloadIdentity = isTalos || isKind;
   namespace = "external-secrets";
 in
 {
   # Conditionally include this application based on environment type
-  config = lib.mkIf isTalos {
+  config = lib.mkIf enableAzureWorkloadIdentity {
     applications.eso-workload-identity = {
       inherit namespace;
       createNamespace = true;
@@ -50,7 +52,7 @@ in
       # ClusterSecretStore requires Custom Resource - use yamls for now
       yamls = [
         ''
-          apiVersion: external-secrets.io/v1beta1
+          apiVersion: external-secrets.io/v1
           kind: ClusterSecretStore
           metadata:
             name: azure-keyvault-store

@@ -1,10 +1,11 @@
 # Argo Workflows - Workflow Engine
 # Provides workflow orchestration for CI/CD and batch processing.
+# Uses nixhelm for Helm chart management following nixidy best practices.
 #
 # Mirrors: cdk8s Argo Workflows configurations
-{ config, lib, ... }:
+{ config, lib, charts, ... }:
 let
-  namespace = "argo-workflows";
+  namespace = "argo";
 in
 {
   config = {
@@ -28,22 +29,26 @@ in
         };
       };
 
-      # Placeholder for Argo Workflows deployment
-      # Chart: argo-workflows from https://argoproj.github.io/argo-helm
-      yamls = [
-        ''
-          # Argo Workflows workflow engine
-          # For production deployment, use one of:
-          # 1. nixhelm with helm.releases
-          # 2. ArgoCD Application with Helm source
-          # 3. Pre-rendered manifests
-          #
-          # Key values:
-          # - controller.workflowNamespaces for multi-tenant
-          # - server.extraArgs for SSO
-          # - persistence for artifact storage
-        ''
-      ];
+      # Use nixhelm for pre-rendered Helm chart
+      helm.releases.argo-workflows = {
+        chart = charts.argoproj.argo-workflows;
+        values = {
+          controller = {
+            workflowNamespaces = [ namespace ];
+          };
+          server = {
+            serviceType = "ClusterIP";
+            extraArgs = [
+              "--auth-mode=server"
+            ];
+          };
+          workflow = {
+            serviceAccount = {
+              create = true;
+            };
+          };
+        };
+      };
     };
   };
 }

@@ -38,53 +38,70 @@ in
     };
 
     yamls = [
+      # kargo-git-credentials - use gitea ClusterSecretStore (Kubernetes provider)
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: kargo-git-credentials
           namespace: kargo-pipelines
+          labels:
+            app.kubernetes.io/name: kargo-git-credentials
+            app.kubernetes.io/part-of: kargo-pipelines
+            kargo.akuity.io/cred-type: git
         spec:
-          refreshInterval: 1h
+          refreshInterval: "0"
           secretStoreRef:
             kind: ClusterSecretStore
-            name: azure-keyvault-store
+            name: gitea
           target:
             name: kargo-git-credentials
             creationPolicy: Owner
           data:
             - secretKey: username
               remoteRef:
-                key: GITEA-ADMIN-USERNAME
+                key: gitea-credential
+                property: username
             - secretKey: password
               remoteRef:
-                key: GITEA-ADMIN-PASSWORD
+                key: gitea-credential
+                property: password
       ''
+      # kargo-argocd-credentials - use argocd ClusterSecretStore
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: kargo-argocd-credentials
           namespace: kargo-pipelines
+          labels:
+            app.kubernetes.io/name: kargo-argocd-credentials
+            app.kubernetes.io/part-of: kargo-pipelines
         spec:
-          refreshInterval: 1h
+          refreshInterval: "0"
           secretStoreRef:
             kind: ClusterSecretStore
-            name: azure-keyvault-store
+            name: argocd
           target:
             name: kargo-argocd-credentials
             creationPolicy: Owner
           data:
             - secretKey: token
               remoteRef:
-                key: KARGO-ARGOCD-TOKEN
+                key: argocd-initial-admin-secret
+                property: password
       ''
+      # ghcr-credentials - use Azure Key Vault for GitHub PAT
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: ghcr-credentials
           namespace: kargo-pipelines
+          labels:
+            app.kubernetes.io/name: ghcr-credentials
+            app.kubernetes.io/part-of: kargo-pipelines
+            kargo.akuity.io/cred-type: image
         spec:
           refreshInterval: 1h
           secretStoreRef:
@@ -96,11 +113,59 @@ in
             template:
               type: kubernetes.io/dockerconfigjson
               data:
-                .dockerconfigjson: '{{ .dockerconfigjson }}'
+                .dockerconfigjson: |
+                  {
+                    "auths": {
+                      "ghcr.io": {
+                        "username": "pittampalliorg",
+                        "password": "{{ .pat }}",
+                        "auth": "{{ printf "%s:%s" "pittampalliorg" .pat | b64enc }}"
+                      }
+                    }
+                  }
           data:
-            - secretKey: dockerconfigjson
+            - secretKey: pat
               remoteRef:
-                key: GHCR-DOCKERCFG
+                key: GITHUB-PAT
+      ''
+      # kargo-github-app-credentials - GitHub App authentication for Kargo
+      # See: https://docs.kargo.io/user-guide/security/managing-credentials#github-app-authentication
+      # Note: Using GITHUB-APP-ID as client ID (numeric App ID is deprecated but works)
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: kargo-github-app-credentials
+          namespace: kargo-pipelines
+          labels:
+            app.kubernetes.io/name: kargo-github-app-credentials
+            app.kubernetes.io/part-of: kargo-pipelines
+            kargo.akuity.io/cred-type: git
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: kargo-github-app-credentials
+            creationPolicy: Owner
+            template:
+              data:
+                githubAppID: "{{ .appId }}"
+                githubAppPrivateKey: "{{ .privateKey }}"
+                githubAppInstallationID: "{{ .installationId }}"
+                repoURL: "https://github.com/PittampalliOrg"
+                repoURLIsRegex: "true"
+          data:
+            - secretKey: appId
+              remoteRef:
+                key: GITHUB-APP-ID
+            - secretKey: privateKey
+              remoteRef:
+                key: GITHUB-APP-PRIVATE-KEY
+            - secretKey: installationId
+              remoteRef:
+                key: GITHUB-APP-INSTALL-ID
       ''
     ];
   };
@@ -172,19 +237,32 @@ in
             GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
             KARGO_WEBHOOK_URL="http://kargo-api.kargo.svc.cluster.local/webhooks/gitea"
 
-            # Check if webhook exists
-            EXISTING=$(curl -s -u "$GITEA_USER:$GITEA_PASSWORD" \
-              "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks" | jq '.[] | select(.config.url | contains("kargo"))')
+            echo "Checking for existing webhooks..."
 
-            if [ -z "$EXISTING" ]; then
-              echo "Creating webhook..."
-              curl -X POST -u "$GITEA_USER:$GITEA_PASSWORD" \
-                -H "Content-Type: application/json" \
-                -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$KARGO_WEBHOOK_URL\",\"content_type\":\"json\"},\"events\":[\"push\"],\"active\":true}" \
-                "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks"
-              echo "Webhook created"
+            # Check if webhook already exists using grep (no jq required)
+            EXISTING_HOOKS=$(curl -s -u "$GITEA_USER:$GITEA_PASSWORD" \
+              "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks")
+
+            if echo "$EXISTING_HOOKS" | grep -q "kargo"; then
+              echo "Webhook already exists, skipping creation"
+              exit 0
+            fi
+
+            echo "Creating webhook..."
+            RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
+              -u "$GITEA_USER:$GITEA_PASSWORD" \
+              -H "Content-Type: application/json" \
+              -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$KARGO_WEBHOOK_URL\",\"content_type\":\"json\"},\"events\":[\"push\"],\"active\":true}" \
+              "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks")
+
+            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+
+            if [ "$HTTP_STATUS" = "201" ] || [ "$HTTP_STATUS" = "200" ]; then
+              echo "Webhook created successfully"
             else
-              echo "Webhook already exists"
+              echo "Failed to create webhook (HTTP $HTTP_STATUS)"
+              echo "$RESPONSE"
+              exit 1
             fi
           '';
         };
@@ -270,7 +348,7 @@ in
         spec:
           subscriptions:
             - image:
-                repoURL: ghcr.io/pittampalliorg/backstage-cnoe
+                repoURL: ghcr.io/pittampalliorg/backstage
       ''
       # Hub Inner Loop Stage (local-dev on thinkpad)
       ''

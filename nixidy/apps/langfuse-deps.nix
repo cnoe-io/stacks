@@ -410,7 +410,10 @@ in
     };
   };
 
-  # LGTM Grafana (dashboards)
+  # LGTM Grafana - Placeholder
+  # NOTE: Actual Grafana deployment is via nixhelm in grafana.nix
+  # This placeholder exists for ArgoCD Application tracking only.
+  # See cdk8s/charts/infra/lgtm-grafana-chart.ts for reference implementation.
   applications.lgtm-grafana = {
     inherit namespace;
     createNamespace = false;
@@ -431,60 +434,17 @@ in
     };
 
     resources = {
-      deployments.grafana = {
+      configMaps.lgtm-grafana-placeholder = {
         metadata = {
-          inherit namespace;
-          labels.app = "grafana";
-        };
-        spec = {
-          replicas = 1;
-          selector.matchLabels.app = "grafana";
-
-          template = {
-            metadata.labels.app = "grafana";
-
-            spec = {
-              containers = [{
-                name = "grafana";
-                image = "grafana/grafana:10.3.1";
-                ports = [{ containerPort = 3000; name = "http"; }];
-                env = [
-                  { name = "GF_AUTH_ANONYMOUS_ENABLED"; value = "true"; }
-                  { name = "GF_AUTH_ANONYMOUS_ORG_ROLE"; value = "Admin"; }
-                  { name = "GF_SECURITY_ADMIN_PASSWORD"; value = "admin"; }
-                ];
-                volumeMounts = [{
-                  name = "data";
-                  mountPath = "/var/lib/grafana";
-                }];
-                resources = {
-                  requests = {
-                    cpu = "100m";
-                    memory = "256Mi";
-                  };
-                  limits = {
-                    memory = "512Mi";
-                  };
-                };
-              }];
-
-              volumes = [{
-                name = "data";
-                emptyDir = {};
-              }];
-            };
+          namespace = namespace;
+          labels = {
+            "app.kubernetes.io/name" = "lgtm-grafana";
+            "app.kubernetes.io/part-of" = "observability";
           };
         };
-      };
-
-      services.grafana = {
-        metadata = {
-          inherit namespace;
-          labels.app = "grafana";
-        };
-        spec = {
-          ports = [{ name = "http"; port = 3000; targetPort = "http"; }];
-          selector.app = "grafana";
+        data = {
+          status = "placeholder";
+          note = "Grafana deployed via nixhelm in grafana.nix. See cdk8s/charts/infra/lgtm-grafana-chart.ts for dashboard configuration.";
         };
       };
     };

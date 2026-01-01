@@ -2,52 +2,18 @@
 # Gateway API CRDs, kgateway, and related infrastructure
 # Mirrors: cdk8s/charts/platform/gateway-*.ts, kgateway-*.ts
 #
-# NOTE: Helm charts are deployed via ArgoCD Applications with Helm source type
-# nixidy generates the ArgoCD Application manifests pointing to Helm repos
+# NOTE: kgateway uses OCI registry (cr.kgateway.dev) which nixidy doesn't support.
+# We use ArgoCD Application with OCI Helm source - ArgoCD handles OCI natively.
+# See: https://nixidy.dev/user_guide/helm_charts/
 { config, lib, ... }:
 let
   inherit (config) environmentType;
+  kgatewayNamespace = "kgateway-system";
 in
 {
-  # Gateway API CRDs - placeholder for Helm deployment
-  applications.gateway-api-crds = {
-    namespace = "default";
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-130";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = false;  # Never auto-delete CRDs
-        selfHeal = true;
-      };
-      syncOptions = {
-        serverSideApply = true;
-      };
-    };
-
-    yamls = [
-      ''
-        # Gateway API CRDs - Deployed via ArgoCD Application with Helm source
-        # Chart: gateway-api from https://kubernetes-sigs.github.io/gateway-api/charts
-        # Version: 1.4.0
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: gateway-api-crds-placeholder
-          namespace: default
-        data:
-          note: "CRDs deployed via Helm chart in ArgoCD"
-      ''
-    ];
-  };
-
-  # kgateway CRDs - placeholder for Helm deployment
+  # kgateway CRDs - via ArgoCD OCI Helm Application
   applications.kgateway-crds = {
-    namespace = "kgateway-system";
+    namespace = kgatewayNamespace;
     createNamespace = true;
 
     annotations = {
@@ -66,25 +32,39 @@ in
       };
     };
 
+    # Use ArgoCD Application with OCI Helm source (nixidy doesn't support OCI)
     yamls = [
       ''
-        # kgateway CRDs - Deployed via ArgoCD Application with Helm source
-        # Chart: kgateway-crds from https://charts.kgateway.dev
-        # Version: 2.1.1
-        apiVersion: v1
-        kind: ConfigMap
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
         metadata:
-          name: kgateway-crds-placeholder
-          namespace: kgateway-system
-        data:
-          note: "CRDs deployed via Helm chart in ArgoCD"
+          name: kgateway-crds-helm
+          namespace: argocd
+          annotations:
+            argocd.argoproj.io/sync-wave: "-125"
+        spec:
+          project: default
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: ${kgatewayNamespace}
+          source:
+            repoURL: cr.kgateway.dev/kgateway-dev/charts
+            chart: kgateway-crds
+            targetRevision: v2.1.2
+          syncPolicy:
+            automated:
+              prune: false
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+              - ServerSideApply=true
       ''
     ];
   };
 
-  # kgateway with agentgateway - placeholder for Helm deployment
+  # kgateway with agentgateway - via ArgoCD OCI Helm Application
   applications.kgateway = {
-    namespace = "kgateway-system";
+    namespace = kgatewayNamespace;
     createNamespace = false;
 
     annotations = {
@@ -98,28 +78,40 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = false;
         serverSideApply = true;
       };
     };
 
+    # Use ArgoCD Application with OCI Helm source
     yamls = [
       ''
-        # kgateway - Deployed via ArgoCD Application with Helm source
-        # Chart: kgateway from https://charts.kgateway.dev
-        # Version: 2.1.1
-        # Values:
-        #   gateway.enabled: true
-        #   gateway.replicas: 1
-        #   agentGateway.enabled: true
-        #   ai.enabled: true
-        apiVersion: v1
-        kind: ConfigMap
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
         metadata:
-          name: kgateway-placeholder
-          namespace: kgateway-system
-        data:
-          note: "Deployed via Helm chart in ArgoCD"
+          name: kgateway-helm
+          namespace: argocd
+          annotations:
+            argocd.argoproj.io/sync-wave: "-120"
+        spec:
+          project: default
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: ${kgatewayNamespace}
+          source:
+            repoURL: cr.kgateway.dev/kgateway-dev/charts
+            chart: kgateway
+            targetRevision: v2.1.2
+            helm:
+              valuesObject:
+                gateway:
+                  enabled: true
+                  replicas: 1
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+              - ServerSideApply=true
       ''
     ];
   };

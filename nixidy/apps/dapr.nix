@@ -1,52 +1,23 @@
 # Dapr Agents Applications
 # CRDs, runtime, Redis, components, and SpecKit agents
+# Uses lib.helm.downloadHelmChart for Dapr Helm chart (not in nixhelm)
 # Mirrors: cdk8s/charts/platform/dapr-*.ts
 { config, lib, ... }:
 let
   inherit (config) environmentType;
   daprSystemNamespace = "dapr-system";
   daprAgentsNamespace = "dapr-agents";
+
+  # Dapr Helm chart definition (not in nixhelm, using lib.helm.downloadHelmChart)
+  daprChart = lib.helm.downloadHelmChart {
+    repo = "https://dapr.github.io/helm-charts";
+    chart = "dapr";
+    version = "1.14.4";
+    chartHash = "sha256-qdZTXllm8Urr72YWAt2NzkMz3Cuwge60RaT+M0thCao=";
+  };
 in
 {
-  # Dapr CRDs - placeholder for Helm deployment
-  applications.dapr-crds = {
-    namespace = "default";
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-200";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-      syncOptions = {
-        serverSideApply = true;
-        replace = true;
-      };
-    };
-
-    yamls = [
-      ''
-        # Dapr CRDs - Deployed via ArgoCD Application with Helm source
-        # Chart: dapr from https://dapr.github.io/helm-charts
-        # Version: 1.16.3
-        # Values: Only CRDs (all operators disabled)
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: dapr-crds-placeholder
-          namespace: default
-        data:
-          note: "CRDs deployed via Helm chart in ArgoCD"
-      ''
-    ];
-  };
-
-  # Dapr Runtime (Control Plane) - placeholder for Helm deployment
+  # Dapr Runtime (Control Plane) - includes CRDs
   applications.dapr-runtime = {
     namespace = daprSystemNamespace;
     createNamespace = true;
@@ -67,26 +38,24 @@ in
       };
     };
 
-    yamls = [
-      ''
-        # Dapr Runtime - Deployed via ArgoCD Application with Helm source
-        # Chart: dapr from https://dapr.github.io/helm-charts
-        # Version: 1.16.3
-        # Values:
-        #   global.ha.enabled: false
-        #   global.mtls.enabled: true
-        #   global.logAsJson: true
-        #   dapr_dashboard.enabled: true
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: ${daprSystemNamespace}
-          labels:
-            app.kubernetes.io/managed-by: nixidy
-            app.kubernetes.io/component: dapr
-            app.kubernetes.io/part-of: platform
-      ''
-    ];
+    # Use lib.helm.downloadHelmChart for pre-rendered Helm chart
+    helm.releases.dapr = {
+      chart = daprChart;
+      values = {
+        global = {
+          ha = {
+            enabled = false;
+          };
+          mtls = {
+            enabled = true;
+          };
+          logAsJson = true;
+        };
+        dapr_dashboard = {
+          enabled = true;
+        };
+      };
+    };
   };
 
   # Dapr Agents Redis - State and Pub/Sub backend
@@ -199,7 +168,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: dapr-agents-llm-providers

@@ -49,6 +49,63 @@ in
     ];
   };
 
+  # Tailscale RBAC - Required for pods to manage state secrets
+  applications.tailscale-rbac = {
+    namespace = "tailscale";
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-90";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+    };
+
+    resources = {
+      roles.tailscale-state = {
+        metadata.namespace = "tailscale";
+        rules = [
+          {
+            apiGroups = [""];
+            resources = ["secrets"];
+            verbs = ["get" "list" "watch" "create" "update" "patch" "delete"];
+          }
+          {
+            apiGroups = [""];
+            resources = ["events"];
+            verbs = ["get" "create" "patch"];
+          }
+        ];
+      };
+
+      roleBindings.tailscale-state = {
+        metadata.namespace = "tailscale";
+        roleRef = {
+          apiGroup = "rbac.authorization.k8s.io";
+          kind = "Role";
+          name = "tailscale-state";
+        };
+        subjects = [
+          {
+            kind = "ServiceAccount";
+            name = "default";
+            namespace = "tailscale";
+          }
+          {
+            kind = "ServiceAccount";
+            name = "tailscale-subnet-router";
+            namespace = "tailscale";
+          }
+        ];
+      };
+    };
+  };
+
   # Tailscale Secrets - Auth key from Azure Key Vault
   applications.tailscale-secrets = {
     namespace = "tailscale";
@@ -79,7 +136,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: tailscale-auth-key

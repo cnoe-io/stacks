@@ -69,24 +69,121 @@ in
 
 
     yamls = [
+      # flipt-oidc - uses keycloak ClusterSecretStore for OIDC client secret
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
-          name: flipt-credentials
+          name: flipt-oidc
           namespace: ${namespace}
+          labels:
+            app.kubernetes.io/name: flipt
+            app.kubernetes.io/component: secrets
+            app.kubernetes.io/part-of: feature-flags
+        spec:
+          refreshInterval: 1m
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: keycloak
+          target:
+            name: flipt-oidc
+            creationPolicy: Owner
+            template:
+              type: Opaque
+              data:
+                FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET: "{{ .FLIPT_CLIENT_SECRET }}"
+          data:
+            - secretKey: FLIPT_CLIENT_SECRET
+              remoteRef:
+                key: keycloak-clients
+                property: FLIPT_CLIENT_SECRET
+      ''
+      # flipt-git-credentials - uses gitea ClusterSecretStore for Git access
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: flipt-git-credentials
+          namespace: ${namespace}
+          labels:
+            app.kubernetes.io/name: flipt
+            app.kubernetes.io/component: secrets
+            app.kubernetes.io/part-of: feature-flags
+        spec:
+          refreshInterval: "0"
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: gitea
+          target:
+            name: flipt-git-credentials
+            creationPolicy: Owner
+            template:
+              type: Opaque
+              data:
+                FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME: "{{ .username }}"
+                FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD: "{{ .password }}"
+          data:
+            - secretKey: username
+              remoteRef:
+                key: gitea-credential
+                property: username
+            - secretKey: password
+              remoteRef:
+                key: gitea-credential
+                property: password
+      ''
+      # flipt-db-credentials - uses Azure Key Vault for stable secrets
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: flipt-db-credentials
+          namespace: ${namespace}
+          labels:
+            app.kubernetes.io/name: flipt
+            app.kubernetes.io/component: secrets
+            app.kubernetes.io/part-of: feature-flags
         spec:
           refreshInterval: 1h
           secretStoreRef:
             kind: ClusterSecretStore
             name: azure-keyvault-store
           target:
-            name: flipt-credentials
+            name: flipt-db-credentials
             creationPolicy: Owner
+            template:
+              type: Opaque
           data:
-            - secretKey: FLIPT_AUTH_TOKEN
+            - secretKey: FLIPT_DB_URL
               remoteRef:
-                key: FLIPT-AUTH-TOKEN
+                key: FLIPT-DB-URL
+      ''
+      # idpbuilder-cert - copy CA cert from default namespace
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: idpbuilder-cert
+          namespace: ${namespace}
+          labels:
+            app.kubernetes.io/name: idpbuilder
+            app.kubernetes.io/component: ca-cert
+            app.kubernetes.io/part-of: feature-flags
+        spec:
+          refreshInterval: 24h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: default-namespace
+          target:
+            name: idpbuilder-cert
+            creationPolicy: Owner
+            template:
+              type: Opaque
+          data:
+            - secretKey: ca.crt
+              remoteRef:
+                key: idpbuilder-cert
+                property: ca.crt
       ''
     ];
   };

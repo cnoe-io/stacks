@@ -1,8 +1,9 @@
 # Grafana - Observability Dashboards
 # Provides visualization and dashboards for metrics, logs, and traces.
+# Uses nixhelm for Helm chart management following nixidy best practices.
 #
 # Mirrors: cdk8s/charts/infra/lgtm-grafana-chart.ts
-{ config, lib, ... }:
+{ config, lib, charts, ... }:
 let
   namespace = "observability";
 in
@@ -61,22 +62,41 @@ in
         };
       };
 
-      # Placeholder for Grafana deployment
-      # Chart: grafana from https://grafana.github.io/helm-charts
-      yamls = [
-        ''
-          # Grafana visualization platform
-          # For production deployment, use one of:
-          # 1. nixhelm with helm.releases
-          # 2. ArgoCD Application with Helm source
-          # 3. Pre-rendered manifests
-          #
-          # Key values:
-          # - persistence.enabled = true
-          # - datasources for Loki, Tempo, Mimir
-          # - dashboardProviders for pre-built dashboards
-        ''
-      ];
+      # Use nixhelm for pre-rendered Helm chart
+      helm.releases.grafana = {
+        chart = charts.grafana.grafana;
+        values = {
+          persistence = {
+            enabled = true;
+            size = "10Gi";
+          };
+          adminPassword = "admin";  # Override via secret in production
+          service = {
+            type = "ClusterIP";
+          };
+          datasources = {
+            "datasources.yaml" = {
+              apiVersion = 1;
+              datasources = [
+                {
+                  name = "Loki";
+                  type = "loki";
+                  url = "http://loki:3100";
+                  access = "proxy";
+                  isDefault = false;
+                }
+                {
+                  name = "Tempo";
+                  type = "tempo";
+                  url = "http://tempo:3200";
+                  access = "proxy";
+                  isDefault = false;
+                }
+              ];
+            };
+          };
+        };
+      };
     };
   };
 }

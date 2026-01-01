@@ -11,7 +11,18 @@ in
     # Kargo Pipelines Project
     applications.kargo-pipelines-project = {
       inherit namespace;
-      createNamespace = true;
+      createNamespace = false;  # We create namespace manually with required labels
+
+      resources = {
+        namespaces.kargo-pipelines = {
+          metadata.labels = {
+            "app.kubernetes.io/name" = "kargo-pipelines";
+            "app.kubernetes.io/part-of" = "kargo";
+            "app.kubernetes.io/component" = "namespace";
+            "kargo.akuity.io/project" = "true";
+          };
+        };
+      };
 
       annotations = {
         "argocd.argoproj.io/sync-wave" = "70";
@@ -35,13 +46,34 @@ in
           kind: Project
           metadata:
             name: kargo-pipelines
+            labels:
+              app.kubernetes.io/name: kargo-pipelines
+              app.kubernetes.io/part-of: kargo
+              app.kubernetes.io/component: project
+        ''
+        ''
+          apiVersion: kargo.akuity.io/v1alpha1
+          kind: ProjectConfig
+          metadata:
+            name: kargo-pipelines
+            namespace: kargo-pipelines
+            labels:
+              app.kubernetes.io/name: kargo-pipelines-config
+              app.kubernetes.io/part-of: kargo
+              app.kubernetes.io/component: project-config
           spec:
             promotionPolicies:
-              - stage: dev
+              - stageSelector:
+                  name: "glob:*-local-dev"
                 autoPromotionEnabled: true
-              - stage: staging
+              - stageSelector:
+                  name: "glob:*-dev"
+                autoPromotionEnabled: true
+              - stageSelector:
+                  name: "glob:*-staging"
                 autoPromotionEnabled: false
-              - stage: prod
+              - stageSelector:
+                  name: "glob:*-prod"
                 autoPromotionEnabled: false
         ''
       ];
@@ -77,7 +109,7 @@ in
 
       yamls = [
         ''
-          apiVersion: external-secrets.io/v1beta1
+          apiVersion: external-secrets.io/v1
           kind: ExternalSecret
           metadata:
             name: kargo-pipelines-credentials
@@ -126,27 +158,49 @@ in
           metadata:
             name: backstage
             namespace: ${namespace}
+            labels:
+              app.kubernetes.io/name: backstage-warehouse
+              app.kubernetes.io/part-of: kargo-pipelines
+              app.kubernetes.io/component: warehouse
           spec:
+            freightCreationPolicy: Automatic
+            interval: 5m0s
             subscriptions:
               - image:
                   repoURL: ghcr.io/pittampalliorg/backstage
+                  imageSelectionStrategy: SemVer
                   semverConstraint: "*"
+                  discoveryLimit: 20
+                  platform: linux/amd64
         ''
         ''
-          # Kargo Stages for Backstage promotion
-          # dev -> staging -> prod
+          # Kargo Stage for Backstage dev environment
+          # Uses requestedFreight and promotionTemplate (Kargo 1.8.4 API)
           apiVersion: kargo.akuity.io/v1alpha1
           kind: Stage
           metadata:
             name: backstage-dev
             namespace: ${namespace}
+            labels:
+              app.kubernetes.io/name: backstage-dev-stage
+              app.kubernetes.io/part-of: kargo-pipelines
+              app.kubernetes.io/component: stage
           spec:
-            subscriptions:
-              warehouse: backstage
-            promotionMechanisms:
-              argoCDAppUpdates:
-                - appName: backstage-dev
-                  appNamespace: argocd
+            requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: backstage
+                sources:
+                  direct: true
+            promotionTemplate:
+              spec:
+                steps:
+                  - uses: argocd-update
+                    as: sync-argocd-app
+                    config:
+                      apps:
+                        - name: backstage-dev
+                          namespace: argocd
         ''
       ];
     };

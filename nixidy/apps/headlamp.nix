@@ -38,27 +38,39 @@ in
 
 
     yamls = [
+      # headlamp-oidc-secrets - uses keycloak ClusterSecretStore to fetch from keycloak-clients
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
-          name: headlamp-oidc-credentials
+          name: headlamp-oidc-secrets-external
           namespace: ${namespace}
         spec:
-          refreshInterval: 1h
+          refreshInterval: 1m
           secretStoreRef:
             kind: ClusterSecretStore
-            name: azure-keyvault-store
+            name: keycloak
           target:
-            name: headlamp-oidc-credentials
+            name: headlamp-oidc-secrets
             creationPolicy: Owner
+            template:
+              type: Opaque
+              engineVersion: v2
+              data:
+                OIDC_CLIENT_ID: "{{ .clientId }}"
+                OIDC_CLIENT_SECRET: "{{ .clientSecret }}"
+                OIDC_ISSUER_URL: "https://${ingressHost}:8443/keycloak/realms/cnoe"
+                OIDC_SCOPES: "openid email profile"
+                OIDC_REDIRECT_URL: "https://headlamp.${ingressHost}:8443/oidc-callback"
           data:
             - secretKey: clientId
               remoteRef:
-                key: HEADLAMP-CLIENT-ID
+                key: keycloak-clients
+                property: HEADLAMP_CLIENT_ID
             - secretKey: clientSecret
               remoteRef:
-                key: HEADLAMP-CLIENT-SECRET
+                key: keycloak-clients
+                property: HEADLAMP_CLIENT_SECRET
       ''
     ];
   };
@@ -143,11 +155,9 @@ in
                   "-in-cluster"
                   "-plugins-dir=/headlamp/plugins"
                 ];
-                env = [
-                  { name = "HEADLAMP_CONFIG_OIDC_CLIENT_ID"; valueFrom.secretKeyRef = { name = "headlamp-oidc-credentials"; key = "clientId"; }; }
-                  { name = "HEADLAMP_CONFIG_OIDC_CLIENT_SECRET"; valueFrom.secretKeyRef = { name = "headlamp-oidc-credentials"; key = "clientSecret"; }; }
-                  { name = "HEADLAMP_CONFIG_OIDC_IDP_ISSUER_URL"; value = "https://${ingressHost}/keycloak/realms/cnoe"; }
-                ];
+                envFrom = [{
+                  secretRef.name = "headlamp-oidc-secrets";
+                }];
                 resources = {
                   requests = {
                     cpu = "100m";

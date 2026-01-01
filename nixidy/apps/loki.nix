@@ -27,22 +27,22 @@ in
         };
       };
 
-      # Placeholder for Loki deployment
-      # Chart: loki from https://grafana.github.io/helm-charts
-      yamls = [
-        ''
-          # Loki log aggregation
-          # For production deployment, use one of:
-          # 1. nixhelm with helm.releases
-          # 2. ArgoCD Application with Helm source
-          # 3. Pre-rendered manifests
-          #
-          # Key values:
-          # - loki.storage.type = "filesystem" or "s3"
-          # - persistence.enabled = true
-          # - loki.schemaConfig for chunk storage
-        ''
-      ];
+      # Placeholder ConfigMap until Loki Helm chart is configured
+      resources = {
+        configMaps.loki-placeholder = {
+          metadata = {
+            namespace = namespace;
+            labels = {
+              "app.kubernetes.io/name" = "loki";
+              "app.kubernetes.io/part-of" = "observability";
+            };
+          };
+          data = {
+            status = "placeholder";
+            note = "Loki will be deployed via Helm chart. See cdk8s/charts/infra/lgtm-loki-chart.ts";
+          };
+        };
+      };
     };
   };
 }

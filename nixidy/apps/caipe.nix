@@ -77,7 +77,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: llm-secret
@@ -91,6 +91,27 @@ in
             name: llm-secret
             creationPolicy: Owner
           data:
+            # LLM Provider selection (azure-openai, openai, etc.)
+            - secretKey: LLM_PROVIDER
+              remoteRef:
+                key: CAIPE-LLM-PROVIDER
+            # Azure OpenAI credentials
+            - secretKey: AZURE_OPENAI_API_KEY
+              remoteRef:
+                key: AZURE-OPENAI-API-KEY
+            - secretKey: AZURE_OPENAI_ENDPOINT
+              remoteRef:
+                key: AZURE-OPENAI-ENDPOINT
+            - secretKey: AZURE_OPENAI_API_VERSION
+              remoteRef:
+                key: AZURE-OPENAI-API-VERSION
+            - secretKey: OPENAI_API_VERSION
+              remoteRef:
+                key: AZURE-OPENAI-API-VERSION
+            - secretKey: AZURE_OPENAI_DEPLOYMENT
+              remoteRef:
+                key: AZURE-OPENAI-DEPLOYMENT
+            # Fallback OpenAI/Anthropic keys
             - secretKey: OPENAI_API_KEY
               remoteRef:
                 key: OPENAI-API-KEY
@@ -99,7 +120,7 @@ in
                 key: ANTHROPIC-API-KEY
       ''
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: embeddings-secret
@@ -117,12 +138,17 @@ in
               remoteRef:
                 key: OPENAI-API-KEY
       ''
+      # neo4j-secret - uses template to set both NEO4J_AUTH and NEO4J_PASSWORD
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: neo4j-secret
           namespace: ${namespace}
+          labels:
+            app.kubernetes.io/name: caipe
+            app.kubernetes.io/component: neo4j
+            app.kubernetes.io/part-of: ai-platform-engineering
         spec:
           refreshInterval: 1h
           secretStoreRef:
@@ -131,13 +157,18 @@ in
           target:
             name: neo4j-secret
             creationPolicy: Owner
+            template:
+              type: Opaque
+              data:
+                NEO4J_AUTH: "neo4j/{{ .password }}"
+                NEO4J_PASSWORD: "{{ .password }}"
           data:
-            - secretKey: NEO4J_AUTH
+            - secretKey: password
               remoteRef:
-                key: NEO4J-AUTH
+                key: CAIPE-NEO4J-PASSWORD
       ''
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: agent-argocd-secret
@@ -156,7 +187,7 @@ in
                 key: CAIPE-ARGOCD-TOKEN-${lib.toUpper clusterId}
       ''
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: agent-github-secret
@@ -175,7 +206,7 @@ in
                 key: GITHUB-PAT
       ''
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: agent-backstage-secret
@@ -193,10 +224,35 @@ in
               remoteRef:
                 key: CAIPE-BACKSTAGE-API-TOKEN-${lib.toUpper clusterId}
       ''
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: ghcr-pull-secret
+          namespace: ${namespace}
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: ghcr-pull-secret
+            creationPolicy: Owner
+            template:
+              type: kubernetes.io/dockerconfigjson
+              data:
+                .dockerconfigjson: |
+                  {"auths":{"ghcr.io":{"username":"pittampalliorg","password":"{{ .token }}","auth":"{{ printf "%s:%s" "pittampalliorg" .token | b64enc }}"}}}
+          data:
+            - secretKey: token
+              remoteRef:
+                key: GITHUB-PAT
+      ''
     ];
   };
 
   # CAIPE Token Sync (ArgoCD token synchronization)
+  # Creates token, stores in K8s secret, then pushes to Azure Key Vault
   applications.caipe-token-sync = lib.mkIf isKind {
     namespace = "argocd";
     createNamespace = false;
@@ -213,36 +269,317 @@ in
       };
     };
 
+    resources = {
+      # ServiceAccount for token generator
+      serviceAccounts.caipe-token-generator = {
+        metadata.namespace = "argocd";
+      };
+
+      # Role for creating secrets
+      roles.caipe-token-generator = {
+        metadata.namespace = "argocd";
+        rules = [{
+          apiGroups = [ "" ];
+          resources = [ "secrets" ];
+          verbs = [ "create" "update" "patch" "get" ];
+        }];
+      };
+
+      # RoleBinding
+      roleBindings.caipe-token-generator = {
+        metadata.namespace = "argocd";
+        subjects = [{
+          kind = "ServiceAccount";
+          name = "caipe-token-generator";
+          namespace = "argocd";
+        }];
+        roleRef = {
+          apiGroup = "rbac.authorization.k8s.io";
+          kind = "Role";
+          name = "caipe-token-generator";
+        };
+      };
+    };
+
     yamls = [
+      # Job - Generate ArgoCD token and store in K8s secret
       ''
         apiVersion: batch/v1
-        kind: CronJob
+        kind: Job
         metadata:
-          name: caipe-argocd-token-sync
+          name: caipe-token-generator
           namespace: argocd
+          annotations:
+            argocd.argoproj.io/sync-wave: "50"
+            argocd.argoproj.io/hook: Sync
+            argocd.argoproj.io/hook-delete-policy: HookSucceeded
         spec:
-          schedule: "0 */6 * * *"
-          jobTemplate:
+          ttlSecondsAfterFinished: 300
+          backoffLimit: 3
+          template:
             spec:
-              template:
-                spec:
-                  serviceAccountName: argocd-server
-                  containers:
-                    - name: token-sync
-                      image: quay.io/argoproj/argocd:v2.14.11
-                      env:
-                        - name: HOME
-                          value: /tmp
-                        - name: ARGOCD_SERVER
-                          value: argocd-server.argocd.svc.cluster.local
-                      command:
-                        - /bin/sh
-                        - -c
-                        - |
-                          argocd login $ARGOCD_SERVER --core
-                          TOKEN=$(argocd account generate-token --account developer)
-                          echo "Token generated successfully"
-                  restartPolicy: OnFailure
+              serviceAccountName: caipe-token-generator
+              restartPolicy: OnFailure
+              containers:
+                - name: token-generator
+                  image: bitnami/kubectl:latest
+                  command: ["/bin/bash", "-c"]
+                  env:
+                    - name: HOME
+                      value: /tmp
+                  args:
+                    - |
+                      set -e
+
+                      # Install argocd CLI
+                      echo "Installing ArgoCD CLI..."
+                      curl -sSL -o /tmp/argocd https://github.com/argoproj/argo-cd/releases/download/v2.11.0/argocd-linux-amd64
+                      chmod +x /tmp/argocd
+
+                      echo "Checking if ArgoCD token secret already exists..."
+
+                      # Check if the secret already exists and has a valid token
+                      EXISTING_TOKEN=$(kubectl get secret caipe-argocd-token -n argocd -o jsonpath='{.data.token}' 2>/dev/null | base64 -d || echo "")
+
+                      if [ -n "$EXISTING_TOKEN" ]; then
+                        echo "Token secret already exists. Validating token..."
+                        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+                          -H "Authorization: Bearer $EXISTING_TOKEN" \
+                          "https://argocd-server.argocd/api/v1/account" \
+                          --insecure 2>/dev/null || echo "000")
+
+                        if [ "$RESPONSE" = "200" ]; then
+                          echo "Existing token is valid. Skipping regeneration."
+                          exit 0
+                        fi
+                        echo "Existing token is invalid (HTTP $RESPONSE). Regenerating..."
+                      fi
+
+                      echo "Generating new ArgoCD API token for account 'developer'..."
+
+                      # Get admin password from secret
+                      ADMIN_PASSWORD=$(cat /var/run/secrets/argocd/password)
+
+                      # Login to ArgoCD
+                      /tmp/argocd login argocd-server.argocd \
+                        --username admin \
+                        --password "$ADMIN_PASSWORD" \
+                        --insecure \
+                        --grpc-web
+
+                      # Generate token for the target account
+                      TOKEN=$(/tmp/argocd account generate-token --account developer)
+
+                      if [ -z "$TOKEN" ]; then
+                        echo "ERROR: Failed to generate token"
+                        exit 1
+                      fi
+
+                      echo "Token generated successfully"
+
+                      # Create or update the Kubernetes secret
+                      cat <<EOF | kubectl apply -f -
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: caipe-argocd-token
+                        namespace: argocd
+                      type: Opaque
+                      stringData:
+                        token: "$TOKEN"
+                      EOF
+
+                      echo "Secret 'caipe-argocd-token' created/updated successfully"
+                  volumeMounts:
+                    - name: argocd-admin-password
+                      mountPath: /var/run/secrets/argocd
+                      readOnly: true
+              volumes:
+                - name: argocd-admin-password
+                  secret:
+                    secretName: argocd-initial-admin-secret
+                    items:
+                      - key: password
+                        path: password
+      ''
+      # PushSecret - Sync the K8s secret to Azure Key Vault
+      ''
+        apiVersion: external-secrets.io/v1alpha1
+        kind: PushSecret
+        metadata:
+          name: caipe-argocd-token-push
+          namespace: argocd
+          annotations:
+            argocd.argoproj.io/sync-wave: "51"
+        spec:
+          refreshInterval: 1h
+          updatePolicy: Replace
+          deletionPolicy: None
+          secretStoreRefs:
+            - name: azure-keyvault-store
+              kind: ClusterSecretStore
+          selector:
+            secret:
+              name: caipe-argocd-token
+          data:
+            - match:
+                secretKey: token
+                remoteRef:
+                  remoteKey: CAIPE-ARGOCD-TOKEN-${lib.toUpper clusterId}
+      ''
+    ];
+  };
+
+  # Backstage API Token Sync - Generate token for CAIPE agents to call Backstage APIs
+  applications.backstage-api-token-sync = lib.mkIf isKind {
+    namespace = "backstage";
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-20";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+    };
+
+    yamls = [
+      # ServiceAccount for token generator (must exist before Job runs)
+      ''
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: backstage-token-generator
+          namespace: backstage
+          annotations:
+            argocd.argoproj.io/sync-wave: "-21"
+      ''
+      # Role for creating secrets
+      ''
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+          name: backstage-token-generator
+          namespace: backstage
+          annotations:
+            argocd.argoproj.io/sync-wave: "-21"
+        rules:
+          - apiGroups: [""]
+            resources: ["secrets"]
+            verbs: ["create", "update", "patch", "get"]
+      ''
+      # RoleBinding
+      ''
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        metadata:
+          name: backstage-token-generator
+          namespace: backstage
+          annotations:
+            argocd.argoproj.io/sync-wave: "-21"
+        subjects:
+          - kind: ServiceAccount
+            name: backstage-token-generator
+            namespace: backstage
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Role
+          name: backstage-token-generator
+      ''
+      # Job - Generate Backstage API token and store in K8s secret
+      ''
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: backstage-token-generator
+          namespace: backstage
+          annotations:
+            argocd.argoproj.io/sync-wave: "-20"
+            argocd.argoproj.io/hook: Sync
+            argocd.argoproj.io/hook-delete-policy: HookSucceeded
+        spec:
+          ttlSecondsAfterFinished: 300
+          backoffLimit: 3
+          template:
+            spec:
+              serviceAccountName: backstage-token-generator
+              restartPolicy: OnFailure
+              containers:
+                - name: token-generator
+                  image: bitnami/kubectl:latest
+                  command: ["/bin/bash", "-c"]
+                  args:
+                    - |
+                      set -e
+
+                      echo "Checking if Backstage API token secret already exists..."
+
+                      # Check if the secret already exists and has a valid token
+                      EXISTING_TOKEN=$(kubectl get secret backstage-api-token -n backstage -o jsonpath='{.data.token}' 2>/dev/null | base64 -d || echo "")
+
+                      if [ -n "$EXISTING_TOKEN" ] && [ "''${#EXISTING_TOKEN}" -gt 20 ]; then
+                        echo "Token secret already exists with valid token (length: ''${#EXISTING_TOKEN}). Skipping regeneration."
+                        exit 0
+                      fi
+
+                      echo "Generating new Backstage API token..."
+
+                      # Generate a cryptographically secure random token (32 bytes = 256 bits)
+                      TOKEN=$(head -c 32 /dev/urandom | base64 | tr -d '\n')
+
+                      if [ -z "$TOKEN" ] || [ "''${#TOKEN}" -lt 20 ]; then
+                        echo "ERROR: Failed to generate token"
+                        exit 1
+                      fi
+
+                      echo "Token generated successfully (length: ''${#TOKEN})"
+
+                      # Create or update the Kubernetes secret
+                      cat <<EOF | kubectl apply -f -
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: backstage-api-token
+                        namespace: backstage
+                        labels:
+                          app.kubernetes.io/name: backstage-token-sync
+                          app.kubernetes.io/component: api-token
+                          app.kubernetes.io/part-of: backstage
+                      type: Opaque
+                      stringData:
+                        token: "$TOKEN"
+                      EOF
+
+                      echo "Secret 'backstage-api-token' created/updated successfully"
+      ''
+      # PushSecret - Sync the K8s secret to Azure Key Vault
+      ''
+        apiVersion: external-secrets.io/v1alpha1
+        kind: PushSecret
+        metadata:
+          name: backstage-api-token-push
+          namespace: backstage
+          annotations:
+            argocd.argoproj.io/sync-wave: "-19"
+        spec:
+          refreshInterval: 1h
+          updatePolicy: Replace
+          deletionPolicy: None
+          secretStoreRefs:
+            - name: azure-keyvault-store
+              kind: ClusterSecretStore
+          selector:
+            secret:
+              name: backstage-api-token
+          data:
+            - match:
+                secretKey: token
+                remoteRef:
+                  remoteKey: CAIPE-BACKSTAGE-API-TOKEN-${lib.toUpper clusterId}
       ''
     ];
   };
@@ -390,6 +727,12 @@ in
                 env = [
                   { name = "NEO4J_AUTH"; valueFrom.secretKeyRef = { name = "neo4j-secret"; key = "NEO4J_AUTH"; }; }
                   { name = "NEO4J_PLUGINS"; value = "[\"apoc\"]"; }
+                  # Disable strict config validation to ignore K8s service discovery env vars
+                  { name = "NEO4J_server_config_strict__validation_enabled"; value = "false"; }
+                  # Memory settings - must fit within 2Gi container limit
+                  { name = "NEO4J_server_memory_heap_initial__size"; value = "1g"; }
+                  { name = "NEO4J_server_memory_heap_max__size"; value = "1g"; }
+                  { name = "NEO4J_server_memory_pagecache_size"; value = "512m"; }
                 ];
                 volumeMounts = [{
                   name = "data";
@@ -555,14 +898,31 @@ in
             metadata.labels.app = "rag-server";
 
             spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
               containers = [{
                 name = "rag-server";
-                image = "ghcr.io/pittampalliorg/rag-server:latest";
+                image = "ghcr.io/cnoe-io/caipe-rag-server:0.2.8";
                 ports = [{ containerPort = 8000; name = "http"; }];
                 env = [
-                  { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                  { name = "MILVUS_HOST"; value = "milvus.${namespace}.svc.cluster.local"; }
-                  { name = "MILVUS_PORT"; value = "19530"; }
+                  # Use MILVUS_URI format as expected by rag-server
+                  { name = "MILVUS_URI"; value = "http://milvus.${namespace}.svc.cluster.local:19530"; }
+                  # Neo4j connection for GraphRAG
+                  { name = "NEO4J_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
+                  { name = "NEO4J_ONTOLOGY_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
+                  { name = "NEO4J_USERNAME"; value = "neo4j"; }
+                  # Redis for caching
+                  { name = "REDIS_URL"; value = "redis://redis.${namespace}.svc.cluster.local:6379/0"; }
+                  # Agent ontology for GraphRAG
+                  { name = "ONTOLOGY_AGENT_RESTAPI_ADDR"; value = "http://nexigraph.${namespace}.svc.cluster.local:8098"; }
+                  # Embedding model
+                  { name = "EMBEDDINGS_MODEL"; value = "text-embedding-3-large"; }
+                  { name = "ENABLE_GRAPH_RAG"; value = "true"; }
+                ];
+                # Inject all keys from secrets
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                  { secretRef.name = "embeddings-secret"; }
+                  { secretRef.name = "neo4j-secret"; }
                 ];
                 resources = {
                   requests = {
@@ -628,23 +988,26 @@ in
           template = {
             metadata.labels.app = "rag-webui";
 
-            spec.containers = [{
-              name = "rag-webui";
-              image = "ghcr.io/pittampalliorg/rag-webui:latest";
-              ports = [{ containerPort = 3000; name = "http"; }];
-              env = [
-                { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "256Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "rag-webui";
+                image = "ghcr.io/cnoe-io/caipe-rag-webui:0.2.8";
+                ports = [{ containerPort = 3000; name = "http"; }];
+                env = [
+                  { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    memory = "512Mi";
+                  };
                 };
-                limits = {
-                  memory = "512Mi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -716,32 +1079,36 @@ in
           };
         };
         spec = {
-          replicas = 1;
+          # Scaled to 0 - image has entry point bug (double slash in path)
+          replicas = 0;
           selector.matchLabels.app = "rag-ingestors";
 
           template = {
             metadata.labels.app = "rag-ingestors";
 
-            spec.containers = [{
-              name = "rag-ingestors";
-              image = "ghcr.io/pittampalliorg/rag-ingestors:latest";
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "embeddings-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "NEO4J_URI"; value = "bolt://neo4j.${namespace}.svc.cluster.local:7687"; }
-                { name = "NEO4J_AUTH"; valueFrom.secretKeyRef = { name = "neo4j-secret"; key = "NEO4J_AUTH"; }; }
-                { name = "MILVUS_HOST"; value = "milvus.${namespace}.svc.cluster.local"; }
-                { name = "MILVUS_PORT"; value = "19530"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "200m";
-                  memory = "512Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "rag-ingestors";
+                image = "ghcr.io/cnoe-io/caipe-rag-ingestors:latest";
+                env = [
+                  { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "embeddings-secret"; key = "OPENAI_API_KEY"; }; }
+                  { name = "NEO4J_URI"; value = "bolt://neo4j.${namespace}.svc.cluster.local:7687"; }
+                  { name = "NEO4J_AUTH"; valueFrom.secretKeyRef = { name = "neo4j-secret"; key = "NEO4J_AUTH"; }; }
+                  { name = "MILVUS_HOST"; value = "milvus.${namespace}.svc.cluster.local"; }
+                  { name = "MILVUS_PORT"; value = "19530"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "200m";
+                    memory = "512Mi";
+                  };
+                  limits = {
+                    memory = "1Gi";
+                  };
                 };
-                limits = {
-                  memory = "1Gi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -795,7 +1162,8 @@ in
           };
         };
         spec = {
-          replicas = 1;
+          # Scaled to 0 - same image issue as rag-ingestors
+          replicas = 0;
           selector.matchLabels.app = "k8s-ingestor";
 
           template = {
@@ -803,9 +1171,10 @@ in
 
             spec = {
               serviceAccountName = "k8s-ingestor";
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
               containers = [{
                 name = "k8s-ingestor";
-                image = "ghcr.io/pittampalliorg/rag-k8s-ingestor:latest";
+                image = "ghcr.io/cnoe-io/caipe-rag-ingestors:latest";
                 env = [
                   { name = "CLUSTER_NAME"; value = clusterId; }
                   { name = "SYNC_INTERVAL"; value = "3600"; }
@@ -869,25 +1238,34 @@ in
           template = {
             metadata.labels.app = "nexigraph";
 
-            spec.containers = [{
-              name = "nexigraph";
-              image = "ghcr.io/pittampalliorg/nexigraph:latest";
-              ports = [{ containerPort = 8000; name = "http"; }];
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "NEO4J_URI"; value = "bolt://neo4j.${namespace}.svc.cluster.local:7687"; }
-                { name = "NEO4J_AUTH"; valueFrom.secretKeyRef = { name = "neo4j-secret"; key = "NEO4J_AUTH"; }; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "200m";
-                  memory = "512Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "nexigraph";
+                image = "ghcr.io/cnoe-io/caipe-rag-agent-ontology:0.2.8";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  # Neo4j connection (use NEO4J_ADDR format, not NEO4J_URI)
+                  { name = "NEO4J_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
+                  { name = "NEO4J_ONTOLOGY_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
+                  { name = "NEO4J_USERNAME"; value = "neo4j"; }
+                  { name = "REDIS_URL"; value = "redis://redis.${namespace}.svc.cluster.local:6379/0"; }
+                ];
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                  { secretRef.name = "neo4j-secret"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "200m";
+                    memory = "512Mi";
+                  };
+                  limits = {
+                    memory = "1Gi";
+                  };
                 };
-                limits = {
-                  memory = "1Gi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -945,26 +1323,33 @@ in
           template = {
             metadata.labels.app = "supervisor";
 
-            spec.containers = [{
-              name = "supervisor";
-              image = "ghcr.io/pittampalliorg/caipe-supervisor:latest";
-              ports = [{ containerPort = 8000; name = "http"; }];
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "ANTHROPIC_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "ANTHROPIC_API_KEY"; }; }
-                { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
-                { name = "ENABLE_RAG_AGENT"; value = "true"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "200m";
-                  memory = "512Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "supervisor";
+                image = "ghcr.io/cnoe-io/ai-platform-engineering:latest";
+                # Run the platform-engineer multi-agent system
+                command = ["python" "-m" "ai_platform_engineering.multi_agents" "platform-engineer"];
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
+                  { name = "ENABLE_RAG_AGENT"; value = "true"; }
+                ];
+                # Inject all LLM keys from secret (includes LLM_PROVIDER, AZURE_OPENAI_*, etc.)
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "200m";
+                    memory = "512Mi";
+                  };
+                  limits = {
+                    memory = "1Gi";
+                  };
                 };
-                limits = {
-                  memory = "1Gi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -1042,25 +1427,30 @@ in
           template = {
             metadata.labels.app = "agent-argocd";
 
-            spec.containers = [{
-              name = "agent-argocd";
-              image = "ghcr.io/pittampalliorg/caipe-agent-argocd:latest";
-              ports = [{ containerPort = 8000; name = "http"; }];
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "ARGOCD_AUTH_TOKEN"; valueFrom.secretKeyRef = { name = "agent-argocd-secret"; key = "ARGOCD_AUTH_TOKEN"; }; }
-                { name = "ARGOCD_SERVER"; value = "argocd-server.argocd.svc.cluster.local"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "256Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "agent-argocd";
+                image = "ghcr.io/cnoe-io/agent-argocd:latest";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  { name = "ARGOCD_SERVER"; value = "argocd-server.argocd.svc.cluster.local"; }
+                ];
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                  { secretRef.name = "agent-argocd-secret"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    memory = "512Mi";
+                  };
                 };
-                limits = {
-                  memory = "512Mi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -1114,24 +1504,28 @@ in
           template = {
             metadata.labels.app = "agent-github";
 
-            spec.containers = [{
-              name = "agent-github";
-              image = "ghcr.io/pittampalliorg/caipe-agent-github:latest";
-              ports = [{ containerPort = 8000; name = "http"; }];
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "GITHUB_TOKEN"; valueFrom.secretKeyRef = { name = "agent-github-secret"; key = "GITHUB_TOKEN"; }; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "256Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "agent-github";
+                image = "ghcr.io/cnoe-io/agent-github:latest";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                # Use envFrom to inject all keys from secrets
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                  { secretRef.name = "agent-github-secret"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    memory = "512Mi";
+                  };
                 };
-                limits = {
-                  memory = "512Mi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -1185,25 +1579,31 @@ in
           template = {
             metadata.labels.app = "agent-backstage";
 
-            spec.containers = [{
-              name = "agent-backstage";
-              image = "ghcr.io/pittampalliorg/caipe-agent-backstage:latest";
-              ports = [{ containerPort = 8000; name = "http"; }];
-              env = [
-                { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "llm-secret"; key = "OPENAI_API_KEY"; }; }
-                { name = "BACKSTAGE_API_TOKEN"; valueFrom.secretKeyRef = { name = "agent-backstage-secret"; key = "BACKSTAGE_API_TOKEN"; }; }
-                { name = "BACKSTAGE_URL"; value = "http://backstage.backstage.svc.cluster.local:7007"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "256Mi";
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "agent-backstage";
+                image = "ghcr.io/cnoe-io/agent-backstage:latest";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  { name = "BACKSTAGE_URL"; value = "http://backstage.backstage.svc.cluster.local:7007"; }
+                ];
+                # Use envFrom to inject all keys from secrets
+                envFrom = [
+                  { secretRef.name = "llm-secret"; }
+                  { secretRef.name = "agent-backstage-secret"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    memory = "512Mi";
+                  };
                 };
-                limits = {
-                  memory = "512Mi";
-                };
-              };
-            }];
+              }];
+            };
           };
         };
       };
@@ -1238,25 +1638,22 @@ in
       };
     };
 
-    yamls = [
-      ''
-        apiVersion: monitoring.coreos.com/v1
-        kind: ServiceMonitor
-        metadata:
-          name: caipe-metrics
-          namespace: ${namespace}
-          labels:
-            app: caipe
-        spec:
-          selector:
-            matchLabels:
-              tier: agent
-          endpoints:
-            - port: http
-              path: /metrics
-              interval: 30s
-      ''
-    ];
+    # Placeholder ConfigMap until Prometheus Operator CRDs are installed
+    resources = {
+      configMaps.caipe-servicemonitor-placeholder = {
+        metadata = {
+          namespace = namespace;
+          labels = {
+            "app.kubernetes.io/name" = "caipe-servicemonitor";
+            "app.kubernetes.io/part-of" = "ai-platform-engineering";
+          };
+        };
+        data = {
+          status = "placeholder";
+          note = "ServiceMonitor requires Prometheus Operator CRDs. Install kube-prometheus-stack to enable metrics scraping.";
+        };
+      };
+    };
   };
 
   # CAIPE Tailscale Serve

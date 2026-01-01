@@ -1,55 +1,16 @@
 # Secrets Management Applications
-# Bootstrap secrets, ClusterSecretStore, and related secrets infrastructure
+# Bootstrap secrets and related secrets infrastructure
+# NOTE: ClusterSecretStore is defined in eso-workload-identity.nix
 # Mirrors: cdk8s/charts/secrets/*.ts
 { config, lib, ... }:
 let
   inherit (config) environmentType azure;
   isTalos = environmentType == "talos";
   isKind = environmentType == "kind";
+  # Enable Azure secrets for both talos and kind (thinkpad, ryzen)
+  enableAzureSecrets = isTalos || isKind;
 in
 {
-  # ClusterSecretStore for Azure Key Vault - Talos only
-  applications.cluster-secret-store = lib.mkIf isTalos {
-    namespace = "external-secrets";
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-88";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-      syncOptions = {
-        serverSideApply = true;
-      };
-    };
-
-    resources = {
-      # ClusterSecretStore CRD - needs yamls for CRD resources
-    };
-
-    yamls = [
-      ''
-        apiVersion: external-secrets.io/v1beta1
-        kind: ClusterSecretStore
-        metadata:
-          name: azure-keyvault-store
-        spec:
-          provider:
-            azurekv:
-              authType: WorkloadIdentity
-              vaultUrl: https://${azure.keyVaultName}.vault.azure.net
-              serviceAccountRef:
-                name: external-secrets
-                namespace: external-secrets
-      ''
-    ];
-  };
-
   # Bootstrap Secrets - External Secrets from Azure Key Vault
   applications.bootstrap-secrets = lib.mkIf isTalos {
     namespace = "argocd";
@@ -82,7 +43,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: argocd-github-credentials
@@ -138,7 +99,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: cloudflare-api-token-secret

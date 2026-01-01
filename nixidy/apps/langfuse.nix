@@ -61,25 +61,22 @@ in
         };
       };
 
-      # Placeholder for Langfuse deployment
-      # In production, use Helm or full manifest templates
-      yamls = [
-        ''
-          # Langfuse observability platform
-          # For production deployment, use one of:
-          # 1. nixhelm with helm.releases
-          # 2. ArgoCD Application with Helm source
-          # 3. Pre-rendered manifests
-          #
-          # Components:
-          # - langfuse-server (web UI and API)
-          # - langfuse-worker (background jobs)
-          # - langfuse-postgres (database)
-          # - langfuse-clickhouse (analytics)
-          # - langfuse-redis (caching)
-          # - langfuse-minio (object storage)
-        ''
-      ];
+      # Placeholder ConfigMap until Langfuse is configured
+      resources = {
+        configMaps.langfuse-placeholder = {
+          metadata = {
+            namespace = namespace;
+            labels = {
+              "app.kubernetes.io/name" = "langfuse";
+              "app.kubernetes.io/part-of" = "observability";
+            };
+          };
+          data = {
+            status = "placeholder";
+            note = "Langfuse LLM observability. See cdk8s/charts/infra/langfuse-chart.ts";
+          };
+        };
+      };
     };
   };
 }

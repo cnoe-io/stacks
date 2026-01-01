@@ -11,7 +11,7 @@ let
   isTalos = config.cluster.tls.enabled;
 
   # Default values
-  backstageImage = "docker.io/vpittamp23/backstage:1.1.0";
+  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.0.0";
   imagePullSecretName = "ghcr-dockercfg";
   postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
   postgresStorageSize = "500Mi";

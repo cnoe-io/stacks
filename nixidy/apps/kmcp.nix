@@ -27,17 +27,22 @@ in
         };
       };
 
-      # Placeholder for KMCP deployment
-      yamls = [
-        ''
-          # KMCP MCP servers
-          # Provides context servers for AI agents:
-          # - Kubernetes context
-          # - GitHub context
-          # - ArgoCD context
-          # - Backstage context
-        ''
-      ];
+      # Placeholder ConfigMap until KMCP is configured
+      resources = {
+        configMaps.kmcp-placeholder = {
+          metadata = {
+            namespace = namespace;
+            labels = {
+              "app.kubernetes.io/name" = "kmcp";
+              "app.kubernetes.io/part-of" = "kagent";
+            };
+          };
+          data = {
+            status = "placeholder";
+            note = "KMCP MCP servers for AI agents. See cdk8s/charts/infra/kmcp-chart.ts";
+          };
+        };
+      };
     };
   };
 }

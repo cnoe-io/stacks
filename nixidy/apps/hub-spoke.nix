@@ -79,7 +79,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ClusterSecretStore
         metadata:
           name: azure-keyvault-store
@@ -160,7 +160,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: operator-oauth
@@ -250,7 +250,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: tailscale-auth-key
@@ -534,7 +534,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: spoke-creds-hetzner
@@ -591,7 +591,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: spoke-creds-thinkpad
@@ -648,7 +648,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: spoke-creds-ryzen
@@ -705,7 +705,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: spoke-creds-talos
@@ -951,7 +951,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: kargo-oidc-credentials

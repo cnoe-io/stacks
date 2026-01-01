@@ -27,22 +27,22 @@ in
         };
       };
 
-      # Placeholder for Tempo deployment
-      # Chart: tempo from https://grafana.github.io/helm-charts
-      yamls = [
-        ''
-          # Tempo distributed tracing
-          # For production deployment, use one of:
-          # 1. nixhelm with helm.releases
-          # 2. ArgoCD Application with Helm source
-          # 3. Pre-rendered manifests
-          #
-          # Key values:
-          # - persistence.enabled = true
-          # - tempo.storage.trace.backend = "local" or "s3"
-          # - tempo.receivers (otlp, jaeger, zipkin)
-        ''
-      ];
+      # Placeholder ConfigMap until Tempo is configured
+      resources = {
+        configMaps.tempo-placeholder = {
+          metadata = {
+            namespace = namespace;
+            labels = {
+              "app.kubernetes.io/name" = "tempo";
+              "app.kubernetes.io/part-of" = "observability";
+            };
+          };
+          data = {
+            status = "placeholder";
+            note = "Tempo distributed tracing. See cdk8s/charts/infra/lgtm-tempo-chart.ts. Jaeger is available as alternative.";
+          };
+        };
+      };
     };
   };
 }

@@ -232,7 +232,7 @@ in
 
               volumes = [
                 { name = "keycloak-config"; configMap.name = "keycloak-config"; }
-                { name = "realm-import-template"; configMap.name = "keycloak-realm-import"; }
+                { name = "realm-import-template"; configMap.name = "keycloak-realm-config"; }
                 { name = "realm-import"; emptyDir = {}; }
               ];
             };

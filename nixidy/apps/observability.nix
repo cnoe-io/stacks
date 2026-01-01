@@ -42,7 +42,7 @@ in
 
     yamls = [
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: langfuse-postgres-credentials
@@ -61,7 +61,7 @@ in
                 key: LANGFUSE-POSTGRES-PASSWORD
       ''
       ''
-        apiVersion: external-secrets.io/v1beta1
+        apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         metadata:
           name: langfuse-auth
@@ -116,42 +116,49 @@ in
           template = {
             metadata.labels.app = "jaeger";
 
-            spec.containers = [{
-              name = "jaeger";
-              image = "jaegertracing/all-in-one:1.66.0";
-              ports = [
-                { containerPort = 5775; name = "zipkin-compact"; protocol = "UDP"; }
-                { containerPort = 6831; name = "jaeger-compact"; protocol = "UDP"; }
-                { containerPort = 6832; name = "jaeger-binary"; protocol = "UDP"; }
-                { containerPort = 5778; name = "config-rest"; }
-                { containerPort = 16686; name = "query"; }
-                { containerPort = 14250; name = "grpc"; }
-                { containerPort = 14268; name = "jaeger-http"; }
-                { containerPort = 14269; name = "admin"; }
-                { containerPort = 9411; name = "zipkin"; }
-              ];
-              env = [
-                { name = "COLLECTOR_ZIPKIN_HOST_PORT"; value = ":9411"; }
-                { name = "SPAN_STORAGE_TYPE"; value = "badger"; }
-                { name = "BADGER_EPHEMERAL"; value = "false"; }
-                { name = "BADGER_DIRECTORY_VALUE"; value = "/badger/data"; }
-                { name = "BADGER_DIRECTORY_KEY"; value = "/badger/key"; }
-                { name = "BADGER_SPAN_STORE_TTL"; value = "168h"; }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "256Mi";
+            spec = {
+              containers = [{
+                name = "jaeger";
+                image = "jaegertracing/all-in-one:1.66.0";
+                ports = [
+                  { containerPort = 5775; name = "zipkin-compact"; protocol = "UDP"; }
+                  { containerPort = 6831; name = "jaeger-compact"; protocol = "UDP"; }
+                  { containerPort = 6832; name = "jaeger-binary"; protocol = "UDP"; }
+                  { containerPort = 5778; name = "config-rest"; }
+                  { containerPort = 16686; name = "query"; }
+                  { containerPort = 14250; name = "grpc"; }
+                  { containerPort = 14268; name = "jaeger-http"; }
+                  { containerPort = 14269; name = "admin"; }
+                  { containerPort = 9411; name = "zipkin"; }
+                ];
+                env = [
+                  { name = "COLLECTOR_ZIPKIN_HOST_PORT"; value = ":9411"; }
+                  { name = "SPAN_STORAGE_TYPE"; value = "badger"; }
+                  { name = "BADGER_EPHEMERAL"; value = "false"; }
+                  { name = "BADGER_DIRECTORY_VALUE"; value = "/badger/data"; }
+                  { name = "BADGER_DIRECTORY_KEY"; value = "/badger/key"; }
+                  { name = "BADGER_SPAN_STORE_TTL"; value = "168h"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    memory = "512Mi";
+                  };
                 };
-                limits = {
-                  memory = "512Mi";
-                };
-              };
-              volumeMounts = [{
-                name = "data";
-                mountPath = "/badger";
+                volumeMounts = [{
+                  name = "data";
+                  mountPath = "/badger";
+                }];
               }];
-            }];
+
+              volumes = [{
+                name = "data";
+                emptyDir = {};
+              }];
+            };
           };
         };
       };
@@ -361,7 +368,7 @@ in
             spec = {
               containers = [{
                 name = "otel-collector";
-                image = "otel/opentelemetry-collector-contrib:0.115.0";
+                image = "otel/opentelemetry-collector-contrib:0.114.0";
                 args = [
                   "--config=/etc/otel-collector/config.yaml"
                 ];

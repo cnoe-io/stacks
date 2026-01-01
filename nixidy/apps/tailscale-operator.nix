@@ -1,6 +1,7 @@
 # Tailscale Operator - VPN and Service Mesh
 # Provides Tailscale integration for secure remote access and service exposure.
-# Deploys the official Tailscale Kubernetes Operator via Helm.
+# Deploys the official Tailscale Kubernetes Operator via nixhelm.
+# Uses nixhelm for Helm chart management following nixidy best practices.
 #
 # Features:
 # - Manages Tailscale resources (ProxyGroup, Connector, DNSConfig)
@@ -13,7 +14,7 @@
 # - Tailscale ACL policy with tag:k8s-operator configured
 #
 # Mirrors: cdk8s/charts/infra/tailscale-operator-chart.ts
-{ config, lib, ... }:
+{ config, lib, charts, ... }:
 let
   namespace = "tailscale";
   # Operator hostname varies by cluster
@@ -22,43 +23,10 @@ let
 in
 {
   config = {
-    # Tailscale CRDs - install first
-    applications.tailscale-crds = {
-      inherit namespace;
-      createNamespace = true;
-
-      annotations = {
-        "argocd.argoproj.io/sync-wave" = "-120";  # Very early, CRDs first
-      };
-
-      syncPolicy = {
-        autoSync = {
-          enable = true;
-          prune = false;  # Don't prune CRDs
-          selfHeal = true;
-        };
-        syncOptions = {
-          createNamespace = true;
-          serverSideApply = true;
-          replace = true;
-        };
-      };
-
-      yamls = [
-        ''
-          # Tailscale CRDs are managed by the Helm chart or fetched from:
-          # https://raw.githubusercontent.com/tailscale/tailscale/main/cmd/k8s-operator/deploy/crds/tailscale.com_connectors.yaml
-          # https://raw.githubusercontent.com/tailscale/tailscale/main/cmd/k8s-operator/deploy/crds/tailscale.com_proxygroups.yaml
-          # https://raw.githubusercontent.com/tailscale/tailscale/main/cmd/k8s-operator/deploy/crds/tailscale.com_dnsconfigs.yaml
-          # https://raw.githubusercontent.com/tailscale/tailscale/main/cmd/k8s-operator/deploy/crds/tailscale.com_proxyclasses.yaml
-        ''
-      ];
-    };
-
     # Tailscale Operator Secrets - OAuth credentials
     applications.tailscale-operator-secrets = {
       inherit namespace;
-      createNamespace = false;
+      createNamespace = true;
 
       annotations = {
         "argocd.argoproj.io/sync-wave" = "-105";  # After namespace, before operator
@@ -71,6 +39,7 @@ in
           selfHeal = true;
         };
         syncOptions = {
+          createNamespace = true;
           serverSideApply = true;
         };
         retry = {
@@ -83,15 +52,20 @@ in
         };
       };
 
-      yamls = lib.mkIf (config.environmentType == "talos") [
+      # ExternalSecret for operator-oauth - available for all environments with Azure Key Vault
+      yamls = [
         ''
-          apiVersion: external-secrets.io/v1beta1
+          apiVersion: external-secrets.io/v1
           kind: ExternalSecret
           metadata:
             name: operator-oauth
             namespace: ${namespace}
+            labels:
+              app.kubernetes.io/name: tailscale-operator
+              app.kubernetes.io/component: secrets
+              app.kubernetes.io/part-of: tailscale
           spec:
-            refreshInterval: 1h
+            refreshInterval: 24h
             secretStoreRef:
               kind: ClusterSecretStore
               name: azure-keyvault-store
@@ -101,15 +75,16 @@ in
             data:
               - secretKey: client_id
                 remoteRef:
-                  key: tailscale-oauth-client-id
+                  key: TAILSCALE-OAUTH-CLIENT-ID
               - secretKey: client_secret
                 remoteRef:
-                  key: tailscale-oauth-client-secret
+                  key: TAILSCALE-OAUTH-CLIENT-SECRET
         ''
       ];
     };
 
-    # Tailscale Operator via Helm
+    # Tailscale Operator via nixhelm
+    # CRDs are included with the Helm chart
     applications.tailscale-operator = {
       inherit namespace;
       createNamespace = false;
@@ -129,22 +104,23 @@ in
         };
       };
 
-      # Helm chart for Tailscale Operator
-      # Note: nixidy uses helm.releases with nixhelm or yamls for inline manifests
-      # Since Tailscale is not in nixhelm, we use yamls with rendered values
-      yamls = [
-        ''
-          # Placeholder: Tailscale Operator would be deployed via Helm
-          # In production, use nixhelm or ArgoCD Helm source
-          # Chart: tailscale-operator from https://pkgs.tailscale.com/helmcharts
-          # Version: 1.82.0
-        ''
-      ];
-
-      # For Helm charts not in nixhelm, consider:
-      # 1. Adding chart to nixidy.chartsDir
-      # 2. Using ArgoCD Application with Helm source directly
-      # 3. Pre-rendering Helm templates
+      # Use nixhelm for pre-rendered Helm chart
+      helm.releases.tailscale-operator = {
+        chart = charts.tailscale.tailscale-operator;
+        values = {
+          operatorConfig = {
+            hostname = operatorHostname;
+          };
+          oauth = {
+            clientId = "";  # From operator-oauth secret
+            clientSecret = "";  # From operator-oauth secret
+          };
+          # Reference existing secret for OAuth credentials
+          apiServerProxyConfig = {
+            mode = "true";
+          };
+        };
+      };
     };
 
     # K8s API Tailscale Serve - Expose API server via Tailscale

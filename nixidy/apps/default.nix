@@ -8,6 +8,7 @@
     # Phase 3: Core pilot applications (all environments)
     ./namespace.nix
     ./backstage.nix
+    ./backstage-secrets.nix  # Secrets for main backstage namespace
     ./keycloak.nix
     ./postgres.nix
     ./redis.nix
