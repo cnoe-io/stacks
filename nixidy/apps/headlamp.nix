@@ -59,7 +59,7 @@ in
               data:
                 OIDC_CLIENT_ID: "{{ .clientId }}"
                 OIDC_CLIENT_SECRET: "{{ .clientSecret }}"
-                OIDC_ISSUER_URL: "https://${ingressHost}:8443/keycloak/realms/cnoe"
+                OIDC_ISSUER_URL: "https://keycloak.${ingressHost}:8443/realms/cnoe"
                 OIDC_SCOPES: "openid email profile"
                 OIDC_REDIRECT_URL: "https://headlamp.${ingressHost}:8443/oidc-callback"
           data:

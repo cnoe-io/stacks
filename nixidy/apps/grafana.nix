@@ -5,6 +5,7 @@
 # Mirrors: cdk8s/charts/infra/lgtm-grafana-chart.ts
 { config, lib, charts, ... }:
 let
+  inherit (config.cluster) ingressHost;
   namespace = "observability";
 in
 {
@@ -73,6 +74,17 @@ in
           adminPassword = "admin";  # Override via secret in production
           service = {
             type = "ClusterIP";
+          };
+          ingress = {
+            enabled = true;
+            ingressClassName = "nginx";
+            hosts = [ "grafana.${ingressHost}" ];
+            annotations = {
+              "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
+            };
+            tls = [{
+              hosts = [ "grafana.${ingressHost}" ];
+            }];
           };
           datasources = {
             "datasources.yaml" = {

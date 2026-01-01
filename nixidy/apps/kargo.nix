@@ -214,6 +214,12 @@ in
                     enabled: true
                     tls:
                       enabled: false
+                    incomingWebhooks:
+                      github:
+                        enabled: true
+                        secretKeyRef:
+                          name: kargo-github-webhook-secret
+                          key: secret
                   awsLoadBalancerController:
                     enabled: false
                   rbac:

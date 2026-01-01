@@ -1,11 +1,20 @@
 # Feature Flags Applications
 # Flipt management UI and Flagd sidecar
-# Mirrors: cdk8s/charts/apps/feature-flags-*.ts
+# Mirrors: cdk8s/charts/infra/flipt-chart.ts
+# Uses domain-based routing for all services
 { config, lib, ... }:
 let
-  inherit (config.cluster) ingressHost name;
+  inherit (config.cluster) ingressHost ingressPort name;
   namespace = "feature-flags";
   clusterSuffix = if name != "" then "-${name}" else "";
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
+
+  # Domain-based routing for all services
+  fliptHost = "flipt.${ingressHost}";
+  keycloakHost = "keycloak.${ingressHost}";
+
+  # Internal cluster DNS for service-to-service communication
+  giteaInternalHost = "my-gitea-http.gitea.svc.cluster.local:3000";
 in
 {
   # Feature Flags Namespace
@@ -281,55 +290,151 @@ in
 
     resources = {
       configMaps.flipt-config = {
-        metadata.namespace = namespace;
+        metadata = {
+          namespace = namespace;
+          labels = {
+            "app" = "flipt";
+            "app.kubernetes.io/name" = "flipt";
+            "app.kubernetes.io/component" = "management-ui";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
+        };
         data = {
-          "default.yml" = ''
+          # Flipt v2 configuration
+          # https://docs.flipt.io/configuration/overview
+          "flipt.yml" = ''
+            log:
+              level: debug
+              encoding: json
+
             server:
               protocol: http
-              host: 0.0.0.0
               http_port: 8080
               grpc_port: 9000
 
-            log:
-              level: info
+            # Declarative Git storage (v2 format)
+            # https://docs.flipt.io/configuration/storage
+            storage:
+              default:
+                remote: "http://${giteaInternalHost}/giteaAdmin/feature-flags.git"
+                ref: "main"
+                poll_interval: "30s"
+                insecure_skip_tls: true
+                backend:
+                  type: memory
 
-            db:
-              url: file:/var/lib/flipt/flipt.db
-
+            # Authentication configuration
             authentication:
-              required: false
+              required: true
+              session:
+                domain: "${fliptHost}"
+                secure: true
               methods:
                 token:
+                  enabled: false
+                oidc:
                   enabled: true
                   cleanup:
-                    interval: 1h
+                    interval: "10m"
+                    grace_period: "30m"
+                  providers:
+                    keycloak:
+                      # Domain-based routing for Keycloak
+                      issuer_url: "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe"
+                      client_id: "flipt"
+                      # client_secret provided via FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET env var
+                      redirect_address: "https://${fliptHost}${portSuffix}"
+                      scopes:
+                        - openid
+                        - profile
+                        - email
+                        - groups
+
+            # Audit logging
+            audit:
+              sinks:
+                log:
+                  enabled: true
+
+            # Telemetry
+            telemetry:
+              enabled: true
           '';
         };
       };
 
-      statefulSets.flipt = {
+      # PVC for Flipt data (local cache)
+      persistentVolumeClaims.flipt-data = {
+        metadata = {
+          namespace = namespace;
+          labels = {
+            "app" = "flipt";
+            "app.kubernetes.io/name" = "flipt";
+          };
+        };
+        spec = {
+          accessModes = [ "ReadWriteOnce" ];
+          resources.requests.storage = "1Gi";
+        };
+      };
+
+      # Deployment (not StatefulSet) to match cdk8s
+      deployments.flipt = {
         metadata = {
           inherit namespace;
-          labels.app = "flipt";
+          labels = {
+            "app" = "flipt";
+            "app.kubernetes.io/name" = "flipt";
+            "app.kubernetes.io/component" = "management-ui";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
         };
         spec = {
           replicas = 1;
-          serviceName = "flipt";
           selector.matchLabels.app = "flipt";
 
           template = {
-            metadata.labels.app = "flipt";
+            metadata.labels = {
+              "app" = "flipt";
+              "app.kubernetes.io/name" = "flipt";
+              "app.kubernetes.io/component" = "management-ui";
+              "app.kubernetes.io/part-of" = "feature-flags";
+            };
 
             spec = {
+              # Security context
+              securityContext = {
+                runAsNonRoot = true;
+                runAsUser = 1000;
+                runAsGroup = 1000;
+                fsGroup = 1000;
+              };
+
               containers = [{
                 name = "flipt";
-                image = "flipt/flipt:v1.52.0";
+                image = "ghcr.io/flipt-io/flipt:v2.4.0";
+                # Flipt v2 requires 'server' subcommand
+                command = [ "/flipt" ];
+                args = [ "server" "--config" "/etc/flipt/flipt.yml" ];
                 ports = [
-                  { containerPort = 8080; name = "http"; }
-                  { containerPort = 9000; name = "grpc"; }
+                  { containerPort = 8080; name = "http"; protocol = "TCP"; }
+                  { containerPort = 9000; name = "grpc"; protocol = "TCP"; }
+                ];
+                # Mount secrets via envFrom
+                envFrom = [
+                  { secretRef.name = "flipt-oidc"; }
+                  { secretRef.name = "flipt-git-credentials"; }
                 ];
                 env = [
-                  { name = "FLIPT_CONFIG_PATH"; value = "/etc/flipt/config"; }
+                  { name = "FLIPT_LOG_LEVEL"; value = "debug"; }
+                  # Use idpbuilder CA for TLS verification
+                  { name = "GIT_SSL_CAINFO"; value = "/etc/ssl/certs/idpbuilder-ca.crt"; }
+                  { name = "SSL_CERT_FILE"; value = "/etc/ssl/certs/idpbuilder-ca.crt"; }
+                ];
+                volumeMounts = [
+                  { name = "config"; mountPath = "/etc/flipt"; readOnly = true; }
+                  { name = "data"; mountPath = "/var/opt/flipt"; }
+                  { name = "idpbuilder-ca"; mountPath = "/etc/ssl/certs/idpbuilder-ca.crt"; subPath = "ca.crt"; readOnly = true; }
                 ];
                 resources = {
                   requests = {
@@ -337,41 +442,55 @@ in
                     memory = "128Mi";
                   };
                   limits = {
+                    cpu = "500m";
                     memory = "256Mi";
                   };
                 };
-                volumeMounts = [
-                  { name = "config"; mountPath = "/etc/flipt/config"; }
-                  { name = "data"; mountPath = "/var/lib/flipt"; }
-                ];
+                # Security context for container
+                securityContext = {
+                  allowPrivilegeEscalation = false;
+                  capabilities.drop = [ "ALL" ];
+                };
+                # Health probes
+                livenessProbe = {
+                  httpGet = { path = "/health"; port = 8080; };
+                  initialDelaySeconds = 15;
+                  periodSeconds = 10;
+                  failureThreshold = 3;
+                };
+                readinessProbe = {
+                  httpGet = { path = "/health"; port = 8080; };
+                  initialDelaySeconds = 5;
+                  periodSeconds = 5;
+                  failureThreshold = 3;
+                };
               }];
 
-              volumes = [{
-                name = "config";
-                configMap.name = "flipt-config";
-              }];
+              volumes = [
+                { name = "config"; configMap.name = "flipt-config"; }
+                { name = "data"; persistentVolumeClaim.claimName = "flipt-data"; }
+                { name = "idpbuilder-ca"; secret.secretName = "idpbuilder-cert"; }
+              ];
             };
           };
-
-          volumeClaimTemplates = [{
-            metadata.name = "data";
-            spec = {
-              accessModes = [ "ReadWriteOnce" ];
-              resources.requests.storage = "1Gi";
-            };
-          }];
         };
       };
 
       services.flipt = {
         metadata = {
           inherit namespace;
-          labels.app = "flipt";
+          labels = {
+            "app" = "flipt";
+            "app.kubernetes.io/name" = "flipt";
+            "app.kubernetes.io/component" = "management-ui";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
         };
         spec = {
+          type = "ClusterIP";
           ports = [
-            { name = "http"; port = 8080; targetPort = "http"; }
-            { name = "grpc"; port = 9000; targetPort = "grpc"; }
+            { name = "http"; port = 8080; targetPort = 8080; protocol = "TCP"; }
+            { name = "grpc"; port = 9000; targetPort = 9000; protocol = "TCP"; }
           ];
           selector.app = "flipt";
         };
@@ -380,23 +499,31 @@ in
       ingresses.flipt = {
         metadata = {
           inherit namespace;
+          labels = {
+            "app" = "flipt";
+            "app.kubernetes.io/name" = "flipt";
+            "app.kubernetes.io/component" = "management-ui";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
           annotations = {
-            "nginx.ingress.kubernetes.io/use-regex" = "true";
-            "nginx.ingress.kubernetes.io/rewrite-target" = "/$2";
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
           };
         };
         spec = {
           ingressClassName = "nginx";
           rules = [{
-            host = ingressHost;
+            host = fliptHost;
             http.paths = [{
-              path = "/flipt(/|$)(.*)";
-              pathType = "ImplementationSpecific";
+              path = "/";
+              pathType = "Prefix";
               backend.service = {
                 name = "flipt";
-                port.name = "http";
+                port.number = 8080;
               };
             }];
+          }];
+          tls = [{
+            hosts = [ fliptHost ];
           }];
         };
       };

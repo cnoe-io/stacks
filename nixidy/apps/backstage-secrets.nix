@@ -67,7 +67,7 @@ in
                   ARGO_WORKFLOWS_URL: "https://${ingressHost}:8443/argo-workflows"
                   ARGO_CD_URL: "https://argocd.${ingressHost}:8443"
                   ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
-                  KEYCLOAK_NAME_METADATA: "https://${ingressHost}:8443/keycloak/realms/cnoe/.well-known/openid-configuration"
+                  KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}:8443/realms/cnoe/.well-known/openid-configuration"
                   KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
                   GITEA_URL: "https://gitea.${ingressHost}:8443"
                   GITEA_URL_NO_PORT: "https://gitea.${ingressHost}"

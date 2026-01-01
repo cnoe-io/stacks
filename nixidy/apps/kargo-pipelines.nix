@@ -176,6 +176,7 @@ in
         ''
           # Kargo Stage for Backstage dev environment
           # Uses requestedFreight and promotionTemplate (Kargo 1.8.4 API)
+          # Note: Stage name is backstage-dev, but syncs backstage-local-dev ArgoCD app
           apiVersion: kargo.akuity.io/v1alpha1
           kind: Stage
           metadata:
@@ -199,7 +200,7 @@ in
                     as: sync-argocd-app
                     config:
                       apps:
-                        - name: backstage-dev
+                        - name: backstage-local-dev
                           namespace: argocd
         ''
       ];

@@ -72,7 +72,7 @@ in
                 ARGO_WORKFLOWS_URL: "https://${ingressHost}:8443/argo-workflows"
                 ARGO_CD_URL: "https://argocd.${ingressHost}:8443"
                 ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
-                KEYCLOAK_NAME_METADATA: "https://${ingressHost}:8443/keycloak/realms/cnoe/.well-known/openid-configuration"
+                KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}:8443/realms/cnoe/.well-known/openid-configuration"
                 KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
                 GITEA_URL: "https://gitea.${ingressHost}:8443"
                 GITEA_HOST: "gitea.${ingressHost}:8443"
@@ -187,6 +187,42 @@ in
                 key: argocd-initial-admin-secret
                 property: password
       ''
+      # ghcr-dockercfg - for pulling from GHCR
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: ghcr-dockercfg-external
+          namespace: backstage-local-dev
+          labels:
+            app.kubernetes.io/name: ghcr-dockercfg
+            app.kubernetes.io/part-of: backstage
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: ghcr-dockercfg
+            creationPolicy: Owner
+            template:
+              type: kubernetes.io/dockerconfigjson
+              data:
+                .dockerconfigjson: |
+                  {
+                    "auths": {
+                      "ghcr.io": {
+                        "username": "pittampalliorg",
+                        "password": "{{ .pat }}",
+                        "auth": "{{ printf "%s:%s" "pittampalliorg" .pat | b64enc }}"
+                      }
+                    }
+                  }
+          data:
+            - secretKey: pat
+              remoteRef:
+                key: GITHUB-PAT
+      ''
     ];
   };
 
@@ -197,7 +233,7 @@ in
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "85";
-      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage-local-dev";
+      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage-dev";
     };
 
     syncPolicy = {
@@ -279,10 +315,10 @@ in
             metadata.labels.app = "backstage";
 
             spec = {
-              imagePullSecrets = [{ name = "gitea-dockercfg"; }];
+              imagePullSecrets = [{ name = "ghcr-dockercfg"; }];
               containers = [{
                 name = "backstage";
-                image = "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest";
+                image = "ghcr.io/pittampalliorg/backstage:v1.0.0";
                 ports = [{ containerPort = 7007; name = "http"; }];
                 envFrom = [{
                   secretRef.name = "backstage-env-vars";
@@ -665,10 +701,10 @@ in
             metadata.labels.app = "backstage";
 
             spec = {
-              imagePullSecrets = [{ name = "gitea-dockercfg"; }];
+              imagePullSecrets = [{ name = "ghcr-dockercfg"; }];
               containers = [{
                 name = "backstage";
-                image = "gitea.cnoe.localtest.me:8443/giteaadmin/backstage-cnoe:latest";
+                image = "ghcr.io/pittampalliorg/backstage:v1.0.0";
                 ports = [{ containerPort = 7007; name = "http"; }];
                 resources = {
                   requests = {
@@ -763,7 +799,7 @@ in
 
             spec.containers = [{
               name = "backstage";
-              image = "ghcr.io/pittampalliorg/backstage-cnoe:latest";
+              image = "ghcr.io/pittampalliorg/backstage:v1.0.0";
               ports = [{ containerPort = 7007; name = "http"; }];
               resources = {
                 requests = {
@@ -839,7 +875,7 @@ in
 
             spec.containers = [{
               name = "backstage";
-              image = "ghcr.io/pittampalliorg/backstage-cnoe:latest";
+              image = "ghcr.io/pittampalliorg/backstage:v1.0.0";
               ports = [{ containerPort = 7007; name = "http"; }];
               resources = {
                 requests = {

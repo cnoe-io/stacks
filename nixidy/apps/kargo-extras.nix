@@ -92,6 +92,7 @@ in
                 property: password
       ''
       # ghcr-credentials - use Azure Key Vault for GitHub PAT
+      # Note: kargo.akuity.io/cred-type label must be on the SECRET, not just ExternalSecret
       ''
         apiVersion: external-secrets.io/v1
         kind: ExternalSecret
@@ -111,18 +112,15 @@ in
             name: ghcr-credentials
             creationPolicy: Owner
             template:
-              type: kubernetes.io/dockerconfigjson
+              type: Opaque
+              metadata:
+                labels:
+                  kargo.akuity.io/cred-type: image
               data:
-                .dockerconfigjson: |
-                  {
-                    "auths": {
-                      "ghcr.io": {
-                        "username": "pittampalliorg",
-                        "password": "{{ .pat }}",
-                        "auth": "{{ printf "%s:%s" "pittampalliorg" .pat | b64enc }}"
-                      }
-                    }
-                  }
+                username: pittampalliorg
+                password: "{{ .pat }}"
+                repoURL: "ghcr.io/pittampalliorg"
+                repoURLIsRegex: "true"
           data:
             - secretKey: pat
               remoteRef:
@@ -150,6 +148,9 @@ in
             name: kargo-github-app-credentials
             creationPolicy: Owner
             template:
+              metadata:
+                labels:
+                  kargo.akuity.io/cred-type: git
               data:
                 githubAppID: "{{ .appId }}"
                 githubAppPrivateKey: "{{ .privateKey }}"
@@ -166,6 +167,30 @@ in
             - secretKey: installationId
               remoteRef:
                 key: GITHUB-APP-INSTALL-ID
+      ''
+      # kargo-github-webhook-secret - for GitHub webhook signature verification
+      # Note: This secret goes in kargo namespace (where kargo-api runs)
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: kargo-github-webhook-secret
+          namespace: kargo
+          labels:
+            app.kubernetes.io/name: kargo-github-webhook-secret
+            app.kubernetes.io/part-of: kargo
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: kargo-github-webhook-secret
+            creationPolicy: Owner
+          data:
+            - secretKey: secret
+              remoteRef:
+                key: GITHUB-WEBHOOK-SECRET
       ''
     ];
   };
@@ -204,104 +229,10 @@ in
     };
   };
 
-  # Kargo Gitea Webhook Setup
-  applications.kargo-gitea-webhook-setup = lib.mkIf isKind {
-    namespace = "kargo-pipelines";
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "85";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-    };
-
-    resources = {
-      serviceAccounts.webhook-setup = {
-        metadata.namespace = "kargo-pipelines";
-      };
-
-      configMaps.webhook-setup-script = {
-        metadata.namespace = "kargo-pipelines";
-        data = {
-          "setup.sh" = ''
-            #!/bin/sh
-            set -e
-            echo "Setting up Kargo webhook in Gitea..."
-
-            GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
-            KARGO_WEBHOOK_URL="http://kargo-api.kargo.svc.cluster.local/webhooks/gitea"
-
-            echo "Checking for existing webhooks..."
-
-            # Check if webhook already exists using grep (no jq required)
-            EXISTING_HOOKS=$(curl -s -u "$GITEA_USER:$GITEA_PASSWORD" \
-              "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks")
-
-            if echo "$EXISTING_HOOKS" | grep -q "kargo"; then
-              echo "Webhook already exists, skipping creation"
-              exit 0
-            fi
-
-            echo "Creating webhook..."
-            RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
-              -u "$GITEA_USER:$GITEA_PASSWORD" \
-              -H "Content-Type: application/json" \
-              -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$KARGO_WEBHOOK_URL\",\"content_type\":\"json\"},\"events\":[\"push\"],\"active\":true}" \
-              "$GITEA_URL/api/v1/repos/giteaadmin/stacks/hooks")
-
-            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
-
-            if [ "$HTTP_STATUS" = "201" ] || [ "$HTTP_STATUS" = "200" ]; then
-              echo "Webhook created successfully"
-            else
-              echo "Failed to create webhook (HTTP $HTTP_STATUS)"
-              echo "$RESPONSE"
-              exit 1
-            fi
-          '';
-        };
-      };
-
-      jobs.webhook-setup = {
-        metadata = {
-          namespace = "kargo-pipelines";
-          labels.app = "webhook-setup";
-        };
-        spec = {
-          backoffLimit = 5;
-          template = {
-            spec = {
-              serviceAccountName = "webhook-setup";
-              restartPolicy = "OnFailure";
-              containers = [{
-                name = "setup";
-                image = "curlimages/curl:8.5.0";
-                command = ["/bin/sh" "/scripts/setup.sh"];
-                env = [
-                  { name = "GITEA_USER"; valueFrom.secretKeyRef = { name = "kargo-git-credentials"; key = "username"; }; }
-                  { name = "GITEA_PASSWORD"; valueFrom.secretKeyRef = { name = "kargo-git-credentials"; key = "password"; }; }
-                ];
-                volumeMounts = [{
-                  name = "scripts";
-                  mountPath = "/scripts";
-                }];
-              }];
-              volumes = [{
-                name = "scripts";
-                configMap.name = "webhook-setup-script";
-              }];
-            };
-          };
-        };
-      };
-    };
-  };
+  # NOTE: Gitea webhooks can be configured manually via UI if needed
+  # ArgoCD webhook URL: http://argocd-server.argocd.svc.cluster.local:80/api/webhook
+  # Kargo webhook URL: http://kargo-api.kargo.svc.cluster.local:80/webhooks/gitea
+  # idpBuilder already uses 60s polling, so webhooks are optional for faster sync
 
   # NOTE: kargo-backstage-pipeline is defined in kargo-pipelines.nix
 

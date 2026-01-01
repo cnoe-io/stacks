@@ -1,5 +1,6 @@
 # Keycloak Identity Provider
 # Mirrors: cdk8s/charts/infra/keycloak-chart.ts
+# Uses domain-based routing: keycloak.${ingressHost}
 { config, lib, ... }:
 let
   namespace = "keycloak";
@@ -10,15 +11,19 @@ let
   ingressHost = config.cluster.ingressHost;
   ingressPort = config.cluster.ingressPort;
   isTalos = config.cluster.tls.enabled;
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
+
+  # Domain-based routing: keycloak.cnoe.localtest.me
+  keycloakHost = "keycloak.${ingressHost}";
+  keycloakUrl = "https://${keycloakHost}${portSuffix}";
 
   # Default values
   keycloakImage = "quay.io/keycloak/keycloak:22.0.3";
   postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
   postgresStorageSize = "500Mi";
-  httpRelativePath = "/keycloak";
 
-  # Build hostname admin URL
-  hostnameAdmin = if ingressPort == 443 then ingressHost else "${ingressHost}:${toString ingressPort}";
+  # Build hostname admin URL (now uses domain-based host)
+  hostnameAdmin = "${keycloakHost}${portSuffix}";
 in
 {
   applications.keycloak = {
@@ -98,10 +103,10 @@ in
           # The proxy address forwarding mode if the server is behind a reverse proxy.
           proxy=edge
 
-          # hostname configuration
-          hostname=${ingressHost}
+          # hostname configuration (domain-based routing)
+          hostname=${keycloakHost}
           hostname-port=${toString ingressPort}
-          http-relative-path=${httpRelativePath}
+          # No http-relative-path for domain-based routing
 
           # the admin url requires its own configuration to reflect correct url
           hostname-admin=${hostnameAdmin}
@@ -220,7 +225,7 @@ in
                 }];
                 readinessProbe = {
                   httpGet = {
-                    path = "${httpRelativePath}/realms/master";
+                    path = "/realms/master";
                     port = 8080;
                   };
                 };
@@ -240,12 +245,13 @@ in
         };
       };
 
-      # Keycloak Ingress
+      # Keycloak Ingress (domain-based routing)
       ingresses.keycloak-ingress = {
         metadata = {
           inherit namespace;
           annotations = {
             "argocd.argoproj.io/sync-wave" = "100";
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
           } // lib.optionalAttrs isTalos {
             "cert-manager.io/cluster-issuer" = config.cluster.tls.clusterIssuer;
           };
@@ -253,21 +259,22 @@ in
         spec = {
           ingressClassName = "nginx";
           rules = [{
-            host = ingressHost;
+            host = keycloakHost;
             http.paths = [{
-              path = httpRelativePath;
-              pathType = "ImplementationSpecific";
+              path = "/";
+              pathType = "Prefix";
               backend.service = {
                 name = appName;
                 port.name = "http";
               };
             }];
           }];
-        } // lib.optionalAttrs isTalos {
-          tls = [{
-            hosts = [ ingressHost ];
+          # TLS for both KIND and Talos
+          tls = [({
+            hosts = [ keycloakHost ];
+          } // lib.optionalAttrs isTalos {
             secretName = "keycloak-tls";
-          }];
+          })];
         };
       };
     };
