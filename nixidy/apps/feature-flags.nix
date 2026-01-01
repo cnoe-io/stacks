@@ -8,12 +8,7 @@ let
   namespace = "feature-flags";
   clusterSuffix = if name != "" then "-${name}" else "";
   portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
-
-  # Domain-based routing for all services
   fliptHost = "flipt.${ingressHost}";
-  keycloakHost = "keycloak.${ingressHost}";
-
-  # Internal cluster DNS for service-to-service communication
   giteaInternalHost = "my-gitea-http.gitea.svc.cluster.local:3000";
 in
 {

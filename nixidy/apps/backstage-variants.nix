@@ -4,11 +4,12 @@
 { config, lib, ... }:
 let
   inherit (config) environmentType;
-  inherit (config.cluster) ingressHost name;
+  inherit (config.cluster) ingressHost ingressPort name;
   isKind = environmentType == "kind";
   isTalos = environmentType == "talos";
   isHub = environmentType == "hub";
   clusterSuffix = if name != "" then "-${name}" else "";
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
 in
 {
   # =========================================================================
@@ -62,20 +63,20 @@ in
             template:
               engineVersion: v2
               data:
-                BACKSTAGE_FRONTEND_URL: "https://${ingressHost}:8443/backstage"
+                BACKSTAGE_FRONTEND_URL: "https://${ingressHost}${portSuffix}/backstage"
                 POSTGRES_HOST: "postgresql.backstage-local-dev.svc.cluster.local"
                 POSTGRES_PORT: "5432"
                 POSTGRES_DB: backstage
                 POSTGRES_USER: backstage
                 POSTGRES_PASSWORD: "{{.POSTGRES_PASSWORD}}"
                 BACKSTAGE_SESSION_SECRET: "{{.SESSION_SECRET}}"
-                ARGO_WORKFLOWS_URL: "https://${ingressHost}:8443/argo-workflows"
-                ARGO_CD_URL: "https://argocd.${ingressHost}:8443"
+                ARGO_WORKFLOWS_URL: "https://${ingressHost}${portSuffix}/argo-workflows"
+                ARGO_CD_URL: "https://argocd.${ingressHost}${portSuffix}"
                 ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
-                KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}:8443/realms/cnoe/.well-known/openid-configuration"
+                KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration"
                 KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
-                GITEA_URL: "https://gitea.${ingressHost}:8443"
-                GITEA_HOST: "gitea.${ingressHost}:8443"
+                GITEA_URL: "https://gitea.${ingressHost}${portSuffix}"
+                GITEA_HOST: "gitea.${ingressHost}${portSuffix}"
           data:
             # OIDC tokens from keycloak ClusterSecretStore
             - secretKey: ARGOCD_SESSION_TOKEN

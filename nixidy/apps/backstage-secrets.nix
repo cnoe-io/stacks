@@ -4,10 +4,11 @@
 { config, lib, ... }:
 let
   inherit (config) environmentType;
-  inherit (config.cluster) ingressHost name;
+  inherit (config.cluster) ingressHost ingressPort name;
   namespace = "backstage";
   isKind = environmentType == "kind";
   clusterSuffix = if name != "" then "-${name}" else "";
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
 in
 {
   config = lib.mkIf isKind {
@@ -57,24 +58,24 @@ in
               template:
                 engineVersion: v2
                 data:
-                  BACKSTAGE_FRONTEND_URL: "https://backstage.${ingressHost}:8443"
+                  BACKSTAGE_FRONTEND_URL: "https://backstage.${ingressHost}${portSuffix}"
                   POSTGRES_HOST: "postgresql.${namespace}.svc.cluster.local"
                   POSTGRES_PORT: "5432"
                   POSTGRES_DB: backstage
                   POSTGRES_USER: backstage
                   POSTGRES_PASSWORD: "{{.POSTGRES_PASSWORD}}"
                   BACKSTAGE_SESSION_SECRET: "{{.SESSION_SECRET}}"
-                  ARGO_WORKFLOWS_URL: "https://${ingressHost}:8443/argo-workflows"
-                  ARGO_CD_URL: "https://argocd.${ingressHost}:8443"
+                  ARGO_WORKFLOWS_URL: "https://${ingressHost}${portSuffix}/argo-workflows"
+                  ARGO_CD_URL: "https://argocd.${ingressHost}${portSuffix}"
                   ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
-                  KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}:8443/realms/cnoe/.well-known/openid-configuration"
+                  KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration"
                   KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
-                  GITEA_URL: "https://gitea.${ingressHost}:8443"
+                  GITEA_URL: "https://gitea.${ingressHost}${portSuffix}"
                   GITEA_URL_NO_PORT: "https://gitea.${ingressHost}"
-                  GITEA_HOST: "gitea.${ingressHost}:8443"
+                  GITEA_HOST: "gitea.${ingressHost}${portSuffix}"
                   GITEA_HOST_NO_PORT: "gitea.${ingressHost}"
-                  CATALOG_URL: "https://gitea.${ingressHost}:8443/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml"
-                  KARGO_URL: "https://kargo.${ingressHost}:8443"
+                  CATALOG_URL: "https://gitea.${ingressHost}${portSuffix}/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml"
+                  KARGO_URL: "https://kargo.${ingressHost}${portSuffix}"
                   AGENT_FORGE_URL: "http://k8s-agent.kagent:8080"
             data:
               # OIDC tokens from keycloak ClusterSecretStore

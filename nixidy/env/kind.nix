@@ -25,6 +25,6 @@
     tls.enabled = lib.mkDefault false;
   };
 
-  # Derive Keycloak URL from ingress host and port
-  keycloak.url = lib.mkDefault "https://${config.cluster.ingressHost}:${toString config.cluster.ingressPort}/keycloak";
+  # Derive Keycloak URL from ingress host and port (domain-based routing)
+  keycloak.url = lib.mkDefault "https://keycloak.${config.cluster.ingressHost}:${toString config.cluster.ingressPort}";
 }

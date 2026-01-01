@@ -4,10 +4,12 @@
 { config, lib, ... }:
 let
   inherit (config) environmentType;
-  inherit (config.cluster) ingressHost;
+  inherit (config.cluster) ingressHost ingressPort;
   namespace = "keycloak";
   giteaNamespace = "gitea";
   defaultNamespace = "default";
+  # Dynamic port suffix for URLs (empty for 443, :port otherwise)
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
 in
 {
   # Keycloak Secrets - Creates Password generator, keycloak-config secret, and ClusterSecretStores
@@ -590,10 +592,10 @@ in
             rootUrl = "";
             baseUrl = "";
             redirectUris = [
-              "https://${ingressHost}:8443/api/auth/keycloak-oidc/handler/frame"
-              "https://${ingressHost}:8443/backstage/api/auth/keycloak-oidc/handler/frame"
-              "https://${ingressHost}/api/auth/keycloak-oidc/handler/frame"
-              "https://${ingressHost}/backstage/api/auth/keycloak-oidc/handler/frame"
+              # Domain-based routing (primary)
+              "https://backstage.${ingressHost}${portSuffix}/api/auth/keycloak-oidc/handler/frame"
+              "https://backstage.${ingressHost}/api/auth/keycloak-oidc/handler/frame"
+              # Local development
               "http://localhost:7007/api/auth/keycloak-oidc/handler/frame"
             ];
             webOrigins = [ "/*" ];
@@ -619,10 +621,10 @@ in
             rootUrl = "";
             baseUrl = "";
             redirectUris = [
-              "https://${ingressHost}:8443/flipt/auth/v1/method/oidc/keycloak/callback"
-              "https://${ingressHost}/flipt/auth/v1/method/oidc/keycloak/callback"
-              "https://flipt.${ingressHost}:8443/auth/v1/method/oidc/keycloak/callback"
+              # Domain-based routing (primary)
+              "https://flipt.${ingressHost}${portSuffix}/auth/v1/method/oidc/keycloak/callback"
               "https://flipt.${ingressHost}/auth/v1/method/oidc/keycloak/callback"
+              # Internal cluster for backchannel
               "http://flipt.feature-flags.svc.cluster.local:8080/auth/v1/method/oidc/keycloak/callback"
             ];
             webOrigins = [ "/*" ];
@@ -648,10 +650,10 @@ in
             rootUrl = "";
             baseUrl = "";
             redirectUris = [
-              "https://headlamp.${ingressHost}:8443/oidc-callback"
+              # Domain-based routing (primary)
+              "https://headlamp.${ingressHost}${portSuffix}/oidc-callback"
               "https://headlamp.${ingressHost}/oidc-callback"
-              "https://${ingressHost}:8443/headlamp/oidc-callback"
-              "https://${ingressHost}/headlamp/oidc-callback"
+              # Local development
               "http://localhost:4466/oidc-callback"
               "http://localhost:8000/*"
             ];
@@ -736,7 +738,8 @@ in
                       ADMIN_PASSWORD=$(cat /var/secrets/KEYCLOAK_ADMIN_PASSWORD)
                       USER1_PASSWORD=$(cat /var/secrets/USER_PASSWORD)
 
-                      KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080/keycloak
+                      # Domain-based routing: no path prefix needed
+                      KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080
 
                       KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
                         --data-urlencode "username=cnoe-admin" \

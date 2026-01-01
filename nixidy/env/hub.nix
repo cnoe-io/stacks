@@ -28,8 +28,8 @@
     };
   };
 
-  # Derive Keycloak URL from ingress host if not set
-  keycloak.url = lib.mkDefault "https://${config.cluster.ingressHost}/keycloak";
+  # Derive Keycloak URL from ingress host (domain-based routing)
+  keycloak.url = lib.mkDefault "https://keycloak.${config.cluster.ingressHost}";
 
   # Note: Hub cluster typically runs ArgoCD that manages spoke clusters
   # Spoke clusters are managed via Tailscale VPN connections

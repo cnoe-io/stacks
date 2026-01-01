@@ -27,8 +27,8 @@
     };
   };
 
-  # Derive Keycloak URL from ingress host if not set
-  keycloak.url = lib.mkDefault "https://${config.cluster.ingressHost}/keycloak";
+  # Derive Keycloak URL from ingress host (domain-based routing)
+  keycloak.url = lib.mkDefault "https://keycloak.${config.cluster.ingressHost}";
 
   # Note: Environment variable validation is done via documentation and runtime checks
   # Required Talos environment variables:

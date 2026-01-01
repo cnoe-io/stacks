@@ -2,9 +2,10 @@
 # Mirrors: cdk8s/charts/apps/headlamp-chart.ts
 { config, lib, ... }:
 let
-  inherit (config.cluster) ingressHost;
+  inherit (config.cluster) ingressHost ingressPort;
   namespace = "headlamp";
   appName = "headlamp";
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
 in
 {
   # Headlamp Keycloak Secrets
@@ -59,9 +60,9 @@ in
               data:
                 OIDC_CLIENT_ID: "{{ .clientId }}"
                 OIDC_CLIENT_SECRET: "{{ .clientSecret }}"
-                OIDC_ISSUER_URL: "https://keycloak.${ingressHost}:8443/realms/cnoe"
+                OIDC_ISSUER_URL: "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe"
                 OIDC_SCOPES: "openid email profile"
-                OIDC_REDIRECT_URL: "https://headlamp.${ingressHost}:8443/oidc-callback"
+                OIDC_REDIRECT_URL: "https://headlamp.${ingressHost}${portSuffix}/oidc-callback"
           data:
             - secretKey: clientId
               remoteRef:

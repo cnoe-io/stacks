@@ -166,8 +166,8 @@ in
       url = lib.mkOption {
         type = lib.types.str;
         default = if keycloakUrl != "" then keycloakUrl
-                  else "https://cnoe.localtest.me:8443/keycloak";
-        description = "Keycloak base URL";
+                  else "https://keycloak.cnoe.localtest.me:8443";
+        description = "Keycloak base URL (domain-based routing)";
       };
 
       realm = lib.mkOption {
