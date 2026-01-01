@@ -5,19 +5,16 @@
 Please use the following command to deploy Dapr using `idpbuilder`:
 
 ```bash
-idpbuilder create \
-  --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//dapr-integrations \
+idpbuilder create --use-path-routing -package https://github.com/cnoe-io/stacks//dapr-integration
 ```
 
 Notice that you can add Dapr to the reference implementation:
 
 ```bash
-idpbuilder create \
-  --use-path-routing \
-  -p https://github.com/cnoe-io/stacks//ref-implementation \
-  -p https://github.com/cnoe-io/stacks//dapr-integrations
+idpbuilder create --use-path-routing --package https://github.com/cnoe-io/stacks//ref-implementation --package https://github.com/cnoe-io/stacks//dapr-integration
 ```
+> [!NOTE]  
+> [Using the reference](https://github.com/cnoe-io/stacks/blob/main/ref-implementation/README.md#using-it) example explains how to use each UI's that idpbuilder creates from the reference implementation. Make sure each ArgoCD application is synced and healthy before proceeding.
 
 ## What is installed?
 
