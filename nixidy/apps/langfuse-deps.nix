@@ -129,10 +129,15 @@ in
             spec = {
               containers = [{
                 name = "clickhouse";
-                image = "clickhouse/clickhouse-server:24.1-alpine";
+                image = "clickhouse/clickhouse-server:24.8-alpine";
                 ports = [
                   { containerPort = 8123; name = "http"; }
                   { containerPort = 9000; name = "native"; }
+                ];
+                env = [
+                  { name = "CLICKHOUSE_USER"; value = "default"; }
+                  { name = "CLICKHOUSE_PASSWORD"; value = "clickhouse_langfuse_password"; }
+                  { name = "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT"; value = "1"; }
                 ];
                 volumeMounts = [{
                   name = "data";
@@ -144,8 +149,18 @@ in
                     memory = "512Mi";
                   };
                   limits = {
-                    memory = "1Gi";
+                    memory = "2Gi";
                   };
+                };
+                readinessProbe = {
+                  httpGet = { path = "/ping"; port = 8123; };
+                  initialDelaySeconds = 10;
+                  periodSeconds = 5;
+                };
+                livenessProbe = {
+                  httpGet = { path = "/ping"; port = 8123; };
+                  initialDelaySeconds = 30;
+                  periodSeconds = 10;
                 };
               }];
             };

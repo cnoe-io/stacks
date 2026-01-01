@@ -56,6 +56,9 @@ in
             name: langfuse-postgres-credentials
             creationPolicy: Owner
           data:
+            - secretKey: POSTGRES_USER
+              remoteRef:
+                key: LANGFUSE-POSTGRES-USER
             - secretKey: POSTGRES_PASSWORD
               remoteRef:
                 key: LANGFUSE-POSTGRES-PASSWORD
@@ -81,6 +84,28 @@ in
             - secretKey: SALT
               remoteRef:
                 key: LANGFUSE-SALT
+            - secretKey: ENCRYPTION_KEY
+              remoteRef:
+                key: LANGFUSE-ENCRYPTION-KEY
+      ''
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: langfuse-api
+          namespace: ${namespace}
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: langfuse-api
+            creationPolicy: Owner
+          data:
+            - secretKey: LANGFUSE_AUTH
+              remoteRef:
+                key: LANGFUSE-API-AUTH
       ''
     ];
   };
@@ -332,6 +357,341 @@ in
     };
   };
 
+  # LGTM Loki - Logs Backend
+  applications.lgtm-loki = {
+    inherit namespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-60";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      persistentVolumeClaims.loki-data = {
+        metadata = {
+          inherit namespace;
+          labels.app = "loki";
+        };
+        spec = {
+          accessModes = [ "ReadWriteOnce" ];
+          resources.requests.storage = "20Gi";
+        };
+      };
+
+      deployments.loki = {
+        metadata = {
+          inherit namespace;
+          labels.app = "loki";
+        };
+        spec = {
+          replicas = 1;
+          strategy.type = "Recreate";  # Required for single-node with PVC
+          selector.matchLabels.app = "loki";
+
+          template = {
+            metadata.labels.app = "loki";
+
+            spec = {
+              securityContext = {
+                fsGroup = 10001;
+                runAsUser = 10001;
+                runAsNonRoot = true;
+              };
+              containers = [{
+                name = "loki";
+                image = "grafana/loki:3.3.0";
+                args = [
+                  "-config.file=/etc/loki/config.yaml"
+                  "-target=all"
+                ];
+                ports = [
+                  { containerPort = 3100; name = "http"; }
+                  { containerPort = 9096; name = "grpc"; }
+                ];
+                volumeMounts = [
+                  { name = "config"; mountPath = "/etc/loki"; }
+                  { name = "data"; mountPath = "/data/loki"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    cpu = "500m";
+                    memory = "1Gi";
+                  };
+                };
+                readinessProbe = {
+                  httpGet = {
+                    path = "/ready";
+                    port = 3100;
+                  };
+                  initialDelaySeconds = 15;
+                  periodSeconds = 10;
+                };
+                livenessProbe = {
+                  httpGet = {
+                    path = "/ready";
+                    port = 3100;
+                  };
+                  initialDelaySeconds = 30;
+                  periodSeconds = 30;
+                };
+              }];
+
+              volumes = [
+                { name = "config"; configMap.name = "loki-config"; }
+                { name = "data"; persistentVolumeClaim.claimName = "loki-data"; }
+              ];
+            };
+          };
+        };
+      };
+
+      services.loki = {
+        metadata = {
+          inherit namespace;
+          labels.app = "loki";
+        };
+        spec = {
+          ports = [
+            { name = "http"; port = 3100; targetPort = "http"; }
+            { name = "grpc"; port = 9096; targetPort = "grpc"; }
+          ];
+          selector.app = "loki";
+        };
+      };
+
+      configMaps.loki-config = {
+        metadata.namespace = namespace;
+        data = {
+          "config.yaml" = ''
+            auth_enabled: false
+            server:
+              http_listen_port: 3100
+              grpc_listen_port: 9096
+              log_level: warn
+            common:
+              path_prefix: /data/loki
+              storage:
+                filesystem:
+                  chunks_directory: /data/loki/chunks
+                  rules_directory: /data/loki/rules
+              replication_factor: 1
+              ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+            schema_config:
+              configs:
+                - from: "2024-01-01"
+                  store: tsdb
+                  object_store: filesystem
+                  schema: v13
+                  index:
+                    prefix: index_
+                    period: 24h
+            ingester:
+              chunk_encoding: snappy
+              wal:
+                dir: /data/loki/wal
+            querier:
+              max_concurrent: 4
+            limits_config:
+              retention_period: 720h
+              allow_structured_metadata: true
+              volume_enabled: true
+            compactor:
+              working_directory: /data/loki/compactor
+              retention_enabled: true
+              delete_request_store: filesystem
+          '';
+        };
+      };
+    };
+  };
+
+  # LGTM Tempo - Traces Backend
+  applications.lgtm-tempo = {
+    inherit namespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-60";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      persistentVolumeClaims.tempo-data = {
+        metadata = {
+          inherit namespace;
+          labels.app = "tempo";
+        };
+        spec = {
+          accessModes = [ "ReadWriteOnce" ];
+          resources.requests.storage = "20Gi";
+        };
+      };
+
+      deployments.tempo = {
+        metadata = {
+          inherit namespace;
+          labels.app = "tempo";
+        };
+        spec = {
+          replicas = 1;
+          strategy.type = "Recreate";  # Required for single-node with PVC
+          selector.matchLabels.app = "tempo";
+
+          template = {
+            metadata.labels.app = "tempo";
+
+            spec = {
+              securityContext = {
+                fsGroup = 10001;
+                runAsUser = 10001;
+                runAsNonRoot = true;
+              };
+              containers = [{
+                name = "tempo";
+                image = "grafana/tempo:2.6.1";
+                args = [
+                  "-config.file=/etc/tempo/config.yaml"
+                  "-target=all"
+                ];
+                ports = [
+                  { containerPort = 3200; name = "http"; }
+                  { containerPort = 4317; name = "otlp-grpc"; }
+                  { containerPort = 4318; name = "otlp-http"; }
+                  { containerPort = 9095; name = "grpc"; }
+                ];
+                volumeMounts = [
+                  { name = "config"; mountPath = "/etc/tempo"; }
+                  { name = "data"; mountPath = "/data/tempo"; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    cpu = "500m";
+                    memory = "1Gi";
+                  };
+                };
+                readinessProbe = {
+                  httpGet = {
+                    path = "/ready";
+                    port = 3200;
+                  };
+                  initialDelaySeconds = 15;
+                  periodSeconds = 10;
+                };
+                livenessProbe = {
+                  httpGet = {
+                    path = "/ready";
+                    port = 3200;
+                  };
+                  initialDelaySeconds = 30;
+                  periodSeconds = 30;
+                };
+              }];
+
+              volumes = [
+                { name = "config"; configMap.name = "tempo-config"; }
+                { name = "data"; persistentVolumeClaim.claimName = "tempo-data"; }
+              ];
+            };
+          };
+        };
+      };
+
+      services.tempo = {
+        metadata = {
+          inherit namespace;
+          labels.app = "tempo";
+        };
+        spec = {
+          ports = [
+            { name = "http"; port = 3200; targetPort = "http"; }
+            { name = "otlp-grpc"; port = 4317; targetPort = "otlp-grpc"; }
+            { name = "otlp-http"; port = 4318; targetPort = "otlp-http"; }
+            { name = "grpc"; port = 9095; targetPort = "grpc"; }
+          ];
+          selector.app = "tempo";
+        };
+      };
+
+      configMaps.tempo-config = {
+        metadata.namespace = namespace;
+        data = {
+          "config.yaml" = ''
+            server:
+              http_listen_port: 3200
+              grpc_listen_port: 9095
+              log_level: warn
+            distributor:
+              receivers:
+                otlp:
+                  protocols:
+                    grpc:
+                      endpoint: 0.0.0.0:4317
+                    http:
+                      endpoint: 0.0.0.0:4318
+            ingester:
+              trace_idle_period: 10s
+              max_block_bytes: 1000000
+              max_block_duration: 5m
+            compactor:
+              compaction:
+                block_retention: 720h
+            storage:
+              trace:
+                backend: local
+                local:
+                  path: /data/tempo/traces
+                wal:
+                  path: /data/tempo/wal
+            querier:
+              frontend_worker:
+                frontend_address: 127.0.0.1:9095
+            metrics_generator:
+              registry:
+                external_labels:
+                  source: tempo
+              storage:
+                path: /data/tempo/generator/wal
+                remote_write:
+                  - url: http://mimir.observability.svc.cluster.local:9009/api/v1/push
+                    send_exemplars: true
+          '';
+        };
+      };
+    };
+  };
+
   # LGTM OTEL Collector - Ingestion Gateway
   applications.lgtm-otel-collector = {
     inherit namespace;
@@ -369,18 +729,53 @@ in
               containers = [{
                 name = "otel-collector";
                 image = "otel/opentelemetry-collector-contrib:0.114.0";
-                args = [
-                  "--config=/etc/otel-collector/config.yaml"
-                ];
+                command = [ "/otelcol-contrib" "--config=/conf/config.yaml" ];
                 ports = [
                   { containerPort = 4317; name = "otlp-grpc"; }
                   { containerPort = 4318; name = "otlp-http"; }
                   { containerPort = 8888; name = "metrics"; }
+                  { containerPort = 13133; name = "health"; }
+                ];
+                env = [
+                  {
+                    name = "LANGFUSE_AUTH";
+                    valueFrom.secretKeyRef = {
+                      name = "langfuse-api";
+                      key = "LANGFUSE_AUTH";
+                      optional = true;
+                    };
+                  }
                 ];
                 volumeMounts = [{
                   name = "config";
-                  mountPath = "/etc/otel-collector";
+                  mountPath = "/conf";
                 }];
+                resources = {
+                  requests = {
+                    cpu = "100m";
+                    memory = "256Mi";
+                  };
+                  limits = {
+                    cpu = "500m";
+                    memory = "512Mi";
+                  };
+                };
+                readinessProbe = {
+                  httpGet = {
+                    path = "/";
+                    port = 13133;
+                  };
+                  initialDelaySeconds = 5;
+                  periodSeconds = 10;
+                };
+                livenessProbe = {
+                  httpGet = {
+                    path = "/";
+                    port = 13133;
+                  };
+                  initialDelaySeconds = 10;
+                  periodSeconds = 30;
+                };
               }];
 
               volumes = [{
@@ -419,34 +814,76 @@ in
                     endpoint: 0.0.0.0:4318
 
             processors:
+              memory_limiter:
+                check_interval: 1s
+                limit_mib: 512
+                spike_limit_mib: 128
               batch:
-                timeout: 10s
+                timeout: 5s
                 send_batch_size: 1000
+                send_batch_max_size: 1500
+              resource:
+                attributes:
+                  - key: service.instance.id
+                    from_attribute: host.name
+                    action: insert
+                  - key: deployment.environment
+                    value: homelab
+                    action: insert
 
             exporters:
-              otlphttp/mimir:
-                endpoint: http://mimir.observability.svc.cluster.local:9009/api/v1/otlp
-              otlphttp/loki:
-                endpoint: http://loki.observability.svc.cluster.local:3100/otlp
-              otlphttp/tempo:
-                endpoint: http://tempo.observability.svc.cluster.local:4318
+              prometheusremotewrite:
+                endpoint: http://mimir.observability.svc.cluster.local:9009/api/v1/push
+                resource_to_telemetry_conversion:
+                  enabled: true
+                external_labels:
+                  cluster: homelab
+                  source: otel-collector
+              loki:
+                endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+                default_labels_enabled:
+                  exporter: false
+                  job: true
+                  instance: true
+                  level: true
+              otlp/tempo:
+                endpoint: tempo.observability.svc.cluster.local:4317
+                tls:
+                  insecure: true
               otlphttp/langfuse:
                 endpoint: http://langfuse.observability.svc.cluster.local:3000/api/public/otel
+                headers:
+                  Authorization: "''${env:LANGFUSE_AUTH}"
+
+            extensions:
+              health_check:
+                endpoint: 0.0.0.0:13133
+              pprof:
+                endpoint: 0.0.0.0:1777
+              zpages:
+                endpoint: 0.0.0.0:55679
 
             service:
+              extensions: [health_check, pprof, zpages]
               pipelines:
                 metrics:
                   receivers: [otlp]
-                  processors: [batch]
-                  exporters: [otlphttp/mimir]
+                  processors: [memory_limiter, batch, resource]
+                  exporters: [prometheusremotewrite]
                 logs:
                   receivers: [otlp]
-                  processors: [batch]
-                  exporters: [otlphttp/loki]
+                  processors: [memory_limiter, batch, resource]
+                  exporters: [loki]
                 traces:
                   receivers: [otlp]
-                  processors: [batch]
-                  exporters: [otlphttp/tempo, otlphttp/langfuse]
+                  processors: [memory_limiter, batch, resource]
+                  exporters: [otlp/tempo, otlphttp/langfuse]
+              telemetry:
+                logs:
+                  level: warn
+                metrics:
+                  address: 0.0.0.0:8888
+                  level: basic
           '';
         };
       };
