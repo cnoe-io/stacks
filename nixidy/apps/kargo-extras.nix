@@ -267,7 +267,7 @@ in
         spec:
           subscriptions:
             - image:
-                repoURL: gitea-thinkpad.tail286401.ts.net/giteaadmin/backstage-cnoe
+                repoURL: gitea-thinkpad.tail286401.ts.net/giteaadmin/backstage
       ''
       # Hub Outer Loop Warehouse (GHCR)
       ''

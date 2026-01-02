@@ -17,6 +17,12 @@
     # KIND only (local development)
     ./idpbuilder-gitea.nix
 
+    # Ref-implementation packages (KIND only)
+    ./azure-workload-identity.nix  # Azure Workload Identity webhook (sync-wave -90)
+    ./metrics-server.nix           # Kubernetes metrics for HPA (sync-wave -100)
+    ./spark-operator.nix           # Spark job orchestration (sync-wave 50)
+    ./backstage-templates.nix      # Backstage scaffolder templates (sync-wave 100)
+
     # Talos only (production with Azure)
     ./eso-workload-identity.nix
 
@@ -49,6 +55,7 @@
 
     # Security & Secrets
     ./secrets.nix           # ClusterSecretStore, bootstrap-secrets, cert-manager-secrets, cloudflare-issuer
+    ./secretstores.nix      # ClusterSecretStores for gitea, argocd, default (KIND only)
     ./keycloak-config.nix   # Keycloak secrets, clients, and config
 
     # Tailscale Services

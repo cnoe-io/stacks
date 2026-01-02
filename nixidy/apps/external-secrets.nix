@@ -60,6 +60,20 @@ in
               "azure.workload.identity/tenant-id" = config.azure.tenantId;
             };
           };
+          # Resource limits from ref-implementation
+          resources = {
+            requests = {
+              cpu = "100m";
+              memory = "128Mi";
+            };
+            limits = {
+              cpu = "500m";
+              memory = "512Mi";
+            };
+          };
+          # Additional settings from ref-implementation
+          logLevel = "info";
+          leaderElect = true;
         };
       };
     };
