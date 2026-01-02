@@ -1,5 +1,5 @@
-# Backstage Secrets
-# External Secrets for main Backstage namespace
+# Backstage Secrets and Configuration
+# External Secrets for sensitive data, ConfigMap for non-sensitive config
 # Mirrors: cdk8s/charts/secrets/backstage-secrets-chart.ts
 { config, lib, ... }:
 let
@@ -9,6 +9,20 @@ let
   isKind = environmentType == "kind";
   clusterSuffix = if name != "" then "-${name}" else "";
   portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
+
+  # Service URLs (non-sensitive configuration)
+  backstageUrl = "https://backstage.${ingressHost}${portSuffix}";
+  argocdUrl = "https://argocd.${ingressHost}${portSuffix}";
+  argoWorkflowsUrl = "https://${ingressHost}${portSuffix}/argo-workflows";
+  giteaUrl = "https://gitea.${ingressHost}${portSuffix}";
+  keycloakMetadataUrl = "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration";
+  kargoUrl = "https://kargo.${ingressHost}${portSuffix}";
+  catalogUrl = "https://gitea.${ingressHost}${portSuffix}/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml";
+
+  # Internal service URLs
+  postgresHost = "postgresql.${namespace}.svc.cluster.local";
+  agentForgeUrl = "http://supervisor.ai-platform-engineering.svc.cluster.local:8000";
+  flagdHost = "flagd.feature-flags.svc.cluster.local";
 in
 {
   config = lib.mkIf isKind {
@@ -41,12 +55,119 @@ in
       };
 
       yamls = [
-        # backstage-env-vars - uses keycloak ClusterSecretStore for OIDC + Azure for stable passwords
+        # ============================================================
+        # ConfigMap: Kubernetes-specific Backstage configuration
+        # Mounted at /etc/backstage/ and loaded after baked configs
+        # Following Backstage best practice: config independent from image
+        # ============================================================
+        ''
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: backstage-app-config
+            namespace: ${namespace}
+            labels:
+              app.kubernetes.io/name: backstage
+              app.kubernetes.io/component: config
+          data:
+            app-config.yaml: |
+              # Kubernetes environment configuration for Backstage
+              # Loaded after app-config.yaml and app-config.production.yaml from the image
+
+              app:
+                baseUrl: ${backstageUrl}
+
+              backend:
+                baseUrl: ${backstageUrl}
+                database:
+                  connection:
+                    host: ${postgresHost}
+                    port: 5432
+
+              # Proxy endpoints
+              proxy:
+                endpoints:
+                  '/agent-forge':
+                    target: ${agentForgeUrl}
+                    changeOrigin: true
+                    secure: false
+                    pathRewrite:
+                      '^/api/proxy/agent-forge/?': '/'
+                    credentials: 'dangerously-allow-unauthenticated'
+                    headers:
+                      X-Custom-Source: 'backstage'
+                    allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+                    allowedHeaders: ['Authorization', 'Content-Type']
+
+              # Feature Flags
+              featureFlags:
+                flagd:
+                  host: ${flagdHost}
+                  port: 8013
+                  tls: false
+                frontend:
+                  baseUrl: /api/feature-flags
+                  pollInterval: 30000
+
+              # Agent Forge / CAIPE
+              agentForge:
+                baseUrl: /api/proxy/agent-forge
+                botName: 'CAIPE'
+                useOpenIDToken: false
+                enableStreaming: false
+                requestTimeout: 300
+                headerTitle: 'CAIPE'
+                headerSubtitle: 'AI Platform Engineer Assistant'
+                inputPlaceholder: 'Ask CAIPE anything...'
+
+              # Integrations (URLs only, credentials from secrets)
+              integrations:
+                gitea:
+                  - host: gitea.${ingressHost}
+                    baseUrl: ${giteaUrl}
+                    apiBaseUrl: ${giteaUrl}/api/v1
+
+              # Catalog locations
+              catalog:
+                locations:
+                  - type: url
+                    target: ${catalogUrl}
+                    rules:
+                      - allow: [Component, System, API, Resource, Location, Template, User, Group]
+                  # Keep local examples for fallback
+                  - type: file
+                    target: ./examples/entities.yaml
+                  - type: file
+                    target: ./examples/template/template.yaml
+                    rules:
+                      - allow: [Template]
+                  - type: file
+                    target: ./examples/org.yaml
+                    rules:
+                      - allow: [User, Group]
+
+              # ArgoCD integration
+              argocd:
+                baseUrl: ${argocdUrl}
+                appLocatorMethods:
+                  - type: 'config'
+                    instances:
+                      - name: main
+                        url: ${argocdUrl}
+
+              # Kargo URL for templates
+              kargo:
+                baseUrl: ${kargoUrl}
+        ''
+
+        # ============================================================
+        # ExternalSecret: Sensitive data only
+        # ============================================================
         ''
           apiVersion: external-secrets.io/v1
           kind: ExternalSecret
           metadata:
-            name: backstage-oidc
+            name: backstage-secrets
             namespace: ${namespace}
           spec:
             refreshInterval: 1m
@@ -58,25 +179,18 @@ in
               template:
                 engineVersion: v2
                 data:
-                  BACKSTAGE_FRONTEND_URL: "https://backstage.${ingressHost}${portSuffix}"
-                  POSTGRES_HOST: "postgresql.${namespace}.svc.cluster.local"
+                  # Database credentials
+                  POSTGRES_HOST: "${postgresHost}"
                   POSTGRES_PORT: "5432"
-                  POSTGRES_DB: backstage
-                  POSTGRES_USER: backstage
+                  POSTGRES_DB: "backstage"
+                  POSTGRES_USER: "backstage"
                   POSTGRES_PASSWORD: "{{.POSTGRES_PASSWORD}}"
+                  # Session secret
                   BACKSTAGE_SESSION_SECRET: "{{.SESSION_SECRET}}"
-                  ARGO_WORKFLOWS_URL: "https://${ingressHost}${portSuffix}/argo-workflows"
-                  ARGO_CD_URL: "https://argocd.${ingressHost}${portSuffix}"
-                  ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
-                  KEYCLOAK_NAME_METADATA: "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration"
+                  # OIDC/Auth credentials
+                  KEYCLOAK_NAME_METADATA: "${keycloakMetadataUrl}"
                   KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
-                  GITEA_URL: "https://gitea.${ingressHost}${portSuffix}"
-                  GITEA_URL_NO_PORT: "https://gitea.${ingressHost}"
-                  GITEA_HOST: "gitea.${ingressHost}${portSuffix}"
-                  GITEA_HOST_NO_PORT: "gitea.${ingressHost}"
-                  CATALOG_URL: "https://gitea.${ingressHost}${portSuffix}/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml"
-                  KARGO_URL: "https://kargo.${ingressHost}${portSuffix}"
-                  AGENT_FORGE_URL: "http://k8s-agent.kagent:8080"
+                  ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
             data:
               # OIDC tokens from keycloak ClusterSecretStore
               - secretKey: ARGOCD_SESSION_TOKEN
@@ -103,6 +217,11 @@ in
                 remoteRef:
                   key: BACKSTAGE-SESSION-SECRET
         ''
+
+        # ============================================================
+        # Docker registry credentials
+        # ============================================================
+
         # ghcr-dockercfg - for pulling images from GHCR
         ''
           apiVersion: external-secrets.io/v1
@@ -141,6 +260,7 @@ in
                 remoteRef:
                   key: GITHUB-PAT
         ''
+
         # gitea-dockercfg - uses gitea ClusterSecretStore (Kubernetes provider)
         ''
           apiVersion: external-secrets.io/v1
@@ -189,6 +309,7 @@ in
                   key: gitea-credential
                   property: password
         ''
+
         # gitea-credentials - for Backstage to access Gitea API
         ''
           apiVersion: external-secrets.io/v1
@@ -213,6 +334,7 @@ in
                   key: gitea-credential
                   property: password
         ''
+
         # argocd-credentials - for Backstage to access ArgoCD
         ''
           apiVersion: external-secrets.io/v1

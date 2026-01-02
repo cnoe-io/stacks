@@ -1,0 +1,97 @@
+apiVersion: v1
+data:
+  app-config.yaml: |
+    # Kubernetes environment configuration for Backstage
+    # Loaded after app-config.yaml and app-config.production.yaml from the image
+
+    app:
+      baseUrl: https://backstage.cnoe.localtest.me:8443
+
+    backend:
+      baseUrl: https://backstage.cnoe.localtest.me:8443
+      database:
+        connection:
+          host: postgresql.backstage.svc.cluster.local
+          port: 5432
+
+    # Proxy endpoints
+    proxy:
+      endpoints:
+        '/agent-forge':
+          target: http://supervisor.ai-platform-engineering.svc.cluster.local:8000
+          changeOrigin: true
+          secure: false
+          pathRewrite:
+            '^/api/proxy/agent-forge/?': '/'
+          credentials: 'dangerously-allow-unauthenticated'
+          headers:
+            X-Custom-Source: 'backstage'
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+          allowedHeaders: ['Authorization', 'Content-Type']
+
+    # Feature Flags
+    featureFlags:
+      flagd:
+        host: flagd.feature-flags.svc.cluster.local
+        port: 8013
+        tls: false
+      frontend:
+        baseUrl: /api/feature-flags
+        pollInterval: 30000
+
+    # Agent Forge / CAIPE
+    agentForge:
+      baseUrl: /api/proxy/agent-forge
+      botName: 'CAIPE'
+      useOpenIDToken: false
+      enableStreaming: false
+      requestTimeout: 300
+      headerTitle: 'CAIPE'
+      headerSubtitle: 'AI Platform Engineer Assistant'
+      inputPlaceholder: 'Ask CAIPE anything...'
+
+    # Integrations (URLs only, credentials from secrets)
+    integrations:
+      gitea:
+        - host: gitea.cnoe.localtest.me
+          baseUrl: https://gitea.cnoe.localtest.me:8443
+          apiBaseUrl: https://gitea.cnoe.localtest.me:8443/api/v1
+
+    # Catalog locations
+    catalog:
+      locations:
+        - type: url
+          target: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-templates-entities/src/branch/main/catalog-info.yaml
+          rules:
+            - allow: [Component, System, API, Resource, Location, Template, User, Group]
+        # Keep local examples for fallback
+        - type: file
+          target: ./examples/entities.yaml
+        - type: file
+          target: ./examples/template/template.yaml
+          rules:
+            - allow: [Template]
+        - type: file
+          target: ./examples/org.yaml
+          rules:
+            - allow: [User, Group]
+
+    # ArgoCD integration
+    argocd:
+      baseUrl: https://argocd.cnoe.localtest.me:8443
+      appLocatorMethods:
+        - type: 'config'
+          instances:
+            - name: main
+              url: https://argocd.cnoe.localtest.me:8443
+
+    # Kargo URL for templates
+    kargo:
+      baseUrl: https://kargo.cnoe.localtest.me:8443
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: config
+    app.kubernetes.io/name: backstage
+  name: backstage-app-config
+  namespace: backstage

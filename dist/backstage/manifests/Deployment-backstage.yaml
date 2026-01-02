@@ -18,7 +18,16 @@ spec:
         app: backstage
     spec:
       containers:
-        - env:
+        - args:
+            - node
+            - packages/backend
+            - --config
+            - /app/app-config.yaml
+            - --config
+            - /app/app-config.production.yaml
+            - --config
+            - /etc/backstage/app-config.yaml
+          env:
             - name: LOG_LEVEL
               value: debug
             - name: NODE_TLS_REJECT_UNAUTHORIZED
@@ -32,11 +41,16 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/pittampalliorg/backstage:v1.1.1
+          image: ghcr.io/pittampalliorg/backstage:v1.1.2
           name: backstage
           ports:
             - containerPort: 7007
               name: http
+          volumeMounts:
+            - mountPath: /etc/backstage/app-config.yaml
+              name: app-config
+              readOnly: true
+              subPath: app-config.yaml
       imagePullSecrets:
         - name: ghcr-dockercfg
       securityContext:
@@ -44,3 +58,7 @@ spec:
         runAsGroup: 0
         runAsUser: 0
       serviceAccountName: backstage
+      volumes:
+        - configMap:
+            name: backstage-app-config
+          name: app-config

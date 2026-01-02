@@ -14,7 +14,7 @@ let
   backstageHost = "backstage.${ingressHost}";
 
   # Default values
-  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.1.1";
+  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.1.2";
   imagePullSecretName = "ghcr-dockercfg";
   postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
   postgresStorageSize = "500Mi";
@@ -230,6 +230,18 @@ in
                   containerPort = 7007;
                   name = "http";
                 }];
+                # Load config files in order (last wins for overlapping keys)
+                # Order: base config → production config → Kubernetes environment config
+                args = [
+                  "node"
+                  "packages/backend"
+                  "--config"
+                  "/app/app-config.yaml"
+                  "--config"
+                  "/app/app-config.production.yaml"
+                  "--config"
+                  "/etc/backstage/app-config.yaml"
+                ];
                 env = [
                   { name = "LOG_LEVEL"; value = "debug"; }
                   { name = "NODE_TLS_REJECT_UNAUTHORIZED"; value = "0"; }
@@ -240,6 +252,17 @@ in
                   { secretRef.name = "gitea-credentials"; }
                   { secretRef.name = "argocd-credentials"; }
                 ];
+                volumeMounts = [{
+                  name = "app-config";
+                  mountPath = "/etc/backstage/app-config.yaml";
+                  subPath = "app-config.yaml";
+                  readOnly = true;
+                }];
+              }];
+
+              volumes = [{
+                name = "app-config";
+                configMap.name = "backstage-app-config";
               }];
             };
           };
