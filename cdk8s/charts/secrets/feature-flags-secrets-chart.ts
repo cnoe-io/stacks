@@ -151,8 +151,9 @@ export class FeatureFlagsSecretsChart extends Chart {
             },
             data: {
               // Git credentials for Flipt storage backend
-              'FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME': '{{ .username }}',
-              'FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD': '{{ .password }}',
+              // Must match storage name 'default' in flipt.yml: FLIPT_STORAGE_<NAME>_AUTHENTICATION_BASIC_*
+              'FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME': '{{ .username }}',
+              'FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD': '{{ .password }}',
             },
           },
         },

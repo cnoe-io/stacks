@@ -136,14 +136,22 @@ server:
 
 # Declarative Git storage (v2 format)
 # https://docs.flipt.io/configuration/storage
+# Authentication values are overridden by env vars:
+# FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
+# FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
 storage:
   default:
     remote: "${gitRepositoryUrl}"
     ref: "${gitBranch}"
     poll_interval: "${gitPollInterval}"
     insecure_skip_tls: true
+    authentication:
+      basic:
+        # Placeholder values - overridden by env vars from flipt-git-credentials secret
+        username: "placeholder"
+        password: "placeholder"
     backend:
-      type: memory
+      type: git
 
 # Authentication configuration
 authentication:
