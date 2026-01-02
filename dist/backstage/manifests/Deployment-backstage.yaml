@@ -41,7 +41,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/pittampalliorg/backstage:v1.1.2
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
           name: backstage
           ports:
             - containerPort: 7007
@@ -52,7 +52,7 @@ spec:
               readOnly: true
               subPath: app-config.yaml
       imagePullSecrets:
-        - name: ghcr-dockercfg
+        - name: gitea-dockercfg
       securityContext:
         fsGroup: 0
         runAsGroup: 0

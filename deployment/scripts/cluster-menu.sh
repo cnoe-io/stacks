@@ -306,7 +306,7 @@ cluster-deploy() {
   fi
 
   local CDK8S_DIR="$STACKS_DIR/cdk8s"
-  local REF_DIR="$STACKS_DIR/ref-implementation"
+  local NIXIDY_DIR="$STACKS_DIR/nixidy"
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   local ORIG_DIR="$(pwd)"
 
@@ -355,7 +355,7 @@ cluster-deploy() {
   if [ -f "$DEPLOY_DIR/scripts/deploy-linux-ssh.sh" ]; then
     echo "Using Linux deployment script with direct key mounting and Azure integration..."
     cd "$DEPLOY_DIR/scripts" && ./deploy-linux-ssh.sh \
-      --package "$REF_DIR/" \
+      --package "$NIXIDY_DIR/dist/" \
       --package "$CDK8S_DIR/dist/" \
       "$@"
   else
@@ -368,16 +368,16 @@ cluster-deploy() {
 
     idpbuilder create \
       --name "${CLUSTER_NAME}" \
-      -p "$REF_DIR/" \
+      -p "$NIXIDY_DIR/dist/" \
       -p "$CDK8S_DIR/dist/" \
       --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
       --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
       --dev-password "$@"
 
-    # Sync JWKS after cluster creation
-    if [ -f "$REF_DIR/azure-workload-identity/sync-jwks-to-azure.sh" ]; then
+    # Sync JWKS after cluster creation (now in deployment/scripts)
+    if [ -f "$DEPLOY_DIR/scripts/sync-jwks-to-azure.sh" ]; then
       echo "🔄 Syncing JWKS to Azure for External Secrets..."
-      cd "$REF_DIR/azure-workload-identity" && ./sync-jwks-to-azure.sh
+      cd "$DEPLOY_DIR/scripts" && ./sync-jwks-to-azure.sh
     fi
   fi
 
@@ -566,7 +566,7 @@ cluster-update-gum() {
     return 1
   fi
 
-  local REF_DIR="$STACKS_DIR/ref-implementation"
+  local NIXIDY_DIR="$STACKS_DIR/nixidy"
   local CDK8S_DIR="$STACKS_DIR/cdk8s"
   local HOST_CONTEXT="$(detect_host_context)"
   local ORIG_DIR="$(pwd)"
@@ -644,7 +644,7 @@ cluster-update-gum() {
 
   # Step 2: Update cluster with spinner
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
-    bash -lc "cd '$REF_DIR' && idpbuilder create --name '$CLUSTER_NAME' -p '$REF_DIR/' -p '$CDK8S_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
+    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$NIXIDY_DIR/dist/' -p '$CDK8S_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -680,7 +680,7 @@ MESSAGE:.status.conditions[0].message | \
 
 cluster-update() {
   # Update existing cluster with idpbuilder (idempotent operation)
-  local REF_DIR="$STACKS_DIR/ref-implementation"
+  local NIXIDY_DIR="$STACKS_DIR/nixidy"
   local CDK8S_DIR="$STACKS_DIR/cdk8s"
   local HOST_CONTEXT="$(detect_host_context)"
   local NO_EXIT=""
@@ -822,10 +822,9 @@ cluster-update() {
   generate-kind-config
 
   local DEPLOY_DIR="$STACKS_DIR/deployment"
-  cd "$REF_DIR"
   idpbuilder create \
     --name "${CLUSTER_NAME}" \
-    -p "$REF_DIR/" \
+    -p "$NIXIDY_DIR/dist/" \
     -p "$CDK8S_DIR/dist/" \
     --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
     --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
