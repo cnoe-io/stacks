@@ -124,8 +124,10 @@ in
             template:
               type: Opaque
               data:
-                FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME: "{{ .username }}"
-                FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD: "{{ .password }}"
+                # Flipt env var naming: FLIPT_<section>_<key> in UPPER_SNAKE_CASE
+                # storage.default.authentication.basic.username -> FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
+                FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME: "{{ .username }}"
+                FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD: "{{ .password }}"
           data:
             - secretKey: username
               remoteRef:
@@ -743,16 +745,15 @@ EOF
 
             # Declarative Git storage (v2 format)
             # https://docs.flipt.io/configuration/storage
+            # Git storage - authentication provided via env vars:
+            # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
+            # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
             storage:
               default:
                 remote: "http://${giteaInternalHost}/giteaAdmin/feature-flags.git"
                 ref: "main"
                 poll_interval: "30s"
                 insecure_skip_tls: true
-                authentication:
-                  basic:
-                    username: "''${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME}"
-                    password: "''${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD}"
                 backend:
                   type: memory
 
