@@ -10,12 +10,14 @@ let
   ingressHost = config.cluster.ingressHost;
   isTalos = config.cluster.tls.enabled;
 
+  # Subdomain-based routing: backstage.cnoe.localtest.me
+  backstageHost = "backstage.${ingressHost}";
+
   # Default values
-  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.0.0";
+  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.1.1";
   imagePullSecretName = "ghcr-dockercfg";
   postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
   postgresStorageSize = "500Mi";
-  basePath = "/backstage";
 in
 {
   applications.backstage = {
@@ -244,24 +246,21 @@ in
         };
       };
 
-      # Backstage Ingress
+      # Backstage Ingress - subdomain-based routing
       ingresses.${appName} = {
         metadata = {
           inherit namespace;
-          annotations = {
-            "nginx.ingress.kubernetes.io/use-regex" = "true";
-            "nginx.ingress.kubernetes.io/rewrite-target" = "/$2";
-          } // lib.optionalAttrs isTalos {
+          annotations = lib.optionalAttrs isTalos {
             "cert-manager.io/cluster-issuer" = config.cluster.tls.clusterIssuer;
           };
         };
         spec = {
           ingressClassName = "nginx";
           rules = [{
-            host = ingressHost;
+            host = backstageHost;
             http.paths = [{
-              path = "${basePath}(/|$)(.*)";
-              pathType = "ImplementationSpecific";
+              path = "/";
+              pathType = "Prefix";
               backend.service = {
                 name = appName;
                 port.name = "http";
@@ -270,37 +269,7 @@ in
           }];
         } // lib.optionalAttrs isTalos {
           tls = [{
-            hosts = [ ingressHost ];
-            secretName = "${appName}-tls";
-          }];
-        };
-      };
-
-      # Root redirect ingress
-      ingresses."${appName}-root-redirect" = {
-        metadata = {
-          inherit namespace;
-          annotations = {
-            "nginx.ingress.kubernetes.io/use-regex" = "true";
-            "nginx.ingress.kubernetes.io/permanent-redirect" = basePath;
-          };
-        };
-        spec = {
-          ingressClassName = "nginx";
-          rules = [{
-            host = ingressHost;
-            http.paths = [{
-              path = "/$";
-              pathType = "ImplementationSpecific";
-              backend.service = {
-                name = appName;
-                port.name = "http";
-              };
-            }];
-          }];
-        } // lib.optionalAttrs isTalos {
-          tls = [{
-            hosts = [ ingressHost ];
+            hosts = [ backstageHost ];
             secretName = "${appName}-tls";
           }];
         };
