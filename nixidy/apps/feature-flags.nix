@@ -760,7 +760,7 @@ EOF
                     username: "placeholder"
                     password: "placeholder"
                 backend:
-                  type: memory
+                  type: git
 
             # Authentication configuration
             authentication:

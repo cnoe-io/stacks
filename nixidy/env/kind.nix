@@ -27,4 +27,7 @@
 
   # Derive Keycloak URL from ingress host and port (domain-based routing)
   keycloak.url = lib.mkDefault "https://keycloak.${config.cluster.ingressHost}:${toString config.cluster.ingressPort}";
+
+  # Local charts directory for charts not in nixhelm (spark-operator)
+  nixidy.chartsDir = ../charts;
 }
