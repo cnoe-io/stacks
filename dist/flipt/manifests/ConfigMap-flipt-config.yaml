@@ -12,6 +12,9 @@ data:
 
     # Declarative Git storage (v2 format)
     # https://docs.flipt.io/configuration/storage
+    # Authentication values are overridden by env vars:
+    # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
+    # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
     storage:
       default:
         remote: "http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/feature-flags.git"
@@ -20,8 +23,9 @@ data:
         insecure_skip_tls: true
         authentication:
           basic:
-            username: "${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME}"
-            password: "${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD}"
+            # Placeholder values - overridden by env vars from flipt-git-credentials secret
+            username: "placeholder"
+            password: "placeholder"
         backend:
           type: memory
 
