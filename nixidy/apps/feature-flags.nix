@@ -192,13 +192,15 @@ in
     ];
   };
 
-  # Flagd - OpenFeature-compliant flag evaluation sidecar
-  applications.flagd = {
+  # Feature Flags Repo Init - Create the feature-flags repo in Gitea
+  applications.feature-flags-repo-init = {
     inherit namespace;
     createNamespace = false;
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "-76";
+      "argocd.argoproj.io/sync-wave" = "-77";
+      "argocd.argoproj.io/hook" = "Sync";
+      "argocd.argoproj.io/hook-delete-policy" = "HookSucceeded";
     };
 
     syncPolicy = {
@@ -210,6 +212,427 @@ in
     };
 
     resources = {
+      # ServiceAccount for the init job
+      serviceAccounts.feature-flags-repo-init = {
+        metadata = {
+          inherit namespace;
+          labels = {
+            "app.kubernetes.io/name" = "feature-flags-repo-init";
+            "app.kubernetes.io/component" = "init";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
+        };
+      };
+
+      # Job to create the feature-flags repo
+      jobs.feature-flags-repo-init = {
+        metadata = {
+          inherit namespace;
+          labels = {
+            "app.kubernetes.io/name" = "feature-flags-repo-init";
+            "app.kubernetes.io/component" = "init";
+            "app.kubernetes.io/part-of" = "feature-flags";
+          };
+        };
+        spec = {
+          ttlSecondsAfterFinished = 300;
+          backoffLimit = 3;
+          template = {
+            metadata.labels = {
+              "app.kubernetes.io/name" = "feature-flags-repo-init";
+            };
+            spec = {
+              serviceAccountName = "feature-flags-repo-init";
+              restartPolicy = "OnFailure";
+              containers = [{
+                name = "init-repo";
+                image = "alpine/git:latest";
+                command = [ "/bin/sh" "-c" ];
+                args = [''
+                  set -e
+
+                  # Install curl and jq
+                  apk add --no-cache curl jq
+
+                  GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+                  REPO_NAME="feature-flags"
+
+                  echo "Checking if repo exists..."
+                  REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
+                    -u "$GITEA_USERNAME:$GITEA_PASSWORD" \
+                    "$GITEA_URL/api/v1/repos/giteaAdmin/$REPO_NAME")
+
+                  if [ "$REPO_CHECK" = "200" ]; then
+                    echo "Repository already exists, checking for .flipt.yml..."
+                    cd /tmp
+                    git config --global user.email "admin@example.com"
+                    git config --global user.name "Admin"
+                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/$REPO_NAME.git"
+                    cd "$REPO_NAME"
+                    if [ -d "default" ] && [ -f "default/features.yaml" ]; then
+                      echo "Feature flags already configured with correct structure, skipping"
+                      exit 0
+                    fi
+                    echo "Repo exists but needs feature flags setup, continuing..."
+                  else
+                    echo "Creating repository..."
+                    curl -s -X POST "$GITEA_URL/api/v1/user/repos" \
+                      -u "$GITEA_USERNAME:$GITEA_PASSWORD" \
+                      -H "Content-Type: application/json" \
+                      -d '{
+                        "name": "'"$REPO_NAME"'",
+                        "description": "Feature flags configuration for Flipt",
+                        "private": false,
+                        "auto_init": true,
+                        "default_branch": "main"
+                      }'
+
+                    echo "Waiting for repo to be ready..."
+                    sleep 5
+
+                    cd /tmp
+                    git config --global user.email "admin@example.com"
+                    git config --global user.name "Admin"
+                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/$REPO_NAME.git"
+                    cd "$REPO_NAME"
+                  fi
+
+                  # Remove old features.json and flags directory if they exist
+                  rm -f features.json
+                  rm -rf flags .flipt.yml
+
+                  # Create namespace directories (Flipt expects <namespace>/features.yaml structure)
+                  mkdir -p default development staging production
+
+                  # Default namespace flags (for Flagd and general use)
+                  cat > default/features.yaml << 'EOF'
+# Default Namespace Feature Flags
+version: "1.2"
+namespace: default
+
+segments:
+  - key: beta-users
+    name: Beta Program Users
+    match_type: ANY_MATCH_TYPE
+    constraints:
+      - property: groups
+        operator: isoneof
+        value: beta-testers,early-adopters
+        type: STRING_COMPARISON_TYPE
+
+  - key: internal-users
+    name: Internal Users
+    match_type: ANY_MATCH_TYPE
+    constraints:
+      - property: email
+        operator: suffix
+        value: "@company.com"
+        type: STRING_COMPARISON_TYPE
+
+flags:
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - segment:
+          key: beta-users
+          value: true
+      - threshold:
+          percentage: 20
+          value: true
+
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - segment:
+          key: internal-users
+          value: true
+
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: VARIANT_FLAG_TYPE
+    enabled: true
+    variants:
+      - key: control
+        name: Original checkout
+      - key: variant-a
+        name: Streamlined checkout
+      - key: variant-b
+        name: Single page checkout
+    rules:
+      - segment: beta-users
+        rank: 1
+        distributions:
+          - variant: control
+            rollout: 34
+          - variant: variant-a
+            rollout: 33
+          - variant: variant-b
+            rollout: 33
+EOF
+
+                  # Development environment flags - Flipt v2 format
+                  cat > development/features.yaml << 'EOF'
+# Development Environment Feature Flags
+version: "1.2"
+namespace: development
+
+segments:
+  - key: beta-users
+    name: Beta Program Users
+    match_type: ANY_MATCH_TYPE
+    constraints:
+      - property: groups
+        operator: isoneof
+        value: beta-testers,early-adopters
+        type: STRING_COMPARISON_TYPE
+
+  - key: internal-users
+    name: Internal Users
+    match_type: ANY_MATCH_TYPE
+    constraints:
+      - property: email
+        operator: suffix
+        value: "@company.com"
+        type: STRING_COMPARISON_TYPE
+
+flags:
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - segment:
+          key: beta-users
+          value: true
+      - threshold:
+          percentage: 20
+          value: true
+
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - segment:
+          key: internal-users
+          value: true
+      - threshold:
+          percentage: 0
+          value: false
+
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: VARIANT_FLAG_TYPE
+    enabled: true
+    variants:
+      - key: control
+        name: Original checkout
+      - key: variant-a
+        name: Streamlined checkout
+      - key: variant-b
+        name: Single page checkout
+    rules:
+      - segment: beta-users
+        rank: 1
+        distributions:
+          - variant: control
+            rollout: 34
+          - variant: variant-a
+            rollout: 33
+          - variant: variant-b
+            rollout: 33
+EOF
+
+                  # Staging environment flags - Flipt v2 format
+                  cat > staging/features.yaml << 'EOF'
+# Staging Environment Feature Flags
+version: "1.2"
+namespace: staging
+
+segments:
+  - key: beta-users
+    name: Beta Program Users
+    match_type: ANY_MATCH_TYPE
+    constraints:
+      - property: groups
+        operator: isoneof
+        value: beta-testers
+        type: STRING_COMPARISON_TYPE
+
+flags:
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - threshold:
+          percentage: 50
+          value: true
+
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN_FLAG_TYPE
+    enabled: false
+
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: VARIANT_FLAG_TYPE
+    enabled: true
+    variants:
+      - key: control
+        name: Original checkout
+      - key: variant-a
+        name: Streamlined checkout
+    rules:
+      - segment: beta-users
+        rank: 1
+        distributions:
+          - variant: control
+            rollout: 80
+          - variant: variant-a
+            rollout: 20
+EOF
+
+                  # Production environment flags - Flipt v2 format
+                  cat > production/features.yaml << 'EOF'
+# Production Environment Feature Flags
+version: "1.2"
+namespace: production
+
+segments:
+  - key: vip-users
+    name: VIP Users
+    match_type: ALL_MATCH_TYPE
+    constraints:
+      - property: tier
+        operator: eq
+        value: enterprise
+        type: STRING_COMPARISON_TYPE
+
+flags:
+  - key: dark-mode-enabled
+    name: Dark Mode
+    type: BOOLEAN_FLAG_TYPE
+    enabled: true
+    rollouts:
+      - threshold:
+          percentage: 100
+          value: true
+
+  - key: new-dashboard-ui
+    name: New Dashboard UI
+    type: BOOLEAN_FLAG_TYPE
+    enabled: false
+
+  - key: checkout-flow
+    name: Checkout Flow Version
+    type: VARIANT_FLAG_TYPE
+    enabled: true
+    variants:
+      - key: control
+        name: Original checkout
+    rules:
+      - segment: vip-users
+        rank: 1
+        distributions:
+          - variant: control
+            rollout: 100
+EOF
+
+                  # Commit all changes
+                  git add -A
+                  git commit -m "Initialize feature flags with multi-environment setup" || true
+                  git push origin main || true
+
+                  echo "Repository initialized with full feature flags configuration"
+                ''];
+                env = [
+                  { name = "GITEA_USERNAME"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME"; }; }
+                  { name = "GITEA_PASSWORD"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD"; }; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "50m";
+                    memory = "64Mi";
+                  };
+                  limits = {
+                    memory = "128Mi";
+                  };
+                };
+              }];
+            };
+          };
+        };
+      };
+    };
+  };
+
+  # Flagd - OpenFeature-compliant flag evaluation sidecar
+  # Note: Sync wave -74 ensures Flagd deploys after Flipt (-75)
+  applications.flagd = {
+    inherit namespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-74";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+    };
+
+    resources = {
+      # ConfigMap with flag definitions in flagd format
+      configMaps.flagd-flags = {
+        metadata = {
+          inherit namespace;
+          labels.app = "flagd";
+        };
+        data."flags.json" = builtins.toJSON {
+          flags = {
+            "enable-caipe" = {
+              state = "ENABLED";
+              variants = {
+                "on" = true;
+                "off" = false;
+              };
+              defaultVariant = "on";
+            };
+            "dark-mode-enabled" = {
+              state = "ENABLED";
+              variants = {
+                "on" = true;
+                "off" = false;
+              };
+              defaultVariant = "off";
+            };
+            "new-dashboard-ui" = {
+              state = "ENABLED";
+              variants = {
+                "on" = true;
+                "off" = false;
+              };
+              defaultVariant = "off";
+              targeting = {
+                "if" = [
+                  { "in" = [ { var = "groups"; } [ "admin" "beta-testers" ] ]; }
+                  "on"
+                  "off"
+                ];
+              };
+            };
+          };
+        };
+      };
+
       deployments.flagd = {
         metadata = {
           inherit namespace;
@@ -228,13 +651,20 @@ in
                 image = "ghcr.io/open-feature/flagd:v0.11.0";
                 args = [
                   "start"
+                  "--port"
+                  "8013"
                   "--uri"
-                  "http://flipt.${namespace}.svc.cluster.local:8080/internal/v1/evaluation/snapshot/namespace/default"
+                  "file:/etc/flagd/flags.json"
                 ];
                 ports = [
                   { containerPort = 8013; name = "grpc"; }
                   { containerPort = 8014; name = "http"; }
                 ];
+                volumeMounts = [{
+                  name = "flags-config";
+                  mountPath = "/etc/flagd";
+                  readOnly = true;
+                }];
                 resources = {
                   requests = {
                     cpu = "50m";
@@ -244,6 +674,10 @@ in
                     memory = "128Mi";
                   };
                 };
+              }];
+              volumes = [{
+                name = "flags-config";
+                configMap.name = "flagd-flags";
               }];
             };
           };
@@ -317,14 +751,17 @@ in
                 insecure_skip_tls: true
                 authentication:
                   basic:
-                    username: "$(FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME)"
-                    password: "$(FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD)"
+                    username: "''${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME}"
+                    password: "''${FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD}"
                 backend:
                   type: memory
 
             # Authentication configuration
             authentication:
               required: true
+              exclude:
+                metadata: true
+                evaluation: true
               session:
                 domain: "${fliptHost}"
                 secure: true
