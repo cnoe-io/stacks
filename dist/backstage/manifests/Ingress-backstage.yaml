@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations: {}
+  name: backstage
+  namespace: backstage
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: backstage.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: backstage
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
