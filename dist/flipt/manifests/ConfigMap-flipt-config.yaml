@@ -23,9 +23,8 @@ data:
         insecure_skip_tls: true
         authentication:
           basic:
-            # Placeholder values - overridden by env vars from flipt-git-credentials secret
-            username: "placeholder"
-            password: "placeholder"
+            username: "giteaAdmin"
+            password: "developer"
         backend:
           type: memory
 
