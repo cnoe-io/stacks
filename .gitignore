@@ -75,3 +75,4 @@ argocd-*-screenshot.png
 .devenv/
 .devenv.flake.nix
 devenv.lock
+result

@@ -7,23 +7,22 @@
       url = "github:arnarg/nixidy";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    flake-utils.url = "github:numtide/flake-utils";
     nixhelm = {
       url = "github:farcaller/nixhelm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, nixidy, flake-utils, nixhelm }:
+  outputs = { self, nixpkgs, nixidy, nixhelm, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        charts = nixhelm.chartsDerivations.${system};
       in {
         # Nixidy environments for different cluster types
         nixidyEnvs = nixidy.lib.mkEnvs {
-          inherit pkgs;
-          # Pass nixhelm charts to all nixidy modules
-          charts = nixhelm.chartsDerivations.${system};
+          inherit pkgs charts;
           envs = {
             # KIND local development environment
             kind = {
