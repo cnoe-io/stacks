@@ -553,8 +553,8 @@ EOF
                   echo "Repository initialized with full feature flags configuration"
                 ''];
                 env = [
-                  { name = "GITEA_USERNAME"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_USERNAME"; }; }
-                  { name = "GITEA_PASSWORD"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_GIT_AUTHENTICATION_BASIC_PASSWORD"; }; }
+                  { name = "GITEA_USERNAME"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME"; }; }
+                  { name = "GITEA_PASSWORD"; valueFrom.secretKeyRef = { name = "flipt-git-credentials"; key = "FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD"; }; }
                 ];
                 resources = {
                   requests = {
@@ -745,7 +745,7 @@ EOF
 
             # Declarative Git storage (v2 format)
             # https://docs.flipt.io/configuration/storage
-            # Git storage - authentication provided via env vars:
+            # Authentication values are overridden by env vars:
             # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
             # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
             storage:
@@ -754,6 +754,11 @@ EOF
                 ref: "main"
                 poll_interval: "30s"
                 insecure_skip_tls: true
+                authentication:
+                  basic:
+                    # Placeholder values - overridden by env vars from flipt-git-credentials secret
+                    username: "placeholder"
+                    password: "placeholder"
                 backend:
                   type: memory
 
