@@ -49,7 +49,8 @@ in
     createNamespace = false;
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "-78";
+      # After keycloak-config (-50 to -40) which creates keycloak-clients secret
+      "argocd.argoproj.io/sync-wave" = "-35";
     };
 
     syncPolicy = {

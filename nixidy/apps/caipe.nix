@@ -627,7 +627,8 @@ in
 
             spec.containers = [{
               name = "milvus";
-              image = "milvusdb/milvus:v2.3.4";
+              # Use v2.4.x to fix HNSW index efConstruction bug (pymilvus #1886)
+              image = "milvusdb/milvus:v2.4.17";
               ports = [
                 { containerPort = 19530; name = "grpc"; }
                 { containerPort = 9091; name = "metrics"; }
@@ -891,7 +892,10 @@ in
           };
         };
         spec = {
-          replicas = 1;
+          # Scaled to 0 - langchain-milvus has bug with HNSW index params (pymilvus #1886)
+          # Error: "efConstruction out of range" when creating sparse-dense vector index
+          # Fix: Update caipe-rag-server image when langchain-milvus is fixed upstream
+          replicas = 0;
           selector.matchLabels.app = "rag-server";
 
           template = {

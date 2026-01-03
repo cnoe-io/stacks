@@ -161,4 +161,38 @@ in
       ''
     ];
   };
+
+  # Self-Signed ClusterIssuer for KIND environments
+  # Used for internal service certificates (e.g., Kargo webhooks)
+  # idpbuilder provides ingress TLS via idpbuilder-cert - this is separate
+  applications.selfsigned-issuer = lib.mkIf isKind {
+    namespace = "cert-manager";
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-80";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    yamls = [
+      ''
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: selfsigned-issuer
+        spec:
+          selfSigned: {}
+      ''
+    ];
+  };
 }

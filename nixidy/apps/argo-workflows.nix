@@ -61,6 +61,25 @@ in
             extraEnv = lib.mkIf isKind [
               { name = "BASE_HREF"; value = "/argo-workflows/"; }
             ];
+            # SSO configuration for Keycloak OIDC
+            sso = lib.mkIf isKind {
+              enabled = true;
+              issuer = "${keycloakUrl}/realms/${keycloakRealm}";
+              redirectUrl = "https://${ingressHost}:${toString ingressPort}/argo-workflows/oauth2/callback";
+              clientId = {
+                name = "keycloak-oidc";
+                key = "client-id";
+              };
+              clientSecret = {
+                name = "keycloak-oidc";
+                key = "secret-key";
+              };
+              scopes = [ "openid" "profile" "email" "groups" ];
+              rbac = {
+                enabled = true;
+              };
+              insecureSkipVerify = true;
+            };
           };
           workflow = {
             serviceAccount = {

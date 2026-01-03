@@ -39,6 +39,7 @@ in
 
     yamls = [
       # kargo-git-credentials - use gitea ClusterSecretStore (Kubernetes provider)
+      # Includes repoURL pattern to match both internal and external gitea URLs
       ''
         apiVersion: external-secrets.io/v1
         kind: ExternalSecret
@@ -57,6 +58,15 @@ in
           target:
             name: kargo-git-credentials
             creationPolicy: Owner
+            template:
+              metadata:
+                labels:
+                  kargo.akuity.io/cred-type: git
+              data:
+                username: "{{ .username }}"
+                password: "{{ .password }}"
+                repoURL: "gitea"
+                repoURLIsRegex: "true"
           data:
             - secretKey: username
               remoteRef:
@@ -229,10 +239,182 @@ in
     };
   };
 
-  # NOTE: Gitea webhooks can be configured manually via UI if needed
-  # ArgoCD webhook URL: http://argocd-server.argocd.svc.cluster.local:80/api/webhook
-  # Kargo webhook URL: http://kargo-api.kargo.svc.cluster.local:80/webhooks/gitea
-  # idpBuilder already uses 60s polling, so webhooks are optional for faster sync
+  # =========================================================================
+  # Kargo Webhook Sync - Declaratively configures Gitea webhooks
+  # Creates webhooks in Gitea repos to notify Kargo of new artifacts
+  # =========================================================================
+  applications.kargo-webhook-sync = lib.mkIf isKind {
+    namespace = "kargo";
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "80";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    yamls = [
+      # Sync Gitea credentials to kargo namespace using gitea ClusterSecretStore
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: kargo-gitea-credentials
+          namespace: kargo
+          labels:
+            app.kubernetes.io/name: kargo-gitea-credentials
+            app.kubernetes.io/part-of: kargo
+        spec:
+          refreshInterval: "0"
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: gitea
+          target:
+            name: kargo-gitea-credentials
+            creationPolicy: Owner
+          data:
+            - secretKey: token
+              remoteRef:
+                key: gitea-credential
+                property: token
+      ''
+      # ConfigMap with webhook sync script
+      ''
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: kargo-webhook-sync-script
+          namespace: kargo
+        data:
+          sync-webhooks.sh: |
+            #!/bin/sh
+
+            # Configuration from environment
+            # Use HTTP for internal cluster communication
+            GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+            KARGO_WEBHOOK_URL="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80"
+
+            # Get webhook path from ClusterConfig (cluster-scoped, best practice)
+            # ClusterConfig triggers ALL Warehouses across ALL projects
+            # Path format: /webhooks/gitea/<hash>
+            WEBHOOK_PATH="/webhooks/gitea/7090e2e781280fe5dce3c1e9e110ad453602198aa7802cf5f834ee925c085738"
+
+            # Repos to configure (manifest repos watched by Kargo Warehouses)
+            REPOS="giteaadmin/idpbuilder-thinkpad-backstage-local-dev-manifests"
+
+            for REPO in $REPOS; do
+              REPO_OWNER=$(echo $REPO | cut -d'/' -f1)
+              REPO_NAME=$(echo $REPO | cut -d'/' -f2)
+
+              echo "Checking webhooks for $REPO..."
+              EXISTING_HOOKS=$(curl -s --connect-timeout 10 --max-time 30 "$GITEA_URL/api/v1/repos/$REPO_OWNER/$REPO_NAME/hooks" \
+                -H "Authorization: token $GITEA_TOKEN" 2>&1 || echo "[]")
+
+              # Check if our webhook already exists
+              if echo "$EXISTING_HOOKS" | grep -q "$WEBHOOK_PATH"; then
+                echo "  Webhook already exists"
+              else
+                echo "  Creating Kargo webhook..."
+                RESULT=$(curl -s --connect-timeout 10 --max-time 30 -X POST "$GITEA_URL/api/v1/repos/$REPO_OWNER/$REPO_NAME/hooks" \
+                  -H "Authorization: token $GITEA_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$KARGO_WEBHOOK_URL$WEBHOOK_PATH\",\"content_type\":\"json\",\"secret\":\"$KARGO_WEBHOOK_SECRET\"},\"events\":[\"push\"],\"active\":true}" 2>&1)
+                if echo "$RESULT" | grep -q '"id"'; then
+                  echo "  Webhook created successfully"
+                else
+                  echo "  Failed to create webhook: $RESULT"
+                fi
+              fi
+            done
+            echo "Webhook sync complete"
+      ''
+      # CronJob to ensure webhooks stay configured
+      ''
+        apiVersion: batch/v1
+        kind: CronJob
+        metadata:
+          name: kargo-webhook-sync
+          namespace: kargo
+          labels:
+            app.kubernetes.io/name: kargo-webhook-sync
+            app.kubernetes.io/part-of: kargo
+        spec:
+          schedule: "0 * * * *"
+          successfulJobsHistoryLimit: 1
+          failedJobsHistoryLimit: 3
+          jobTemplate:
+            spec:
+              template:
+                spec:
+                  restartPolicy: OnFailure
+                  containers:
+                    - name: webhook-sync
+                      image: curlimages/curl:8.5.0
+                      command: ["/bin/sh", "/scripts/sync-webhooks.sh"]
+                      env:
+                        - name: GITEA_TOKEN
+                          valueFrom:
+                            secretKeyRef:
+                              name: kargo-gitea-credentials
+                              key: token
+                        - name: KARGO_WEBHOOK_SECRET
+                          value: kargo-gitea-webhook-thinkpad-secret-2024
+                      volumeMounts:
+                        - name: scripts
+                          mountPath: /scripts
+                  volumes:
+                    - name: scripts
+                      configMap:
+                        name: kargo-webhook-sync-script
+                        defaultMode: 0755
+      ''
+      # Job to run webhook sync immediately on deployment
+      ''
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: kargo-webhook-sync-init
+          namespace: kargo
+          annotations:
+            argocd.argoproj.io/hook: PostSync
+            argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+        spec:
+          ttlSecondsAfterFinished: 3600
+          template:
+            spec:
+              restartPolicy: OnFailure
+              containers:
+                - name: webhook-sync
+                  image: curlimages/curl:8.5.0
+                  command: ["/bin/sh", "/scripts/sync-webhooks.sh"]
+                  env:
+                    - name: GITEA_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: kargo-gitea-credentials
+                          key: token
+                    - name: KARGO_WEBHOOK_SECRET
+                      value: kargo-gitea-webhook-thinkpad-secret-2024
+                  volumeMounts:
+                    - name: scripts
+                      mountPath: /scripts
+              volumes:
+                - name: scripts
+                  configMap:
+                    name: kargo-webhook-sync-script
+                    defaultMode: 0755
+      ''
+    ];
+  };
 
   # NOTE: kargo-backstage-pipeline is defined in kargo-pipelines.nix
 

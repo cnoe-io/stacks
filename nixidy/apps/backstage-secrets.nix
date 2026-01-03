@@ -32,7 +32,9 @@ in
       createNamespace = false;  # Created by backstage.nix
 
       annotations = {
-        "argocd.argoproj.io/sync-wave" = "-70";  # Before backstage deployment
+        # Sync-wave -35: After keycloak-config (-50 to -40) which creates keycloak-clients secret
+        # but before backstage deployment (100)
+        "argocd.argoproj.io/sync-wave" = "-35";
       };
 
       syncPolicy = {

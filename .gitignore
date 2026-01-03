@@ -76,3 +76,4 @@ argocd-*-screenshot.png
 .devenv.flake.nix
 devenv.lock
 result
+nixidy/dist/

@@ -232,22 +232,48 @@ ensure-nixidy-ready() {
   return 0
 }
 
-# Synthesize nixidy manifests
+# Synthesize nixidy manifests and restructure for idpBuilder
 nixidy-synth() {
   local NIXIDY_DIR="$STACKS_DIR/nixidy"
   local ENV="${1:-kind}"
+  local OUTPUT_DIR="$STACKS_DIR/dist"
 
   echo "🔨 Synthesizing nixidy manifests for $ENV..."
+
+  # Source environment variables for nixidy (Azure credentials, cluster config, etc.)
+  # These are read at nix evaluation time via builtins.getEnv in variables.nix
+  if [ -f "$STACKS_DIR/.env-files/kind.env" ] && [ "$ENV" = "kind" ]; then
+    echo "📋 Loading environment from kind.env for nixidy build..."
+    source "$STACKS_DIR/.env-files/kind.env"
+    export AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_KEYVAULT_NAME
+    export CLUSTER_HOST TAILSCALE_TAILNET
+  fi
 
   cd "$NIXIDY_DIR"
 
   # Build nixidy manifests (creates result symlink)
-  if nix develop -c nixidy build ".#$ENV" 2>&1; then
-    echo "✅ Nixidy synthesis complete. Manifests in: $NIXIDY_DIR/result/"
-    return 0
-  else
+  # Use 'nix run' instead of 'nix develop -c' for non-interactive subshell compatibility
+  if ! nix run .#nixidy -- build ".#$ENV" 2>&1; then
     echo "❌ Nixidy synthesis failed"
     return 1
+  fi
+
+  echo "✅ Nixidy build complete. Restructuring for idpBuilder..."
+
+  # Restructure nixidy output to idpBuilder format
+  # This creates <app>.yaml + <app>/manifests/ structure
+  if [ -f "$STACKS_DIR/scripts/nixidy-to-idpbuilder.sh" ]; then
+    cd "$STACKS_DIR"
+    if ./scripts/nixidy-to-idpbuilder.sh --env "$ENV" --output "$OUTPUT_DIR" 2>&1; then
+      echo "✅ Restructuring complete. Manifests in: $OUTPUT_DIR/"
+      return 0
+    else
+      echo "❌ Restructuring failed"
+      return 1
+    fi
+  else
+    echo "⚠️  nixidy-to-idpbuilder.sh not found, using raw nixidy output"
+    return 0
   fi
 }
 
@@ -276,6 +302,43 @@ generate-kind-config() {
   sed "s|\${STACKS_DIR}|$STACKS_DIR|g" "$TEMPLATE_FILE" > "$OUTPUT_FILE"
 
   echo "✅ Generated kind-config.yaml with STACKS_DIR=$STACKS_DIR"
+}
+
+# Fix /etc/hosts on KIND nodes for gitea.cnoe.localtest.me resolution
+# Required because containerd on KIND nodes doesn't use CoreDNS, it uses node's /etc/hosts
+# Without this, *.localtest.me resolves to ::1 (localhost) and image pulls fail
+fix-kind-hosts() {
+  local CLUSTER_NAME="${1:-$(detect_hostname)}"
+
+  echo "🔧 Fixing /etc/hosts on KIND nodes for gitea.cnoe.localtest.me..."
+
+  # Get the ingress-nginx ClusterIP
+  local INGRESS_IP
+  INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+
+  if [ -z "$INGRESS_IP" ]; then
+    echo "⚠️  Could not get ingress-nginx ClusterIP, skipping hosts fix"
+    return 0
+  fi
+
+  echo "   Ingress ClusterIP: $INGRESS_IP"
+
+  # Find all KIND nodes for this cluster
+  local nodes
+  nodes=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E "^${CLUSTER_NAME}-(control|worker)" || true)
+
+  if [ -z "$nodes" ]; then
+    echo "⚠️  No KIND nodes found for cluster: $CLUSTER_NAME"
+    return 0
+  fi
+
+  # Add /etc/hosts entry to each node (idempotent)
+  for node in $nodes; do
+    docker exec "$node" sh -c "grep -q 'gitea.cnoe.localtest.me' /etc/hosts || echo '$INGRESS_IP gitea.cnoe.localtest.me' >> /etc/hosts" 2>/dev/null
+    echo "   ✅ Updated $node"
+  done
+
+  echo "✅ KIND nodes /etc/hosts fixed for Gitea OCI registry access"
 }
 
 # Base functions - always non-interactive
@@ -333,7 +396,7 @@ cluster-deploy() {
   if [ -f "$DEPLOY_DIR/scripts/deploy-linux-ssh.sh" ]; then
     echo "Using Linux deployment script with direct key mounting and Azure integration..."
     cd "$DEPLOY_DIR/scripts" && ./deploy-linux-ssh.sh \
-      --package "$NIXIDY_DIR/result/" \
+      --package "$STACKS_DIR/dist/" \
       "$@"
   else
     # Fallback to standard idpbuilder with post-setup JWKS sync
@@ -345,15 +408,16 @@ cluster-deploy() {
 
     idpbuilder create \
       --name "${CLUSTER_NAME}" \
-      -p "$NIXIDY_DIR/result/" \
+      -p "$STACKS_DIR/dist/" \
       --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
       --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
       --dev-password "$@"
 
-    # Sync JWKS after cluster creation (now in deployment/scripts)
-    if [ -f "$DEPLOY_DIR/scripts/sync-jwks-to-azure.sh" ]; then
+    # Sync JWKS after cluster creation
+    local JWKS_SCRIPT="$STACKS_DIR/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh"
+    if [ -f "$JWKS_SCRIPT" ]; then
       echo "🔄 Syncing JWKS to Azure for External Secrets..."
-      cd "$DEPLOY_DIR/scripts" && ./sync-jwks-to-azure.sh
+      "$JWKS_SCRIPT"
     fi
   fi
 
@@ -362,6 +426,11 @@ cluster-deploy() {
   # Note: Docker Hub auth is now configured via Kind mount (containerd/certs.d)
   # The generate-docker-registry-config.sh script runs before cluster creation
   # and the Kind config mounts the generated config at /etc/containerd/certs.d
+
+  # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
+  if [ $result -eq 0 ]; then
+    fix-kind-hosts "${CLUSTER_NAME}"
+  fi
 
   # Initialize ArgoCD authentication and save token to 1Password after successful deployment
   if [ $result -eq 0 ] && [ "${SKIP_ARGOCD_INIT:-}" != "true" ]; then
@@ -602,13 +671,13 @@ cluster-update-gum() {
     return 1
   fi
 
-  # Step 1: Synthesize with spinner
+  # Step 1: Synthesize with spinner (includes restructuring for idpBuilder)
   gum spin --spinner dot --title "🔨 Synthesizing nixidy manifests..." -- \
-    bash -lc "cd '$NIXIDY_DIR' && nix develop -c nixidy build .#kind >/dev/null 2>&1"
+    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; nixidy-synth kind >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Nixidy synthesis failed"
-    cd "$NIXIDY_DIR" && nix develop -c nixidy build .#kind
+    nixidy-synth "kind"
     cd "$ORIG_DIR"
     return 1
   fi
@@ -620,7 +689,7 @@ cluster-update-gum() {
 
   # Step 2: Update cluster with spinner
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
-    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$NIXIDY_DIR/result/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
+    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$STACKS_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -712,18 +781,11 @@ cluster-update() {
   echo "🔍 Checking nixidy dependencies..."
   ensure-nixidy-ready || return 1
 
-  # Step 1: Synthesize nixidy manifests
-  echo "🔨 Synthesizing nixidy manifests..."
-
-  # Run synthesis
-  cd "$NIXIDY_DIR"
-  nix develop -c nixidy build .#kind || {
-    echo "❌ Nixidy synthesis failed"
+  # Step 1: Synthesize nixidy manifests (includes restructuring for idpBuilder)
+  nixidy-synth "kind" || {
     cd "$ORIG_DIR"
     return 1
   }
-
-  echo "✅ Synthesis complete. Manifests in: $NIXIDY_DIR/result/"
 
   # Step 2: Update cluster using idpbuilder
   echo ""
@@ -736,7 +798,7 @@ cluster-update() {
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   idpbuilder create \
     --name "${CLUSTER_NAME}" \
-    -p "$NIXIDY_DIR/result/" \
+    -p "$STACKS_DIR/dist/" \
     --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
     --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
     --dev-password
@@ -751,7 +813,10 @@ cluster-update() {
   echo ""
   echo "✅ Cluster update complete"
 
-  # Step 3: Show ArgoCD application status
+  # Step 3: Fix /etc/hosts on KIND nodes for Gitea OCI registry access
+  fix-kind-hosts "${CLUSTER_NAME}"
+
+  # Step 4: Show ArgoCD application status
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "📊 ARGOCD APPLICATION STATUS"

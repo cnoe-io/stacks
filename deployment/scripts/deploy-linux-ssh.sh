@@ -323,30 +323,12 @@ else
     echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
 fi
 
-# Step 9: Deploy SSH services (if CDK8s manifests exist)
-CDK8S_DIST="/home/vpittamp/stacks/cdk8s/dist"
-if [ -d "${CDK8S_DIST}" ]; then
-    echo -e "${GREEN}Checking for SSH service manifests...${NC}"
-    
-    # Find and apply all SSH service manifests
-    for manifest in ${CDK8S_DIST}/*/manifests/Service.*-ssh.k8s.yaml; do
-        if [ -f "$manifest" ]; then
-            # Extract namespace from the manifest
-            NAMESPACE=$(grep "namespace:" "$manifest" | head -1 | awk '{print $2}')
-            if [ -n "$NAMESPACE" ]; then
-                # Ensure namespace exists
-                kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
-                echo -e "${GREEN}Applying $(basename $manifest) to namespace ${NAMESPACE}...${NC}"
-                kubectl apply -f "$manifest"
-            fi
-        fi
-    done
-else
-    echo -e "${YELLOW}CDK8s dist directory not found, skipping SSH services${NC}"
-fi
+# Step 9: SSH services are now deployed via ArgoCD from nixidy manifests
+# No manual deployment needed here
 
 # Step 10: Sync JWKS to Azure (CRITICAL for External Secrets)
-if [ -f "${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh" ]; then
+JWKS_SCRIPT="${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh"
+if [ -f "$JWKS_SCRIPT" ]; then
     echo -e "${GREEN}Checking Azure authentication for JWKS sync...${NC}"
     
     # Pre-check Azure auth to fail fast
@@ -358,7 +340,7 @@ if [ -f "${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-a
         echo ""
         echo -e "${YELLOW}Note: The cluster has been created but External Secrets will not work.${NC}"
         echo -e "${YELLOW}After logging in to Azure, you can run:${NC}"
-        echo -e "${YELLOW}  ${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
+        echo -e "${YELLOW}  $JWKS_SCRIPT${NC}"
         exit 1
     fi
     
@@ -392,7 +374,7 @@ if [ -f "${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-a
     echo ""
     
     # Run the sync
-    ${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh
+    "$JWKS_SCRIPT"
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ JWKS successfully synced to Azure${NC}"
@@ -402,11 +384,11 @@ if [ -f "${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-a
         sleep 5
     else
         echo -e "${RED}⚠️  JWKS sync failed - External Secrets will not work properly${NC}"
-        echo -e "${YELLOW}You can manually run: ${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
+        echo -e "${YELLOW}You can manually run: $JWKS_SCRIPT${NC}"
     fi
 else
     echo -e "${RED}⚠️  Azure JWKS sync script not found - External Secrets will fail${NC}"
-    echo -e "${YELLOW}Expected at: ${STACKS_DIR}/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh${NC}"
+    echo -e "${YELLOW}Expected at: $JWKS_SCRIPT${NC}"
 fi
 
 # Step 11: Verify External Secrets health

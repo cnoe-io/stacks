@@ -1,17 +1,18 @@
 # Cert-Manager - TLS Certificate Management
-# Provides Let's Encrypt certificate automation for Talos clusters.
-# KIND uses localtest.me which doesn't require TLS certificates.
+# Provides certificate automation for both Talos (Let's Encrypt) and KIND (self-signed).
+# KIND uses self-signed certificates for internal services (webhooks, etc.)
 # Uses nixhelm for Helm chart management following nixidy best practices.
 #
-# Dependency chain: cert-manager → cert-manager-secrets → cloudflare-issuer
+# Dependency chain: cert-manager → cert-manager-secrets → cloudflare-issuer (Talos) / selfsigned-issuer (KIND)
 # Mirrors: cdk8s/config/applications.ts cert-manager entries
 { config, lib, charts, ... }:
 let
   isTalos = config.environmentType == "talos";
+  isKind = config.environmentType == "kind";
   namespace = "cert-manager";
 in
 {
-  config = lib.mkIf isTalos {
+  config = lib.mkIf (isTalos || isKind) {
     # Cert-Manager - includes CRDs with installCRDs=true
     applications.cert-manager = {
       inherit namespace;

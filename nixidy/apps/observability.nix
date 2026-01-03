@@ -88,25 +88,10 @@ in
               remoteRef:
                 key: LANGFUSE-ENCRYPTION-KEY
       ''
-      ''
-        apiVersion: external-secrets.io/v1
-        kind: ExternalSecret
-        metadata:
-          name: langfuse-api
-          namespace: ${namespace}
-        spec:
-          refreshInterval: 1h
-          secretStoreRef:
-            kind: ClusterSecretStore
-            name: azure-keyvault-store
-          target:
-            name: langfuse-api
-            creationPolicy: Owner
-          data:
-            - secretKey: LANGFUSE_AUTH
-              remoteRef:
-                key: LANGFUSE-API-AUTH
-      ''
+      # Note: langfuse-api ExternalSecret removed - LANGFUSE-API-AUTH doesn't exist in Key Vault
+      # The OTEL collector config marks this secret as optional
+      # To enable Langfuse integration, create LANGFUSE-API-AUTH in Key Vault with format:
+      # "Basic <base64(LANGFUSE_PUBLIC_KEY:LANGFUSE_SECRET_KEY)>"
     ];
   };
 

@@ -113,7 +113,12 @@ get_nixidy_result() {
         exit 1
     fi
 
-    echo "$result_path"
+    # Handle both old format (result/<app>/) and new activation package format (result/environment/<app>/)
+    if [[ -d "${result_path}/environment" ]]; then
+        echo "${result_path}/environment"
+    else
+        echo "$result_path"
+    fi
 }
 
 # Restructure nixidy output to idpBuilder format
@@ -131,6 +136,10 @@ restructure_output() {
 
     # Clean output directory
     if [[ "$DRY_RUN" == "false" ]]; then
+        # Make files writable before removal (nix store files are read-only)
+        if [[ -d "${OUTPUT_DIR}" ]]; then
+            chmod -R u+w "${OUTPUT_DIR}" 2>/dev/null || true
+        fi
         rm -rf "${OUTPUT_DIR}"
         mkdir -p "${OUTPUT_DIR}"
     fi
@@ -204,8 +213,9 @@ process_argocd_apps() {
             if [[ "$ENV_TYPE" == "kind" ]]; then
                 # Transform GitHub source to cnoe:// protocol using sed
                 # This avoids yq version compatibility issues
+                # Keep path: . for ArgoCD to find manifests in the repo root
                 sed -e "s|repoURL:.*|repoURL: cnoe://${app_name}/manifests|" \
-                    -e '/path:/d' \
+                    -e "s|path:.*|path: .|" \
                     -e '/targetRevision:/d' \
                     "$app_file" > "${OUTPUT_DIR}/${app_name}.yaml"
             else
@@ -219,6 +229,50 @@ process_argocd_apps() {
             log_success "  Created: ${OUTPUT_DIR}/${app_name}.yaml"
         fi
     done
+}
+
+# Handle file-based templates (templates with skeleton directories)
+# These need the full directory structure, not flat manifests
+handle_file_based_templates() {
+    log_info "Processing file-based templates..."
+
+    # Backstage templates - need full directory structure with skeletons
+    local backstage_templates="${REPO_ROOT}/nixidy/templates/backstage"
+    if [[ -d "$backstage_templates" ]]; then
+        local target_dir="${OUTPUT_DIR}/backstage-templates/entities"
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "  Would remove: ${OUTPUT_DIR}/backstage-templates/manifests"
+            echo "  Would copy: ${backstage_templates} -> ${target_dir}"
+        else
+            # Remove nixidy-generated flat manifests
+            rm -rf "${OUTPUT_DIR}/backstage-templates/manifests"
+
+            # Copy the full template directory tree
+            mkdir -p "${OUTPUT_DIR}/backstage-templates"
+            cp -r "$backstage_templates" "$target_dir"
+
+            # Ensure files are writable
+            chmod -R u+w "$target_dir" 2>/dev/null || true
+
+            # Update the ArgoCD Application to use entities path and exclude catalog-info.yaml
+            local app_yaml="${OUTPUT_DIR}/backstage-templates.yaml"
+            if [[ -f "$app_yaml" ]]; then
+                # Update repoURL to use /entities instead of /manifests
+                sed -i 's|cnoe://backstage-templates/manifests|cnoe://backstage-templates/entities|' "$app_yaml"
+
+                # Add directory exclude for catalog-info.yaml (Backstage catalog file, not K8s resource)
+                # Insert after path: . line
+                if ! grep -q "directory:" "$app_yaml"; then
+                    sed -i '/path: \./a\    directory:\n      exclude: '\''catalog-info.yaml'\''' "$app_yaml"
+                fi
+            fi
+
+            log_success "  backstage-templates: copied file-based templates with skeletons"
+        fi
+    else
+        log_warning "  Backstage templates not found at ${backstage_templates}"
+    fi
 }
 
 # Verify the restructured output
@@ -266,6 +320,9 @@ main() {
 
     # Restructure output
     restructure_output
+
+    # Handle file-based templates (Backstage templates with skeletons)
+    handle_file_based_templates
 
     # Verify if not dry run
     if [[ "$DRY_RUN" == "false" ]]; then

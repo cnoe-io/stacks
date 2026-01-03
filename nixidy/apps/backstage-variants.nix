@@ -22,7 +22,8 @@ in
     createNamespace = true;
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "-75";
+      # After keycloak-config (-50 to -40) which creates keycloak-clients
+      "argocd.argoproj.io/sync-wave" = "-35";
     };
 
     syncPolicy = {
@@ -234,7 +235,8 @@ in
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "85";
-      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage-dev";
+      # Authorize Kargo Stage to mutate this Application for promotions
+      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage-local-dev";
     };
 
     syncPolicy = {
@@ -374,6 +376,9 @@ in
         };
       };
     };
+
+    # Note: kustomization.yaml for Kargo is generated separately
+    # via the kargo-backstage-pipeline manifest repo, not here
   };
 
   # Backstage Staging Secrets
@@ -382,7 +387,8 @@ in
     createNamespace = true;
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "-75";
+      # After keycloak-config (-50 to -40) which creates keycloak-clients
+      "argocd.argoproj.io/sync-wave" = "-35";
     };
 
     syncPolicy = {
