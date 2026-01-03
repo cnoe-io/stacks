@@ -3,15 +3,6 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-65"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  labels:
-    app.kubernetes.io/component: tracing
-    app.kubernetes.io/environment: talos
-    app.kubernetes.io/managed-by: cdk8s
-    app.kubernetes.io/name: jaeger
-    app.kubernetes.io/part-of: observability
-    example: basic
   name: jaeger
   namespace: argocd
 spec:
@@ -19,10 +10,9 @@ spec:
     namespace: observability
     server: https://kubernetes.default.svc
   project: default
-  sources:
-    - path: cdk8s/dist/jaeger/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: main
+  source:
+    path: .
+    repoURL: cnoe://jaeger/manifests
   syncPolicy:
     automated:
       prune: true

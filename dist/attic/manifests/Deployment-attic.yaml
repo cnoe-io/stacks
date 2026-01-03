@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: attic
+  name: attic
+  namespace: nix-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attic
+  template:
+    metadata:
+      labels:
+        app: attic
+    spec:
+      containers:
+        - args:
+            - -f
+            - /etc/attic/server.toml
+          image: ghcr.io/zhaofengli/attic:latest
+          name: attic
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/attic
+              name: config
+            - mountPath: /var/lib/attic
+              name: data
+      volumes:
+        - name: config
+          secret:
+            secretName: attic-server-config
+        - emptyDir: {}
+          name: data

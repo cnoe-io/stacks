@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: agent-backstage
+    tier: agent
+  name: agent-backstage
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-backstage
+  template:
+    metadata:
+      labels:
+        app: agent-backstage
+    spec:
+      containers:
+        - env:
+            - name: BACKSTAGE_URL
+              value: http://backstage.backstage.svc.cluster.local:7007
+          envFrom:
+            - secretRef:
+                name: llm-secret
+            - secretRef:
+                name: agent-backstage-secret
+          image: ghcr.io/cnoe-io/agent-backstage:latest
+          name: agent-backstage
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

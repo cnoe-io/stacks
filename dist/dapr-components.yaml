@@ -3,15 +3,6 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-90"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  labels:
-    app.kubernetes.io/component: infrastructure
-    app.kubernetes.io/environment: talos
-    app.kubernetes.io/managed-by: cdk8s
-    app.kubernetes.io/name: dapr-components
-    app.kubernetes.io/part-of: dapr-agents
-    example: basic
   name: dapr-components
   namespace: argocd
 spec:
@@ -19,10 +10,9 @@ spec:
     namespace: dapr-agents
     server: https://kubernetes.default.svc
   project: default
-  sources:
-    - path: cdk8s/dist/dapr-components/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: main
+  source:
+    path: .
+    repoURL: cnoe://dapr-components/manifests
   syncPolicy:
     automated:
       prune: true

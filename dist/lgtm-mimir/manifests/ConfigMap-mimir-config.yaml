@@ -1,0 +1,25 @@
+apiVersion: v1
+data:
+  mimir.yaml: |
+    multitenancy_enabled: false
+    server:
+      http_listen_port: 9009
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/blocks
+      tsdb:
+        dir: /data/tsdb
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/rules
+kind: ConfigMap
+metadata:
+  name: mimir-config
+  namespace: observability

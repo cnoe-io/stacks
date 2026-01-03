@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: backstage
+  name: backstage
+  namespace: backstage-local-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backstage
+  template:
+    metadata:
+      labels:
+        app: backstage
+    spec:
+      containers:
+        - env:
+            - name: GITEA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: GITEA_USERNAME
+                  name: gitea-credentials
+            - name: GITEA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: GITEA_PASSWORD
+                  name: gitea-credentials
+          envFrom:
+            - secretRef:
+                name: backstage-env-vars
+          image: ghcr.io/pittampalliorg/backstage:v1.0.0
+          name: backstage
+          ports:
+            - containerPort: 7007
+              name: http
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: ghcr-dockercfg

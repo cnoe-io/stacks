@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  note: Prometheus metrics. Using Mimir for long-term storage. See lgtm-mimir in observability.nix
+  status: placeholder
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: observability
+  name: prometheus-placeholder
+  namespace: observability

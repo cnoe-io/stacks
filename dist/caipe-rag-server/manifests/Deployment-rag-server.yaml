@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rag-server
+    tier: rag
+  name: rag-server
+  namespace: ai-platform-engineering
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: rag-server
+  template:
+    metadata:
+      labels:
+        app: rag-server
+    spec:
+      containers:
+        - env:
+            - name: MILVUS_URI
+              value: http://milvus.ai-platform-engineering.svc.cluster.local:19530
+            - name: NEO4J_ADDR
+              value: neo4j://neo4j.ai-platform-engineering.svc.cluster.local:7687
+            - name: NEO4J_ONTOLOGY_ADDR
+              value: neo4j://neo4j.ai-platform-engineering.svc.cluster.local:7687
+            - name: NEO4J_USERNAME
+              value: neo4j
+            - name: REDIS_URL
+              value: redis://redis.ai-platform-engineering.svc.cluster.local:6379/0
+            - name: ONTOLOGY_AGENT_RESTAPI_ADDR
+              value: http://nexigraph.ai-platform-engineering.svc.cluster.local:8098
+            - name: EMBEDDINGS_MODEL
+              value: text-embedding-3-large
+            - name: ENABLE_GRAPH_RAG
+              value: "true"
+          envFrom:
+            - secretRef:
+                name: llm-secret
+            - secretRef:
+                name: embeddings-secret
+            - secretRef:
+                name: neo4j-secret
+          image: ghcr.io/cnoe-io/caipe-rag-server:0.2.8
+          name: rag-server
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

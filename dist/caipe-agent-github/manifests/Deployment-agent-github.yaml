@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: agent-github
+    tier: agent
+  name: agent-github
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-github
+  template:
+    metadata:
+      labels:
+        app: agent-github
+    spec:
+      containers:
+        - envFrom:
+            - secretRef:
+                name: llm-secret
+            - secretRef:
+                name: agent-github-secret
+          image: ghcr.io/cnoe-io/agent-github:latest
+          name: agent-github
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

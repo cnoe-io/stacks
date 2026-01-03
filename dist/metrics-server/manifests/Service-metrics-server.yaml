@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: metrics-server
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: metrics-server
+    app.kubernetes.io/version: 0.8.0
+    helm.sh/chart: metrics-server-3.13.0
+  name: metrics-server
+  namespace: kube-system
+spec:
+  ports:
+    - appProtocol: https
+      name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/instance: metrics-server
+    app.kubernetes.io/name: metrics-server
+  type: ClusterIP

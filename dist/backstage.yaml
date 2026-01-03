@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: manifests
-    repoURL: cnoe://backstage
+    path: .
+    repoURL: cnoe://backstage/manifests
   syncPolicy:
     automated:
       prune: true

@@ -1,0 +1,58 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  labels:
+    app.kubernetes.io/component: stage
+    app.kubernetes.io/name: backstage-local-dev-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+    kargo.akuity.io/loop: inner
+  name: backstage-local-dev
+  namespace: kargo-pipelines
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+        - as: clone-repo
+          config:
+            checkout:
+              - branch: main
+                path: ./repo
+            repoURL: ${{ vars.gitRepoURL }}
+          uses: git-clone
+        - as: update-image
+          config:
+            images:
+              - image: ghcr.io/pittampalliorg/backstage
+                newName: ${{ vars.imageRepoURL }}
+                tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
+            path: ./repo
+          uses: kustomize-set-image
+        - as: commit-changes
+          config:
+            message: ${{ outputs['update-image'].commitMessage }}
+            path: ./repo
+          uses: git-commit
+        - as: push-changes
+          config:
+            path: ./repo
+          uses: git-push
+        - as: sync-argocd-app
+          config:
+            apps:
+              - name: backstage-local-dev
+                namespace: argocd
+                sources:
+                  - desiredRevision: ${{ outputs['push-changes'].commit }}
+                    repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+          uses: argocd-update
+      vars:
+        - name: gitRepoURL
+          value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+        - name: imageRepoURL
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage
+      sources:
+        direct: true

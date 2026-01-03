@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/sync-wave: "-77"
+  name: feature-flags-repo-init
+  namespace: argocd
+spec:
+  destination:
+    namespace: feature-flags
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://feature-flags-repo-init/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

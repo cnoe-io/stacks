@@ -3,15 +3,6 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-125"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  labels:
-    app.kubernetes.io/component: crds
-    app.kubernetes.io/environment: talos
-    app.kubernetes.io/managed-by: cdk8s
-    app.kubernetes.io/name: kgateway-crds
-    app.kubernetes.io/part-of: kgateway
-    example: basic
   name: kgateway-crds
   namespace: argocd
 spec:
@@ -19,10 +10,9 @@ spec:
     namespace: kgateway-system
     server: https://kubernetes.default.svc
   project: default
-  sources:
-    - path: cdk8s/dist/kgateway-crds/manifests
-      repoURL: https://github.com/PittampalliOrg/stacks.git
-      targetRevision: main
+  source:
+    path: .
+    repoURL: cnoe://kgateway-crds/manifests
   syncPolicy:
     automated:
       prune: false

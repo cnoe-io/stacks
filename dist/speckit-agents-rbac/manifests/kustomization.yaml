@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ClusterRole.speckit-webhook-reader.k8s.yaml
-  - ClusterRoleBinding.speckit-webhook-reader.k8s.yaml
-  - Role.speckit-agents.k8s.yaml
-  - RoleBinding.speckit-agents.k8s.yaml
-  - ServiceAccount.speckit-agents.k8s.yaml

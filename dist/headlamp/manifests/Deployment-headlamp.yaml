@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: headlamp
+  name: headlamp
+  namespace: headlamp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headlamp
+  template:
+    metadata:
+      labels:
+        app: headlamp
+    spec:
+      containers:
+        - args:
+            - -in-cluster
+            - -plugins-dir=/headlamp/plugins
+          envFrom:
+            - secretRef:
+                name: headlamp-oidc-secrets
+          image: ghcr.io/headlamp-k8s/headlamp:v0.25.0
+          name: headlamp
+          ports:
+            - containerPort: 4466
+              name: http
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /headlamp/plugins
+              name: plugins
+      initContainers:
+        - args:
+            - curl -L https://github.com/magohl/external-secrets-operator-headlamp-plugin/releases/download/0.1.0-beta7/external-secrets-operator-headlamp-plugin-0.1.0-beta7.tar.gz | tar -xz -C /headlamp/plugins
+          command:
+            - sh
+            - -c
+          image: curlimages/curl:8.5.0
+          name: download-plugins
+          volumeMounts:
+            - mountPath: /headlamp/plugins
+              name: plugins
+      serviceAccountName: headlamp
+      volumes:
+        - emptyDir: {}
+          name: plugins

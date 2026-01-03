@@ -1,0 +1,24 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  labels:
+    app.kubernetes.io/component: warehouse
+    app.kubernetes.io/name: backstage-warehouse
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: backstage
+  namespace: kargo-pipelines
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+    - git:
+        branch: main
+        insecureSkipTLSVerify: true
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+    - image:
+        discoveryLimit: 20
+        imageSelectionStrategy: SemVer
+        insecureSkipTLSVerify: true
+        platform: linux/amd64
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+        semverConstraint: '*'

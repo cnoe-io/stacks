@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: agent-argocd
+    tier: agent
+  name: agent-argocd
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-argocd
+  template:
+    metadata:
+      labels:
+        app: agent-argocd
+    spec:
+      containers:
+        - env:
+            - name: ARGOCD_SERVER
+              value: argocd-server.argocd.svc.cluster.local
+          envFrom:
+            - secretRef:
+                name: llm-secret
+            - secretRef:
+                name: agent-argocd-secret
+          image: ghcr.io/cnoe-io/agent-argocd:latest
+          name: agent-argocd
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  name: minio
+  namespace: argocd
+spec:
+  destination:
+    namespace: nix-cache
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://minio/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

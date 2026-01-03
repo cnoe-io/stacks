@@ -1,0 +1,112 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  name: kargo-helm
+  namespace: argocd
+spec:
+  destination:
+    namespace: kargo
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    chart: kargo
+    helm:
+      valuesObject:
+        api:
+          adminAccount:
+            enabled: true
+            passwordHash: $2b$10$bqVe5nszNR1eEt20jtNSle24cBsnhiiNcFHgZuMcv7HACZCD6a3IW
+            tokenSigningKey: pw4J0w4L2sMcvsbdWNPgWSeOuBm1IK0b
+            tokenTTL: 24h
+          grpcWeb: true
+          host: kargo.cnoe.localtest.me
+          ingress:
+            annotations:
+              nginx.ingress.kubernetes.io/backend-protocol: HTTP
+              nginx.ingress.kubernetes.io/grpc-backend: "true"
+            className: nginx
+            enabled: true
+            tls:
+              enabled: false
+          logLevel: INFO
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          service:
+            port: 8080
+            type: ClusterIP
+          tls:
+            enabled: false
+        awsLoadBalancerController:
+          enabled: false
+        certificates:
+          enabled: false
+        controller:
+          allowCredentialsOverHTTP: true
+          logLevel: INFO
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+        externalWebhooksServer:
+          enabled: true
+          incomingWebhooks:
+            github:
+              enabled: true
+              secretKeyRef:
+                key: secret
+                name: kargo-github-webhook-secret
+          tls:
+            enabled: false
+        garbageCollector:
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+        management:
+          logLevel: INFO
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+        rbac:
+          installClusterRoleBindings: true
+          installClusterRoles: true
+        webhooks:
+          logLevel: INFO
+          register: false
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+        webhooksServer:
+          enabled: true
+          tls:
+            selfSignedCert: false
+    repoURL: ghcr.io/akuity/kargo-charts
+    targetRevision: 1.8.4
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

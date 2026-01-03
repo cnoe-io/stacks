@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rag-ingestors
+    tier: rag
+  name: rag-ingestors
+  namespace: ai-platform-engineering
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: rag-ingestors
+  template:
+    metadata:
+      labels:
+        app: rag-ingestors
+    spec:
+      containers:
+        - env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: OPENAI_API_KEY
+                  name: embeddings-secret
+            - name: NEO4J_URI
+              value: bolt://neo4j.ai-platform-engineering.svc.cluster.local:7687
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_AUTH
+                  name: neo4j-secret
+            - name: MILVUS_HOST
+              value: milvus.ai-platform-engineering.svc.cluster.local
+            - name: MILVUS_PORT
+              value: "19530"
+          image: ghcr.io/cnoe-io/caipe-rag-ingestors:latest
+          name: rag-ingestors
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

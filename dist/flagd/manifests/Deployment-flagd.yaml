@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: flagd
+  name: flagd
+  namespace: feature-flags
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flagd
+  template:
+    metadata:
+      labels:
+        app: flagd
+    spec:
+      containers:
+        - args:
+            - start
+            - --port
+            - "8013"
+            - --uri
+            - file:/etc/flagd/flags.json
+          image: ghcr.io/open-feature/flagd:v0.11.0
+          name: flagd
+          ports:
+            - containerPort: 8013
+              name: grpc
+            - containerPort: 8014
+              name: http
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /etc/flagd
+              name: flags-config
+              readOnly: true
+      volumes:
+        - configMap:
+            name: flagd-flags
+          name: flags-config
