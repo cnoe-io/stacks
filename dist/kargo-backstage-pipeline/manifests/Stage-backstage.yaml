@@ -2,13 +2,12 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
-    kargo.akuity.io/color: red
+    kargo.akuity.io/color: blue
   labels:
     app.kubernetes.io/component: stage
-    app.kubernetes.io/name: backstage-local-dev-stage
+    app.kubernetes.io/name: backstage-stage
     app.kubernetes.io/part-of: kargo-pipelines
-    kargo.akuity.io/loop: inner
-  name: backstage-local-dev
+  name: backstage
   namespace: kargo-pipelines
 spec:
   promotionTemplate:
@@ -48,15 +47,15 @@ spec:
           uses: argocd-update
       vars:
         - name: gitRepoURL
-          value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+          value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
         - name: gitRepoURLExternal
-          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
         - name: imageRepoURL
           value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
         - name: baseImage
           value: ghcr.io/pittampalliorg/backstage
         - name: argoAppName
-          value: backstage-local-dev
+          value: backstage
   requestedFreight:
     - origin:
         kind: Warehouse

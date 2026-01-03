@@ -278,23 +278,22 @@ in
                   insecureSkipTLSVerify: true
         ''
         # =========================================================================
-        # Stage - Backstage Local Dev (Inner Loop)
+        # Stage - Backstage
         # First stage in pipeline, receives freight directly from Warehouse
         # =========================================================================
         ''
           apiVersion: kargo.akuity.io/v1alpha1
           kind: Stage
           metadata:
-            name: backstage-local-dev
+            name: backstage
             namespace: ${namespace}
             labels:
-              app.kubernetes.io/name: backstage-local-dev-stage
+              app.kubernetes.io/name: backstage-stage
               app.kubernetes.io/part-of: kargo-pipelines
               app.kubernetes.io/component: stage
-              kargo.akuity.io/loop: inner
             annotations:
               # Stage color for Kargo UI
-              kargo.akuity.io/color: red
+              kargo.akuity.io/color: blue
           spec:
             requestedFreight:
               - origin:
@@ -306,15 +305,15 @@ in
               spec:
                 vars:
                   - name: gitRepoURL
-                    value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+                    value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
                   - name: gitRepoURLExternal
-                    value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+                    value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
                   - name: imageRepoURL
                     value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
                   - name: baseImage
                     value: ghcr.io/pittampalliorg/backstage
                   - name: argoAppName
-                    value: backstage-local-dev
+                    value: backstage
                 # NOTE: Kargo v1.8.4 MutatingWebhook Bug
                 # The mutating webhook doesn't copy promotionTemplate.spec.steps from Stage to Promotion
                 # when creating Promotions manually via kubectl/API.
