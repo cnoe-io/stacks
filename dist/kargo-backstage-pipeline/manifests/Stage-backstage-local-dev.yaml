@@ -1,6 +1,8 @@
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
+  annotations:
+    kargo.akuity.io/color: red
   labels:
     app.kubernetes.io/component: stage
     app.kubernetes.io/name: backstage-local-dev-stage
@@ -21,15 +23,14 @@ spec:
           uses: git-clone
         - as: update-image
           config:
-            images:
-              - image: ghcr.io/pittampalliorg/backstage
-                newName: ${{ vars.imageRepoURL }}
-                tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
-            path: ./repo
-          uses: kustomize-set-image
+            path: ./repo/Deployment-backstage.yaml
+            updates:
+              - key: spec.template.spec.containers.0.image
+                value: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
+          uses: yaml-update
         - as: commit-changes
           config:
-            message: ${{ outputs['update-image'].commitMessage }}
+            message: 'chore: update backstage image to ${{ imageFrom(vars.imageRepoURL).Tag }}'
             path: ./repo
           uses: git-commit
         - as: push-changes
@@ -39,17 +40,23 @@ spec:
         - as: sync-argocd-app
           config:
             apps:
-              - name: backstage-local-dev
+              - name: ${{ vars.argoAppName }}
                 namespace: argocd
                 sources:
                   - desiredRevision: ${{ outputs['push-changes'].commit }}
-                    repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+                    repoURL: ${{ vars.gitRepoURLExternal }}
           uses: argocd-update
       vars:
         - name: gitRepoURL
           value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+        - name: gitRepoURLExternal
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
         - name: imageRepoURL
           value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+        - name: baseImage
+          value: ghcr.io/pittampalliorg/backstage
+        - name: argoAppName
+          value: backstage-local-dev
   requestedFreight:
     - origin:
         kind: Warehouse

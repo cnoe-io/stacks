@@ -75,7 +75,36 @@ in
               - stageSelector:
                   name: "glob:*-prod"
                 autoPromotionEnabled: false
+            # NOTE: Project-scoped webhookReceivers commented out in favor of cluster-scoped ClusterConfig
+            # ClusterConfig (defined in kargo.nix) triggers ALL Warehouses across ALL projects,
+            # which is the best practice when all repos are in the same Git org (Gitea).
+            # See: https://docs.kargo.io/references/cluster-config/#webhookreceivers
+            #
+            # webhookReceivers:
+            #   - name: gitea-webhook
+            #     gitea:
+            #       secretRef:
+            #         name: kargo-gitea-webhook-secret
         ''
+        # NOTE: Project-scoped webhook secret commented out - using cluster-scoped secret instead
+        # The cluster-scoped secret is in kargo-cluster-secrets namespace (defined in kargo.nix)
+        #
+        # ''
+        #   apiVersion: v1
+        #   kind: Secret
+        #   type: Opaque
+        #   metadata:
+        #     name: kargo-gitea-webhook-secret
+        #     namespace: kargo-pipelines
+        #     labels:
+        #       app.kubernetes.io/name: kargo-gitea-webhook-secret
+        #       app.kubernetes.io/part-of: kargo-pipelines
+        #       kargo.akuity.io/cred-type: generic
+        #   stringData:
+        #     # Shared secret for webhook signature verification
+        #     # Using a deterministic value based on cluster name for idempotency
+        #     secret: kargo-gitea-webhook-thinkpad-secret-2024
+        # ''
       ];
     };
 
@@ -151,8 +180,72 @@ in
       };
 
       yamls = [
+        # =========================================================================
+        # PromotionTask - Reusable promotion steps for Backstage
+        # Requires cert-manager for MutatingWebhookConfiguration TLS
+        # =========================================================================
         ''
-          # Kargo Warehouse for Backstage images
+          apiVersion: kargo.akuity.io/v1alpha1
+          kind: PromotionTask
+          metadata:
+            name: backstage-promote
+            namespace: ${namespace}
+            labels:
+              app.kubernetes.io/name: backstage-promote
+              app.kubernetes.io/part-of: kargo-pipelines
+              app.kubernetes.io/component: promotiontask
+          spec:
+            vars:
+              - name: gitRepoURL
+              - name: gitRepoURLExternal
+              - name: imageRepoURL
+              - name: baseImage
+                value: ghcr.io/pittampalliorg/backstage
+              - name: argoAppName
+            steps:
+              # Clone the Git repository containing manifests
+              - uses: git-clone
+                as: clone-repo
+                config:
+                  repoURL: ''${{ vars.gitRepoURL }}
+                  checkout:
+                    - branch: main
+                      path: ./repo
+              # Update the image in Deployment-backstage.yaml using yaml-update
+              - uses: yaml-update
+                as: update-image
+                config:
+                  path: ./repo/Deployment-backstage.yaml
+                  updates:
+                    - key: spec.template.spec.containers.0.image
+                      value: ''${{ vars.imageRepoURL }}:''${{ imageFrom(vars.imageRepoURL).Tag }}
+              # Commit the changes
+              - uses: git-commit
+                as: commit-changes
+                config:
+                  path: ./repo
+                  message: "chore: update backstage image to ''${{ imageFrom(vars.imageRepoURL).Tag }}"
+              # Push to the repository
+              - uses: git-push
+                as: push-changes
+                config:
+                  path: ./repo
+              # Sync the ArgoCD application
+              - uses: argocd-update
+                as: sync-argocd-app
+                config:
+                  apps:
+                    - name: ''${{ vars.argoAppName }}
+                      namespace: argocd
+                      sources:
+                        - repoURL: ''${{ vars.gitRepoURLExternal }}
+                          desiredRevision: ''${{ task.outputs['push-changes'].commit }}
+        ''
+        # =========================================================================
+        # Warehouse - Backstage Image Discovery
+        # Watches Gitea registry for new semver-tagged images
+        # =========================================================================
+        ''
           apiVersion: kargo.akuity.io/v1alpha1
           kind: Warehouse
           metadata:
@@ -166,26 +259,42 @@ in
             freightCreationPolicy: Automatic
             interval: 5m0s
             subscriptions:
+              # NOTE: Git subscription commented out to avoid duplicate Freight creation
+              # Each (git commit + image) combination creates a Freight, and promotions
+              # create new commits, causing a cascade of Freight items.
+              # Uncomment if you need git-based triggering via webhooks.
+              # - git:
+              #     repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+              #     branch: main
+              #     insecureSkipTLSVerify: true
+              # Image subscription with semver filtering
               - image:
-                  repoURL: ghcr.io/pittampalliorg/backstage
+                  repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
                   imageSelectionStrategy: SemVer
-                  semverConstraint: "*"
+                  # Match semver tags: v1.0.0, 1.0.0, v1.0.0-rc1, etc.
+                  allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
                   discoveryLimit: 20
                   platform: linux/amd64
+                  insecureSkipTLSVerify: true
         ''
+        # =========================================================================
+        # Stage - Backstage Local Dev (Inner Loop)
+        # First stage in pipeline, receives freight directly from Warehouse
+        # =========================================================================
         ''
-          # Kargo Stage for Backstage dev environment
-          # Uses requestedFreight and promotionTemplate (Kargo 1.8.4 API)
-          # Note: Stage name is backstage-dev, but syncs backstage-local-dev ArgoCD app
           apiVersion: kargo.akuity.io/v1alpha1
           kind: Stage
           metadata:
-            name: backstage-dev
+            name: backstage-local-dev
             namespace: ${namespace}
             labels:
-              app.kubernetes.io/name: backstage-dev-stage
+              app.kubernetes.io/name: backstage-local-dev-stage
               app.kubernetes.io/part-of: kargo-pipelines
               app.kubernetes.io/component: stage
+              kargo.akuity.io/loop: inner
+            annotations:
+              # Stage color for Kargo UI
+              kargo.akuity.io/color: red
           spec:
             requestedFreight:
               - origin:
@@ -195,13 +304,67 @@ in
                   direct: true
             promotionTemplate:
               spec:
+                vars:
+                  - name: gitRepoURL
+                    value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+                  - name: gitRepoURLExternal
+                    value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-local-dev-manifests.git
+                  - name: imageRepoURL
+                    value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+                  - name: baseImage
+                    value: ghcr.io/pittampalliorg/backstage
+                  - name: argoAppName
+                    value: backstage-local-dev
+                # NOTE: Kargo v1.8.4 MutatingWebhook Bug
+                # The mutating webhook doesn't copy promotionTemplate.spec.steps from Stage to Promotion
+                # when creating Promotions manually via kubectl/API.
+                #
+                # Behavior:
+                # - Auto-promotions (created by Kargo controller) work correctly - steps are populated
+                # - Manual promotions fail validation with "Stage defines no promotion steps"
+                # - PromotionTask references also don't get inflated for manual promotions
+                #
+                # Workaround: Use inline steps (shown below). Auto-promotion handles this transparently.
+                # For manual promotions, include spec.steps explicitly in the Promotion resource.
+                # See: https://github.com/akuity/kargo/issues/4935
                 steps:
+                  # Clone the Git repository containing manifests
+                  - uses: git-clone
+                    as: clone-repo
+                    config:
+                      repoURL: ''${{ vars.gitRepoURL }}
+                      checkout:
+                        - branch: main
+                          path: ./repo
+                  # Update the image in Deployment-backstage.yaml using yaml-update
+                  - uses: yaml-update
+                    as: update-image
+                    config:
+                      path: ./repo/Deployment-backstage.yaml
+                      updates:
+                        - key: spec.template.spec.containers.0.image
+                          value: ''${{ vars.imageRepoURL }}:''${{ imageFrom(vars.imageRepoURL).Tag }}
+                  # Commit the changes
+                  - uses: git-commit
+                    as: commit-changes
+                    config:
+                      path: ./repo
+                      message: "chore: update backstage image to ''${{ imageFrom(vars.imageRepoURL).Tag }}"
+                  # Push to the repository
+                  - uses: git-push
+                    as: push-changes
+                    config:
+                      path: ./repo
+                  # Sync the ArgoCD application
                   - uses: argocd-update
                     as: sync-argocd-app
                     config:
                       apps:
-                        - name: backstage-local-dev
+                        - name: ''${{ vars.argoAppName }}
                           namespace: argocd
+                          sources:
+                            - repoURL: ''${{ vars.gitRepoURLExternal }}
+                              desiredRevision: ''${{ outputs['push-changes'].commit }}
         ''
       ];
     };

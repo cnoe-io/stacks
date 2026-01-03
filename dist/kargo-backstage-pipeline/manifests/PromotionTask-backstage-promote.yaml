@@ -1,0 +1,50 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  labels:
+    app.kubernetes.io/component: promotiontask
+    app.kubernetes.io/name: backstage-promote
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: backstage-promote
+  namespace: kargo-pipelines
+spec:
+  steps:
+    - as: clone-repo
+      config:
+        checkout:
+          - branch: main
+            path: ./repo
+        repoURL: ${{ vars.gitRepoURL }}
+      uses: git-clone
+    - as: update-image
+      config:
+        path: ./repo/Deployment-backstage.yaml
+        updates:
+          - key: spec.template.spec.containers.0.image
+            value: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
+      uses: yaml-update
+    - as: commit-changes
+      config:
+        message: 'chore: update backstage image to ${{ imageFrom(vars.imageRepoURL).Tag }}'
+        path: ./repo
+      uses: git-commit
+    - as: push-changes
+      config:
+        path: ./repo
+      uses: git-push
+    - as: sync-argocd-app
+      config:
+        apps:
+          - name: ${{ vars.argoAppName }}
+            namespace: argocd
+            sources:
+              - desiredRevision: ${{ task.outputs['push-changes'].commit }}
+                repoURL: ${{ vars.gitRepoURLExternal }}
+      uses: argocd-update
+  vars:
+    - name: gitRepoURL
+    - name: gitRepoURLExternal
+    - name: imageRepoURL
+    - name: baseImage
+      value: ghcr.io/pittampalliorg/backstage
+    - name: argoAppName

@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: Prune=false
-  name: kargo
+  name: cert-manager

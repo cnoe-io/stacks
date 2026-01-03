@@ -46,7 +46,7 @@ spec:
         awsLoadBalancerController:
           enabled: false
         certificates:
-          enabled: false
+          enabled: true
         controller:
           allowCredentialsOverHTTP: true
           logLevel: INFO
@@ -89,7 +89,7 @@ spec:
           installClusterRoles: true
         webhooks:
           logLevel: INFO
-          register: false
+          register: true
           resources:
             limits:
               cpu: 200m
@@ -100,7 +100,7 @@ spec:
         webhooksServer:
           enabled: true
           tls:
-            selfSignedCert: false
+            selfSignedCert: true
     repoURL: ghcr.io/akuity/kargo-charts
     targetRevision: 1.8.4
   syncPolicy:
