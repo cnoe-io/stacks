@@ -3,6 +3,7 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "100"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:backstage
   name: backstage
   namespace: argocd
 spec:

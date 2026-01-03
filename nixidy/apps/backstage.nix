@@ -26,6 +26,8 @@ in
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "100";
+      # Allow Kargo Stage to manage this ArgoCD Application
+      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage";
     };
 
     syncPolicy = {
