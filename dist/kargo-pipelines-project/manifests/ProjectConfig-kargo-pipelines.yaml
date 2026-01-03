@@ -11,6 +11,9 @@ spec:
   promotionPolicies:
     - autoPromotionEnabled: true
       stageSelector:
+        name: backstage
+    - autoPromotionEnabled: true
+      stageSelector:
         name: glob:*-local-dev
     - autoPromotionEnabled: true
       stageSelector:

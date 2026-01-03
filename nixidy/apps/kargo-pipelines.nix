@@ -63,6 +63,10 @@ in
               app.kubernetes.io/component: project-config
           spec:
             promotionPolicies:
+              # Auto-promote backstage stage (primary deployment)
+              - stageSelector:
+                  name: backstage
+                autoPromotionEnabled: true
               - stageSelector:
                   name: "glob:*-local-dev"
                 autoPromotionEnabled: true
