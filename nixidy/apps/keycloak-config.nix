@@ -812,9 +812,145 @@ in
                         fi
                       }
 
+                      # Helper function to ensure groups scope exists
+                      ensure_groups_scope() {
+                        echo "ensuring groups scope exists..."
+                        local groups_scope_id
+                        groups_scope_id=$(curl -sS -H "Content-Type: application/json" \
+                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                          -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+
+                        if [ -z "$groups_scope_id" ] || [ "$groups_scope_id" = "null" ]; then
+                          echo "creating groups scope..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/client-scope-groups-payload.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes
+
+                          groups_scope_id=$(curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+
+                          echo "adding group mapper to groups scope..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/group-mapper-payload.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes/''${groups_scope_id}/protocol-mappers/models
+                        fi
+                        echo "groups scope id: $groups_scope_id"
+                      }
+
+                      # Helper function to ensure groups exist
+                      ensure_groups() {
+                        echo "ensuring groups exist..."
+                        local admin_group_id base_user_group_id
+
+                        admin_group_id=$(curl -sS -H "Content-Type: application/json" \
+                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                          -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "admin") | .id')
+
+                        if [ -z "$admin_group_id" ] || [ "$admin_group_id" = "null" ]; then
+                          echo "creating admin group..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/group-admin-payload.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/groups
+                        fi
+
+                        base_user_group_id=$(curl -sS -H "Content-Type: application/json" \
+                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                          -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "base-user") | .id')
+
+                        if [ -z "$base_user_group_id" ] || [ "$base_user_group_id" = "null" ]; then
+                          echo "creating base-user group..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/group-base-user-payload.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/groups
+                        fi
+                      }
+
+                      # Helper function to ensure users exist
+                      ensure_users() {
+                        echo "ensuring users exist..."
+
+                        # Check/create user1
+                        local user1_id
+                        user1_id=$(curl -sS -H "Content-Type: application/json" \
+                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                          "''${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user1" | jq -r '.[0].id // empty')
+
+                        if [ -z "$user1_id" ]; then
+                          echo "creating user1..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/user-user1.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+                          user1_id=$(curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            "''${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user1" | jq -r '.[0].id')
+
+                          echo "setting user1 password..."
+                          jq -r --arg pass ''${USER1_PASSWORD} '.value = $pass' /var/config/user-password.json > /tmp/user-password-to-be-applied.json
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X PUT --data @/tmp/user-password-to-be-applied.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/users/''${user1_id}/reset-password
+
+                          echo "adding user1 to admin group..."
+                          local admin_group_id
+                          admin_group_id=$(curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "admin") | .id')
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X PUT ''${KEYCLOAK_URL}/admin/realms/cnoe/users/''${user1_id}/groups/''${admin_group_id}
+                        fi
+
+                        # Check/create user2
+                        local user2_id
+                        user2_id=$(curl -sS -H "Content-Type: application/json" \
+                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                          "''${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user2" | jq -r '.[0].id // empty')
+
+                        if [ -z "$user2_id" ]; then
+                          echo "creating user2..."
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X POST --data @/var/config/user-user2.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+                          user2_id=$(curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            "''${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user2" | jq -r '.[0].id')
+
+                          echo "setting user2 password..."
+                          jq -r --arg pass ''${USER1_PASSWORD} '.value = $pass' /var/config/user-password.json > /tmp/user-password-to-be-applied.json
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X PUT --data @/tmp/user-password-to-be-applied.json \
+                            ''${KEYCLOAK_URL}/admin/realms/cnoe/users/''${user2_id}/reset-password
+
+                          echo "adding user2 to base-user group..."
+                          local base_user_group_id
+                          base_user_group_id=$(curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "base-user") | .id')
+                          curl -sS -H "Content-Type: application/json" \
+                            -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
+                            -X PUT ''${KEYCLOAK_URL}/admin/realms/cnoe/users/''${user2_id}/groups/''${base_user_group_id}
+                        fi
+                      }
+
                       # If realm exists, check if keycloak-clients secret exists
                       if [ $REALM_EXISTS -eq 0 ]; then
-                        # Realm exists: still ensure redirect URIs match the desired payloads
+                        # Realm exists: ensure all resources are present (idempotent)
+                        ensure_groups_scope
+                        ensure_groups
+                        ensure_users
+
+                        # Ensure redirect URIs match the desired payloads
                         patch_client_redirects "argo-workflows" "/var/config/argo-client-payload.json"
                         patch_client_redirects "backstage" "/var/config/backstage-client-payload.json"
                         patch_client_redirects "flipt" "/var/config/flipt-client-payload.json"
@@ -822,7 +958,7 @@ in
 
                         # Check if secret already exists
                         if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
-                          echo "Realm and secret already exist; redirect URIs reconciled"
+                          echo "Realm and secret already exist; all resources reconciled"
                           exit 0
                         fi
                         echo "Realm exists but secret missing, recreating secret..."
