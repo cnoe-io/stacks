@@ -76,6 +76,10 @@
     # Feature Flags
     ./feature-flags.nix     # Flagd, Flipt for feature flag management
 
+    # NocoDB (No-Code Database)
+    ./nocodb.nix            # NocoDB app with PostgreSQL StatefulSet
+    ./nocodb-secrets.nix    # NocoDB secrets from Azure Key Vault
+
     # Gateway & Infrastructure
     ./gateway.nix           # Gateway API CRDs, kgateway, Dagger infra
 
