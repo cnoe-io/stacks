@@ -225,20 +225,41 @@ in
           selector.matchLabels.app = appName;
 
           template = {
-            metadata.labels.app = appName;
+            metadata = {
+              labels.app = appName;
+              # Dapr sidecar annotations for configuration building block
+              annotations = {
+                "dapr.io/enabled" = "true";
+                "dapr.io/app-id" = "backstage";
+                "dapr.io/app-port" = "7007";
+                "dapr.io/config" = "backstage-dapr-config";
+                "dapr.io/log-as-json" = "true";
+                "dapr.io/log-level" = "info";
+                # Override sidecar securityContext to allow running with pod's runAsUser: 0
+                # The daprd image defaults to runAsNonRoot: true which conflicts with backstage's root requirement
+                "dapr.io/sidecar-securitycontext" = builtins.toJSON {
+                  allowPrivilegeEscalation = false;
+                  readOnlyRootFilesystem = true;
+                  runAsNonRoot = false;
+                };
+              };
+            };
 
             spec = {
               serviceAccountName = appName;
               imagePullSecrets = [{ name = imagePullSecretName; }];
-              securityContext = {
-                runAsUser = 0;
-                runAsGroup = 0;
-                fsGroup = 0;
-              };
+              # Note: Pod-level securityContext removed to allow Dapr sidecar injection
+              # Container-level securityContext handles backstage's root requirement
 
               containers = [{
                 name = appName;
                 image = backstageImage;
+                # Container-level securityContext for backstage (runs as root)
+                securityContext = {
+                  runAsUser = 0;
+                  runAsGroup = 0;
+                  allowPrivilegeEscalation = false;
+                };
                 ports = [{
                   containerPort = 7007;
                   name = "http";

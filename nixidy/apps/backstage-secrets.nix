@@ -98,20 +98,18 @@ in
                     password: ''${POSTGRES_PASSWORD}
 
               auth:
+                environment: production
                 session:
                   secret: ''${BACKSTAGE_SESSION_SECRET}
                 providers:
                   guest:
                     dangerouslyAllowOutsideDevelopment: true
-                  oidc:
+                  keycloak-oidc:
                     production:
                       metadataUrl: ''${KEYCLOAK_NAME_METADATA}
                       clientId: backstage
                       clientSecret: ''${KEYCLOAK_CLIENT_SECRET}
                       prompt: auto
-                      signIn:
-                        resolvers:
-                          - resolver: preferredUsernameMatchingUserEntityName
 
               # Proxy endpoints
               proxy:
@@ -191,6 +189,14 @@ in
               # Kargo URL for templates
               kargo:
                 baseUrl: ${kargoUrl}
+
+              # Dapr Configuration plugin settings
+              # Connects to Dapr sidecar for configuration management
+              # See: https://docs.dapr.io/developing-applications/building-blocks/configuration/
+              daprConfiguration:
+                host: localhost  # Dapr sidecar runs as localhost in the pod
+                port: 3500       # Dapr HTTP port
+                storeName: configstore  # Dapr configuration component name
         ''
 
         # ============================================================

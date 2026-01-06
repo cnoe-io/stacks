@@ -68,6 +68,7 @@
 
     # Dapr Agents
     ./dapr.nix              # Dapr CRDs, runtime, Redis, components, SpecKit RBAC
+    ./backstage-dapr.nix    # Backstage Dapr Configuration components
 
     # Feature Flags
     ./feature-flags.nix     # Flagd, Flipt for feature flag management
