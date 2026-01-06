@@ -98,7 +98,7 @@
       };
 
       # Host identifier for Tailscale Services (stable URLs)
-      # Maps to created services like attic-thinkpad, gitea-thinkpad, etc.
+      # Maps to created services like gitea-thinkpad, argocd-thinkpad, etc.
       # Defaults to cluster name, but can be overridden for physical host mapping
       serviceHost = lib.mkOption {
         type = lib.types.str;

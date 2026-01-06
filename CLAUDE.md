@@ -73,14 +73,6 @@ kargo promote --project kargo-pipelines --stage backstage-staging --freight <nam
 
 See `specs/105-setup-kargo-pipelines/quickstart.md`.
 
-### Nix Binary Cache (Attic + MinIO)
-```bash
-source deployment/scripts/cluster-menu.sh && cluster-update
-./deployment/scripts/nix-cache/init-attic-cache.sh
-./deployment/scripts/nix-cache/push-to-cache.sh /run/current-system
-```
-See `specs/003-implement-attic-minio/quickstart.md`.
-
 ### kagent/kmcp (AI Agent Platform)
 ```bash
 kubectl get pods -n kagent

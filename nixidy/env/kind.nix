@@ -49,7 +49,7 @@ in
   tailscale = {
     tailnet = "tail286401.ts.net";
     # Use TAILSCALE_SERVICE_HOST env var or default to "thinkpad"
-    # This maps to Tailscale Services: attic-thinkpad, gitea-thinkpad, etc.
+    # This maps to Tailscale Services: gitea-thinkpad, argocd-thinkpad, etc.
     serviceHost = let
       envHost = builtins.getEnv "TAILSCALE_SERVICE_HOST";
     in if envHost != "" then envHost else "thinkpad";

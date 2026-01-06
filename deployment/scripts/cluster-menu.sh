@@ -741,29 +741,6 @@ cluster-recreate() {
   echo "🔨 Creating fresh cluster..."
   # cluster-deploy will handle ArgoCD initialization automatically
   SKIP_AZURE_CHECK=true cluster-deploy "$@"
-  local deploy_result=$?
-
-  # Attic cache public key handling
-  # When using persistent signing keys from AKV, skip the slow sync-attic-pubkey.sh
-  # The public key is static and was added to NixOS config during one-time setup
-  if [ $deploy_result -eq 0 ]; then
-    local ATTIC_SYNC_SCRIPT="$STACKS_DIR/deployment/scripts/nix-cache/sync-attic-pubkey.sh"
-    if [ -f "$ATTIC_SYNC_SCRIPT" ]; then
-      # Check if persistent signing key exists in AKV (indicates persistent certs are in use)
-      if az keyvault secret show --vault-name "${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}" --name "ATTIC-SIGNING-PUBLIC-KEY" &>/dev/null 2>&1; then
-        echo ""
-        echo "✅ Using persistent Attic signing key from AKV (skipping sync)"
-        echo "   Public key was configured during one-time setup"
-      else
-        # Fallback: Run full sync for non-persistent setup
-        echo ""
-        echo "🔑 Syncing Attic cache public key to backstage flake.nix..."
-        "$ATTIC_SYNC_SCRIPT" || true
-      fi
-    fi
-  fi
-
-  return $deploy_result
 }
 
 cluster-update-gum() {

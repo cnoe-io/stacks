@@ -69,9 +69,6 @@
     # Dapr Agents
     ./dapr.nix              # Dapr CRDs, runtime, Redis, components, SpecKit RBAC
 
-    # Nix Binary Cache
-    ./nix-cache.nix         # MinIO, Attic for Nix binary cache
-
     # Feature Flags
     ./feature-flags.nix     # Flagd, Flipt for feature flag management
 
