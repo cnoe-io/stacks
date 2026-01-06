@@ -367,13 +367,16 @@ in
                       TOKEN=$(atticadm -f /etc/attic/server.toml make-token --sub init --validity 1m --create-cache backstage 2>/dev/null)
 
                       # Check if persistent signing keypair is available from Azure Key Vault
-                      # The ExternalSecret creates /etc/attic-keys/private-key if ATTIC-SIGNING-PRIVATE-KEY exists in AKV
-                      if [ -f /etc/attic-keys/private-key ]; then
+                      # The ExternalSecret creates /etc/attic-keys/private-key and public-key
+                      # Attic API expects keypair format: {"Keypair": "base64(priv32bytes + pub32bytes)"}
+                      if [ -f /etc/attic-keys/private-key ] && [ -f /etc/attic-keys/public-key ]; then
                         echo "Using persistent signing keypair from Azure Key Vault"
-                        KEYPAIR=$(cat /etc/attic-keys/private-key)
-                        # Escape the keypair for JSON (handle special chars)
-                        KEYPAIR_ESCAPED=$(echo "$KEYPAIR" | sed 's/"/\\"/g')
-                        PAYLOAD="{\"is_public\":true,\"keypair\":\"$KEYPAIR_ESCAPED\",\"store_dir\":\"/nix/store\",\"priority\":41,\"upstream_cache_key_names\":[\"cache.nixos.org-1\"]}"
+                        # Extract base64 payload from secretkey:xxx and cachename:xxx formats
+                        PRIV_B64=$(cat /etc/attic-keys/private-key | cut -d: -f2)
+                        PUB_B64=$(cat /etc/attic-keys/public-key | cut -d: -f2)
+                        # Combine: decode both to binary, concatenate (priv+pub = 64 bytes), re-encode
+                        COMBINED_B64=$({ echo "$PRIV_B64" | base64 -d; echo "$PUB_B64" | base64 -d; } | base64 | tr -d '\n')
+                        PAYLOAD="{\"is_public\":true,\"keypair\":{\"Keypair\":\"$COMBINED_B64\"},\"store_dir\":\"/nix/store\",\"priority\":41,\"upstream_cache_key_names\":[\"cache.nixos.org-1\"]}"
                       else
                         echo "No persistent keypair found, generating new keypair"
                         PAYLOAD='{"is_public":true,"keypair":"Generate","store_dir":"/nix/store","priority":41,"upstream_cache_key_names":["cache.nixos.org-1"]}'
