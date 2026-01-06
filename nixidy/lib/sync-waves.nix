@@ -1,39 +1,46 @@
 # Sync wave constants for ArgoCD resource ordering
-# Matches the current cdk8s sync wave patterns
+# SIMPLIFIED: Reduced from 35 waves to 10 for faster parallel syncing
+# Resources within the same wave sync in parallel
 {
-  # CRDs and fundamental resources (earliest)
-  crds = "-120";
-  operators = "-110";
-  namespaces = "-110";
+  # === INFRASTRUCTURE LAYER (negative waves) ===
 
-  # RBAC and security
-  rbac = "-90";
-  workloadIdentity = "-90";
-  secretStores = "-88";
+  # CRDs and operators - must be first
+  crds = "-100";          # Gateway API, Tailscale, Kargo, ESO CRDs
+  operators = "-100";     # CRD-installing operators
 
-  # Secrets and configuration
-  secrets = "-85";
-  clusterIssuers = "-80";
-  configMaps = "-70";
+  # Namespaces and RBAC - foundational
+  namespaces = "-80";     # All namespace creation
+  rbac = "-80";           # ClusterRoles, ServiceAccounts
 
-  # Dependencies
-  databases = "-50";
-  caches = "-40";
+  # Secrets infrastructure - before apps that need secrets
+  secretStores = "-60";   # ESO, ClusterSecretStores, Workload Identity
+  secrets = "-60";        # ExternalSecrets, generated secrets
 
-  # Core infrastructure
-  infrastructure = "-30";
+  # Stateful dependencies - databases, caches
+  databases = "-40";      # PostgreSQL, Minio, Clickhouse
+  caches = "-40";         # Redis, Milvus, Neo4j
 
-  # Deployments (default)
-  deployments = "0";
+  # Core infrastructure services
+  infrastructure = "-20"; # Keycloak, Gitea, cert-manager issuers
 
-  # Post-deployment
-  jobs = "10";
-  tests = "20";
+  # === APPLICATION LAYER (zero and positive waves) ===
 
-  # Applications
-  applications = "50";
+  # Main deployments - default wave
+  deployments = "0";      # Application deployments
 
-  # Ingress and external access (last)
-  ingress = "100";
-  tailscaleServe = "110";
+  # Post-deployment jobs
+  jobs = "20";            # Config jobs, sync jobs
+
+  # Applications that depend on core services
+  applications = "40";    # Backstage, Argo Workflows, Grafana
+
+  # External access - last
+  ingress = "60";         # Ingress resources
+  tailscaleServe = "60";  # Tailscale Serve proxies
+
+  # === LEGACY ALIASES (for backward compatibility) ===
+  workloadIdentity = "-60";  # Same as secretStores
+  clusterIssuers = "-20";    # Same as infrastructure
+  configMaps = "-20";        # Same as infrastructure
+  tests = "20";              # Same as jobs
 }

@@ -24,9 +24,10 @@ in
 {
   config = {
     # Tailscale Operator Secrets - OAuth credentials
+    # NOTE: Namespace owned by tailscale-crds app (sync-wave -120)
     applications.tailscale-operator-secrets = {
       inherit namespace;
-      createNamespace = true;
+      createNamespace = false;  # tailscale-crds owns the namespace
 
       annotations = {
         "argocd.argoproj.io/sync-wave" = "-105";  # After namespace, before operator
@@ -39,8 +40,8 @@ in
           selfHeal = true;
         };
         syncOptions = {
-          createNamespace = true;
           serverSideApply = true;
+          applyOutOfSyncOnly = true;  # Skip unchanged resources
         };
         retry = {
           limit = 5;

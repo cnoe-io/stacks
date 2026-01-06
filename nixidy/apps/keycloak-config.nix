@@ -13,9 +13,10 @@ let
 in
 {
   # Keycloak Secrets - Creates Password generator, keycloak-config secret, and ClusterSecretStores
+  # NOTE: Namespace owned by keycloak app (sync-wave -50)
   applications.keycloak-secrets = {
     inherit namespace;
-    createNamespace = true;
+    createNamespace = false;  # keycloak app owns the namespace
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-50";
@@ -28,8 +29,8 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = true;
         serverSideApply = true;
+        applyOutOfSyncOnly = true;  # Skip unchanged resources
       };
       retry = {
         limit = 10;
@@ -169,252 +170,8 @@ in
     ];
   };
 
-  # Gitea ClusterSecretStore - for accessing idpbuilder-created Gitea secrets
-  applications.gitea-secretstore = {
-    namespace = giteaNamespace;
-    createNamespace = true;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-50";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-      syncOptions = {
-        createNamespace = true;
-        serverSideApply = true;
-      };
-    };
-
-    resources = {
-      # Namespace for gitea
-      namespaces.${giteaNamespace} = {
-        metadata.labels = {
-          "app.kubernetes.io/managed-by" = "nixidy";
-        };
-      };
-
-      serviceAccounts.eso-store = {
-        metadata.namespace = giteaNamespace;
-      };
-
-      roles.eso-store = {
-        metadata.namespace = giteaNamespace;
-        rules = [
-          {
-            apiGroups = [ "" ];
-            resources = [ "secrets" ];
-            verbs = [ "get" "list" "watch" ];
-          }
-          {
-            apiGroups = [ "authorization.k8s.io" ];
-            resources = [ "selfsubjectrulesreviews" ];
-            verbs = [ "create" ];
-          }
-        ];
-      };
-
-      roleBindings.eso-store = {
-        metadata.namespace = giteaNamespace;
-        roleRef = {
-          apiGroup = "rbac.authorization.k8s.io";
-          kind = "Role";
-          name = "eso-store";
-        };
-        subjects = [{
-          kind = "ServiceAccount";
-          name = "eso-store";
-          namespace = giteaNamespace;
-        }];
-      };
-    };
-
-    yamls = [
-      # ClusterSecretStore: gitea (Kubernetes provider)
-      ''
-        apiVersion: external-secrets.io/v1
-        kind: ClusterSecretStore
-        metadata:
-          name: gitea
-        spec:
-          provider:
-            kubernetes:
-              remoteNamespace: ${giteaNamespace}
-              server:
-                caProvider:
-                  type: ConfigMap
-                  name: kube-root-ca.crt
-                  namespace: ${giteaNamespace}
-                  key: ca.crt
-              auth:
-                serviceAccount:
-                  name: eso-store
-                  namespace: ${giteaNamespace}
-      ''
-    ];
-  };
-
-  # Default namespace ClusterSecretStore - for accessing idpbuilder-cert CA certificate
-  applications.default-secretstore = {
-    namespace = defaultNamespace;
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-50";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-      syncOptions = {
-        serverSideApply = true;
-      };
-    };
-
-    resources = {
-      serviceAccounts.eso-store-default = {
-        metadata.namespace = defaultNamespace;
-      };
-
-      roles.eso-store-default = {
-        metadata.namespace = defaultNamespace;
-        rules = [
-          {
-            apiGroups = [ "" ];
-            resources = [ "secrets" ];
-            verbs = [ "get" "list" "watch" ];
-            resourceNames = [ "idpbuilder-cert" ];
-          }
-        ];
-      };
-
-      roleBindings.eso-store-default = {
-        metadata.namespace = defaultNamespace;
-        roleRef = {
-          apiGroup = "rbac.authorization.k8s.io";
-          kind = "Role";
-          name = "eso-store-default";
-        };
-        subjects = [{
-          kind = "ServiceAccount";
-          name = "eso-store-default";
-          namespace = defaultNamespace;
-        }];
-      };
-    };
-
-    yamls = [
-      # ClusterSecretStore: default-namespace (Kubernetes provider)
-      ''
-        apiVersion: external-secrets.io/v1
-        kind: ClusterSecretStore
-        metadata:
-          name: default-namespace
-        spec:
-          provider:
-            kubernetes:
-              remoteNamespace: ${defaultNamespace}
-              server:
-                caProvider:
-                  type: ConfigMap
-                  name: kube-root-ca.crt
-                  namespace: ${defaultNamespace}
-                  key: ca.crt
-              auth:
-                serviceAccount:
-                  name: eso-store-default
-                  namespace: ${defaultNamespace}
-      ''
-    ];
-  };
-
-  # ArgoCD ClusterSecretStore - for accessing ArgoCD secrets from other namespaces
-  applications.argocd-secretstore = {
-    namespace = "argocd";
-    createNamespace = false;
-
-    annotations = {
-      "argocd.argoproj.io/sync-wave" = "-50";
-    };
-
-    syncPolicy = {
-      autoSync = {
-        enable = true;
-        prune = true;
-        selfHeal = true;
-      };
-      syncOptions = {
-        serverSideApply = true;
-      };
-    };
-
-    resources = {
-      serviceAccounts.eso-store = {
-        metadata.namespace = "argocd";
-      };
-
-      roles.eso-store = {
-        metadata.namespace = "argocd";
-        rules = [
-          {
-            apiGroups = [ "" ];
-            resources = [ "secrets" ];
-            verbs = [ "get" "list" "watch" ];
-          }
-          {
-            apiGroups = [ "authorization.k8s.io" ];
-            resources = [ "selfsubjectrulesreviews" ];
-            verbs = [ "create" ];
-          }
-        ];
-      };
-
-      roleBindings.eso-store = {
-        metadata.namespace = "argocd";
-        roleRef = {
-          apiGroup = "rbac.authorization.k8s.io";
-          kind = "Role";
-          name = "eso-store";
-        };
-        subjects = [{
-          kind = "ServiceAccount";
-          name = "eso-store";
-          namespace = "argocd";
-        }];
-      };
-    };
-
-    yamls = [
-      # ClusterSecretStore: argocd (Kubernetes provider)
-      ''
-        apiVersion: external-secrets.io/v1
-        kind: ClusterSecretStore
-        metadata:
-          name: argocd
-        spec:
-          provider:
-            kubernetes:
-              remoteNamespace: argocd
-              server:
-                caProvider:
-                  type: ConfigMap
-                  name: kube-root-ca.crt
-                  namespace: argocd
-                  key: ca.crt
-              auth:
-                serviceAccount:
-                  name: eso-store
-                  namespace: argocd
-      ''
-    ];
-  };
+  # NOTE: gitea-secretstore, default-secretstore, and argocd-secretstore
+  # are defined in secretstores.nix to avoid duplication
 
   # Keycloak Config Job - Creates realm, users, OIDC clients, and keycloak-clients secret
   # Mirrors: cdk8s/charts/platform/keycloak-config-chart.ts

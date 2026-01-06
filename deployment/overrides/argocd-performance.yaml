@@ -1,0 +1,36 @@
+# ArgoCD Performance Tuning Override
+# Applied via: idpbuilder create --package-custom-file argocd:deployment/overrides/argocd-performance.yaml
+#
+# Key optimizations:
+# - Increased parallelism for faster sync of 128+ applications
+# - Reduced reconciliation timeout for faster retries
+# - Server-side diff enabled for accuracy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Status processors: concurrent status update goroutines
+  # Default: 20, increased for 128+ apps
+  controller.status.processors: "50"
+
+  # Operation processors: concurrent sync operations
+  # Default: 10, increased to reduce sync queue time
+  controller.operation.processors: "25"
+
+  # Kubectl parallelism: concurrent kubectl commands
+  # Default: 20, increased for faster manifest application
+  controller.kubectl.parallelism.limit: "30"
+
+  # Use server-side diff for more accurate comparison
+  # Reduces unnecessary syncs due to client-side diff issues
+  controller.diff.server.side: "true"
+
+  # Repo server parallelism: concurrent manifest generation
+  # Default: 0 (unlimited), set explicit limit for memory management
+  reposerver.parallelism.limit: "50"

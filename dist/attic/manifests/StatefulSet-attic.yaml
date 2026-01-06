@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: attic
+  name: attic
+  namespace: nix-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attic
+  serviceName: attic
+  template:
+    metadata:
+      labels:
+        app: attic
+    spec:
+      containers:
+        - args:
+            - |
+              atticd -f /etc/attic/server.toml &
+              PID=$!
+              sleep 5
+              # Create backstage cache via API using wget (curl not available in image)
+              TOKEN=$(atticadm -f /etc/attic/server.toml make-token --sub init --validity 1m --create-cache backstage 2>/dev/null)
+              wget -q -O- --header="Authorization: Bearer $TOKEN" --header="Content-Type: application/json" \
+                --post-data='{"is_public":true,"keypair":"Generate","store_dir":"/nix/store","priority":41,"upstream_cache_key_names":["cache.nixos.org-1"]}' \
+                http://localhost:8080/_api/v1/cache-config/backstage 2>/dev/null \
+                && echo "Created backstage cache" \
+                || echo "Cache backstage may already exist"
+              wait $PID
+          command:
+            - /bin/sh
+            - -c
+          image: ghcr.io/zhaofengli/attic:latest
+          name: attic
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /etc/attic
+              name: config
+            - mountPath: /var/lib/attic
+              name: data
+      initContainers:
+        - args:
+            - |
+              until mc alias set minio http://minio.nix-cache.svc.cluster.local:9000 admin minioadmin 2>/dev/null; do
+                echo "Waiting for MinIO..."; sleep 2
+              done
+              mc mb minio/attic-cache --ignore-existing
+          command:
+            - /bin/sh
+            - -c
+          image: minio/mc:latest
+          name: init-minio-bucket
+      volumes:
+        - name: config
+          secret:
+            secretName: attic-server-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

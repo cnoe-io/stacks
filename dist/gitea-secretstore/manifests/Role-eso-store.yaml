@@ -18,17 +18,3 @@ rules:
       - selfsubjectrulesreviews
     verbs:
       - create
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - authorization.k8s.io
-    resources:
-      - selfsubjectrulesreviews
-    verbs:
-      - create

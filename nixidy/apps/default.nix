@@ -23,8 +23,7 @@
     ./spark-operator.nix           # Spark job orchestration (sync-wave 50)
     ./backstage-templates.nix      # Backstage scaffolder templates (sync-wave 100)
 
-    # Talos only (production with Azure)
-    ./eso-workload-identity.nix
+    # NOTE: eso-workload-identity merged into external-secrets.nix to avoid SharedResourceWarning
 
     # Phase 8: Core Infrastructure (Batch 1)
     ./argocd.nix            # ArgoCD configuration (disabled by default)
@@ -79,6 +78,7 @@
     # NocoDB (No-Code Database)
     ./nocodb.nix            # NocoDB app with PostgreSQL StatefulSet
     ./nocodb-secrets.nix    # NocoDB secrets from Azure Key Vault
+    ./nocodb-connections.nix # External DB connections (Backstage, Langfuse)
 
     # Gateway & Infrastructure
     ./gateway.nix           # Gateway API CRDs, kgateway, Dagger infra

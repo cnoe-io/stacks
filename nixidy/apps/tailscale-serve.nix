@@ -8,6 +8,12 @@ let
   clusterSuffix = if name != "" then "-${name}" else "";
   tailnet = "tail286401";
   isKind = environmentType == "kind";
+  # Tailscale service host for stable URLs (e.g., attic-thinkpad, gitea-thinkpad)
+  # Uses serviceHost config if set, falls back to cluster name
+  serviceHost = let
+    host = config.tailscale.serviceHost;
+  in if host != "" then host else name;
+  serviceSuffix = if serviceHost != "" then "-${serviceHost}" else "";
 in
 {
   # Langfuse Tailscale Serve - Access: https://langfuse-<cluster>.tail286401.ts.net
@@ -51,7 +57,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -153,7 +159,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -255,7 +261,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -357,7 +363,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -459,7 +465,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -561,7 +567,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -665,7 +671,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -767,7 +773,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -859,7 +865,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -961,7 +967,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -1063,7 +1069,7 @@ in
             spec = {
               containers = [{
                 name = "tailscale";
-                image = "tailscale/tailscale:v1.82.0";
+                image = "tailscale/tailscale:v1.86.5";
                 securityContext.capabilities.add = ["NET_ADMIN"];
                 env = [
                   {
@@ -1114,6 +1120,111 @@ in
                 Handlers = {
                   "/" = {
                     Proxy = "http://flipt.feature-flags.svc.cluster.local:8080";
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  # Attic Tailscale Serve - Access: https://attic-<host>.tail286401.ts.net
+  # Nix binary cache exposed via Tailscale Serve (traditional approach)
+  # Uses TS_SERVE_CONFIG with ConfigMap for reliable proxying to external URLs
+  # Hostname uses serviceHost (e.g., thinkpad, ryzen, hub) for stable URLs
+  applications.attic-tailscale-serve = {
+    namespace = "tailscale";
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-55";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+    };
+
+    resources = {
+      persistentVolumeClaims."attic${clusterSuffix}-tailscale-state" = {
+        metadata.namespace = "tailscale";
+        spec = {
+          accessModes = ["ReadWriteOnce"];
+          resources.requests.storage = "1Gi";
+        };
+      };
+
+      deployments."attic${clusterSuffix}-tailscale-serve" = {
+        metadata = {
+          namespace = "tailscale";
+          labels.app = "attic-tailscale-serve";
+        };
+        spec = {
+          replicas = 1;
+          selector.matchLabels.app = "attic-tailscale-serve";
+
+          template = {
+            metadata.labels.app = "attic-tailscale-serve";
+
+            spec = {
+              containers = [{
+                name = "tailscale";
+                image = "tailscale/tailscale:v1.86.5";
+                securityContext.capabilities.add = ["NET_ADMIN"];
+                env = [
+                  {
+                    name = "TS_AUTHKEY";
+                    valueFrom.secretKeyRef = {
+                      name = "tailscale-auth-key";
+                      key = "authKey";
+                    };
+                  }
+                  # Hostname uses serviceSuffix for stable URLs (e.g., attic-thinkpad)
+                  { name = "TS_HOSTNAME"; value = "attic${serviceSuffix}"; }
+                  { name = "TS_SERVE_CONFIG"; value = "/config/serve.json"; }
+                  { name = "TS_STATE_DIR"; value = "/var/lib/tailscale"; }
+                  { name = "TS_EXTRA_ARGS"; value = "--reset"; }
+                ];
+                volumeMounts = [
+                  { name = "state"; mountPath = "/var/lib/tailscale"; }
+                  { name = "config"; mountPath = "/config"; }
+                ];
+              }];
+
+              volumes = [
+                {
+                  name = "state";
+                  persistentVolumeClaim.claimName = "attic${clusterSuffix}-tailscale-state";
+                }
+                {
+                  name = "config";
+                  configMap.name = "attic-tailscale-serve-config";
+                }
+              ];
+            };
+          };
+        };
+      };
+
+      configMaps.attic-tailscale-serve-config = {
+        metadata.namespace = "tailscale";
+        data = {
+          "serve.json" = builtins.toJSON {
+            TCP = {
+              "443" = {
+                HTTPS = true;
+              };
+            };
+            Web = {
+              "attic${serviceSuffix}.${tailnet}.ts.net:443" = {
+                Handlers = {
+                  "/" = {
+                    Proxy = "http://attic.nix-cache.svc.cluster.local:8080";
                   };
                 };
               };

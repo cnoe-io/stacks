@@ -96,6 +96,15 @@
         default = null;
         description = "Secret name containing Tailscale auth key";
       };
+
+      # Host identifier for Tailscale Services (stable URLs)
+      # Maps to created services like attic-thinkpad, gitea-thinkpad, etc.
+      # Defaults to cluster name, but can be overridden for physical host mapping
+      serviceHost = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Host identifier for Tailscale Services (e.g., thinkpad, ryzen, hub)";
+      };
     };
 
     # =========================================================================

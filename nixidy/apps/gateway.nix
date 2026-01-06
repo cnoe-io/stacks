@@ -64,9 +64,10 @@ in
   };
 
   # kgateway CRDs - via ArgoCD OCI Helm Application
+  # NOTE: Namespace owned by gateway-api-crds app (sync-wave -130)
   applications.kgateway-crds = {
     namespace = kgatewayNamespace;
-    createNamespace = true;
+    createNamespace = false;  # gateway-api-crds owns the namespace
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-125";
@@ -79,8 +80,8 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = true;
         serverSideApply = true;
+        applyOutOfSyncOnly = true;  # Skip unchanged resources
       };
     };
 
@@ -169,12 +170,14 @@ in
   };
 
   # Dagger Infrastructure for Argo Workflows
+  # NOTE: Namespace owned by argo-workflows app (sync-wave 50)
+  # This app deploys earlier to set up RBAC before workflows deploy
   applications.dagger-infra = {
     namespace = "argo";
-    createNamespace = true;
+    createNamespace = false;  # argo-workflows owns the namespace
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "-80";
+      "argocd.argoproj.io/sync-wave" = "45";  # Just before argo-workflows (50)
     };
 
     syncPolicy = {
@@ -184,19 +187,12 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = true;
+        serverSideApply = true;
+        applyOutOfSyncOnly = true;  # Skip unchanged resources
       };
     };
 
     resources = {
-      namespaces.argo = {
-        metadata.labels = {
-          "app.kubernetes.io/managed-by" = "nixidy";
-          "app.kubernetes.io/component" = "workflows";
-          "app.kubernetes.io/part-of" = "platform";
-        };
-      };
-
       # ServiceAccount for Dagger workflows
       serviceAccounts.dagger-workflow = {
         metadata.namespace = "argo";

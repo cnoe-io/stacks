@@ -1,7 +1,10 @@
 # External Secrets Operator - Secret Management
 # Provides external secret management for both KIND and Talos clusters.
 # KIND uses idpBuilder's built-in Gitea secret stores.
-# Talos uses Azure Key Vault via Workload Identity.
+# Both KIND and Talos use Azure Key Vault via Workload Identity.
+#
+# CONSOLIDATED: This app now owns the namespace, ServiceAccount, and ClusterSecretStore
+# (previously split across external-secrets and eso-workload-identity apps)
 #
 # Uses nixhelm for Helm chart management following nixidy best practices.
 # See: https://nixidy.dev/user_guide/helm_charts/
@@ -11,6 +14,7 @@
 let
   isKind = config.environmentType == "kind";
   isTalos = config.environmentType == "talos";
+  enableAzureWorkloadIdentity = isTalos || isKind;
   namespace = "external-secrets";
 in
 {
@@ -33,6 +37,7 @@ in
         syncOptions = {
           createNamespace = true;
           serverSideApply = true;
+          applyOutOfSyncOnly = true;  # Skip unchanged resources for faster syncs
         };
       };
 
@@ -76,10 +81,26 @@ in
           leaderElect = true;
         };
       };
-    };
 
-    # Workload Identity for External Secrets (Talos only)
-    # This is handled by eso-workload-identity.nix
+      # ClusterSecretStore for Azure Key Vault (consolidated from eso-workload-identity)
+      # This provides access to Azure Key Vault for all ExternalSecrets
+      yamls = lib.mkIf enableAzureWorkloadIdentity [
+        ''
+          apiVersion: external-secrets.io/v1
+          kind: ClusterSecretStore
+          metadata:
+            name: azure-keyvault-store
+          spec:
+            provider:
+              azurekv:
+                authType: WorkloadIdentity
+                vaultUrl: https://${config.azure.keyVaultName}.vault.azure.net
+                serviceAccountRef:
+                  name: external-secrets
+                  namespace: ${namespace}
+        ''
+      ];
+    };
 
     # NOTE: bootstrap-secrets is defined in secrets.nix
   };

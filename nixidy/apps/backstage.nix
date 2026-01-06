@@ -42,6 +42,17 @@ in
       };
     };
 
+    # Allow DevSpace to scale down the deployment without ArgoCD reverting it
+    ignoreDifferences = {
+      ${appName} = {
+        group = "apps";
+        kind = "Deployment";
+        name = appName;
+        namespace = namespace;
+        jsonPointers = [ "/spec/replicas" ];
+      };
+    };
+
     resources = {
       # Namespace
       namespaces.${namespace} = {

@@ -2,21 +2,18 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
-    argocd.argoproj.io/sync-wave: "-90"
-  name: eso-workload-identity
+    argocd.argoproj.io/sync-wave: "-55"
+  name: attic-tailscale-serve
   namespace: argocd
 spec:
   destination:
-    namespace: external-secrets
+    namespace: tailscale
     server: https://kubernetes.default.svc
   project: default
   source:
     path: .
-    repoURL: cnoe://eso-workload-identity/manifests
+    repoURL: cnoe://attic-tailscale-serve/manifests
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true

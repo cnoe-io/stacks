@@ -17,12 +17,15 @@ let
   giteaUrl = "https://gitea.${ingressHost}${portSuffix}";
   keycloakMetadataUrl = "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration";
   kargoUrl = "https://kargo.${ingressHost}${portSuffix}";
+  # Catalog URL follows idpBuilder naming: cnoe://<package>/<path> -> idpbuilder-<cluster>-<package>-<path>
+  # Since we use cnoe://backstage-templates/entities, the Gitea repo is backstage-templates-entities
   catalogUrl = "https://gitea.${ingressHost}${portSuffix}/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml";
 
   # Internal service URLs
   postgresHost = "postgresql.${namespace}.svc.cluster.local";
   agentForgeUrl = "http://supervisor.ai-platform-engineering.svc.cluster.local:8000";
-  flagdHost = "flagd.feature-flags.svc.cluster.local";
+  # Flipt provides OpenFeature-compliant gRPC API on port 9000
+  fliptHost = "flipt.feature-flags.svc.cluster.local";
 in
 {
   config = lib.mkIf isKind {
@@ -81,10 +84,34 @@ in
 
               backend:
                 baseUrl: ${backstageUrl}
+                listen: ':7007'
+                reading:
+                  allow:
+                    - host: 'gitea.${ingressHost}${portSuffix}'
+                    - host: '*.${ingressHost}${portSuffix}'
                 database:
+                  client: pg
                   connection:
                     host: ${postgresHost}
                     port: 5432
+                    user: ''${POSTGRES_USER}
+                    password: ''${POSTGRES_PASSWORD}
+
+              auth:
+                session:
+                  secret: ''${BACKSTAGE_SESSION_SECRET}
+                providers:
+                  guest:
+                    dangerouslyAllowOutsideDevelopment: true
+                  oidc:
+                    production:
+                      metadataUrl: ''${KEYCLOAK_NAME_METADATA}
+                      clientId: backstage
+                      clientSecret: ''${KEYCLOAK_CLIENT_SECRET}
+                      prompt: auto
+                      signIn:
+                        resolvers:
+                          - resolver: preferredUsernameMatchingUserEntityName
 
               # Proxy endpoints
               proxy:
@@ -101,11 +128,12 @@ in
                     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
                     allowedHeaders: ['Authorization', 'Content-Type']
 
-              # Feature Flags
+              # Feature Flags - Using Flipt (OpenFeature-compliant gRPC API)
+              # Flagd has been deprecated in favor of Flipt-only architecture
               featureFlags:
-                flagd:
-                  host: ${flagdHost}
-                  port: 8013
+                flipt:
+                  host: ${fliptHost}
+                  port: 9000
                   tls: false
                 frontend:
                   baseUrl: /api/feature-flags
@@ -122,12 +150,15 @@ in
                 headerSubtitle: 'AI Platform Engineer Assistant'
                 inputPlaceholder: 'Ask CAIPE anything...'
 
-              # Integrations (URLs only, credentials from secrets)
+              # Integrations (credentials from environment variables set by gitea-credentials secret)
+              # Host includes port for URL matching in catalog locations
               integrations:
                 gitea:
-                  - host: gitea.${ingressHost}
+                  - host: gitea.${ingressHost}${portSuffix}
                     baseUrl: ${giteaUrl}
                     apiBaseUrl: ${giteaUrl}/api/v1
+                    username: ''${GITEA_USERNAME}
+                    password: ''${GITEA_PASSWORD}
 
               # Catalog locations
               catalog:

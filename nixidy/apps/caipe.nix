@@ -882,78 +882,144 @@ in
       };
     };
 
-    resources = {
-      deployments.rag-server = {
-        metadata = {
-          inherit namespace;
-          labels = {
-            app = "rag-server";
-            tier = "rag";
-          };
-        };
-        spec = {
-          # Scaled to 0 - langchain-milvus has bug with HNSW index params (pymilvus #1886)
-          # Error: "efConstruction out of range" when creating sparse-dense vector index
-          # Fix: Update caipe-rag-server image when langchain-milvus is fixed upstream
-          replicas = 0;
-          selector.matchLabels.app = "rag-server";
+    # Use raw YAML to include init container for HNSW index bug fix
+    yamls = [
+      ''
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: rag-server
+          namespace: ${namespace}
+          labels:
+            app: rag-server
+            tier: rag
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: rag-server
+          template:
+            metadata:
+              labels:
+                app: rag-server
+            spec:
+              imagePullSecrets:
+                - name: ghcr-pull-secret
+              initContainers:
+                # Fix rag-server for Milvus 2.4.x compatibility:
+                # - Milvus 2.4.x doesn't support BM25 metric for sparse indexes (only IP)
+                # - So we disable hybrid search (BM25BuiltInFunction) and use dense vectors only
+                # - Also fix HNSW index params (missing M and efConstruction)
+                - name: patch-index-params
+                  image: ghcr.io/cnoe-io/caipe-rag-server:0.2.8
+                  command: ["/bin/sh", "-c"]
+                  args:
+                    - |
+                      # Copy the entire server module to a writable location
+                      mkdir -p /tmp/patched/server
+                      cp -r /app/server/src/server/* /tmp/patched/server/
 
-          template = {
-            metadata.labels.app = "rag-server";
+                      # Patch 1: Fix HNSW index params - add required M and efConstruction
+                      sed -i 's/dense_index_params = {"index_type": "HNSW", "metric_type": "COSINE"}/dense_index_params = {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 64}}/' /tmp/patched/server/restapi.py
 
-            spec = {
-              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
-              containers = [{
-                name = "rag-server";
-                image = "ghcr.io/cnoe-io/caipe-rag-server:0.2.8";
-                ports = [{ containerPort = 8000; name = "http"; }];
-                env = [
-                  # Use MILVUS_URI format as expected by rag-server
-                  { name = "MILVUS_URI"; value = "http://milvus.${namespace}.svc.cluster.local:19530"; }
-                  # Neo4j connection for GraphRAG
-                  { name = "NEO4J_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
-                  { name = "NEO4J_ONTOLOGY_ADDR"; value = "neo4j://neo4j.${namespace}.svc.cluster.local:7687"; }
-                  { name = "NEO4J_USERNAME"; value = "neo4j"; }
-                  # Redis for caching
-                  { name = "REDIS_URL"; value = "redis://redis.${namespace}.svc.cluster.local:6379/0"; }
-                  # Agent ontology for GraphRAG
-                  { name = "ONTOLOGY_AGENT_RESTAPI_ADDR"; value = "http://nexigraph.${namespace}.svc.cluster.local:8098"; }
-                  # Embedding model
-                  { name = "EMBEDDINGS_MODEL"; value = "text-embedding-3-large"; }
-                  { name = "ENABLE_GRAPH_RAG"; value = "true"; }
-                ];
-                # Inject all keys from secrets
-                envFrom = [
-                  { secretRef.name = "llm-secret"; }
-                  { secretRef.name = "embeddings-secret"; }
-                  { secretRef.name = "neo4j-secret"; }
-                ];
-                resources = {
-                  requests = {
-                    cpu = "200m";
-                    memory = "512Mi";
-                  };
-                  limits = {
-                    memory = "1Gi";
-                  };
-                };
-              }];
-            };
-          };
-        };
-      };
+                      # Patch 2: Disable hybrid search (BM25 not supported in Milvus 2.4.x)
+                      # Remove BM25BuiltInFunction and use single dense vector field
+                      sed -i 's/builtin_function=BM25BuiltInFunction(output_field_names="sparse"),/# builtin_function disabled - BM25 not supported in Milvus 2.4.x/' /tmp/patched/server/restapi.py
+                      sed -i 's/vector_field=\["dense", "sparse"\],/vector_field="dense",/' /tmp/patched/server/restapi.py
+                      sed -i 's/vector_field=\["dense", "sparse"\]/vector_field="dense"/' /tmp/patched/server/restapi.py
 
-      services.rag-server = {
-        metadata = {
-          inherit namespace;
-          labels.app = "rag-server";
-        };
-        spec = {
-          ports = [{ name = "http"; port = 8000; targetPort = "http"; }];
-          selector.app = "rag-server";
-        };
-      };
-    };
+                      # Patch 3: Fix index_params to match single vector_field
+                      sed -i 's/index_params=\[dense_index_params, sparse_index_params\],/index_params=dense_index_params,/' /tmp/patched/server/restapi.py
+                      sed -i 's/index_params=\[dense_index_params, sparse_index_params\]/index_params=dense_index_params/' /tmp/patched/server/restapi.py
+
+                      # Patch 4: Update index_params in healthz response (remove sparse)
+                      sed -i 's/"index_params": {"dense": dense_index_params, "sparse": sparse_index_params}/"index_params": {"dense": dense_index_params}/' /tmp/patched/server/restapi.py
+
+                      echo "Patched for Milvus 2.4.x compatibility (dense-only vectors):"
+                      grep -n "vector_field\|index_params=" /tmp/patched/server/restapi.py | head -6
+                  volumeMounts:
+                    - name: patched-src
+                      mountPath: /tmp/patched
+              containers:
+                - name: rag-server
+                  image: ghcr.io/cnoe-io/caipe-rag-server:0.2.8
+                  # Use PYTHONPATH to load patched server module first
+                  command: ["/bin/sh", "-c"]
+                  args:
+                    - |
+                      # Set PYTHONPATH so patched module is found first
+                      export PYTHONPATH=/tmp/patched:$PYTHONPATH
+                      # Verify patch
+                      grep "_index_params = " /tmp/patched/server/restapi.py | head -2
+                      # Start the server
+                      exec python -m uvicorn server.restapi:app --host 0.0.0.0 --port 9446
+                  ports:
+                    - containerPort: 9446
+                      name: http
+                  env:
+                    # Use MILVUS_URI format as expected by rag-server
+                    - name: MILVUS_URI
+                      value: http://milvus.${namespace}.svc.cluster.local:19530
+                    # Skip init tests that fail due to langchain-milvus bug (pymilvus #1886)
+                    - name: SKIP_INIT_TESTS
+                      value: "true"
+                    - name: DISABLE_MILVUS_TEST
+                      value: "true"
+                    # Neo4j connection for GraphRAG
+                    - name: NEO4J_ADDR
+                      value: neo4j://neo4j.${namespace}.svc.cluster.local:7687
+                    - name: NEO4J_ONTOLOGY_ADDR
+                      value: neo4j://neo4j.${namespace}.svc.cluster.local:7687
+                    - name: NEO4J_USERNAME
+                      value: neo4j
+                    # Redis for caching
+                    - name: REDIS_URL
+                      value: redis://redis.${namespace}.svc.cluster.local:6379/0
+                    # Agent ontology for GraphRAG
+                    - name: ONTOLOGY_AGENT_RESTAPI_ADDR
+                      value: http://nexigraph.${namespace}.svc.cluster.local:8098
+                    # Embedding model
+                    - name: EMBEDDINGS_MODEL
+                      value: text-embedding-3-large
+                    - name: ENABLE_GRAPH_RAG
+                      value: "true"
+                  envFrom:
+                    - secretRef:
+                        name: llm-secret
+                    - secretRef:
+                        name: embeddings-secret
+                    - secretRef:
+                        name: neo4j-secret
+                  volumeMounts:
+                    - name: patched-src
+                      mountPath: /tmp/patched
+                  resources:
+                    requests:
+                      cpu: 200m
+                      memory: 512Mi
+                    limits:
+                      memory: 1Gi
+              volumes:
+                - name: patched-src
+                  emptyDir: {}
+      ''
+      ''
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: rag-server
+          namespace: ${namespace}
+          labels:
+            app: rag-server
+        spec:
+          ports:
+            - name: http
+              port: 8000
+              targetPort: http
+          selector:
+            app: rag-server
+      ''
+    ];
   };
 
   # CAIPE RAG WebUI
@@ -997,7 +1063,7 @@ in
               containers = [{
                 name = "rag-webui";
                 image = "ghcr.io/cnoe-io/caipe-rag-webui:0.2.8";
-                ports = [{ containerPort = 3000; name = "http"; }];
+                ports = [{ containerPort = 80; name = "http"; }];
                 env = [
                   { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
                 ];
@@ -1027,26 +1093,44 @@ in
         };
       };
 
+      # Domain-based routing: rag-webui.cnoe.localtest.me
+      # Routes API paths to rag-server, static files to rag-webui
       ingresses.rag-webui = {
         metadata = {
           inherit namespace;
-          annotations = {
-            "nginx.ingress.kubernetes.io/use-regex" = "true";
-            "nginx.ingress.kubernetes.io/rewrite-target" = "/$2";
-          };
         };
         spec = {
           ingressClassName = "nginx";
           rules = [{
-            host = ingressHost;
-            http.paths = [{
-              path = "/rag(/|$)(.*)";
-              pathType = "ImplementationSpecific";
-              backend.service = {
-                name = "rag-webui";
-                port.name = "http";
-              };
-            }];
+            host = "rag-webui.${ingressHost}";
+            http.paths = [
+              # API endpoints proxied to rag-server
+              {
+                path = "/healthz";
+                pathType = "Exact";
+                backend.service = {
+                  name = "rag-server";
+                  port.number = 8000;
+                };
+              }
+              {
+                path = "/v1";
+                pathType = "Prefix";
+                backend.service = {
+                  name = "rag-server";
+                  port.number = 8000;
+                };
+              }
+              # Static files served by rag-webui
+              {
+                path = "/";
+                pathType = "Prefix";
+                backend.service = {
+                  name = "rag-webui";
+                  port.name = "http";
+                };
+              }
+            ];
           }];
         };
       };
@@ -1073,50 +1157,75 @@ in
       };
     };
 
-    resources = {
-      deployments.rag-ingestors = {
-        metadata = {
-          inherit namespace;
-          labels = {
-            app = "rag-ingestors";
-            tier = "rag";
-          };
-        };
-        spec = {
-          # Scaled to 0 - image has entry point bug (double slash in path)
-          replicas = 0;
-          selector.matchLabels.app = "rag-ingestors";
-
-          template = {
-            metadata.labels.app = "rag-ingestors";
-
-            spec = {
-              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
-              containers = [{
-                name = "rag-ingestors";
-                image = "ghcr.io/cnoe-io/caipe-rag-ingestors:latest";
-                env = [
-                  { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = "embeddings-secret"; key = "OPENAI_API_KEY"; }; }
-                  { name = "NEO4J_URI"; value = "bolt://neo4j.${namespace}.svc.cluster.local:7687"; }
-                  { name = "NEO4J_AUTH"; valueFrom.secretKeyRef = { name = "neo4j-secret"; key = "NEO4J_AUTH"; }; }
-                  { name = "MILVUS_HOST"; value = "milvus.${namespace}.svc.cluster.local"; }
-                  { name = "MILVUS_PORT"; value = "19530"; }
-                ];
-                resources = {
-                  requests = {
-                    cpu = "200m";
-                    memory = "512Mi";
-                  };
-                  limits = {
-                    memory = "1Gi";
-                  };
-                };
-              }];
-            };
-          };
-        };
-      };
-    };
+    # Use raw YAML to include command/args (nixidy resources module doesn't render these)
+    yamls = [
+      ''
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: rag-ingestors
+          namespace: ${namespace}
+          labels:
+            app: rag-ingestors
+            tier: rag
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: rag-ingestors
+          template:
+            metadata:
+              labels:
+                app: rag-ingestors
+            spec:
+              imagePullSecrets:
+                - name: ghcr-pull-secret
+              containers:
+                - name: rag-ingestors
+                  image: ghcr.io/cnoe-io/caipe-rag-ingestors:0.2.8
+                  # Override entrypoint to fix double-slash bug in image
+                  command: ["python3"]
+                  args: ["/app/ingestors/src/ingestors/webloader/ingestor.py"]
+                  env:
+                    # Redis for job queue (critical for ingestor)
+                    - name: REDIS_URL
+                      value: redis://redis.${namespace}.svc.cluster.local:6379/0
+                    # RAG Server URL for job polling
+                    - name: RAG_SERVER_URL
+                      value: http://rag-server.${namespace}.svc.cluster.local:8000
+                    # Milvus vector database
+                    - name: MILVUS_URI
+                      value: http://milvus.${namespace}.svc.cluster.local:19530
+                    - name: MILVUS_HOST
+                      value: milvus.${namespace}.svc.cluster.local
+                    - name: MILVUS_PORT
+                      value: "19530"
+                    # Neo4j graph database
+                    - name: NEO4J_ADDR
+                      value: neo4j://neo4j.${namespace}.svc.cluster.local:7687
+                    - name: NEO4J_URI
+                      value: bolt://neo4j.${namespace}.svc.cluster.local:7687
+                    - name: NEO4J_AUTH
+                      valueFrom:
+                        secretKeyRef:
+                          name: neo4j-secret
+                          key: NEO4J_AUTH
+                    # Embedding configuration
+                    - name: EMBEDDINGS_MODEL
+                      value: text-embedding-3-large
+                    - name: LOG_LEVEL
+                      value: DEBUG
+                  envFrom:
+                    - secretRef:
+                        name: embeddings-secret
+                  resources:
+                    requests:
+                      cpu: 200m
+                      memory: 512Mi
+                    limits:
+                      memory: 1Gi
+      ''
+    ];
   };
 
   # CAIPE RAG K8s Ingestor

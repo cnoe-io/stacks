@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: nocodb-postgres
+  name: nocodb-postgres
+  namespace: nocodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nocodb-postgres
+  serviceName: nocodb-postgres
+  template:
+    metadata:
+      labels:
+        app: nocodb-postgres
+    spec:
+      containers:
+        - env:
+            - name: POSTGRES_DB
+              value: nocodb
+            - name: POSTGRES_USER
+              value: nocodb
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: nocodb-credentials
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          image: postgres:15-alpine
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - nocodb
+                - -d
+                - nocodb
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          name: postgres
+          ports:
+            - containerPort: 5432
+              name: postgres
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - nocodb
+                - -d
+                - nocodb
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: data
+      securityContext:
+        fsGroup: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

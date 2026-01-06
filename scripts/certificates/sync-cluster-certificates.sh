@@ -7,8 +7,12 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-CERT_SECRET_NAME="${CERT_SECRET_NAME:-idpbuilder-cert}"
+# Support both idpbuilder-cert and persistent-tls-cert secret names
+# persistent-tls-cert is used when persistent certificates from AKV are enabled
+CERT_SECRET_NAME="${CERT_SECRET_NAME:-persistent-tls-cert}"
+CERT_SECRET_NAME_FALLBACK="idpbuilder-cert"
 CERT_NAMESPACE="${CERT_NAMESPACE:-ingress-nginx}"
+VAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
 REGISTRY_HOST="${REGISTRY_HOST:-gitea.cnoe.localtest.me:8443}"
 STACKS_DIR="${STACKS_DIR:-$HOME/stacks}"
 CERT_CACHE_DIR="$STACKS_DIR/scripts/certificates/cache"
@@ -139,9 +143,80 @@ fi
 ensure_binary kubectl
 ensure_binary openssl
 
+# Check if persistent TLS certificate exists in Azure Key Vault
+check_persistent_cert() {
+    if command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
+        if az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" &>/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# If using persistent certificates from AKV, fetch directly instead of from cluster
+if check_persistent_cert && ! $FORCE_UPDATE; then
+    log "Persistent TLS certificate detected in Azure Key Vault"
+
+    mkdir -p "$CERT_CACHE_DIR" "$SYSTEM_CERT_DIR"
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+
+    log "Fetching certificate from Azure Key Vault..."
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" --query value -o tsv | base64 -d > "$tmpdir/tls.crt"
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-KEY" --query value -o tsv | base64 -d > "$tmpdir/tls.key"
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-CA-CRT" --query value -o tsv | base64 -d > "$tmpdir/ca.crt"
+
+    new_fingerprint=$(openssl x509 -in "$tmpdir/tls.crt" -noout -fingerprint | cut -d= -f2)
+    if [ -f "$CERT_CACHE_DIR/tls.crt" ]; then
+        existing_fingerprint=$(openssl x509 -in "$CERT_CACHE_DIR/tls.crt" -noout -fingerprint | cut -d= -f2)
+    else
+        existing_fingerprint=""
+    fi
+
+    if [ "$existing_fingerprint" = "$new_fingerprint" ]; then
+        warn "Certificate fingerprint unchanged (${new_fingerprint}). Using cached certificate."
+    else
+        log "Updating stored certificate from AKV (fingerprint ${new_fingerprint})"
+        install -m0644 "$tmpdir/tls.crt" "$CERT_CACHE_DIR/tls.crt"
+        install -m0600 "$tmpdir/tls.key" "$CERT_CACHE_DIR/tls.key"
+        install -m0644 "$tmpdir/ca.crt" "$CERT_CACHE_DIR/ca.crt"
+
+        install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/idpbuilder-ca.crt"
+        install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/idpbuilder-tls.crt"
+
+        if [ -f /etc/ssl/certs/ca-bundle.crt ]; then
+            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt"
+            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-idpbuilder.crt"
+        fi
+    fi
+
+    # Continue with browser import and system trust installation
+    if [ -x "$BROWSER_SCRIPT" ]; then
+        log "Importing certificate into browser profiles (Firefox and Chromium)"
+        "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/idpbuilder-ca.crt" --no-cluster-check
+    fi
+
+    if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then
+            log "Triggering system trust installation"
+            sudo STACKS_DIR="$STACKS_DIR" TARGET_USER="$TARGET_USER" REGISTRY_HOST="$REGISTRY_HOST" "$STACKS_DIR/scripts/certificates/sync-cluster-certificates.sh" --system
+        fi
+    fi
+
+    log "Certificate sync complete (from Azure Key Vault)"
+    exit 0
+fi
+
+# Fallback: Extract certificate from cluster secret
 log "Waiting for secret ${CERT_SECRET_NAME} in namespace ${CERT_NAMESPACE}"
 for attempt in {1..30}; do
     if kubectl get secret "$CERT_SECRET_NAME" -n "$CERT_NAMESPACE" &>/dev/null; then
+        break
+    fi
+    # Try fallback secret name
+    if kubectl get secret "$CERT_SECRET_NAME_FALLBACK" -n "$CERT_NAMESPACE" &>/dev/null; then
+        CERT_SECRET_NAME="$CERT_SECRET_NAME_FALLBACK"
+        log "Using fallback secret: $CERT_SECRET_NAME"
         break
     fi
     sleep 2

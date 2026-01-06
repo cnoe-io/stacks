@@ -74,15 +74,20 @@ let
 in
 {
   # Gitea SecretStore - for KIND environments
+  # NOTE: Namespace owned by idpbuilder-gitea app (sync-wave -80)
   applications.gitea-secretstore = lib.mkIf isKind {
     namespace = "gitea";
-    createNamespace = true;
+    createNamespace = false;  # idpbuilder-gitea owns the namespace
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "-50";
     };
 
-    syncPolicy = syncPolicyWithRetry;
+    syncPolicy = syncPolicyWithRetry // {
+      syncOptions = syncPolicyWithRetry.syncOptions // {
+        applyOutOfSyncOnly = true;  # Skip unchanged resources
+      };
+    };
 
     resources = mkSecretStore {
       name = "eso-store";

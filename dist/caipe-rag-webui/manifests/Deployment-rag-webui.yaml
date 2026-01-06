@@ -23,7 +23,7 @@ spec:
           image: ghcr.io/cnoe-io/caipe-rag-webui:0.2.8
           name: rag-webui
           ports:
-            - containerPort: 3000
+            - containerPort: 80
               name: http
           resources:
             limits:

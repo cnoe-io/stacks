@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  labels:
+    app: attic
+  name: attic
+  namespace: nix-cache
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: attic.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: attic
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - attic.cnoe.localtest.me
+      secretName: attic-tls

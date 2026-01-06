@@ -8,7 +8,7 @@ in
 {
   applications.redis = {
     inherit namespace;
-    createNamespace = true;
+    createNamespace = false;  # postgres app owns nextjs namespace (sync-wave 50)
 
     # Sync wave for cache layer (after database)
     annotations = {
@@ -22,7 +22,8 @@ in
         selfHeal = true;
       };
       syncOptions = {
-        createNamespace = true;
+        serverSideApply = true;
+        applyOutOfSyncOnly = true;  # Skip unchanged resources
       };
     };
 

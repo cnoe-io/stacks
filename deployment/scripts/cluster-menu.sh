@@ -391,12 +391,109 @@ cluster-deploy() {
   # Generate kind-config.yaml from template with current STACKS_DIR
   generate-kind-config
 
-  # Allow idpbuilder to manage its own self-signed certificates
+  # Generate nginx override with persistent TLS certificate from Azure Key Vault
+  # This creates a combined YAML with both the TLS secret and deployment
+  # Also generates ArgoCD override with CA trust for Gitea access
+  local NGINX_OVERRIDE_SCRIPT="$STACKS_DIR/deployment/scripts/persistent-secrets/generate-nginx-override.sh"
+  local NGINX_OVERRIDE_FILE="/tmp/nginx-override-with-cert.yaml"
+  local ARGOCD_OVERRIDE_FILE="/tmp/argocd-override-with-ca.yaml"
+  local ARGOCD_OVERRIDE_ARG=""
+
+  if [ -f "$NGINX_OVERRIDE_SCRIPT" ]; then
+    echo "🔐 Generating nginx override with persistent TLS certificate..."
+    NGINX_OVERRIDE_FILE=$("$NGINX_OVERRIDE_SCRIPT" 2>/dev/null) || NGINX_OVERRIDE_FILE="/tmp/nginx-override-with-cert.yaml"
+
+    # Verify the override file was created
+    if [ ! -f "$NGINX_OVERRIDE_FILE" ]; then
+      echo "⚠️  Persistent cert not available, using standard nginx override"
+      NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+    else
+      echo "✅ Using persistent TLS certificate from Azure Key Vault"
+      # ArgoCD override is generated alongside nginx override
+      if [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
+        echo "✅ Using declarative ArgoCD CA trust configuration"
+        ARGOCD_OVERRIDE_ARG="--argocd-override $ARGOCD_OVERRIDE_FILE"
+      fi
+    fi
+  else
+    NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+  fi
+
+  # Start background process to apply persistent CA to ArgoCD as soon as it's ready
+  # This runs in parallel with idpbuilder so apps aren't blocked waiting for CA trust
+  local ARGOCD_CA_PID=""
+  local CA_INJECTION_LOG="/tmp/argocd-ca-injection.log"
+  if [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
+    # Use a separate script approach to avoid subshell variable issues
+    cat > /tmp/inject-argocd-ca.sh << 'INJECT_SCRIPT'
+#!/usr/bin/env bash
+set -x  # Enable debug output
+exec > /tmp/argocd-ca-injection.log 2>&1
+
+VAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
+
+echo "$(date): Starting ArgoCD CA injection..."
+echo "VAULT_NAME: $VAULT_NAME"
+
+# Wait for argocd-tls-certs-cm to exist (idpbuilder creates it)
+echo "$(date): Waiting for ArgoCD ConfigMap..."
+waited=0
+while ! kubectl get configmap argocd-tls-certs-cm -n argocd 2>/dev/null; do
+  sleep 2
+  waited=$((waited + 2))
+  echo "$(date): Waited ${waited}s for argocd-tls-certs-cm..."
+  if [ $waited -ge 300 ]; then
+    echo "$(date): TIMEOUT waiting for argocd-tls-certs-cm"
+    exit 1
+  fi
+done
+
+echo "$(date): ConfigMap exists, fetching CA from Key Vault..."
+
+# Apply our persistent CA certificate
+CA_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-CA-CRT" --query value -o tsv 2>&1)
+echo "$(date): AZ CLI result length: ${#CA_CRT}"
+
+if [[ "$CA_CRT" == *"BEGIN CERTIFICATE"* ]] || [[ ${#CA_CRT} -gt 100 ]]; then
+  # Decode if base64 encoded
+  DECODED_CRT=$(echo "$CA_CRT" | base64 -d 2>/dev/null) || DECODED_CRT="$CA_CRT"
+
+  echo "$(date): Applying CA to ArgoCD ConfigMap..."
+  kubectl create configmap argocd-tls-certs-cm -n argocd \
+    --from-literal="gitea.cnoe.localtest.me=${DECODED_CRT}" \
+    --from-literal="cnoe.localtest.me=${DECODED_CRT}" \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+  echo "$(date): Restarting repo-server..."
+  kubectl rollout restart deployment argocd-repo-server -n argocd
+  kubectl rollout status deployment argocd-repo-server -n argocd --timeout=120s
+
+  # Also restart application-controller to pick up new trust
+  kubectl rollout restart statefulset argocd-application-controller -n argocd
+  kubectl rollout status statefulset argocd-application-controller -n argocd --timeout=120s
+
+  echo "$(date): SUCCESS - ArgoCD CA trust configured"
+else
+  echo "$(date): FAILED - Could not fetch CA from Key Vault"
+  echo "CA_CRT value: $CA_CRT"
+  exit 1
+fi
+INJECT_SCRIPT
+    chmod +x /tmp/inject-argocd-ca.sh
+
+    # Run the injection script in background
+    /tmp/inject-argocd-ca.sh &
+    ARGOCD_CA_PID=$!
+    echo "   Started background CA injection process (PID: $ARGOCD_CA_PID, log: $CA_INJECTION_LOG)"
+  fi
+
   # Check if Linux deployment script exists and use it
   if [ -f "$DEPLOY_DIR/scripts/deploy-linux-ssh.sh" ]; then
     echo "Using Linux deployment script with direct key mounting and Azure integration..."
     cd "$DEPLOY_DIR/scripts" && ./deploy-linux-ssh.sh \
       --package "$STACKS_DIR/dist/" \
+      --nginx-override "$NGINX_OVERRIDE_FILE" \
+      $ARGOCD_OVERRIDE_ARG \
       "$@"
   else
     # Fallback to standard idpbuilder with post-setup JWKS sync
@@ -409,7 +506,7 @@ cluster-deploy() {
     idpbuilder create \
       --name "${CLUSTER_NAME}" \
       -p "$STACKS_DIR/dist/" \
-      --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
+      --package-custom-file "nginx:${NGINX_OVERRIDE_FILE}" \
       --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
       --dev-password "$@"
 
@@ -432,6 +529,13 @@ cluster-deploy() {
     fix-kind-hosts "${CLUSTER_NAME}"
   fi
 
+  # Wait for background CA injection to complete (if running)
+  # This ensures CA is applied before we try to use ArgoCD CLI
+  if [ -n "$ARGOCD_CA_PID" ] && kill -0 "$ARGOCD_CA_PID" 2>/dev/null; then
+    echo "   Waiting for background CA injection to complete..."
+    wait "$ARGOCD_CA_PID" 2>/dev/null || true
+  fi
+
   # Initialize ArgoCD authentication and save token to 1Password after successful deployment
   if [ $result -eq 0 ] && [ "${SKIP_ARGOCD_INIT:-}" != "true" ]; then
     echo ""
@@ -450,51 +554,71 @@ cluster-deploy() {
     fi
   fi
 
-  # Generate Tailscale remote access token after deployment
+  # Generate Tailscale remote access token after deployment (ASYNC by default)
+  # This runs in background to avoid blocking cluster-deploy for 5-10 minutes
+  # Use WAIT_TAILSCALE_TOKEN=true to wait synchronously
   if [ $result -eq 0 ] && [ "${SKIP_TAILSCALE_TOKEN:-}" != "true" ]; then
     local TAILSCALE_KUBECONFIG_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh"
+    local TAILSCALE_TOKEN_LOG="/tmp/tailscale-token-generation.log"
     if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
       echo ""
-      echo "🔑 Generating Tailscale remote access token..."
+      echo "🔑 Tailscale remote access token generation..."
 
-      # Wait for k8s-api-tailscale-serve to be ready
-      # Note: With init containers waiting for ESO secrets, this can take 5-10 minutes
-      # The init container approach prevents CreateContainerConfigError but requires patience
-      echo "   Waiting for k8s-api-tailscale-serve pod (may take 5-10 min due to ESO sync)..."
+      # Create async token generation script
+      cat > /tmp/generate-tailscale-token.sh << TAILSCALE_SCRIPT
+#!/usr/bin/env bash
+set -x
+exec > "$TAILSCALE_TOKEN_LOG" 2>&1
+echo "\$(date): Starting Tailscale token generation..."
 
-      # Show progress while waiting
-      local TIMEOUT=600  # 10 minutes
-      local INTERVAL=30
-      local ELAPSED=0
-      local READY=false
+TIMEOUT=600
+INTERVAL=30
+ELAPSED=0
+READY=false
 
-      while [ $ELAPSED -lt $TIMEOUT ]; do
-        if kubectl wait --for=condition=available deployment/k8s-api-tailscale-serve -n tailscale --timeout=${INTERVAL}s &>/dev/null; then
-          READY=true
-          break
-        fi
-        ELAPSED=$((ELAPSED + INTERVAL))
+while [ \$ELAPSED -lt \$TIMEOUT ]; do
+  if kubectl wait --for=condition=available deployment/k8s-api-tailscale-serve -n tailscale --timeout=\${INTERVAL}s 2>/dev/null; then
+    READY=true
+    break
+  fi
+  ELAPSED=\$((ELAPSED + INTERVAL))
+  echo "\$(date): Waiting for k8s-api-tailscale-serve (\${ELAPSED}s/\${TIMEOUT}s)..."
+done
 
-        # Show status update
-        local POD_STATUS
-        POD_STATUS=$(kubectl get pods -n tailscale -l app.kubernetes.io/name=k8s-api-tailscale-serve -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "Unknown")
-        local INIT_STATUS
-        INIT_STATUS=$(kubectl get pods -n tailscale -l app.kubernetes.io/name=k8s-api-tailscale-serve -o jsonpath='{.items[0].status.initContainerStatuses[0].state}' 2>/dev/null | grep -o 'running\|waiting\|terminated' | head -1 || echo "unknown")
-        echo "   ... still waiting (${ELAPSED}s/${TIMEOUT}s) - Pod: $POD_STATUS, Init: $INIT_STATUS"
-      done
+if [ "\$READY" = true ]; then
+  sleep 5
+  if "$TAILSCALE_KUBECONFIG_SCRIPT" generate; then
+    echo "\$(date): SUCCESS - Tailscale token generated and stored in Azure Key Vault"
+  else
+    echo "\$(date): FAILED - Token generation failed"
+    exit 1
+  fi
+else
+  echo "\$(date): TIMEOUT - k8s-api-tailscale-serve not ready after \${TIMEOUT}s"
+  exit 1
+fi
+TAILSCALE_SCRIPT
+      chmod +x /tmp/generate-tailscale-token.sh
 
-      if [ "$READY" = true ]; then
-        sleep 5  # Additional wait for ServiceAccount to be ready
-        if "$TAILSCALE_KUBECONFIG_SCRIPT" generate &>/dev/null; then
-          echo "✅ Tailscale remote access token generated and stored in Azure Key Vault"
+      if [ "${WAIT_TAILSCALE_TOKEN:-}" = "true" ]; then
+        # Synchronous mode: wait for completion
+        echo "   Running synchronously (WAIT_TAILSCALE_TOKEN=true)..."
+        if /tmp/generate-tailscale-token.sh; then
+          echo "✅ Tailscale remote access token generated"
           echo "   Kubeconfig: ~/.kube/tailscale-cluster.yaml"
         else
-          echo "⚠️  Tailscale token generation failed (may retry with: tailscale-kubeconfig.sh generate)"
+          echo "⚠️  Tailscale token generation failed (check $TAILSCALE_TOKEN_LOG)"
         fi
       else
-        echo "⚠️  k8s-api-tailscale-serve not ready after ${TIMEOUT}s"
-        echo "   This is expected during first deployment while ESO syncs secrets from Azure Key Vault"
-        echo "   Retry later with: tailscale-kubeconfig.sh generate"
+        # Async mode: run in background and return immediately
+        /tmp/generate-tailscale-token.sh &
+        local TAILSCALE_PID=$!
+        echo "   Started background token generation (PID: $TAILSCALE_PID)"
+        echo "   Log: $TAILSCALE_TOKEN_LOG"
+        echo "   Check status: tail -f $TAILSCALE_TOKEN_LOG"
+        echo "   Or wait: wait $TAILSCALE_PID && cat $TAILSCALE_TOKEN_LOG"
+        echo ""
+        echo "   ⏱️  This saves ~5-10 minutes - cluster-deploy returning immediately"
       fi
     fi
   fi
@@ -546,6 +670,16 @@ cluster-recreate() {
     export DOCKER_HOST=""
   fi
 
+  # Start pre-fetching persistent TLS certificate from AKV in background
+  # This runs in parallel with Tailscale cleanup to save time
+  local NGINX_OVERRIDE_SCRIPT="$STACKS_DIR/deployment/scripts/persistent-secrets/generate-nginx-override.sh"
+  local AKV_FETCH_PID=""
+  if [ -f "$NGINX_OVERRIDE_SCRIPT" ]; then
+    echo "🔐 Pre-fetching persistent TLS certificate from AKV (background)..."
+    "$NGINX_OVERRIDE_SCRIPT" &>/dev/null &
+    AKV_FETCH_PID=$!
+  fi
+
   # Tailscale best practice: Clean up old devices before cluster recreation
   # This ensures new devices get canonical hostnames (no -1 suffix)
   # See: https://tailscale.com/kb/1439/kubernetes-operator-cluster-ingress
@@ -584,6 +718,12 @@ cluster-recreate() {
     echo ""
   fi
 
+  # Wait for AKV fetch to complete (should already be done after Tailscale cleanup)
+  if [ -n "$AKV_FETCH_PID" ]; then
+    wait "$AKV_FETCH_PID" 2>/dev/null || true
+    echo "✅ Persistent TLS certificate pre-fetched"
+  fi
+
   # Detect cluster name from hostname
   local CLUSTER_NAME="$(detect_cluster_name)"
   if [ $? -ne 0 ] || [ -z "$CLUSTER_NAME" ]; then
@@ -601,6 +741,29 @@ cluster-recreate() {
   echo "🔨 Creating fresh cluster..."
   # cluster-deploy will handle ArgoCD initialization automatically
   SKIP_AZURE_CHECK=true cluster-deploy "$@"
+  local deploy_result=$?
+
+  # Attic cache public key handling
+  # When using persistent signing keys from AKV, skip the slow sync-attic-pubkey.sh
+  # The public key is static and was added to NixOS config during one-time setup
+  if [ $deploy_result -eq 0 ]; then
+    local ATTIC_SYNC_SCRIPT="$STACKS_DIR/deployment/scripts/nix-cache/sync-attic-pubkey.sh"
+    if [ -f "$ATTIC_SYNC_SCRIPT" ]; then
+      # Check if persistent signing key exists in AKV (indicates persistent certs are in use)
+      if az keyvault secret show --vault-name "${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}" --name "ATTIC-SIGNING-PUBLIC-KEY" &>/dev/null 2>&1; then
+        echo ""
+        echo "✅ Using persistent Attic signing key from AKV (skipping sync)"
+        echo "   Public key was configured during one-time setup"
+      else
+        # Fallback: Run full sync for non-persistent setup
+        echo ""
+        echo "🔑 Syncing Attic cache public key to backstage flake.nix..."
+        "$ATTIC_SYNC_SCRIPT" || true
+      fi
+    fi
+  fi
+
+  return $deploy_result
 }
 
 cluster-update-gum() {

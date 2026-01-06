@@ -95,13 +95,14 @@ log_success "Attic pod is running"
 # Step 2: Generate admin token (T039)
 log_info "Generating admin JWT token (valid for 10 years)..."
 ADMIN_TOKEN=$(kubectl exec -n "$NAMESPACE" "deploy/$DEPLOYMENT" -- \
-    atticd-atticadm make-token \
+    atticadm -f /etc/attic/server.toml make-token \
         --sub "admin" \
         --validity "10y" \
         --pull "*" \
         --push "*" \
         --create-cache "*" \
         --configure-cache "*" \
+        --configure-cache-retention "*" \
         --destroy-cache "*" 2>/dev/null | tr -d '\n\r')
 
 if [ -z "$ADMIN_TOKEN" ]; then

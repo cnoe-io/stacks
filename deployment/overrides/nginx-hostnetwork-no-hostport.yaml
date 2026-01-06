@@ -49,7 +49,7 @@ spec:
             - --watch-ingress-without-class=true
             - --publish-status-address=localhost
             - --enable-ssl-passthrough
-            - --default-ssl-certificate=ingress-nginx/idpbuilder-cert
+            - --default-ssl-certificate=ingress-nginx/persistent-tls-cert
           env:
             - name: POD_NAME
               valueFrom:

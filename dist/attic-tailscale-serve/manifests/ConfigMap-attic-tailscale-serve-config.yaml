@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"attic-thinkpad.tail286401.ts.net:443":{"Handlers":{"/":{"Proxy":"http://attic.nix-cache.svc.cluster.local:8080"}}}}}'
+kind: ConfigMap
+metadata:
+  name: attic-tailscale-serve-config
+  namespace: tailscale

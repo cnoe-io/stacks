@@ -1,7 +1,14 @@
 # KIND local development environment configuration
 # Mirrors: cdk8s environment handling for CLUSTER_TYPE=kind
 { config, lib, ... }:
+let
+  # Read cluster name from environment variable if set, otherwise use "localdev"
+  # CLUSTER_HOST is set by cluster-update and nixidy-synth scripts
+  clusterName = builtins.getEnv "CLUSTER_HOST";
+in
 {
+  # Set cluster name from environment (for idpBuilder compatibility)
+  cluster.name = if clusterName != "" then clusterName else "localdev";
   # Set environment identifier
   nixidy.target.branch = "main";
 
@@ -41,6 +48,11 @@
   # Tailscale configuration
   tailscale = {
     tailnet = "tail286401.ts.net";
+    # Use TAILSCALE_SERVICE_HOST env var or default to "thinkpad"
+    # This maps to Tailscale Services: attic-thinkpad, gitea-thinkpad, etc.
+    serviceHost = let
+      envHost = builtins.getEnv "TAILSCALE_SERVICE_HOST";
+    in if envHost != "" then envHost else "thinkpad";
   };
 
   # Derive Keycloak URL from ingress host and port (domain-based routing)

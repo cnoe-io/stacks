@@ -10,6 +10,13 @@ spec:
   destination:
     namespace: backstage
     server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/replicas
+      kind: Deployment
+      name: backstage
+      namespace: backstage
   project: default
   source:
     path: .
