@@ -65,6 +65,7 @@ spec:
               subPath: app-config.yaml
       imagePullSecrets:
         - name: ghcr-dockercfg
+      securityContext: {}
       serviceAccountName: backstage
       volumes:
         - configMap:

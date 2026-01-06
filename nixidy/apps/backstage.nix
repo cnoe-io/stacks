@@ -248,8 +248,10 @@ in
             spec = {
               serviceAccountName = appName;
               imagePullSecrets = [{ name = imagePullSecretName; }];
-              # Note: Pod-level securityContext removed to allow Dapr sidecar injection
+              # Explicit empty pod-level securityContext to allow Dapr sidecar with runAsNonRoot
+              # The daprd container needs to run as non-root, so we can't have pod-level runAsUser: 0
               # Container-level securityContext handles backstage's root requirement
+              securityContext = {};
 
               containers = [{
                 name = appName;

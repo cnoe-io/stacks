@@ -68,7 +68,7 @@ in
             - name: redisPassword
               value: ""
             - name: keyPrefix
-              value: "config||"
+              value: "config"
       ''
 
       # Dapr Configuration for Backstage app
