@@ -228,6 +228,7 @@ in
             metadata = {
               labels.app = appName;
               # Dapr sidecar annotations for configuration building block
+              # See: https://docs.dapr.io/operations/resiliency/health-checks/sidecar-health/
               annotations = {
                 "dapr.io/enabled" = "true";
                 "dapr.io/app-id" = "backstage";
@@ -242,6 +243,23 @@ in
                   readOnlyRootFilesystem = true;
                   runAsNonRoot = false;
                 };
+                # Dapr sidecar health probe configuration (best practices)
+                # - Reasonable initial delay (30s) for container startup
+                # - Faster period (10s) for quicker detection
+                # - 3 failures before marking unhealthy
+                "dapr.io/sidecar-liveness-probe-delay-seconds" = "30";
+                "dapr.io/sidecar-liveness-probe-period-seconds" = "10";
+                "dapr.io/sidecar-liveness-probe-threshold" = "3";
+                "dapr.io/sidecar-readiness-probe-delay-seconds" = "5";
+                "dapr.io/sidecar-readiness-probe-period-seconds" = "5";
+                "dapr.io/sidecar-readiness-probe-threshold" = "3";
+                # App health checks - Dapr monitors the app and stops routing traffic if unhealthy
+                # See: https://docs.dapr.io/operations/resiliency/health-checks/app-health/
+                "dapr.io/enable-app-health-check" = "true";
+                "dapr.io/app-health-check-path" = "/.backstage/health/v1/readiness";
+                "dapr.io/app-health-probe-interval" = "5";
+                "dapr.io/app-health-probe-timeout" = "500";
+                "dapr.io/app-health-threshold" = "3";
               };
             };
 

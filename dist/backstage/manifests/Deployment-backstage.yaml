@@ -15,12 +15,23 @@ spec:
   template:
     metadata:
       annotations:
+        dapr.io/app-health-check-path: /.backstage/health/v1/readiness
+        dapr.io/app-health-probe-interval: "5"
+        dapr.io/app-health-probe-timeout: "500"
+        dapr.io/app-health-threshold: "3"
         dapr.io/app-id: backstage
         dapr.io/app-port: "7007"
         dapr.io/config: backstage-dapr-config
+        dapr.io/enable-app-health-check: "true"
         dapr.io/enabled: "true"
         dapr.io/log-as-json: "true"
         dapr.io/log-level: info
+        dapr.io/sidecar-liveness-probe-delay-seconds: "30"
+        dapr.io/sidecar-liveness-probe-period-seconds: "10"
+        dapr.io/sidecar-liveness-probe-threshold: "3"
+        dapr.io/sidecar-readiness-probe-delay-seconds: "5"
+        dapr.io/sidecar-readiness-probe-period-seconds: "5"
+        dapr.io/sidecar-readiness-probe-threshold: "3"
         dapr.io/sidecar-securitycontext: '{"allowPrivilegeEscalation":false,"readOnlyRootFilesystem":true,"runAsNonRoot":false}'
       labels:
         app: backstage
