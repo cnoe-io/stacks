@@ -17,7 +17,8 @@ in
   # =========================================================================
 
   # Backstage Local Dev Secrets
-  applications.backstage-local-dev-secrets = lib.mkIf isKind {
+  # DISABLED: Using single backstage instance with Kargo/Gitea for image promotion
+  applications.backstage-local-dev-secrets = lib.mkIf false {
     namespace = "backstage-local-dev";
     createNamespace = true;
 
@@ -229,7 +230,8 @@ in
   };
 
   # Backstage Local Dev
-  applications.backstage-local-dev = lib.mkIf isKind {
+  # DISABLED: Using single backstage instance with Kargo/Gitea for image promotion
+  applications.backstage-local-dev = lib.mkIf false {
     namespace = "backstage-local-dev";
     createNamespace = false;
 
@@ -484,7 +486,8 @@ in
   };
 
   # Backstage Staging
-  applications.backstage-staging = lib.mkIf isKind {
+  # DISABLED: Using single backstage instance with Kargo/Gitea for image promotion
+  applications.backstage-staging = lib.mkIf false {
     namespace = "backstage-staging";
     createNamespace = false;
 

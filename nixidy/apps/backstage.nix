@@ -31,10 +31,9 @@ in
     };
 
     syncPolicy = {
+      # Auto-sync disabled: Kargo/Gitea handles image promotion
       autoSync = {
-        enable = true;  # Note: 'enable' not 'enabled'
-        prune = true;
-        selfHeal = true;
+        enable = false;
       };
       syncOptions = {
         createNamespace = true;
