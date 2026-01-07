@@ -23,5 +23,4 @@ spec:
     repoURL: cnoe://backstage/manifests
   syncPolicy:
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true

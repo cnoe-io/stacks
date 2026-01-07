@@ -20,9 +20,47 @@ let
   postgresStorageSize = "500Mi";
 in
 {
-  applications.backstage = {
+  # =========================================================================
+  # Backstage Namespace - Created early for dependent apps (secrets, dapr)
+  # =========================================================================
+  applications.backstage-namespace = {
     inherit namespace;
     createNamespace = true;
+
+    annotations = {
+      # Wave -40: Before backstage-secrets (-35) and backstage-dapr-components (15)
+      "argocd.argoproj.io/sync-wave" = "-40";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        createNamespace = true;
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      namespaces.${namespace} = {
+        metadata.labels = {
+          "app.kubernetes.io/managed-by" = "nixidy";
+          "app.kubernetes.io/component" = "portal";
+          "app.kubernetes.io/part-of" = "developer-platform";
+        };
+      };
+    };
+  };
+
+  # =========================================================================
+  # Backstage Application - Main deployment (managed by Kargo)
+  # =========================================================================
+  applications.backstage = {
+    inherit namespace;
+    createNamespace = false;  # Created by backstage-namespace at wave -40
 
     annotations = {
       "argocd.argoproj.io/sync-wave" = "100";
@@ -36,7 +74,7 @@ in
         enable = false;
       };
       syncOptions = {
-        createNamespace = true;
+        createNamespace = false;  # Namespace already exists
         serverSideApply = true;
       };
     };
@@ -53,14 +91,8 @@ in
     };
 
     resources = {
-      # Namespace
-      namespaces.${namespace} = {
-        metadata.labels = {
-          "app.kubernetes.io/managed-by" = "nixidy";
-          "app.kubernetes.io/component" = "portal";
-          "app.kubernetes.io/part-of" = "developer-platform";
-        };
-      };
+      # NOTE: Namespace is created by backstage-namespace app at wave -40
+      # This ensures namespace exists before backstage-secrets (-35) and backstage-dapr-components (15)
 
       # ServiceAccount
       serviceAccounts.${appName} = {

@@ -16,8 +16,9 @@ in
     createNamespace = false;  # Backstage namespace created by backstage.nix
 
     annotations = {
-      # Deploy after backstage namespace and dapr-runtime but before backstage app
-      "argocd.argoproj.io/sync-wave" = "50";
+      # Deploy BEFORE backstage deployment (wave 20) so Dapr config exists when daprd starts
+      # Requires backstage namespace to exist (created by backstage-namespace at wave -40)
+      "argocd.argoproj.io/sync-wave" = "15";
     };
 
     syncPolicy = {
