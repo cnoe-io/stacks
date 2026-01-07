@@ -244,6 +244,64 @@ in
 
       yamls = [
         # =========================================================================
+        # PreSync Hook - Wait for Kargo webhook server readiness
+        # This app creates Warehouse/Stage CRDs that require Kargo webhook
+        # =========================================================================
+        ''
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: wait-kargo-webhook-pipeline
+            namespace: ${namespace}
+            annotations:
+              argocd.argoproj.io/hook: PreSync
+              argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+            labels:
+              app.kubernetes.io/name: wait-kargo-webhook-pipeline
+              app.kubernetes.io/part-of: kargo-pipelines
+              app.kubernetes.io/component: presync-hook
+          spec:
+            backoffLimit: 10
+            ttlSecondsAfterFinished: 300
+            template:
+              spec:
+                restartPolicy: OnFailure
+                containers:
+                  - name: wait-webhook
+                    image: curlimages/curl:8.5.0
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        echo "Waiting for Kargo webhook server to be ready..."
+                        WEBHOOK_URL="https://kargo-webhooks-server.kargo.svc:443/healthz"
+                        MAX_ATTEMPTS=60
+                        ATTEMPT=0
+
+                        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+                          ATTEMPT=$((ATTEMPT + 1))
+                          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Checking $WEBHOOK_URL"
+
+                          if curl -sk --connect-timeout 5 --max-time 10 "$WEBHOOK_URL" >/dev/null 2>&1; then
+                            echo "Kargo webhook server is ready!"
+                            exit 0
+                          fi
+
+                          echo "Webhook not ready, waiting 5s..."
+                          sleep 5
+                        done
+
+                        echo "ERROR: Kargo webhook server not ready after $MAX_ATTEMPTS attempts"
+                        exit 1
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 50m
+                        memory: 32Mi
+        ''
+        # =========================================================================
         # PromotionTask - Reusable promotion steps for Backstage
         # Requires cert-manager for MutatingWebhookConfiguration TLS
         # =========================================================================
