@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: wait-kargo-webhook-pipeline
     app.kubernetes.io/part-of: kargo-pipelines
   name: wait-kargo-webhook-pipeline
-  namespace: kargo-pipelines
+  namespace: kargo
 spec:
   backoffLimit: 10
   template:

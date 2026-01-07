@@ -246,13 +246,15 @@ in
         # =========================================================================
         # PreSync Hook - Wait for Kargo webhook server readiness
         # This app creates Warehouse/Stage CRDs that require Kargo webhook
+        # NOTE: Runs in 'kargo' namespace (not kargo-pipelines) because the
+        # kargo-pipelines namespace may not exist yet when PreSync runs
         # =========================================================================
         ''
           apiVersion: batch/v1
           kind: Job
           metadata:
             name: wait-kargo-webhook-pipeline
-            namespace: ${namespace}
+            namespace: kargo
             annotations:
               argocd.argoproj.io/hook: PreSync
               argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
