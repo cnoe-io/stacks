@@ -91,6 +91,67 @@ in
 
       # Use ArgoCD Application with OCI Helm source (nixidy doesn't support OCI)
       yamls = [
+        # =========================================================================
+        # PreSync Hook - Wait for cert-manager webhook readiness
+        # Kargo Helm chart creates Certificate resources that require cert-manager
+        # =========================================================================
+        ''
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: wait-cert-manager-webhook
+            namespace: ${namespace}
+            annotations:
+              argocd.argoproj.io/hook: PreSync
+              argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+            labels:
+              app.kubernetes.io/name: wait-cert-manager-webhook
+              app.kubernetes.io/part-of: kargo
+              app.kubernetes.io/component: presync-hook
+          spec:
+            backoffLimit: 10
+            ttlSecondsAfterFinished: 300
+            template:
+              spec:
+                restartPolicy: OnFailure
+                containers:
+                  - name: wait-webhook
+                    image: curlimages/curl:8.5.0
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        echo "Waiting for cert-manager webhook to be ready..."
+                        WEBHOOK_URL="https://cert-manager-webhook.cert-manager.svc:443/validate"
+                        MAX_ATTEMPTS=60
+                        ATTEMPT=0
+
+                        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+                          ATTEMPT=$((ATTEMPT + 1))
+                          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Checking $WEBHOOK_URL"
+
+                          # Check if webhook responds (expect 400 Bad Request for empty body, not connection refused)
+                          HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "$WEBHOOK_URL" 2>/dev/null || echo "000")
+
+                          if [ "$HTTP_CODE" != "000" ]; then
+                            echo "cert-manager webhook is ready! (HTTP $HTTP_CODE)"
+                            exit 0
+                          fi
+
+                          echo "Webhook not ready (HTTP $HTTP_CODE), waiting 5s..."
+                          sleep 5
+                        done
+
+                        echo "ERROR: cert-manager webhook not ready after $MAX_ATTEMPTS attempts"
+                        exit 1
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 50m
+                        memory: 32Mi
+        ''
         ''
           apiVersion: argoproj.io/v1alpha1
           kind: Application
