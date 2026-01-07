@@ -8,12 +8,27 @@ let
   daprSystemNamespace = "dapr-system";
   daprAgentsNamespace = "dapr-agents";
 
+  # Environment-specific settings from cluster config
+  ingressHost = config.cluster.ingressHost;
+  isTalos = config.cluster.tls.enabled;
+
+  # Subdomain-based routing: dapr.cnoe.localtest.me
+  daprDashboardHost = "dapr.${ingressHost}";
+
   # Dapr Helm chart definition (not in nixhelm, using lib.helm.downloadHelmChart)
   daprChart = lib.helm.downloadHelmChart {
     repo = "https://dapr.github.io/helm-charts";
     chart = "dapr";
     version = "1.14.4";
     chartHash = "sha256-qdZTXllm8Urr72YWAt2NzkMz3Cuwge60RaT+M0thCao=";
+  };
+
+  # Dapr Dashboard is a separate Helm chart
+  daprDashboardChart = lib.helm.downloadHelmChart {
+    repo = "https://dapr.github.io/helm-charts";
+    chart = "dapr-dashboard";
+    version = "0.15.0";
+    chartHash = "sha256-FOLYFRHX8/u0E7zRhRDT5tVtnRrtqJParUgrtUJDxzg=";
   };
 in
 {
@@ -51,9 +66,60 @@ in
           };
           logAsJson = true;
         };
-        dapr_dashboard = {
-          enabled = true;
+      };
+    };
+  };
+
+  # Dapr Dashboard - separate Helm chart (depends on dapr-runtime)
+  applications.dapr-dashboard = {
+    namespace = daprSystemNamespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-115";  # After dapr-runtime (-120)
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+    };
+
+    helm.releases.dapr-dashboard = {
+      chart = daprDashboardChart;
+      values = {
+        serviceType = "ClusterIP";
+      };
+    };
+
+    # Dapr Dashboard Ingress
+    resources.ingresses.dapr-dashboard = {
+      metadata = {
+        namespace = daprSystemNamespace;
+        annotations = lib.optionalAttrs isTalos {
+          "cert-manager.io/cluster-issuer" = config.cluster.tls.clusterIssuer;
         };
+      };
+      spec = {
+        ingressClassName = "nginx";
+        rules = [{
+          host = daprDashboardHost;
+          http.paths = [{
+            path = "/";
+            pathType = "Prefix";
+            backend.service = {
+              name = "dapr-dashboard";
+              port.number = 8080;
+            };
+          }];
+        }];
+      } // lib.optionalAttrs isTalos {
+        tls = [{
+          hosts = [ daprDashboardHost ];
+          secretName = "dapr-dashboard-tls";
+        }];
       };
     };
   };

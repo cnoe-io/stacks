@@ -352,10 +352,15 @@ in
               # Domain-based routing (primary)
               "https://backstage.${ingressHost}${portSuffix}/api/auth/keycloak-oidc/handler/frame"
               "https://backstage.${ingressHost}/api/auth/keycloak-oidc/handler/frame"
-              # Local development
-              "http://localhost:7007/api/auth/keycloak-oidc/handler/frame"
+              # Local HMR development (frontend on localhost:3000, backend in K8s)
+              "https://localhost:3000/api/auth/keycloak-oidc/handler/frame"
             ];
-            webOrigins = [ "/*" ];
+            webOrigins = [
+              "https://backstage.${ingressHost}${portSuffix}"
+              "https://backstage.${ingressHost}"
+              # Local HMR development
+              "https://localhost:3000"
+            ];
           };
           "flipt-client-payload.json" = builtins.toJSON {
             protocol = "openid-connect";
@@ -516,7 +521,7 @@ in
                       curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
                       chmod +x kubectl
 
-                      patch_client_redirects() {
+                      patch_client_config() {
                         local client_name="$1"
                         local payload_file="$2"
 
@@ -525,8 +530,9 @@ in
                           return 1
                         fi
 
-                        local desired_redirects
+                        local desired_redirects desired_weborigins
                         desired_redirects=$(jq -c '.redirectUris' "$payload_file")
+                        desired_weborigins=$(jq -c '.webOrigins' "$payload_file")
 
                         local existing_client_id
                         existing_client_id=$(curl -sS -H "Content-Type: application/json" \
@@ -544,12 +550,12 @@ in
                             -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -r --arg name "$client_name" '.[] | select(.clientId == $name) | .id' | head -1)
                         fi
 
-                        echo "ensuring redirectUris for client ''\${client_name}' (''\${existing_client_id}')"
+                        echo "ensuring redirectUris and webOrigins for client ''\${client_name}' (''\${existing_client_id}')"
                         local existing_json updated_json
                         existing_json=$(curl -sS -H "Content-Type: application/json" \
                           -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
                           -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${existing_client_id})
-                        updated_json=$(echo "$existing_json" | jq --argjson redirects "$desired_redirects" '.redirectUris = $redirects')
+                        updated_json=$(echo "$existing_json" | jq --argjson redirects "$desired_redirects" --argjson origins "$desired_weborigins" '.redirectUris = $redirects | .webOrigins = $origins')
 
                         curl -sS -H "Content-Type: application/json" \
                           -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
@@ -707,11 +713,11 @@ in
                         ensure_groups
                         ensure_users
 
-                        # Ensure redirect URIs match the desired payloads
-                        patch_client_redirects "argo-workflows" "/var/config/argo-client-payload.json"
-                        patch_client_redirects "backstage" "/var/config/backstage-client-payload.json"
-                        patch_client_redirects "flipt" "/var/config/flipt-client-payload.json"
-                        patch_client_redirects "headlamp" "/var/config/headlamp-client-payload.json"
+                        # Ensure redirect URIs and web origins match the desired payloads
+                        patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
+                        patch_client_config "backstage" "/var/config/backstage-client-payload.json"
+                        patch_client_config "flipt" "/var/config/flipt-client-payload.json"
+                        patch_client_config "headlamp" "/var/config/headlamp-client-payload.json"
 
                         # Check if secret already exists
                         if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then

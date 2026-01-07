@@ -2,17 +2,17 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
-    argocd.argoproj.io/sync-wave: "-100"
-  name: minio
+    argocd.argoproj.io/sync-wave: "-115"
+  name: dapr-dashboard
   namespace: argocd
 spec:
   destination:
-    namespace: nix-cache
+    namespace: dapr-system
     server: https://kubernetes.default.svc
   project: default
   source:
     path: .
-    repoURL: cnoe://minio/manifests
+    repoURL: cnoe://dapr-dashboard/manifests
   syncPolicy:
     automated:
       prune: true

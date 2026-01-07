@@ -2,20 +2,20 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
-    argocd.argoproj.io/sync-wave: "-110"
-  name: nix-cache-namespace
+    argocd.argoproj.io/sync-wave: "100"
+  name: argocd-webhook-setup
   namespace: argocd
 spec:
   destination:
-    namespace: nix-cache
+    namespace: argocd
     server: https://kubernetes.default.svc
   project: default
   source:
     path: .
-    repoURL: cnoe://nix-cache-namespace/manifests
+    repoURL: cnoe://argocd-webhook-setup/manifests
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
+      - ServerSideApply=true

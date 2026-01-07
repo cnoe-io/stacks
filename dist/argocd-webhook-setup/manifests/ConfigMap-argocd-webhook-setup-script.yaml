@@ -1,0 +1,79 @@
+apiVersion: v1
+data:
+  setup-webhooks.sh: |
+    #!/bin/sh
+    set -e
+
+    echo "Starting Gitea webhook configuration for ArgoCD..."
+    echo "Target: http://argocd-server.argocd.svc.cluster.local/api/webhook"
+
+    # Configuration
+    GITEA_URL="https://gitea.cnoe.localtest.me:8443"
+    WEBHOOK_URL="http://argocd-server.argocd.svc.cluster.local/api/webhook"
+    PARALLEL_JOBS=10
+
+    # Get API token from mounted secret
+    API_TOKEN=$(cat /gitea-credentials/token)
+    export API_TOKEN GITEA_URL WEBHOOK_URL
+
+    echo "Fetching repository list..."
+
+    # Get all repos (up to 200) - use jq to parse JSON properly
+    REPOS=$(curl -k -s -H "Authorization: token $API_TOKEN" \
+      "$GITEA_URL/api/v1/repos/search?limit=200" | \
+      jq -r '.data[].full_name')
+
+    TOTAL=$(echo "$REPOS" | wc -l)
+    echo "Found $TOTAL repositories, processing with $PARALLEL_JOBS parallel jobs..."
+
+    # Create helper script for parallel execution
+    cat > /tmp/process-repo.sh << 'SCRIPT'
+    #!/bin/sh
+    REPO="$1"
+    # Check if ArgoCD webhook already exists
+    EXISTS=$(curl -k -s -H "Authorization: token $API_TOKEN" \
+      "$GITEA_URL/api/v1/repos/$REPO/hooks" | \
+      jq '[.[] | select(.config.url | contains("argocd"))] | length' 2>/dev/null || echo "0")
+
+    if [ "$EXISTS" -gt 0 ]; then
+      echo "skip:$REPO"
+      exit 0
+    fi
+
+    # Create webhook
+    RESULT=$(curl -k -s -w "%{http_code}" -o /dev/null -X POST \
+      "$GITEA_URL/api/v1/repos/$REPO/hooks" \
+      -H "Authorization: token $API_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$WEBHOOK_URL\",\"content_type\":\"json\"},\"events\":[\"push\"],\"active\":true}")
+
+    if [ "$RESULT" = "201" ]; then
+      echo "created:$REPO"
+    else
+      echo "failed:$REPO:$RESULT"
+    fi
+    SCRIPT
+    chmod +x /tmp/process-repo.sh
+
+    # Process repos in parallel
+    RESULTS=$(echo "$REPOS" | xargs -P $PARALLEL_JOBS -I {} /tmp/process-repo.sh {})
+
+    # Count results
+    CREATED=$(echo "$RESULTS" | grep -c "^created:" || echo "0")
+    SKIPPED=$(echo "$RESULTS" | grep -c "^skip:" || echo "0")
+    FAILED=$(echo "$RESULTS" | grep -c "^failed:" || echo "0")
+
+    # Show created repos
+    echo "$RESULTS" | grep "^created:" | sed 's/^created:/[+] /'
+
+    echo ""
+    echo "ArgoCD webhook configuration completed!"
+    echo "Created: $CREATED, Skipped: $SKIPPED, Failed: $FAILED"
+    echo "Gitea will now send push notifications to ArgoCD instantly."
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-automation
+    app.kubernetes.io/name: argocd-webhook-setup
+  name: argocd-webhook-setup-script
+  namespace: argocd

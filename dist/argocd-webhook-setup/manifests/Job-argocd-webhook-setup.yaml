@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app.kubernetes.io/name: argocd-webhook-setup
+  name: argocd-webhook-setup
+  namespace: argocd
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+        - command:
+            - /bin/sh
+            - /scripts/setup-webhooks.sh
+          image: dwdraju/alpine-curl-jq:latest
+          name: webhook-setup
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /scripts
+              name: script
+              readOnly: true
+            - mountPath: /gitea-credentials
+              name: gitea-credentials
+              readOnly: true
+      restartPolicy: OnFailure
+      volumes:
+        - configMap:
+            defaultMode: 493
+            name: argocd-webhook-setup-script
+          name: script
+        - name: gitea-credentials
+          secret:
+            items:
+              - key: token
+                path: token
+            secretName: gitea-argocd-webhook-creds
+  ttlSecondsAfterFinished: 3600

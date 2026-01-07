@@ -4,6 +4,8 @@ metadata:
   name: basic-example-templates
   description: A collection of example templates
 spec:
+  rules:
+    - allow: [Template]
   targets:
     - ./basic/template.yaml
     - ./argo-workflows/template.yaml
@@ -16,5 +18,7 @@ metadata:
   name: basic-organization
   description: Basic organization data
 spec:
+  rules:
+    - allow: [User, Group]
   targets:
     - ./organization/guests.yaml

@@ -243,20 +243,56 @@ fi
 
 # Core package overrides
 # - nginx: avoid hostPort (prevents stale CNI hostport DNAT rules after reboot)
+# - argocd: CA trust for persistent TLS certificate
 NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+ARGOCD_OVERRIDE_FILE=""
 USE_NGINX_OVERRIDE="true"
+USE_ARGOCD_OVERRIDE="true"
+FILTERED_ARGS=()
 prev_arg=""
 for arg in "$@"; do
+    # Check for --nginx-override flag (used by cluster-menu.sh for persistent TLS cert)
+    if [[ "$prev_arg" == "--nginx-override" ]]; then
+        NGINX_OVERRIDE_FILE="$arg"
+        echo -e "${BLUE}Using custom nginx override: ${NGINX_OVERRIDE_FILE}${NC}"
+        prev_arg=""
+        continue
+    fi
+    if [[ "$arg" == "--nginx-override" ]]; then
+        prev_arg="$arg"
+        continue
+    fi
+    # Check for --argocd-override flag (used by cluster-menu.sh for CA trust)
+    if [[ "$prev_arg" == "--argocd-override" ]]; then
+        ARGOCD_OVERRIDE_FILE="$arg"
+        echo -e "${BLUE}Using custom ArgoCD override: ${ARGOCD_OVERRIDE_FILE}${NC}"
+        prev_arg=""
+        continue
+    fi
+    if [[ "$arg" == "--argocd-override" ]]; then
+        prev_arg="$arg"
+        continue
+    fi
+    # Check for inline nginx overrides
     if [[ "$arg" == --package-custom-file=nginx:* ]] || [[ "$arg" == -c=nginx:* ]]; then
         USE_NGINX_OVERRIDE="false"
-        break
     fi
     if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == nginx:* ]]; then
         USE_NGINX_OVERRIDE="false"
-        break
     fi
+    # Check for inline argocd overrides
+    if [[ "$arg" == --package-custom-file=argocd:* ]] || [[ "$arg" == -c=argocd:* ]]; then
+        USE_ARGOCD_OVERRIDE="false"
+    fi
+    if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == argocd:* ]]; then
+        USE_ARGOCD_OVERRIDE="false"
+    fi
+    FILTERED_ARGS+=("$arg")
     prev_arg="$arg"
 done
+# Replace positional args with filtered version (without custom flags)
+set -- "${FILTERED_ARGS[@]}"
+IDPBUILDER_ARGS="$@"
 
 NGINX_CUSTOM_ARG=""
 if [[ "$USE_NGINX_OVERRIDE" == "true" ]]; then
@@ -268,7 +304,13 @@ if [[ "$USE_NGINX_OVERRIDE" == "true" ]]; then
     fi
 fi
 
-idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password ${NGINX_CUSTOM_ARG:+$NGINX_CUSTOM_ARG} $IDPBUILDER_ARGS
+ARGOCD_CUSTOM_ARG=""
+if [[ "$USE_ARGOCD_OVERRIDE" == "true" ]] && [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
+    echo -e "${BLUE}Applying ArgoCD override (CA trust for persistent TLS)${NC}"
+    ARGOCD_CUSTOM_ARG="--package-custom-file=argocd:${ARGOCD_OVERRIDE_FILE}"
+fi
+
+idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password ${NGINX_CUSTOM_ARG:+$NGINX_CUSTOM_ARG} ${ARGOCD_CUSTOM_ARG:+$ARGOCD_CUSTOM_ARG} $IDPBUILDER_ARGS
 
 # Verify cluster was created with expected name
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then

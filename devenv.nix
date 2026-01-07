@@ -14,6 +14,7 @@
     pkgs.kubectl
     pkgs.kubernetes-helm
     pkgs.argocd
+    pkgs.watchexec  # File watcher for nixidy development
   ];
 
   # Custom scripts for development workflows
@@ -66,6 +67,63 @@
     "hub-argocd-sync-all".exec = ''
       argocd --server argocd-hub.tail286401.ts.net --grpc-web app sync --all
     '';
+
+    # Nixidy watch mode - watches nixidy/ and .env-files/ for changes
+    "nixidy-watch".exec = ''
+      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+      echo "Starting nixidy file watcher..."
+      echo "Watching: $STACKS_DIR/nixidy/, $STACKS_DIR/.env-files/"
+      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms"
+      echo "ArgoCD sync: ''${NIXIDY_WATCH_SYNC_ARGOCD:-true}"
+      echo ""
+      echo "Press Ctrl+C to stop"
+      echo ""
+
+      exec watchexec \
+        --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
+        --exts nix,env \
+        --watch "$STACKS_DIR/nixidy" \
+        --watch "$STACKS_DIR/.env-files" \
+        --ignore "result*" \
+        --ignore "dist" \
+        --ignore ".direnv" \
+        --ignore "*.lock" \
+        -- "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
+    '';
+
+    # Manual nixidy rebuild (one-shot, no watching)
+    "nixidy-rebuild".exec = ''
+      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+      "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
+    '';
+  };
+
+  # Background processes for `devenv up`
+  processes = {
+    # Nixidy file watcher - auto-rebuilds and deploys on file changes
+    nixidy-watch = {
+      exec = ''
+        STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+        watchexec \
+          --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
+          --exts nix,env \
+          --watch "$STACKS_DIR/nixidy" \
+          --watch "$STACKS_DIR/.env-files" \
+          --ignore "result*" \
+          --ignore "dist" \
+          --ignore ".direnv" \
+          --ignore "*.lock" \
+          -- "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
+      '';
+      # Restart policy for process-compose
+      process-compose = {
+        availability = {
+          restart = "on_failure";
+          max_restarts = 10;
+          backoff_seconds = 5;
+        };
+      };
+    };
   };
 
   # Shell initialization message
@@ -74,22 +132,27 @@
     echo "  Hub-and-Spoke GitOps Development Environment"
     echo "=================================================================="
     echo ""
-    echo "CDK8s Commands:"
-    echo "  devenv shell synth-kind          # Synthesize manifests for KIND"
-    echo "  devenv shell synth-talos         # Synthesize manifests for Talos (hub)"
-    echo "  devenv shell compile             # TypeScript compilation check"
+    echo "Nixidy Watch Mode (Auto-rebuild on file changes):"
+    echo "  devenv up                        # Start watcher as background process"
+    echo "  nixidy-watch                     # Start watcher in foreground"
+    echo "  nixidy-rebuild                   # One-shot rebuild (no watching)"
+    echo ""
+    echo "CDK8s Commands (Legacy):"
+    echo "  synth-kind                       # Synthesize manifests for KIND"
+    echo "  synth-talos                      # Synthesize manifests for Talos (hub)"
+    echo "  compile                          # TypeScript compilation check"
     echo ""
     echo "Hub Kargo Commands:"
-    echo "  devenv shell hub-kargo-status    # Show hub Kargo resources"
-    echo "  devenv shell refresh-hub-kargo-warehouse [name]  # Trigger warehouse refresh"
+    echo "  hub-kargo-status                 # Show hub Kargo resources"
+    echo "  refresh-hub-kargo-warehouse [name]  # Trigger warehouse refresh"
     echo ""
     echo "Hub ArgoCD Commands:"
-    echo "  devenv shell hub-argocd-apps     # List hub ArgoCD applications"
-    echo "  devenv shell hub-argocd-sync-all # Sync all hub ArgoCD apps"
+    echo "  hub-argocd-apps                  # List hub ArgoCD applications"
+    echo "  hub-argocd-sync-all              # Sync all hub ArgoCD apps"
     echo ""
-    echo "Inner Loop Development:"
-    echo "  See scripts/publish-local-dev.sh for pushing images to KIND Gitea"
-    echo "  Hub Kargo will automatically detect and promote to local-dev stage"
+    echo "Configuration:"
+    echo "  NIXIDY_WATCH_DEBOUNCE=2000       # Debounce delay in ms"
+    echo "  NIXIDY_WATCH_SYNC_ARGOCD=true    # Auto-sync ArgoCD after deploy"
     echo ""
   '';
 
@@ -99,5 +162,8 @@
     CLUSTER_TYPE = "kind";
     # Tailnet name for service URLs
     TAILNET_NAME = "tail286401";
+    # Nixidy watch mode configuration
+    NIXIDY_WATCH_DEBOUNCE = "2000";      # Debounce delay in milliseconds
+    NIXIDY_WATCH_SYNC_ARGOCD = "true";   # Auto-sync ArgoCD after deploy
   };
 }

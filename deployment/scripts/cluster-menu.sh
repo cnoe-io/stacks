@@ -656,6 +656,16 @@ cluster-synth() {
 }
 
 cluster-recreate() {
+  # Health check script for timing and summary
+  local HEALTH_CHECK="$STACKS_DIR/scripts/cluster-health-check.sh"
+
+  # Initialize timing
+  if [ -f "$HEALTH_CHECK" ]; then
+    "$HEALTH_CHECK" reset
+    "$HEALTH_CHECK" start "total"
+    "$HEALTH_CHECK" start "pre-flight"
+  fi
+
   # Check Azure authentication first (required for JWKS sync)
   echo "🔐 Checking Azure authentication..."
   check-azure-auth || return 1
@@ -724,6 +734,8 @@ cluster-recreate() {
     echo "✅ Persistent TLS certificate pre-fetched"
   fi
 
+  [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" end "pre-flight"
+
   # Detect cluster name from hostname
   local CLUSTER_NAME="$(detect_cluster_name)"
   if [ $? -ne 0 ] || [ -z "$CLUSTER_NAME" ]; then
@@ -731,16 +743,40 @@ cluster-recreate() {
     return 1
   fi
 
+  [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" start "cluster-delete"
   echo "🗑️  Deleting cluster: ${CLUSTER_NAME}..."
   idpbuilder delete --name "${CLUSTER_NAME}"
+  [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" end "cluster-delete"
 
   # Clear cached ArgoCD token since cluster is being recreated
   unset ARGOCD_AUTH_TOKEN
 
   echo ""
   echo "🔨 Creating fresh cluster..."
+
+  [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" start "cluster-deploy"
   # cluster-deploy will handle ArgoCD initialization automatically
   SKIP_AZURE_CHECK=true cluster-deploy "$@"
+  local deploy_result=$?
+  [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" end "cluster-deploy"
+
+  # Wait for cluster to stabilize and show summary
+  if [ -f "$HEALTH_CHECK" ]; then
+    "$HEALTH_CHECK" start "stabilization"
+    echo ""
+    echo "⏳ Waiting for cluster to stabilize..."
+    sleep 30  # Give apps time to start syncing
+
+    # Wait up to 5 minutes for cluster to be ready
+    "$HEALTH_CHECK" wait 300 || true
+    "$HEALTH_CHECK" end "stabilization"
+    "$HEALTH_CHECK" end "total"
+
+    # Print final summary
+    "$HEALTH_CHECK" summary
+  fi
+
+  return $deploy_result
 }
 
 cluster-update-gum() {
@@ -1146,6 +1182,25 @@ if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
   alias ts-kubeconfig-test="$TAILSCALE_KUBECONFIG_SCRIPT test"
 fi
 
+# Nixidy watch mode aliases (auto-rebuild on file changes)
+NIXIDY_WATCH_HANDLER="$STACKS_DIR/scripts/nixidy-watch-handler.sh"
+if [ -f "$NIXIDY_WATCH_HANDLER" ]; then
+  alias clwatch="nixidy-watch"
+  alias clrebuild="$NIXIDY_WATCH_HANDLER"
+fi
+
+# Cluster health check and summary
+CLUSTER_HEALTH_CHECK="$STACKS_DIR/scripts/cluster-health-check.sh"
+if [ -f "$CLUSTER_HEALTH_CHECK" ]; then
+  alias clhealth="$CLUSTER_HEALTH_CHECK summary"
+  alias clwait="$CLUSTER_HEALTH_CHECK wait"
+
+  # Convenience function
+  cluster-health() {
+    "$CLUSTER_HEALTH_CHECK" "${1:-summary}"
+  }
+fi
+
 # If script is being run directly (not sourced), show help
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "🎯 Cluster Management Functions"
@@ -1168,6 +1223,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  ts-kubeconfig-gen        - Generate new token after cluster recreation"
   echo "  ts-kubeconfig-get        - Get kubeconfig from Azure Key Vault"
   echo "  ts-kubeconfig-test       - Test remote kubectl access"
+  echo ""
+  echo "Nixidy Watch Mode (Auto-rebuild):"
+  echo "  clwatch                  - Start file watcher (requires devenv shell)"
+  echo "  clrebuild                - One-shot rebuild without watching"
+  echo ""
+  echo "  Or via devenv:"
+  echo "    devenv up              - Start watcher as background process"
+  echo "    nixidy-watch           - Start watcher in foreground"
+  echo "    nixidy-rebuild         - One-shot rebuild"
   echo ""
 
   # If gum is available, run the menu directly

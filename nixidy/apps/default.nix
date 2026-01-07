@@ -27,6 +27,7 @@
 
     # Phase 8: Core Infrastructure (Batch 1)
     ./argocd.nix            # ArgoCD configuration (disabled by default)
+    ./argocd-webhook-setup.nix # Gitea->ArgoCD webhooks for instant sync (KIND only)
     ./ingress-nginx.nix     # Ingress NGINX (Talos only)
     ./cert-manager.nix      # Cert-Manager with Let's Encrypt (Talos only)
     ./external-secrets.nix  # External Secrets Operator (both environments)

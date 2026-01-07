@@ -92,19 +92,60 @@ trap 'rm -rf "$TMPDIR"' EXIT
 log_info "Generating certificates in $TMPDIR"
 
 # =============================================================================
-# STEP 1: Generate TLS Certificate
+# STEP 1: Generate CA Certificate
 # =============================================================================
 
-log_info "Generating TLS certificate for *.$CERT_DOMAIN (valid for $CERT_VALIDITY_DAYS days)..."
+log_info "Generating CA certificate (valid for $CERT_VALIDITY_DAYS days)..."
 
-# Generate private key
-openssl genrsa -out "$TMPDIR/tls.key" 4096
+# Generate CA private key
+openssl genrsa -out "$TMPDIR/ca.key" 4096
 
-# Generate self-signed certificate with SANs
-cat > "$TMPDIR/cert.conf" <<EOF
+# Generate CA certificate config
+cat > "$TMPDIR/ca.conf" <<EOF
 [req]
 distinguished_name = req_distinguished_name
-x509_extensions = v3_req
+x509_extensions = v3_ca
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = California
+L = San Francisco
+O = CNOE Local Development
+OU = Platform Engineering
+CN = CNOE Local Development CA
+
+[v3_ca]
+basicConstraints = critical, CA:true
+keyUsage = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always, issuer
+EOF
+
+# Generate self-signed CA certificate
+openssl req -x509 -new -nodes \
+    -key "$TMPDIR/ca.key" \
+    -out "$TMPDIR/ca.crt" \
+    -days "$CERT_VALIDITY_DAYS" \
+    -config "$TMPDIR/ca.conf" \
+    -sha256
+
+log_success "CA certificate generated"
+
+# =============================================================================
+# STEP 2: Generate Server Certificate signed by CA
+# =============================================================================
+
+log_info "Generating server certificate for *.$CERT_DOMAIN..."
+
+# Generate server private key
+openssl genrsa -out "$TMPDIR/tls.key" 4096
+
+# Generate server certificate config
+cat > "$TMPDIR/server.conf" <<EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
@@ -116,7 +157,8 @@ OU = Platform Engineering
 CN = *.$CERT_DOMAIN
 
 [v3_req]
-keyUsage = keyEncipherment, dataEncipherment, digitalSignature
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
@@ -127,22 +169,41 @@ DNS.3 = localhost
 IP.1 = 127.0.0.1
 EOF
 
-openssl req -x509 -new \
+# Generate server CSR
+openssl req -new \
     -key "$TMPDIR/tls.key" \
+    -out "$TMPDIR/server.csr" \
+    -config "$TMPDIR/server.conf"
+
+# Sign server certificate with CA
+cat > "$TMPDIR/server_ext.conf" <<EOF
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = DNS:$CERT_DOMAIN, DNS:*.$CERT_DOMAIN, DNS:localhost, IP:127.0.0.1
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid, issuer
+EOF
+
+openssl x509 -req \
+    -in "$TMPDIR/server.csr" \
+    -CA "$TMPDIR/ca.crt" \
+    -CAkey "$TMPDIR/ca.key" \
+    -CAcreateserial \
     -out "$TMPDIR/tls.crt" \
     -days "$CERT_VALIDITY_DAYS" \
-    -config "$TMPDIR/cert.conf" \
+    -extfile "$TMPDIR/server_ext.conf" \
     -sha256
 
-# For self-signed certs, the CA is the cert itself
-cp "$TMPDIR/tls.crt" "$TMPDIR/ca.crt"
-
 # Display certificate info
-log_success "TLS certificate generated:"
-openssl x509 -in "$TMPDIR/tls.crt" -noout -subject -dates -fingerprint | sed 's/^/  /'
+log_success "Server certificate generated and signed by CA"
+echo "  CA Certificate:"
+openssl x509 -in "$TMPDIR/ca.crt" -noout -subject | sed 's/^/    /'
+echo "  Server Certificate:"
+openssl x509 -in "$TMPDIR/tls.crt" -noout -subject -dates | sed 's/^/    /'
 
 # =============================================================================
-# STEP 2: Upload to Azure Key Vault
+# STEP 3: Upload to Azure Key Vault
 # =============================================================================
 
 log_info "Uploading secrets to Azure Key Vault..."
@@ -189,12 +250,21 @@ log_success "Persistent certificates uploaded to Azure Key Vault"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Secrets created in $VAULT_NAME:"
-echo "  - IDPBUILDER-TLS-CRT       (TLS certificate, valid until $(date -d "+$CERT_VALIDITY_DAYS days" +%Y-%m-%d))"
-echo "  - IDPBUILDER-TLS-KEY       (TLS private key)"
-echo "  - IDPBUILDER-CA-CRT        (CA certificate)"
+echo "  - IDPBUILDER-TLS-CRT       (Server certificate for K8s TLS secrets)"
+echo "  - IDPBUILDER-TLS-KEY       (Server private key for K8s TLS secrets)"
+echo "  - IDPBUILDER-CA-CRT        (CA certificate for browser trust stores)"
 echo ""
-echo "Certificate fingerprint:"
-openssl x509 -in "$TMPDIR/tls.crt" -noout -fingerprint -sha256 | sed 's/^/  /'
+echo "Certificate validity: $(date -d "+$CERT_VALIDITY_DAYS days" +%Y-%m-%d)"
+echo ""
+echo "PKI Structure:"
+echo "  CA Certificate (IDPBUILDER-CA-CRT):"
+echo "    - Has CA:TRUE (can sign certificates)"
+echo "    - Install in browser trust stores (Chrome, Firefox)"
+echo ""
+echo "  Server Certificate (IDPBUILDER-TLS-CRT):"
+echo "    - Has CA:FALSE (end-entity certificate)"
+echo "    - Signed by CA certificate"
+echo "    - Use in K8s TLS secrets for ingress"
 echo ""
 echo "Next steps:"
 echo "  1. Run cluster-recreate to use persistent certificates"

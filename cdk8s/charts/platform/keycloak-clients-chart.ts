@@ -97,12 +97,12 @@ export class KeycloakClientsChart extends Chart {
       for (const host of hosts) {
         const baseUrl = buildBaseUrl(host);
         const backstagePath = host.backstagePath ?? '/backstage';
-        uris.push(`${baseUrl}/api/auth/keycloak-oidc/handler/frame`);
+        uris.push(`${baseUrl}/api/auth/oidc/handler/frame`);
         if (backstagePath && backstagePath !== '') {
-          uris.push(`${baseUrl}${backstagePath}/api/auth/keycloak-oidc/handler/frame`);
+          uris.push(`${baseUrl}${backstagePath}/api/auth/oidc/handler/frame`);
         }
       }
-      uris.push('http://localhost:7007/api/auth/keycloak-oidc/handler/frame');
+      uris.push('http://localhost:7007/api/auth/oidc/handler/frame');
       return [...new Set(uris)];
     };
 
@@ -367,7 +367,7 @@ It contains all OIDC clients with their redirect URIs and settings.
 | Client ID | Description | Redirect URIs |
 |-----------|-------------|---------------|
 | argo-workflows | Argo Workflows SSO | /argo-workflows/oauth2/callback |
-| backstage | Backstage Developer Portal | /api/auth/keycloak-oidc/handler/frame |
+| backstage | Backstage Developer Portal | /api/auth/oidc/handler/frame |
 | flipt | Feature Flag Management | /flipt/auth/v1/method/oidc/keycloak/callback |
 
 ## Client Secrets

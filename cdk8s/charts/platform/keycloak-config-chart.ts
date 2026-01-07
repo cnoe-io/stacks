@@ -106,15 +106,15 @@ export class KeycloakConfigChart extends Chart {
         const backstagePath = host.backstagePath ?? '/backstage';
 
         // Always include the root API path (for domain-based routing)
-        uris.push(`${baseUrl}/api/auth/keycloak-oidc/handler/frame`);
+        uris.push(`${baseUrl}/api/auth/oidc/handler/frame`);
 
         // Include path-prefixed URI if backstagePath is set
         if (backstagePath && backstagePath !== '') {
-          uris.push(`${baseUrl}${backstagePath}/api/auth/keycloak-oidc/handler/frame`);
+          uris.push(`${baseUrl}${backstagePath}/api/auth/oidc/handler/frame`);
         }
       }
       // Always include localhost for development
-      uris.push('http://localhost:7007/api/auth/keycloak-oidc/handler/frame');
+      uris.push('http://localhost:7007/api/auth/oidc/handler/frame');
       // Deduplicate
       return [...new Set(uris)];
     };
