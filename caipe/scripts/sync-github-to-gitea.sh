@@ -8,6 +8,11 @@ GITEA_USER="giteaAdmin"
 GITHUB_REPO="https://github.com/sriaradhyula/stacks.git"
 TEMP_DIR="/tmp/stacks-sync"
 
+# Detect cluster host for host-specific repository naming
+# Uses CLUSTER_HOST env var if set, otherwise falls back to hostname
+CLUSTER_HOST="${CLUSTER_HOST:-$(hostname)}"
+echo "🏷️  Detected host: $CLUSTER_HOST"
+
 echo "🔄 Syncing GitHub stacks to Gitea repositories..."
 
 # Get Gitea admin password
@@ -75,11 +80,11 @@ sync_to_gitea() {
     fi
 }
 
-# Sync backstage manifests
-sync_to_gitea "caipe/base/backstage" "idpbuilder-localdev-backstage-manifests"
+# Sync backstage manifests (uses host-specific repository name)
+sync_to_gitea "caipe/base/backstage" "idpbuilder-${CLUSTER_HOST}-backstage-manifests"
 
-# Sync ai-platform-engineering manifests  
-sync_to_gitea "caipe/base" "idpbuilder-localdev-ai-platform-engineering-ai-platform-engineering"
+# Sync ai-platform-engineering manifests (uses host-specific repository name)
+sync_to_gitea "caipe/base" "idpbuilder-${CLUSTER_HOST}-ai-platform-engineering-ai-platform-engineering"
 
 # Clean up
 rm -rf $TEMP_DIR

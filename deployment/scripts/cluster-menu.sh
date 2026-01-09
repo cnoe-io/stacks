@@ -318,21 +318,29 @@ nixidy-synth() {
   local ENV="${1:-kind}"
   local OUTPUT_DIR="$STACKS_DIR/dist"
 
-  echo "🔨 Synthesizing nixidy manifests for $ENV..."
+  # Detect host for per-host KIND environments
+  local DETECTED_HOST
+  DETECTED_HOST="$(detect_hostname 2>/dev/null)" || DETECTED_HOST=""
 
-  # Source environment variables for nixidy (Azure credentials, cluster config, etc.)
-  # These are read at nix evaluation time via builtins.getEnv in variables.nix
-  if [ -f "$STACKS_DIR/.env-files/kind.env" ] && [ "$ENV" = "kind" ]; then
-    echo "📋 Loading environment from kind.env for nixidy build..."
+  # For KIND environments, use per-host environment name (kind-ryzen, kind-thinkpad, etc.)
+  # This enables pure Nix builds without --impure flag
+  local NIXIDY_ENV="$ENV"
+  if [[ "$ENV" == "kind" ]] && [[ -n "$DETECTED_HOST" ]]; then
+    NIXIDY_ENV="kind-${DETECTED_HOST}"
+    echo "🏷️  Detected host: ${DETECTED_HOST} -> using environment: ${NIXIDY_ENV}"
+  fi
+
+  echo "🔨 Synthesizing nixidy manifests for $NIXIDY_ENV..."
+
+  # Source environment variables for nixidy (Azure credentials, etc.)
+  if [ -f "$STACKS_DIR/.env-files/kind.env" ] && [[ "$ENV" == "kind"* ]]; then
+    echo "📋 Loading environment from kind.env..."
     source "$STACKS_DIR/.env-files/kind.env"
-    export AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_KEYVAULT_NAME
-    export CLUSTER_HOST TAILSCALE_TAILNET
   fi
 
   cd "$NIXIDY_DIR"
 
   # Remove stale result symlink to force fresh nix evaluation
-  # Without this, nix may reuse cached builds even when source files changed
   rm -f result
 
   # Stage modified nix files so nix flake can see them in dirty git tree
@@ -340,10 +348,16 @@ nixidy-synth() {
   git -C "$STACKS_DIR" add -u "*.nix" ".env-files/*.env" 2>/dev/null || true
 
   # Build nixidy manifests (creates result symlink)
-  # Use 'nix run' instead of 'nix develop -c' for non-interactive subshell compatibility
+  # Per-host environments (kind-ryzen, kind-thinkpad, etc.) enable pure builds
   # --refresh forces re-evaluation of flake inputs from remotes
   # --option eval-cache false disables evaluation caching for dirty git trees
-  if ! nix run --refresh --option eval-cache false .#nixidy -- build ".#$ENV" 2>&1; then
+  local SYSTEM
+  case "$(uname -m)" in
+    x86_64)  SYSTEM="x86_64-linux" ;;
+    aarch64) SYSTEM="aarch64-linux" ;;
+    *)       SYSTEM="x86_64-linux" ;;
+  esac
+  if ! nix build --refresh --option eval-cache false ".#nixidyEnvs.${SYSTEM}.${NIXIDY_ENV}.environmentPackage" -o result 2>&1; then
     echo "❌ Nixidy synthesis failed"
     return 1
   fi
@@ -429,6 +443,63 @@ fix-kind-hosts() {
   done
 
   echo "✅ KIND nodes /etc/hosts fixed for Gitea OCI registry access"
+}
+
+# Ensure Kargo pipeline repositories exist in Gitea with correct host-suffix
+# Kargo stages reference host-specific repos (e.g., idpbuilder-thinkpad-backstage-manifests)
+# These repos must exist before Kargo can promote images
+ensure-kargo-repos() {
+  local CLUSTER_NAME="${1:-$(detect_hostname 2>/dev/null)}"
+
+  if [ -z "$CLUSTER_NAME" ]; then
+    echo "⚠️  Could not detect hostname, skipping Kargo repo setup"
+    return 0
+  fi
+
+  echo "🔧 Ensuring Kargo repositories exist for host: $CLUSTER_NAME"
+
+  # Get Gitea credentials
+  local GITEA_PASSWORD
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+
+  if [ -z "$GITEA_PASSWORD" ]; then
+    echo "⚠️  Could not get Gitea credentials, skipping Kargo repo setup"
+    return 0
+  fi
+
+  local GITEA_URL="https://gitea.cnoe.localtest.me:8443"
+  local GITEA_USER="giteaAdmin"
+
+  # Repositories needed by Kargo pipelines (from kargo-backstage-pipeline-chart.ts)
+  local KARGO_REPOS=(
+    "idpbuilder-${CLUSTER_NAME}-backstage-manifests"
+    "idpbuilder-${CLUSTER_NAME}-backstage-local-dev-manifests"
+  )
+
+  for repo in "${KARGO_REPOS[@]}"; do
+    # Check if repo exists
+    local repo_exists
+    repo_exists=$(curl -k -s -o /dev/null -w "%{http_code}" \
+      -u "$GITEA_USER:$GITEA_PASSWORD" \
+      "$GITEA_URL/api/v1/repos/$GITEA_USER/$repo")
+
+    if [ "$repo_exists" = "200" ]; then
+      echo "   ✅ Repository exists: $repo"
+    else
+      echo "   📦 Creating repository: $repo"
+      if curl -k -s -X POST "$GITEA_URL/api/v1/user/repos" \
+        -H "Content-Type: application/json" \
+        -u "$GITEA_USER:$GITEA_PASSWORD" \
+        -d "{\"name\": \"$repo\", \"private\": false, \"auto_init\": true}" \
+        > /dev/null; then
+        echo "   ✅ Created: $repo"
+      else
+        echo "   ⚠️  Failed to create: $repo"
+      fi
+    fi
+  done
+
+  echo "✅ Kargo repositories verified"
 }
 
 # Base functions - always non-interactive
@@ -617,6 +688,9 @@ INJECT_SCRIPT
   # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
   if [ $result -eq 0 ]; then
     fix-kind-hosts "${CLUSTER_NAME}"
+
+    # Ensure Kargo repositories exist with correct host suffix
+    ensure-kargo-repos "${CLUSTER_NAME}"
   fi
 
   # Wait for background CA injection to complete (if running)
@@ -1258,6 +1332,9 @@ alias clr="cluster-recreate"
 alias clst="cluster-status"
 alias clm="cluster-menu"
 # NixOS aliases (clnix, clnix-force, clnix-github, etc.) defined in nixos-kubevirt.sh
+
+# Kargo repo management (ensure host-specific repos exist in Gitea)
+alias kargo-repos="ensure-kargo-repos"
 
 # ArgoCD Aliases (if argocd-auth.sh is loaded)
 if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then

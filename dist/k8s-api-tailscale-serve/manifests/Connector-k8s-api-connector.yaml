@@ -4,7 +4,7 @@ metadata:
   name: k8s-api-connector
   namespace: tailscale
 spec:
-  hostname: localdev-api
+  hostname: ryzen-api
   subnetRouter:
     advertiseRoutes:
       - 10.43.0.0/16

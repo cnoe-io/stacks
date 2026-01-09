@@ -1,0 +1,54 @@
+apiVersion: v1
+data:
+  setup-org.sh: |
+    #!/bin/sh
+    set -e
+
+    GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+    ORG_NAME="giteaAdmin"
+
+    # Read credentials from mounted secret
+    GITEA_USER=$(cat /gitea-credentials/username)
+    GITEA_PASS=$(cat /gitea-credentials/password)
+
+    echo "Waiting for Gitea to be ready..."
+    until curl -sf "$GITEA_URL/api/v1/version" > /dev/null 2>&1; do
+      echo "Gitea not ready, waiting..."
+      sleep 5
+    done
+    echo "Gitea is ready!"
+
+    # Check if organization already exists
+    echo "Checking if organization '$ORG_NAME' exists..."
+    ORG_CHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
+      -u "$GITEA_USER:$GITEA_PASS" \
+      "$GITEA_URL/api/v1/orgs/$ORG_NAME" 2>/dev/null || echo "000")
+
+    if [ "$ORG_CHECK" = "200" ]; then
+      echo "Organization '$ORG_NAME' already exists, skipping creation"
+      exit 0
+    fi
+
+    echo "Creating organization '$ORG_NAME'..."
+    RESULT=$(curl -sf -X POST \
+      -u "$GITEA_USER:$GITEA_PASS" \
+      -H "Content-Type: application/json" \
+      -d "{\"username\": \"$ORG_NAME\", \"visibility\": \"public\", \"description\": \"Default organization for Backstage templates\"}" \
+      "$GITEA_URL/api/v1/orgs" 2>&1) || {
+        echo "Failed to create organization: $RESULT"
+        # Check if it was created by someone else
+        ORG_RECHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
+          -u "$GITEA_USER:$GITEA_PASS" \
+          "$GITEA_URL/api/v1/orgs/$ORG_NAME" 2>/dev/null || echo "000")
+        if [ "$ORG_RECHECK" = "200" ]; then
+          echo "Organization exists now (created by another process)"
+          exit 0
+        fi
+        exit 1
+      }
+
+    echo "Organization '$ORG_NAME' created successfully!"
+kind: ConfigMap
+metadata:
+  name: gitea-org-setup-script
+  namespace: gitea

@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: grafana-tailscale-serve
-  name: grafana-localdev-tailscale-serve
+    app: flipt-tailscale-serve
+  name: flipt-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: grafana-tailscale-serve
+      app: flipt-tailscale-serve
   template:
     metadata:
       labels:
-        app: grafana-tailscale-serve
+        app: flipt-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: grafana-localdev
+              value: flipt-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: grafana-localdev-tailscale-state
+            claimName: flipt-ryzen-tailscale-state
         - configMap:
-            name: grafana-tailscale-serve-config
+            name: flipt-tailscale-serve-config
           name: config

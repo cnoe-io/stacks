@@ -87,7 +87,7 @@ data:
     catalog:
       locations:
         - type: url
-          target: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-localdev-backstage-templates-entities/src/branch/main/catalog-info.yaml
+          target: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-ryzen-backstage-templates-entities/src/branch/main/catalog-info.yaml
           rules:
             - allow: [Component, System, API, Resource, Location, Template, User, Group]
         # Keep local examples for fallback

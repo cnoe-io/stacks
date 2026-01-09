@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: kagent-tailscale-serve
-  name: kagent-localdev-tailscale-serve
+    app: langfuse-tailscale-serve
+  name: langfuse-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kagent-tailscale-serve
+      app: langfuse-tailscale-serve
   template:
     metadata:
       labels:
-        app: kagent-tailscale-serve
+        app: langfuse-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: kagent-localdev
+              value: langfuse-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: kagent-localdev-tailscale-state
+            claimName: langfuse-ryzen-tailscale-state
         - configMap:
-            name: kagent-tailscale-serve-config
+            name: langfuse-tailscale-serve-config
           name: config

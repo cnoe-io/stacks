@@ -14,7 +14,7 @@ data:
     WEBHOOK_PATH="/webhooks/gitea/7090e2e781280fe5dce3c1e9e110ad453602198aa7802cf5f834ee925c085738"
 
     # Repos to configure (manifest repos watched by Kargo Warehouses)
-    REPOS="giteaadmin/idpbuilder-thinkpad-backstage-local-dev-manifests"
+    REPOS="giteaadmin/idpbuilder-ryzen-backstage-local-dev-manifests"
 
     for REPO in $REPOS; do
       REPO_OWNER=$(echo $REPO | cut -d'/' -f1)

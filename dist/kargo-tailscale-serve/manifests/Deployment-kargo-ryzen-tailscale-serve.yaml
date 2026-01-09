@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: keycloak-tailscale-serve
-  name: keycloak-localdev-tailscale-serve
+    app: kargo-tailscale-serve
+  name: kargo-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: keycloak-tailscale-serve
+      app: kargo-tailscale-serve
   template:
     metadata:
       labels:
-        app: keycloak-tailscale-serve
+        app: kargo-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: keycloak-localdev
+              value: kargo-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: keycloak-localdev-tailscale-state
+            claimName: kargo-ryzen-tailscale-state
         - configMap:
-            name: keycloak-tailscale-serve-config
+            name: kargo-tailscale-serve-config
           name: config

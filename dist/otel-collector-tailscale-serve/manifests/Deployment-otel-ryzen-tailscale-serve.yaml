@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: langfuse-tailscale-serve
-  name: langfuse-localdev-tailscale-serve
+    app: otel-tailscale-serve
+  name: otel-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: langfuse-tailscale-serve
+      app: otel-tailscale-serve
   template:
     metadata:
       labels:
-        app: langfuse-tailscale-serve
+        app: otel-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: langfuse-localdev
+              value: otel-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: langfuse-localdev-tailscale-state
+            claimName: otel-ryzen-tailscale-state
         - configMap:
-            name: langfuse-tailscale-serve-config
+            name: otel-tailscale-serve-config
           name: config

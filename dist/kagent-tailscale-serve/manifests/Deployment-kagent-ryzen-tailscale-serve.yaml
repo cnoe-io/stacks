@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: backstage-tailscale-serve
-  name: backstage-localdev-tailscale-serve
+    app: kagent-tailscale-serve
+  name: kagent-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backstage-tailscale-serve
+      app: kagent-tailscale-serve
   template:
     metadata:
       labels:
-        app: backstage-tailscale-serve
+        app: kagent-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,14 +23,14 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: backstage-localdev
+              value: kagent-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
               value: /var/lib/tailscale
             - name: TS_EXTRA_ARGS
               value: --reset
-          image: tailscale/tailscale:v1.82.0
+          image: tailscale/tailscale:v1.86.5
           name: tailscale
           securityContext:
             capabilities:
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: backstage-localdev-tailscale-state
+            claimName: kagent-ryzen-tailscale-state
         - configMap:
-            name: backstage-tailscale-serve-config
+            name: kagent-tailscale-serve-config
           name: config

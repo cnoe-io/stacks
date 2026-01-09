@@ -23,7 +23,7 @@ spec:
                       key: token
                       name: kargo-gitea-credentials
                 - name: KARGO_WEBHOOK_SECRET
-                  value: kargo-gitea-webhook-thinkpad-secret-2024
+                  value: kargo-gitea-webhook-ryzen-secret-2024
               image: curlimages/curl:8.5.0
               name: webhook-sync
               volumeMounts:

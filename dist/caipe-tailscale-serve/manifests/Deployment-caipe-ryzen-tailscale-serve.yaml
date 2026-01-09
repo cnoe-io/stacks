@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: gitea-tailscale-serve
-  name: gitea-localdev-tailscale-serve
+    app: caipe-tailscale-serve
+  name: caipe-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gitea-tailscale-serve
+      app: caipe-tailscale-serve
   template:
     metadata:
       labels:
-        app: gitea-tailscale-serve
+        app: caipe-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,14 +23,14 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: gitea-localdev
+              value: caipe-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
               value: /var/lib/tailscale
             - name: TS_EXTRA_ARGS
               value: --reset
-          image: tailscale/tailscale:v1.86.5
+          image: tailscale/tailscale:v1.82.0
           name: tailscale
           securityContext:
             capabilities:
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: gitea-localdev-tailscale-state
+            claimName: caipe-ryzen-tailscale-state
         - configMap:
-            name: gitea-tailscale-serve-config
+            name: caipe-tailscale-serve-config
           name: config

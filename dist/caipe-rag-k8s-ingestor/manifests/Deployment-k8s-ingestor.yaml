@@ -19,7 +19,7 @@ spec:
       containers:
         - env:
             - name: CLUSTER_NAME
-              value: localdev
+              value: ryzen
             - name: SYNC_INTERVAL
               value: "3600"
             - name: RESOURCE_LIST

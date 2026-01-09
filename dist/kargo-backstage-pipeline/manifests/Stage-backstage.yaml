@@ -47,11 +47,11 @@ spec:
           uses: argocd-update
       vars:
         - name: gitRepoURL
-          value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
+          value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-ryzen-backstage-manifests.git
         - name: gitRepoURLExternal
-          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-ryzen-backstage-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+          value: gitea.cnoe.localtest.me:8443/giteaAdmin/backstage
         - name: baseImage
           value: ghcr.io/pittampalliorg/backstage
         - name: argoAppName

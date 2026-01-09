@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: langfuse-localdev-tailscale-state
+  name: mimir-ryzen-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

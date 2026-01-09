@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: loki-tailscale-serve
-  name: loki-localdev-tailscale-serve
+    app: keycloak-tailscale-serve
+  name: keycloak-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: loki-tailscale-serve
+      app: keycloak-tailscale-serve
   template:
     metadata:
       labels:
-        app: loki-tailscale-serve
+        app: keycloak-tailscale-serve
     spec:
       containers:
         - env:
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: loki-localdev
+              value: keycloak-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -44,7 +44,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: loki-localdev-tailscale-state
+            claimName: keycloak-ryzen-tailscale-state
         - configMap:
-            name: loki-tailscale-serve-config
+            name: keycloak-tailscale-serve-config
           name: config

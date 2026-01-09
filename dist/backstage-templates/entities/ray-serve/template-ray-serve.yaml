@@ -33,7 +33,7 @@ spec:
       action: publish:gitea
       input:
         description: This is an Ray Serve app Repo
-        repoUrl: gitea.cnoe.localtest.me:8443?repo=${{parameters.name}}
+        repoUrl: gitea.cnoe.localtest.me:8443/giteaAdmin?repo=${{parameters.name}}
         defaultBranch: main
     - id: create-argocd-app
       name: Create ArgoCD App
@@ -43,7 +43,7 @@ spec:
         appNamespace: ray
         argoInstance: in-cluster
         projectName: default
-        repoUrl: https://gitea.gitea.cnoe.localtest.me:8443Admin/${{parameters.name}}
+        repoUrl: https://gitea.cnoe.localtest.me:8443/giteaAdmin/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register

@@ -20,7 +20,7 @@ spec:
             - name: OPERATOR_INITIAL_TAGS
               value: tag:k8s-operator
             - name: OPERATOR_HOSTNAME
-              value: localdev-operator
+              value: ryzen-operator
             - name: OPERATOR_SECRET
               value: operator
             - name: OPERATOR_LOGGING
