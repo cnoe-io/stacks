@@ -160,6 +160,8 @@ in
                     # GitHub App authentication (higher rate limits, better for orgs)
                     apps:
                       - appId: ''${GITHUB_APP_ID}
+                        clientId: ''${GITHUB_CLIENT_ID}
+                        clientSecret: ''${GITHUB_CLIENT_SECRET}
                         privateKey: ''${GITHUB_PRIVATE_KEY}
                         webhookSecret: ''${GITHUB_WEBHOOK_SECRET}
                 gitea:
@@ -320,6 +322,8 @@ in
                   ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
                   # GitHub App credentials for integrations and catalog discovery
                   GITHUB_APP_ID: "{{.GITHUB_APP_ID}}"
+                  GITHUB_CLIENT_ID: "{{.GITHUB_CLIENT_ID}}"
+                  GITHUB_CLIENT_SECRET: "{{.GITHUB_CLIENT_SECRET}}"
                   GITHUB_PRIVATE_KEY: "{{.GITHUB_PRIVATE_KEY}}"
                   GITHUB_WEBHOOK_SECRET: "{{.GITHUB_WEBHOOK_SECRET}}"
             data:
@@ -348,27 +352,47 @@ in
                 remoteRef:
                   key: BACKSTAGE-SESSION-SECRET
               # GitHub App credentials for integrations and catalog discovery
+              # Using BACKSTAGE-GITHUB-APP JSON secret with JSONPath extraction
               - secretKey: GITHUB_APP_ID
                 sourceRef:
                   storeRef:
                     name: azure-keyvault-store
                     kind: ClusterSecretStore
                 remoteRef:
-                  key: GITHUB-APP-ID
+                  key: BACKSTAGE-GITHUB-APP
+                  property: app-id
+              - secretKey: GITHUB_CLIENT_ID
+                sourceRef:
+                  storeRef:
+                    name: azure-keyvault-store
+                    kind: ClusterSecretStore
+                remoteRef:
+                  key: BACKSTAGE-GITHUB-APP
+                  property: client-id
+              - secretKey: GITHUB_CLIENT_SECRET
+                sourceRef:
+                  storeRef:
+                    name: azure-keyvault-store
+                    kind: ClusterSecretStore
+                remoteRef:
+                  key: BACKSTAGE-GITHUB-APP
+                  property: client-secret
               - secretKey: GITHUB_PRIVATE_KEY
                 sourceRef:
                   storeRef:
                     name: azure-keyvault-store
                     kind: ClusterSecretStore
                 remoteRef:
-                  key: GITHUB-APP-PRIVATE-KEY
+                  key: BACKSTAGE-GITHUB-APP
+                  property: private-key
               - secretKey: GITHUB_WEBHOOK_SECRET
                 sourceRef:
                   storeRef:
                     name: azure-keyvault-store
                     kind: ClusterSecretStore
                 remoteRef:
-                  key: GITHUB-WEBHOOK-SECRET
+                  key: BACKSTAGE-GITHUB-APP
+                  property: webhook-secret
         ''
 
         # ============================================================

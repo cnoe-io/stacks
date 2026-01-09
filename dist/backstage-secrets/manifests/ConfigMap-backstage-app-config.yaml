@@ -81,6 +81,8 @@ data:
           # GitHub App authentication (higher rate limits, better for orgs)
           apps:
             - appId: ${GITHUB_APP_ID}
+              clientId: ${GITHUB_CLIENT_ID}
+              clientSecret: ${GITHUB_CLIENT_SECRET}
               privateKey: ${GITHUB_PRIVATE_KEY}
               webhookSecret: ${GITHUB_WEBHOOK_SECRET}
       gitea:
