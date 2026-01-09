@@ -103,7 +103,7 @@ while IFS= read -r repo; do
     # Check if our webhook URL is already registered
     if echo "$existing_hooks" | jq -e ".[] | select(.config.url == \"$WEBHOOK_URL\")" &>/dev/null; then
         log_dim "  ✓ $app_name (already registered)"
-        ((exists++))
+        ((++exists))
         continue
     fi
 
@@ -132,11 +132,11 @@ while IFS= read -r repo; do
 
     if echo "$result" | jq -e '.id' &>/dev/null; then
         echo -e "  ${GREEN}+${NC} $app_name"
-        ((created++))
+        ((++created))
     else
         error_msg=$(echo "$result" | jq -r '.message // "unknown error"' 2>/dev/null)
         log_warn "  Failed: $app_name ($error_msg)"
-        ((failed++))
+        ((++failed))
     fi
 
 done <<< "$repos"

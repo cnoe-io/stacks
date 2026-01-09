@@ -51,7 +51,7 @@ spec:
         - name: gitRepoURLExternal
           value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-ryzen-backstage-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaAdmin/backstage
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
         - name: baseImage
           value: ghcr.io/pittampalliorg/backstage
         - name: argoAppName

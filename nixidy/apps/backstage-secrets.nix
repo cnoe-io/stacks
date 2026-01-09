@@ -22,7 +22,8 @@ let
   kargoUrl = "https://kargo.${ingressHost}${portSuffix}";
   # Catalog URL follows idpBuilder naming: cnoe://<package>/<path> -> idpbuilder-<cluster>-<package>-<path>
   # Since we use cnoe://backstage-templates/entities, the Gitea repo is backstage-templates-entities
-  catalogUrl = "https://gitea.${ingressHost}${portSuffix}/${defaultOwner}/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml";
+  # Uses /raw/branch/main/ for raw content (not /src/branch/main/ which returns HTML)
+  catalogUrl = "https://gitea.${ingressHost}${portSuffix}/${defaultOwner}/idpbuilder${clusterSuffix}-backstage-templates-entities/raw/branch/main/catalog-info.yaml";
 
   # Internal service URLs
   postgresHost = "postgresql.${namespace}.svc.cluster.local";
@@ -151,9 +152,16 @@ in
                 headerSubtitle: 'AI Platform Engineer Assistant'
                 inputPlaceholder: 'Ask CAIPE anything...'
 
-              # Integrations (credentials from environment variables set by gitea-credentials secret)
+              # Integrations (credentials from environment variables)
               # Host includes port for URL matching in catalog locations
               integrations:
+                github:
+                  - host: github.com
+                    # GitHub App authentication (higher rate limits, better for orgs)
+                    apps:
+                      - appId: ''${GITHUB_APP_ID}
+                        privateKey: ''${GITHUB_PRIVATE_KEY}
+                        webhookSecret: ''${GITHUB_WEBHOOK_SECRET}
                 gitea:
                   - host: gitea.${ingressHost}${portSuffix}
                     baseUrl: ${giteaUrl}
@@ -161,8 +169,35 @@ in
                     username: ''${GITEA_USERNAME}
                     password: ''${GITEA_PASSWORD}
 
-              # Catalog locations
+              # Catalog configuration
+              # Global rules apply to all dynamically registered locations
               catalog:
+                rules:
+                  - allow: [Component, System, API, Resource, Location, Template, User, Group]
+                # GitHub catalog providers for autodiscovery
+                # Discovers catalog-info.yaml files in repositories
+                providers:
+                  github:
+                    # Personal account - vpittamp
+                    vpittamp:
+                      organization: 'vpittamp'
+                      catalogPath: '/catalog-info.yaml'
+                      filters:
+                        branch: 'main'
+                        repository: '.*'
+                      schedule:
+                        frequency: { minutes: 30 }
+                        timeout: { minutes: 3 }
+                    # Organization - PittampalliOrg
+                    pittampalliorg:
+                      organization: 'PittampalliOrg'
+                      catalogPath: '/catalog-info.yaml'
+                      filters:
+                        branch: 'main'
+                        repository: '.*'
+                      schedule:
+                        frequency: { minutes: 30 }
+                        timeout: { minutes: 3 }
                 locations:
                   - type: url
                     target: ${catalogUrl}
@@ -181,13 +216,19 @@ in
                       - allow: [User, Group]
 
               # ArgoCD integration
+              # Instance name must match templates' argoInstance field
+              # Uses admin credentials from argocd-credentials secret
               argocd:
                 baseUrl: ${argocdUrl}
+                username: admin
+                password: ''${ARGOCD_ADMIN_PASSWORD}
                 appLocatorMethods:
                   - type: 'config'
                     instances:
-                      - name: main
+                      - name: in-cluster
                         url: ${argocdUrl}
+                        username: admin
+                        password: ''${ARGOCD_ADMIN_PASSWORD}
 
               # Kargo URL for templates
               kargo:
@@ -200,6 +241,50 @@ in
                 host: localhost  # Dapr sidecar runs as localhost in the pod
                 port: 3500       # Dapr HTTP port
                 storeName: configstore  # Dapr configuration component name
+
+              # Kubernetes plugin configuration
+              # Enables viewing K8s resources (pods, deployments, etc.) for catalog components
+              # Uses the Backstage service account to connect to the local cluster
+              kubernetes:
+                serviceLocatorMethod:
+                  type: 'multiTenant'
+                clusterLocatorMethods:
+                  - type: 'config'
+                    clusters:
+                      - name: local-cluster
+                        url: https://kubernetes.default.svc
+                        authProvider: 'serviceAccount'
+                        skipTLSVerify: true
+                        skipMetricsLookup: true
+                customResources:
+                  # ArgoCD Applications
+                  - group: 'argoproj.io'
+                    apiVersion: 'v1alpha1'
+                    plural: 'applications'
+                  # Argo Workflows
+                  - group: 'argoproj.io'
+                    apiVersion: 'v1alpha1'
+                    plural: 'workflows'
+                  # Kargo Stages
+                  - group: 'kargo.akuity.io'
+                    apiVersion: 'v1alpha1'
+                    plural: 'stages'
+
+              # TechDocs configuration
+              # Using 'local' builder - mkdocs-techdocs-core installed in container
+              # generator.runIn: 'local' uses mkdocs directly (not Docker)
+              # For production, configure a publisher (awsS3, googleGcs, azureBlobStorage)
+              techdocs:
+                builder: 'local'
+                generator:
+                  runIn: 'local'
+                publisher:
+                  type: 'local'
+
+              # Permission framework - disabled for development
+              # Enable and configure policies for production
+              permission:
+                enabled: false
         ''
 
         # ============================================================
@@ -233,6 +318,10 @@ in
                   KEYCLOAK_NAME_METADATA: "${keycloakMetadataUrl}"
                   KEYCLOAK_CLIENT_SECRET: "{{.BACKSTAGE_CLIENT_SECRET}}"
                   ARGOCD_AUTH_TOKEN: "argocd.token={{.ARGOCD_SESSION_TOKEN}}"
+                  # GitHub App credentials for integrations and catalog discovery
+                  GITHUB_APP_ID: "{{.GITHUB_APP_ID}}"
+                  GITHUB_PRIVATE_KEY: "{{.GITHUB_PRIVATE_KEY}}"
+                  GITHUB_WEBHOOK_SECRET: "{{.GITHUB_WEBHOOK_SECRET}}"
             data:
               # OIDC tokens from keycloak ClusterSecretStore
               - secretKey: ARGOCD_SESSION_TOKEN
@@ -258,6 +347,28 @@ in
                     kind: ClusterSecretStore
                 remoteRef:
                   key: BACKSTAGE-SESSION-SECRET
+              # GitHub App credentials for integrations and catalog discovery
+              - secretKey: GITHUB_APP_ID
+                sourceRef:
+                  storeRef:
+                    name: azure-keyvault-store
+                    kind: ClusterSecretStore
+                remoteRef:
+                  key: GITHUB-APP-ID
+              - secretKey: GITHUB_PRIVATE_KEY
+                sourceRef:
+                  storeRef:
+                    name: azure-keyvault-store
+                    kind: ClusterSecretStore
+                remoteRef:
+                  key: GITHUB-APP-PRIVATE-KEY
+              - secretKey: GITHUB_WEBHOOK_SECRET
+                sourceRef:
+                  storeRef:
+                    name: azure-keyvault-store
+                    kind: ClusterSecretStore
+                remoteRef:
+                  key: GITHUB-WEBHOOK-SECRET
         ''
 
         # ============================================================

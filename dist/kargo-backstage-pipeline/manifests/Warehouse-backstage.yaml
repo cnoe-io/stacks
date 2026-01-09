@@ -17,4 +17,4 @@ spec:
         imageSelectionStrategy: SemVer
         insecureSkipTLSVerify: true
         platform: linux/amd64
-        repoURL: gitea.cnoe.localtest.me:8443/giteaAdmin/backstage
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
