@@ -80,7 +80,7 @@ in
           data:
             app-config.yaml: |
               # Kubernetes environment configuration for Backstage
-              # Loaded after app-config.yaml and app-config.production.yaml from the image
+              # Loaded after app-config.yaml from the image (provides auth, database, integrations)
 
               app:
                 baseUrl: ${backstageUrl}

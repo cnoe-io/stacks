@@ -316,14 +316,12 @@ in
                   name = "http";
                 }];
                 # Load config files in order (last wins for overlapping keys)
-                # Order: base config → production config → Kubernetes environment config
+                # Order: base config → Kubernetes environment config (ConfigMap)
                 args = [
                   "node"
                   "packages/backend"
                   "--config"
                   "/app/app-config.yaml"
-                  "--config"
-                  "/app/app-config.production.yaml"
                   "--config"
                   "/etc/backstage/app-config.yaml"
                 ];

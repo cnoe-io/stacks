@@ -43,8 +43,6 @@ spec:
             - --config
             - /app/app-config.yaml
             - --config
-            - /app/app-config.production.yaml
-            - --config
             - /etc/backstage/app-config.yaml
           env:
             - name: LOG_LEVEL
