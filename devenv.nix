@@ -73,7 +73,7 @@
       STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
       echo "Starting nixidy file watcher..."
       echo "Watching: $STACKS_DIR/nixidy/, $STACKS_DIR/.env-files/"
-      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms, Poll: ''${NIXIDY_WATCH_POLL:-1000}ms"
+      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms"
       echo "ArgoCD sync: ''${NIXIDY_WATCH_SYNC_ARGOCD:-true}"
       echo ""
       echo "Press Ctrl+C to stop"
@@ -81,8 +81,7 @@
 
       exec watchexec \
         --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
-        --poll "''${NIXIDY_WATCH_POLL:-1000}ms" \
-        --exts nix,env \
+        --exts nix,env,yaml \
         --watch "$STACKS_DIR/nixidy" \
         --watch "$STACKS_DIR/.env-files" \
         --ignore "result*" \
@@ -119,17 +118,18 @@
     nixidy-watch = {
       exec = ''
         STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-        watchexec \
-          --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
-          --poll "''${NIXIDY_WATCH_POLL:-1000}ms" \
-          --exts nix,env \
-          --watch "$STACKS_DIR/nixidy" \
-          --watch "$STACKS_DIR/.env-files" \
-          --ignore "result*" \
-          --ignore "dist" \
-          --ignore ".direnv" \
-          --ignore "*.lock" \
-          -- "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
+        # Use script -q to create a pseudo-TTY, enabling watchexec to forward child output
+        # The -c option runs the command, -q suppresses script's own messages
+        exec script -q -c "watchexec \
+          --debounce ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms \
+          --exts nix,env,yaml \
+          --watch $STACKS_DIR/nixidy \
+          --watch $STACKS_DIR/.env-files \
+          --ignore 'result*' \
+          --ignore dist \
+          --ignore .direnv \
+          --ignore '*.lock' \
+          -- $STACKS_DIR/scripts/nixidy-watch-handler.sh" /dev/null
       '';
       # Restart policy for process-compose
       process-compose = {

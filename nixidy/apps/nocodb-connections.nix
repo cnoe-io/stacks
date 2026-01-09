@@ -44,9 +44,9 @@ let
 
     echo "=== NoCoDB External Connections Setup ==="
 
-    # Wait for NoCoDB to be ready
+    # Wait for NoCoDB to be ready (using wget since alpine doesn't have curl)
     echo "Waiting for NoCoDB to be ready..."
-    until curl -sf http://nocodb:8080/api/v1/health > /dev/null 2>&1; do
+    until wget -q --spider http://nocodb:8080/api/v1/health 2>/dev/null; do
       echo "  NoCoDB not ready, waiting..."
       sleep 5
     done

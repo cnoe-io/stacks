@@ -21,10 +21,17 @@
         charts = nixhelm.chartsDerivations.${system};
       in {
         # Nixidy environments for different cluster types
+        # KIND environments are per-host for pure builds (no --impure needed)
         nixidyEnvs = nixidy.lib.mkEnvs {
           inherit pkgs charts;
           envs = {
-            # KIND local development environment
+            # =========================================================================
+            # KIND Local Development Environments (per-host)
+            # Each host gets its own environment with cluster.name set explicitly
+            # This enables pure Nix builds without --impure flag
+            # =========================================================================
+
+            # Generic fallback (for CI or unknown hosts)
             kind = {
               modules = [
                 ./env/variables.nix
@@ -33,6 +40,43 @@
                 ./apps
               ];
             };
+
+            # Ryzen workstation
+            kind-ryzen = {
+              modules = [
+                ./env/variables.nix
+                ./env/base.nix
+                ./env/kind.nix
+                { config.cluster.name = "ryzen"; }
+                ./apps
+              ];
+            };
+
+            # ThinkPad laptop
+            kind-thinkpad = {
+              modules = [
+                ./env/variables.nix
+                ./env/base.nix
+                ./env/kind.nix
+                { config.cluster.name = "thinkpad"; }
+                ./apps
+              ];
+            };
+
+            # Hetzner server
+            kind-hetzner = {
+              modules = [
+                ./env/variables.nix
+                ./env/base.nix
+                ./env/kind.nix
+                { config.cluster.name = "hetzner"; }
+                ./apps
+              ];
+            };
+
+            # =========================================================================
+            # Production Environments
+            # =========================================================================
 
             # Talos production environment
             talos = {
@@ -67,9 +111,15 @@
           shellHook = ''
             echo "nixidy development environment"
             echo "Commands:"
-            echo "  nixidy build .#kind   - Build manifests for KIND"
-            echo "  nixidy build .#talos  - Build manifests for Talos"
-            echo "  nixidy switch .#kind  - Build and switch to KIND"
+            echo "  nix build .#nixidyEnvs.\$(uname -m)-linux.kind-\$(hostname).environmentPackage"
+            echo ""
+            echo "Per-host KIND environments:"
+            echo "  kind-ryzen     - Ryzen workstation"
+            echo "  kind-thinkpad  - ThinkPad laptop"
+            echo "  kind-hetzner   - Hetzner server"
+            echo "  kind           - Generic fallback (localdev)"
+            echo ""
+            echo "Other environments: talos, hub"
           '';
         };
 

@@ -162,6 +162,41 @@
     # Gitea Configuration
     # =========================================================================
     gitea = {
+      # Service name for internal cluster access
+      serviceName = lib.mkOption {
+        type = lib.types.str;
+        default = "my-gitea-http";
+        description = "Gitea K8s service name (idpBuilder default: my-gitea-http)";
+      };
+
+      namespace = lib.mkOption {
+        type = lib.types.str;
+        default = "gitea";
+        description = "Gitea namespace";
+      };
+
+      # Internal cluster URL (for pods to access Gitea)
+      internalPort = lib.mkOption {
+        type = lib.types.int;
+        default = 3000;
+        description = "Gitea internal HTTP port";
+      };
+
+      # Default owner/organization for repos created by templates
+      defaultOwner = lib.mkOption {
+        type = lib.types.str;
+        default = "giteaAdmin";
+        description = "Default Gitea owner/organization for template-created repos";
+      };
+
+      # Admin username (also used as fallback owner)
+      adminUsername = lib.mkOption {
+        type = lib.types.str;
+        default = "giteaAdmin";
+        description = "Gitea admin username";
+      };
+
+      # Tailscale host for external access
       tailscaleHost = lib.mkOption {
         type = lib.types.str;
         default = "";

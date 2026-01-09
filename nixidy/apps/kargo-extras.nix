@@ -5,6 +5,9 @@
 let
   inherit (config) environmentType;
   inherit (config.cluster) ingressHost;
+  inherit (config.gitea) serviceName internalPort defaultOwner;
+  giteaNamespace = config.gitea.namespace;
+  giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
   isKind = environmentType == "kind";
   isTalos = environmentType == "talos";
 in
@@ -300,7 +303,7 @@ in
 
             # Configuration from environment
             # Use HTTP for internal cluster communication
-            GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+            GITEA_URL="${giteaInternalUrl}"
             KARGO_WEBHOOK_URL="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80"
 
             # Get webhook path from ClusterConfig (cluster-scoped, best practice)
@@ -309,7 +312,7 @@ in
             WEBHOOK_PATH="/webhooks/gitea/7090e2e781280fe5dce3c1e9e110ad453602198aa7802cf5f834ee925c085738"
 
             # Repos to configure (manifest repos watched by Kargo Warehouses)
-            REPOS="giteaadmin/idpbuilder-thinkpad-backstage-local-dev-manifests"
+            REPOS="giteaadmin/idpbuilder-${config.cluster.name}-backstage-local-dev-manifests"
 
             for REPO in $REPOS; do
               REPO_OWNER=$(echo $REPO | cut -d'/' -f1)
@@ -367,7 +370,7 @@ in
                               name: kargo-gitea-credentials
                               key: token
                         - name: KARGO_WEBHOOK_SECRET
-                          value: kargo-gitea-webhook-thinkpad-secret-2024
+                          value: kargo-gitea-webhook-${config.cluster.name}-secret-2024
                       volumeMounts:
                         - name: scripts
                           mountPath: /scripts
@@ -403,7 +406,7 @@ in
                           name: kargo-gitea-credentials
                           key: token
                     - name: KARGO_WEBHOOK_SECRET
-                      value: kargo-gitea-webhook-thinkpad-secret-2024
+                      value: kargo-gitea-webhook-${config.cluster.name}-secret-2024
                   volumeMounts:
                     - name: scripts
                       mountPath: /scripts
@@ -449,7 +452,7 @@ in
         spec:
           subscriptions:
             - image:
-                repoURL: gitea-thinkpad.tail286401.ts.net/giteaadmin/backstage
+                repoURL: gitea-${config.tailscale.serviceHost}.${config.tailscale.tailnet}/giteaadmin/backstage
       ''
       # Hub Outer Loop Warehouse (GHCR)
       ''
@@ -463,7 +466,7 @@ in
             - image:
                 repoURL: ghcr.io/pittampalliorg/backstage
       ''
-      # Hub Inner Loop Stage (local-dev on thinkpad)
+      # Hub Inner Loop Stage (local-dev on spoke cluster)
       ''
         apiVersion: kargo.akuity.io/v1alpha1
         kind: Stage
@@ -487,7 +490,7 @@ in
                         sources:
                           - repoURL: https://github.com/PittampalliOrg/stacks.git
       ''
-      # Hub Outer Loop Stage (dev on thinkpad)
+      # Hub Outer Loop Stage (dev on spoke cluster)
       ''
         apiVersion: kargo.akuity.io/v1alpha1
         kind: Stage

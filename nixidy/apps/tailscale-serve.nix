@@ -5,6 +5,9 @@
 let
   inherit (config) environmentType;
   inherit (config.cluster) name;
+  inherit (config.gitea) serviceName internalPort;
+  giteaNamespace = config.gitea.namespace;
+  giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
   clusterSuffix = if name != "" then "-${name}" else "";
   tailnet = "tail286401";
   isKind = environmentType == "kind";
@@ -209,7 +212,7 @@ in
               "gitea${clusterSuffix}.${tailnet}.ts.net:443" = {
                 Handlers = {
                   "/" = {
-                    Proxy = "http://my-gitea-http.gitea.svc.cluster.local:3000";
+                    Proxy = giteaInternalUrl;
                   };
                 };
               };

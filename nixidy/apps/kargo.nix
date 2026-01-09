@@ -322,7 +322,7 @@ in
               app.kubernetes.io/part-of: kargo
               kargo.akuity.io/cred-type: generic
           stringData:
-            secret: kargo-gitea-webhook-thinkpad-secret-2024
+            secret: kargo-gitea-webhook-${config.cluster.name}-secret-2024
         ''
         # ClusterConfig - cluster-scoped webhook receiver
         # Triggers artifact discovery for ALL Warehouses across ALL projects

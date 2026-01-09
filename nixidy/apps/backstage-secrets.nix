@@ -5,6 +5,8 @@
 let
   inherit (config) environmentType;
   inherit (config.cluster) ingressHost ingressPort name;
+  inherit (config.gitea) serviceName internalPort defaultOwner;
+  giteaNamespace = config.gitea.namespace;
   namespace = "backstage";
   isKind = environmentType == "kind";
   clusterSuffix = if name != "" then "-${name}" else "";
@@ -15,11 +17,12 @@ let
   argocdUrl = "https://argocd.${ingressHost}${portSuffix}";
   argoWorkflowsUrl = "https://${ingressHost}${portSuffix}/argo-workflows";
   giteaUrl = "https://gitea.${ingressHost}${portSuffix}";
+  giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
   keycloakMetadataUrl = "https://keycloak.${ingressHost}${portSuffix}/realms/cnoe/.well-known/openid-configuration";
   kargoUrl = "https://kargo.${ingressHost}${portSuffix}";
   # Catalog URL follows idpBuilder naming: cnoe://<package>/<path> -> idpbuilder-<cluster>-<package>-<path>
   # Since we use cnoe://backstage-templates/entities, the Gitea repo is backstage-templates-entities
-  catalogUrl = "https://gitea.${ingressHost}${portSuffix}/giteaAdmin/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml";
+  catalogUrl = "https://gitea.${ingressHost}${portSuffix}/${defaultOwner}/idpbuilder${clusterSuffix}-backstage-templates-entities/src/branch/main/catalog-info.yaml";
 
   # Internal service URLs
   postgresHost = "postgresql.${namespace}.svc.cluster.local";

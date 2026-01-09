@@ -5,12 +5,17 @@
 let
   isKind = config.environmentType == "kind";
   namespace = "argocd";
+  inherit (config.cluster) ingressHost ingressPort;
+  inherit (config.gitea) serviceName internalPort;
+  giteaNamespace = config.gitea.namespace;
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
 
   # ArgoCD internal webhook endpoint
   argoCDWebhookUrl = "http://argocd-server.argocd.svc.cluster.local/api/webhook";
 
-  # Gitea URLs
-  giteaUrl = "https://gitea.cnoe.localtest.me:8443";
+  # Gitea URLs - external for API calls that need HTTPS
+  giteaUrl = "https://gitea.${ingressHost}${portSuffix}";
+  giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
 in
 {
   config = lib.mkIf isKind {

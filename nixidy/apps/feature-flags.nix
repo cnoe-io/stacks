@@ -5,11 +5,14 @@
 { config, lib, ... }:
 let
   inherit (config.cluster) ingressHost ingressPort name;
+  inherit (config.gitea) serviceName internalPort defaultOwner;
+  giteaNamespace = config.gitea.namespace;
   namespace = "feature-flags";
   clusterSuffix = if name != "" then "-${name}" else "";
   portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
   fliptHost = "flipt.${ingressHost}";
-  giteaInternalHost = "my-gitea-http.gitea.svc.cluster.local:3000";
+  giteaInternalHost = "${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
+  giteaInternalUrl = "http://${giteaInternalHost}";
 in
 {
   # Feature Flags Namespace
@@ -257,20 +260,20 @@ in
                   # Install curl and jq
                   apk add --no-cache curl jq
 
-                  GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+                  GITEA_URL="${giteaInternalUrl}"
                   REPO_NAME="feature-flags"
 
                   echo "Checking if repo exists..."
                   REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
                     -u "$GITEA_USERNAME:$GITEA_PASSWORD" \
-                    "$GITEA_URL/api/v1/repos/giteaAdmin/$REPO_NAME")
+                    "$GITEA_URL/api/v1/repos/${defaultOwner}/$REPO_NAME")
 
                   if [ "$REPO_CHECK" = "200" ]; then
                     echo "Repository already exists, checking for .flipt.yml..."
                     cd /tmp
                     git config --global user.email "admin@example.com"
                     git config --global user.name "Admin"
-                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/$REPO_NAME.git"
+                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@${giteaInternalHost}/${defaultOwner}/$REPO_NAME.git"
                     cd "$REPO_NAME"
                     if [ -d "default" ] && [ -f "default/features.yaml" ]; then
                       echo "Feature flags already configured with correct structure, skipping"
@@ -296,7 +299,7 @@ in
                     cd /tmp
                     git config --global user.email "admin@example.com"
                     git config --global user.name "Admin"
-                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/$REPO_NAME.git"
+                    git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@${giteaInternalHost}/${defaultOwner}/$REPO_NAME.git"
                     cd "$REPO_NAME"
                   fi
 
@@ -627,7 +630,7 @@ EOF
             # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
             storage:
               default:
-                remote: "http://${giteaInternalHost}/giteaAdmin/feature-flags.git"
+                remote: "http://${giteaInternalHost}/${defaultOwner}/feature-flags.git"
                 ref: "main"
                 poll_interval: "30s"
                 insecure_skip_tls: true

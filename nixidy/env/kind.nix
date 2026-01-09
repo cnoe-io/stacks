@@ -1,14 +1,12 @@
 # KIND local development environment configuration
 # Mirrors: cdk8s environment handling for CLUSTER_TYPE=kind
+#
+# NOTE: cluster.name is set in flake.nix per-host environments (kind-ryzen, kind-thinkpad, etc.)
+# This allows pure Nix builds without --impure flag.
 { config, lib, ... }:
-let
-  # Read cluster name from environment variable if set, otherwise use "localdev"
-  # CLUSTER_HOST is set by cluster-update and nixidy-synth scripts
-  clusterName = builtins.getEnv "CLUSTER_HOST";
-in
 {
-  # Set cluster name from environment (for idpBuilder compatibility)
-  cluster.name = if clusterName != "" then clusterName else "localdev";
+  # Default cluster name - overridden by per-host environments in flake.nix
+  cluster.name = lib.mkDefault "localdev";
   # Set environment identifier
   nixidy.target.branch = "main";
 
@@ -48,11 +46,9 @@ in
   # Tailscale configuration
   tailscale = {
     tailnet = "tail286401.ts.net";
-    # Use TAILSCALE_SERVICE_HOST env var or default to "thinkpad"
-    # This maps to Tailscale Services: gitea-thinkpad, argocd-thinkpad, etc.
-    serviceHost = let
-      envHost = builtins.getEnv "TAILSCALE_SERVICE_HOST";
-    in if envHost != "" then envHost else "thinkpad";
+    # serviceHost defaults to cluster.name (set per-host in flake.nix)
+    # This maps to Tailscale Services: gitea-<host>, argocd-<host>, etc.
+    serviceHost = lib.mkDefault config.cluster.name;
   };
 
   # Derive Keycloak URL from ingress host and port (domain-based routing)

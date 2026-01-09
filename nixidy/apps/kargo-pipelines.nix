@@ -5,6 +5,13 @@
 { config, lib, ... }:
 let
   namespace = "kargo-pipelines";
+  inherit (config.cluster) ingressHost ingressPort;
+  inherit (config.gitea) serviceName internalPort defaultOwner;
+  giteaNamespace = config.gitea.namespace;
+  portSuffix = if ingressPort == 443 then "" else ":${toString ingressPort}";
+  giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
+  giteaExternalHost = "gitea.${ingressHost}${portSuffix}";
+  giteaExternalUrl = "https://${giteaExternalHost}";
 in
 {
   config = {
@@ -392,7 +399,7 @@ in
               #     insecureSkipTLSVerify: true
               # Image subscription with semver filtering
               - image:
-                  repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+                  repoURL: ${giteaExternalHost}/${defaultOwner}/backstage
                   imageSelectionStrategy: SemVer
                   # Match semver tags: v1.0.0, 1.0.0, v1.0.0-rc1, etc.
                   allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
@@ -428,11 +435,11 @@ in
               spec:
                 vars:
                   - name: gitRepoURL
-                    value: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
+                    value: ${giteaInternalUrl}/${defaultOwner}/idpbuilder-${config.cluster.name}-backstage-manifests.git
                   - name: gitRepoURLExternal
-                    value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-thinkpad-backstage-manifests.git
+                    value: ${giteaExternalUrl}/${defaultOwner}/idpbuilder-${config.cluster.name}-backstage-manifests.git
                   - name: imageRepoURL
-                    value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+                    value: ${giteaExternalHost}/${defaultOwner}/backstage
                   - name: baseImage
                     value: ghcr.io/pittampalliorg/backstage
                   - name: argoAppName
