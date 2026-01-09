@@ -61,9 +61,6 @@
     # Tailscale Services
     ./tailscale.nix         # CRDs, secrets, subnet-router, Tailscale Serve services
 
-    # Headlamp Dashboard
-    ./headlamp.nix          # Kubernetes dashboard with OIDC
-
     # Extended Observability
     ./observability.nix     # Jaeger, LGTM stack (Mimir, OTEL Collector), observability-namespace, observability-secrets
 

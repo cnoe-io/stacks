@@ -48,7 +48,7 @@ spec:
             - /etc/backstage/app-config.yaml
           env:
             - name: LOG_LEVEL
-              value: debug
+              value: info
             - name: NODE_TLS_REJECT_UNAUTHORIZED
               value: "0"
             - name: NODE_ENV
@@ -61,10 +61,35 @@ spec:
             - secretRef:
                 name: argocd-credentials
           image: ghcr.io/pittampalliorg/backstage:v1.1.2
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /.backstage/health/v1/liveness
+              port: 7007
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
           name: backstage
           ports:
             - containerPort: 7007
               name: http
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /.backstage/health/v1/readiness
+              port: 7007
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
           securityContext:
             allowPrivilegeEscalation: false
             runAsGroup: 0

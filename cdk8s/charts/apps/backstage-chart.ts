@@ -393,12 +393,6 @@ proxy:
         '^/api/proxy/agent-forge/?': '/'
       changeOrigin: true
       secure: false
-    '/kargo':
-      target: ${proxyBaseUrl}
-      pathRewrite:
-        '^/api/proxy/kargo/?': '/'
-      changeOrigin: true
-      secure: false
 `;
       }
 

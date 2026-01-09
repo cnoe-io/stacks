@@ -17,7 +17,7 @@ let
   backstageImage = "ghcr.io/pittampalliorg/backstage:v1.1.2";
   imagePullSecretName = "ghcr-dockercfg";
   postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
-  postgresStorageSize = "500Mi";
+  postgresStorageSize = "2Gi";
 in
 {
   # =========================================================================
@@ -328,7 +328,7 @@ in
                   "/etc/backstage/app-config.yaml"
                 ];
                 env = [
-                  { name = "LOG_LEVEL"; value = "debug"; }
+                  { name = "LOG_LEVEL"; value = "info"; }
                   { name = "NODE_TLS_REJECT_UNAUTHORIZED"; value = "0"; }
                   { name = "NODE_ENV"; value = "production"; }
                 ];
@@ -343,6 +343,40 @@ in
                   subPath = "app-config.yaml";
                   readOnly = true;
                 }];
+                # Resource requests/limits (heavy profile for large catalog + plugins)
+                resources = {
+                  requests = {
+                    cpu = "500m";
+                    memory = "1Gi";
+                  };
+                  limits = {
+                    cpu = "2";
+                    memory = "2Gi";
+                  };
+                };
+                # Kubernetes native health probes (complement Dapr app health checks)
+                readinessProbe = {
+                  httpGet = {
+                    path = "/.backstage/health/v1/readiness";
+                    port = 7007;
+                  };
+                  initialDelaySeconds = 30;
+                  periodSeconds = 10;
+                  timeoutSeconds = 5;
+                  successThreshold = 1;
+                  failureThreshold = 3;
+                };
+                livenessProbe = {
+                  httpGet = {
+                    path = "/.backstage/health/v1/liveness";
+                    port = 7007;
+                  };
+                  initialDelaySeconds = 60;
+                  periodSeconds = 30;
+                  timeoutSeconds = 5;
+                  successThreshold = 1;
+                  failureThreshold = 3;
+                };
               }];
 
               volumes = [{

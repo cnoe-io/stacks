@@ -41,6 +41,8 @@ in
         metadata:
           name: configstore
           namespace: ${backstageNamespace}
+        scopes:
+          - backstage
         spec:
           type: configuration.redis
           version: v1
@@ -60,6 +62,8 @@ in
         metadata:
           name: configstatestore
           namespace: ${backstageNamespace}
+        scopes:
+          - backstage
         spec:
           type: state.redis
           version: v1

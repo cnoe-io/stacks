@@ -73,7 +73,7 @@
       STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
       echo "Starting nixidy file watcher..."
       echo "Watching: $STACKS_DIR/nixidy/, $STACKS_DIR/.env-files/"
-      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms"
+      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms, Poll: ''${NIXIDY_WATCH_POLL:-1000}ms"
       echo "ArgoCD sync: ''${NIXIDY_WATCH_SYNC_ARGOCD:-true}"
       echo ""
       echo "Press Ctrl+C to stop"
@@ -81,6 +81,7 @@
 
       exec watchexec \
         --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
+        --poll "''${NIXIDY_WATCH_POLL:-1000}ms" \
         --exts nix,env \
         --watch "$STACKS_DIR/nixidy" \
         --watch "$STACKS_DIR/.env-files" \
@@ -96,6 +97,20 @@
       STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
       "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
     '';
+
+    # Gitea webhook listener - streams push notifications with desktop notifications
+    # KIND on Linux can't reach host, so we deploy a receiver pod and stream its logs
+    "gitea-listen".exec = ''
+      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+      exec "$STACKS_DIR/scripts/gitea-webhook-notify.sh"
+    '';
+
+    # Register webhooks with all Gitea repos (one-time setup)
+    "gitea-webhook-setup".exec = ''
+      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+      source "$STACKS_DIR/.env-files/kind.env" 2>/dev/null || true
+      exec "$STACKS_DIR/scripts/gitea-webhook-setup-devenv.sh"
+    '';
   };
 
   # Background processes for `devenv up`
@@ -106,6 +121,7 @@
         STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
         watchexec \
           --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
+          --poll "''${NIXIDY_WATCH_POLL:-1000}ms" \
           --exts nix,env \
           --watch "$STACKS_DIR/nixidy" \
           --watch "$STACKS_DIR/.env-files" \
@@ -121,6 +137,22 @@
           restart = "on_failure";
           max_restarts = 10;
           backoff_seconds = 5;
+        };
+      };
+    };
+
+    # Gitea webhook listener - streams push notifications with desktop notifications
+    # KIND on Linux can't reach host, so we deploy a receiver pod and stream its logs
+    gitea-webhook = {
+      exec = ''
+        STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
+        exec "$STACKS_DIR/scripts/gitea-webhook-notify.sh"
+      '';
+      process-compose = {
+        availability = {
+          restart = "on_failure";
+          max_restarts = 5;
+          backoff_seconds = 3;
         };
       };
     };
@@ -150,9 +182,16 @@
     echo "  hub-argocd-apps                  # List hub ArgoCD applications"
     echo "  hub-argocd-sync-all              # Sync all hub ArgoCD apps"
     echo ""
+    echo "Gitea Change Notifications:"
+    echo "  gitea-listen                     # Start webhook listener (foreground)"
+    echo "  gitea-webhook-setup              # Register webhooks with all repos (one-time)"
+    echo "  (devenv up starts listener automatically on port 9999)"
+    echo ""
     echo "Configuration:"
     echo "  NIXIDY_WATCH_DEBOUNCE=2000       # Debounce delay in ms"
+    echo "  NIXIDY_WATCH_POLL=1000           # Poll interval in ms (for Claude Code edits)"
     echo "  NIXIDY_WATCH_SYNC_ARGOCD=true    # Auto-sync ArgoCD after deploy"
+    echo "  NIXIDY_WATCH_SHOW_DIFF=false     # Show detailed manifest diffs"
     echo ""
   '';
 
@@ -164,6 +203,11 @@
     TAILNET_NAME = "tail286401";
     # Nixidy watch mode configuration
     NIXIDY_WATCH_DEBOUNCE = "2000";      # Debounce delay in milliseconds
+    NIXIDY_WATCH_POLL = "1000";          # Poll interval in ms (needed for Claude Code edits)
     NIXIDY_WATCH_SYNC_ARGOCD = "true";   # Auto-sync ArgoCD after deploy
+    NIXIDY_WATCH_SHOW_DIFF = "false";    # Show detailed diff of changed manifests
+    # Gitea webhook listener configuration
+    GITEA_WEBHOOK_PORT = "9999";         # Port for webhook listener
+    GITEA_URL = "https://gitea.cnoe.localtest.me:8443";  # Gitea server URL
   };
 }

@@ -7,7 +7,6 @@ data:
   group-admin-payload.json: '{"name":"admin"}'
   group-base-user-payload.json: '{"name":"base-user"}'
   group-mapper-payload.json: '{"config":{"access.token.claim":"true","claim.name":"groups","full.path":"false","id.token.claim":"true","userinfo.token.claim":"true"},"name":"groups","protocol":"openid-connect","protocolMapper":"oidc-group-membership-mapper"}'
-  headlamp-client-payload.json: '{"alwaysDisplayInConsole":false,"attributes":{"oauth2.device.authorization.grant.enabled":false,"oidc.ciba.grant.enabled":false,"saml_idp_initiated_sso_url_name":""},"authorizationServicesEnabled":false,"baseUrl":"","clientId":"headlamp","description":"Used for Headlamp Dashboard SSO","directAccessGrantsEnabled":true,"frontchannelLogout":true,"implicitFlowEnabled":false,"name":"Headlamp Kubernetes Dashboard","protocol":"openid-connect","publicClient":false,"redirectUris":["https://headlamp.cnoe.localtest.me:8443/oidc-callback","https://headlamp.cnoe.localtest.me/oidc-callback","http://localhost:4466/oidc-callback","http://localhost:8000/*"],"rootUrl":"","serviceAccountsEnabled":false,"standardFlowEnabled":true,"webOrigins":["/*"]}'
   realm-payload.json: '{"enabled":true,"realm":"cnoe"}'
   user-password.json: '{"temporary":false,"type":"password","value":"${USER1_PASSWORD}"}'
   user-user1.json: '{"email":"","emailVerified":false,"enabled":true,"firstName":"user","groups":["/admin"],"lastName":"one","requiredActions":[],"username":"user1"}'

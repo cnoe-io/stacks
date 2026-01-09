@@ -8,7 +8,7 @@
 # 2. Special characters: Item names with special characters (e.g., parentheses, spaces)
 #    can cause parsing issues in op:// secret references
 #
-# Example: "Argo CD (localdev)" → shdhimokibw653iy5gkyzay4qy
+# Example: "Argo CD (localdev)" → ka3qjgk3attw67urtws44uoc2m
 # To get item ID: op item list --vault CLI --format json | jq '.[] | {title, id}'
 # To get field IDs: op item get <item-id> --format json | jq '.fields[] | {label, id}'
 
@@ -18,9 +18,9 @@ export ARGOCD_OPTS="--insecure"
 
 # Token storage location (in 1Password)
 # Using item ID instead of name to avoid special character issues (e.g., parentheses)
-# Item: "Argo CD (localdev)" - ID: shdhimokibw653iy5gkyzay4qy
-# Field: "auth token" - ID: mx5pgaymmkosvjces3fbozj7fa
-ARGOCD_TOKEN_OP_PATH="${ARGOCD_TOKEN_OP_PATH:-op://CLI/shdhimokibw653iy5gkyzay4qy/mx5pgaymmkosvjces3fbozj7fa}"
+# Item: "Argo CD (localdev)" - ID: ka3qjgk3attw67urtws44uoc2m
+# Field: "credential"
+ARGOCD_TOKEN_OP_PATH="${ARGOCD_TOKEN_OP_PATH:-op://CLI/ka3qjgk3attw67urtws44uoc2m/credential}"
 
 # Get ArgoCD authentication token
 # Priority: 1) ARGOCD_AUTH_TOKEN env var, 2) 1Password, 3) Generate new token
@@ -113,10 +113,10 @@ argocd-save-token() {
   fi
 
   # Check if item exists (using item ID for stability)
-  # Item ID: shdhimokibw653iy5gkyzay4qy = "Argo CD (localdev)"
-  if op item get shdhimokibw653iy5gkyzay4qy --vault CLI &>/dev/null 2>&1; then
-    # Update existing item - update the "auth token" field (field ID: mx5pgaymmkosvjces3fbozj7fa)
-    if op item edit shdhimokibw653iy5gkyzay4qy --vault CLI "auth token=$token" &>/dev/null 2>&1; then
+  # Item ID: ka3qjgk3attw67urtws44uoc2m = "Argo CD (localdev)"
+  if op item get ka3qjgk3attw67urtws44uoc2m --vault CLI &>/dev/null 2>&1; then
+    # Update existing item - update the "credential" field
+    if op item edit ka3qjgk3attw67urtws44uoc2m --vault CLI "credential=$token" &>/dev/null 2>&1; then
       echo "✅ ArgoCD token updated in 1Password" >&2
     else
       echo "⚠️  Failed to update token in 1Password" >&2

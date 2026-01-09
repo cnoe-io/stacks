@@ -391,36 +391,6 @@ in
             ];
             webOrigins = [ "/*" ];
           };
-          "headlamp-client-payload.json" = builtins.toJSON {
-            protocol = "openid-connect";
-            clientId = "headlamp";
-            name = "Headlamp Kubernetes Dashboard";
-            description = "Used for Headlamp Dashboard SSO";
-            publicClient = false;
-            authorizationServicesEnabled = false;
-            serviceAccountsEnabled = false;
-            implicitFlowEnabled = false;
-            directAccessGrantsEnabled = true;
-            standardFlowEnabled = true;
-            frontchannelLogout = true;
-            attributes = {
-              saml_idp_initiated_sso_url_name = "";
-              "oauth2.device.authorization.grant.enabled" = false;
-              "oidc.ciba.grant.enabled" = false;
-            };
-            alwaysDisplayInConsole = false;
-            rootUrl = "";
-            baseUrl = "";
-            redirectUris = [
-              # Domain-based routing (primary)
-              "https://headlamp.${ingressHost}${portSuffix}/oidc-callback"
-              "https://headlamp.${ingressHost}/oidc-callback"
-              # Local development
-              "http://localhost:4466/oidc-callback"
-              "http://localhost:8000/*"
-            ];
-            webOrigins = [ "/*" ];
-          };
         };
       };
     };
@@ -717,7 +687,6 @@ in
                         patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
                         patch_client_config "backstage" "/var/config/backstage-client-payload.json"
                         patch_client_config "flipt" "/var/config/flipt-client-payload.json"
-                        patch_client_config "headlamp" "/var/config/headlamp-client-payload.json"
 
                         # Check if secret already exists
                         if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
@@ -758,14 +727,6 @@ in
                           -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
                           -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${CLIENT_ID} | jq -e -r '.secret')
 
-                        # Get Headlamp client secret
-                        CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
-                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
-                          -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "headlamp") | .id')
-                        HEADLAMP_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
-                          -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
-                          -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${CLIENT_ID} | jq -e -r '.secret')
-
                         # Get ArgoCD session token
                         ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
                         ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"''${ARGOCD_PASSWORD}\"}" | jq -r .token)
@@ -786,8 +747,6 @@ in
                         BACKSTAGE_CLIENT_ID: backstage
                         FLIPT_CLIENT_SECRET: ''${FLIPT_CLIENT_SECRET}
                         FLIPT_CLIENT_ID: flipt
-                        HEADLAMP_CLIENT_SECRET: ''${HEADLAMP_CLIENT_SECRET}
-                        HEADLAMP_CLIENT_ID: headlamp
                       " > /tmp/secret.yaml
 
                         ./kubectl apply -f /tmp/secret.yaml
@@ -909,23 +868,6 @@ in
                         -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
                         -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${CLIENT_ID} | jq -e -r '.secret')
 
-                      echo "creating Headlamp client"
-                      curl -sS -H "Content-Type: application/json" \
-                        -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
-                        -X POST --data @/var/config/headlamp-client-payload.json \
-                          ''${KEYCLOAK_URL}/admin/realms/cnoe/clients
-
-                      CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
-                        -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
-                        -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "headlamp") | .id')
-
-                      CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" -X GET  ''${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
-                      curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" -X PUT  ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${CLIENT_ID}/default-client-scopes/''${CLIENT_SCOPE_GROUPS_ID}
-
-                      HEADLAMP_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
-                        -H "Authorization: bearer ''${KEYCLOAK_TOKEN}" \
-                        -X GET ''${KEYCLOAK_URL}/admin/realms/cnoe/clients/''${CLIENT_ID} | jq -e -r '.secret')
-
                       ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
 
                       ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"''${ARGOCD_PASSWORD}\"}" | jq -r .token)
@@ -945,8 +887,6 @@ in
                         BACKSTAGE_CLIENT_ID: backstage
                         FLIPT_CLIENT_SECRET: ''${FLIPT_CLIENT_SECRET}
                         FLIPT_CLIENT_ID: flipt
-                        HEADLAMP_CLIENT_SECRET: ''${HEADLAMP_CLIENT_SECRET}
-                        HEADLAMP_CLIENT_ID: headlamp
                       " > /tmp/secret.yaml
 
                       ./kubectl apply -f /tmp/secret.yaml

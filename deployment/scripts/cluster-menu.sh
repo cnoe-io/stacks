@@ -67,6 +67,86 @@ load-1password-token() {
   return 1
 }
 
+# Sync applications that have auto-sync disabled (e.g., backstage for devspace compatibility)
+# Called after cluster creation to ensure all apps get initial sync
+# Waits for key dependencies (keycloak) before triggering syncs
+sync-manual-apps() {
+  if ! command -v argocd &>/dev/null; then
+    echo "⚠️  argocd CLI not found - skipping manual app sync"
+    return 0
+  fi
+
+  # Ensure we have ArgoCD auth
+  if [ -z "$ARGOCD_AUTH_TOKEN" ]; then
+    echo "⚠️  ARGOCD_AUTH_TOKEN not set - skipping manual app sync"
+    return 0
+  fi
+
+  echo "🔄 Syncing applications without auto-sync..."
+
+  # Wait for keycloak to be healthy (backstage depends on keycloak-clients secret)
+  # This secret is created by keycloak-config job after keycloak is ready
+  local timeout=180
+  local interval=10
+  local elapsed=0
+
+  echo "   Waiting for keycloak dependencies (up to ${timeout}s)..."
+  while [ $elapsed -lt $timeout ]; do
+    # Check if keycloak app is healthy
+    local keycloak_health=$(kubectl get application keycloak -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null)
+
+    # Check if keycloak-clients secret exists (created by keycloak-config job)
+    local secret_exists=$(kubectl get secret keycloak-clients -n keycloak --no-headers 2>/dev/null | wc -l)
+
+    if [ "$keycloak_health" = "Healthy" ] && [ "$secret_exists" -gt 0 ]; then
+      echo "   ✓ Keycloak healthy and keycloak-clients secret exists"
+      break
+    fi
+
+    # Show progress
+    if [ "$keycloak_health" != "Healthy" ]; then
+      echo "   Keycloak: ${keycloak_health:-Unknown} (${elapsed}s/${timeout}s)"
+    elif [ "$secret_exists" -eq 0 ]; then
+      echo "   Waiting for keycloak-clients secret (${elapsed}s/${timeout}s)"
+    fi
+
+    sleep $interval
+    elapsed=$((elapsed + interval))
+  done
+
+  if [ $elapsed -ge $timeout ]; then
+    echo "   ⚠️  Timeout waiting for keycloak dependencies - syncing anyway"
+  fi
+
+  # Find apps that are OutOfSync AND don't have automated sync policy
+  local manual_apps=$(kubectl get applications -n argocd -o json 2>/dev/null | \
+    jq -r '.items[] | select(.spec.syncPolicy.automated == null and .status.sync.status == "OutOfSync") | .metadata.name' 2>/dev/null)
+
+  if [ -z "$manual_apps" ]; then
+    echo "   No manual apps need syncing"
+    return 0
+  fi
+
+  local synced=0
+  local failed=0
+  for app in $manual_apps; do
+    echo "   Syncing: $app"
+    if argocd app sync "argocd/$app" --insecure --async --timeout 300 2>/dev/null; then
+      synced=$((synced + 1))
+    else
+      echo "   ⚠️  Failed to sync: $app"
+      failed=$((failed + 1))
+    fi
+  done
+
+  if [ $synced -gt 0 ]; then
+    echo "✅ Triggered sync for $synced manual app(s)"
+  fi
+  if [ $failed -gt 0 ]; then
+    echo "⚠️  Failed to sync $failed app(s) - may need manual intervention"
+  fi
+}
+
 # Known hosts that can run Kind clusters
 KNOWN_HOSTS=(thinkpad ryzen hetzner)
 
@@ -251,9 +331,19 @@ nixidy-synth() {
 
   cd "$NIXIDY_DIR"
 
+  # Remove stale result symlink to force fresh nix evaluation
+  # Without this, nix may reuse cached builds even when source files changed
+  rm -f result
+
+  # Stage modified nix files so nix flake can see them in dirty git tree
+  # Nix flakes only see staged/committed files, not unstaged modifications
+  git -C "$STACKS_DIR" add -u "*.nix" ".env-files/*.env" 2>/dev/null || true
+
   # Build nixidy manifests (creates result symlink)
   # Use 'nix run' instead of 'nix develop -c' for non-interactive subshell compatibility
-  if ! nix run .#nixidy -- build ".#$ENV" 2>&1; then
+  # --refresh forces re-evaluation of flake inputs from remotes
+  # --option eval-cache false disables evaluation caching for dirty git trees
+  if ! nix run --refresh --option eval-cache false .#nixidy -- build ".#$ENV" 2>&1; then
     echo "❌ Nixidy synthesis failed"
     return 1
   fi
@@ -548,6 +638,10 @@ INJECT_SCRIPT
     if command -v argocd &>/dev/null && [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
       if argocd-auth-init; then
         echo "✅ ArgoCD authentication configured and token saved to 1Password"
+
+        # Sync applications that have auto-sync disabled (e.g., backstage)
+        # These apps won't deploy automatically and need an initial sync trigger
+        sync-manual-apps
       else
         echo "⚠️  ArgoCD authentication initialization failed (may retry later)"
       fi

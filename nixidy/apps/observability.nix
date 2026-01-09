@@ -88,10 +88,27 @@ in
               remoteRef:
                 key: LANGFUSE-ENCRYPTION-KEY
       ''
-      # Note: langfuse-api ExternalSecret removed - LANGFUSE-API-AUTH doesn't exist in Key Vault
-      # The OTEL collector config marks this secret as optional
-      # To enable Langfuse integration, create LANGFUSE-API-AUTH in Key Vault with format:
-      # "Basic <base64(LANGFUSE_PUBLIC_KEY:LANGFUSE_SECRET_KEY)>"
+      # Langfuse API credentials for OTEL collector integration
+      # Syncs from Azure Key Vault: LANGFUSE-API-AUTH
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: langfuse-api
+          namespace: ${namespace}
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: langfuse-api
+            creationPolicy: Owner
+          data:
+            - secretKey: LANGFUSE_AUTH
+              remoteRef:
+                key: LANGFUSE-API-AUTH
+      ''
     ];
   };
 
@@ -314,28 +331,104 @@ in
         };
       };
 
+      # Mimir Ingress - receives metrics from external sources (e.g., Grafana Alloy on NixOS hosts)
+      ingresses.mimir = {
+        metadata = {
+          inherit namespace;
+          annotations = {
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
+            # Allow large payloads for batch metric ingestion
+            "nginx.ingress.kubernetes.io/proxy-body-size" = "10m";
+          };
+        };
+        spec = {
+          ingressClassName = "nginx";
+          rules = [{
+            host = "mimir.${ingressHost}";
+            http.paths = [{
+              path = "/";
+              pathType = "Prefix";
+              backend.service = {
+                name = "mimir";
+                port.name = "http";
+              };
+            }];
+          }];
+          tls = [{
+            hosts = [ "mimir.${ingressHost}" ];
+          }];
+        };
+      };
+
       configMaps.mimir-config = {
         metadata.namespace = namespace;
         data = {
           "mimir.yaml" = ''
             multitenancy_enabled: false
+
             server:
               http_listen_port: 9009
+              log_level: warn
+
+            # Single-node ring configuration (required for monolithic mode)
             common:
               storage:
                 backend: filesystem
                 filesystem:
                   dir: /data
+
+            ingester:
+              ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+                replication_factor: 1
+
+            store_gateway:
+              sharding_ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+                replication_factor: 1
+
+            compactor:
+              sharding_ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+
+            distributor:
+              ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+
             blocks_storage:
               backend: filesystem
               filesystem:
                 dir: /data/blocks
               tsdb:
                 dir: /data/tsdb
+
             ruler_storage:
               backend: filesystem
               filesystem:
                 dir: /data/rules
+
+            ruler:
+              ring:
+                instance_addr: 127.0.0.1
+                kvstore:
+                  store: inmemory
+
+            limits:
+              # Disable rate limiting for single-node homelab use
+              ingestion_rate: 100000
+              ingestion_burst_size: 200000
+              max_global_series_per_user: 0
+              max_global_series_per_metric: 0
+              max_label_names_per_series: 30
+              max_label_value_length: 2048
           '';
         };
       };
@@ -456,6 +549,35 @@ in
             { name = "grpc"; port = 9096; targetPort = "grpc"; }
           ];
           selector.app = "loki";
+        };
+      };
+
+      # Loki Ingress - receives logs from external sources (e.g., Grafana Alloy on NixOS hosts)
+      ingresses.loki = {
+        metadata = {
+          inherit namespace;
+          annotations = {
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
+            # Allow large payloads for batch log ingestion
+            "nginx.ingress.kubernetes.io/proxy-body-size" = "10m";
+          };
+        };
+        spec = {
+          ingressClassName = "nginx";
+          rules = [{
+            host = "loki.${ingressHost}";
+            http.paths = [{
+              path = "/";
+              pathType = "Prefix";
+              backend.service = {
+                name = "loki";
+                port.name = "http";
+              };
+            }];
+          }];
+          tls = [{
+            hosts = [ "loki.${ingressHost}" ];
+          }];
         };
       };
 
@@ -783,6 +905,35 @@ in
             { name = "otlp-http"; port = 4318; targetPort = "otlp-http"; }
           ];
           selector.app = "otel-collector";
+        };
+      };
+
+      # OTEL Collector Ingress - receives traces/logs/metrics from external sources (e.g., NixOS hosts)
+      ingresses.otel-collector = {
+        metadata = {
+          inherit namespace;
+          annotations = {
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP";
+            # Allow large payloads for batch telemetry
+            "nginx.ingress.kubernetes.io/proxy-body-size" = "10m";
+          };
+        };
+        spec = {
+          ingressClassName = "nginx";
+          rules = [{
+            host = "otel-collector.${ingressHost}";
+            http.paths = [{
+              path = "/";
+              pathType = "Prefix";
+              backend.service = {
+                name = "otel-collector";
+                port.name = "otlp-http";
+              };
+            }];
+          }];
+          tls = [{
+            hosts = [ "otel-collector.${ingressHost}" ];
+          }];
         };
       };
 

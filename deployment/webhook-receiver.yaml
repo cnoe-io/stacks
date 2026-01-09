@@ -1,0 +1,127 @@
+# Gitea Webhook Receiver for KIND on Linux
+# Receives push webhooks from Gitea and logs them for streaming to devenv
+# Used because KIND on Linux can't reach host.docker.internal
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webhook-receiver
+  namespace: gitea
+  labels:
+    app: webhook-receiver
+spec:
+  containers:
+  - name: receiver
+    image: python:3.11-slim
+    command:
+    - python3
+    - -c
+    - |
+      from http.server import HTTPServer, BaseHTTPRequestHandler
+      import json, sys
+      from datetime import datetime
+
+      # ANSI Colors
+      RESET = '\033[0m'
+      BOLD = '\033[1m'
+      DIM = '\033[2m'
+      GREEN = '\033[0;32m'
+      YELLOW = '\033[1;33m'
+      CYAN = '\033[0;36m'
+
+      class WebhookHandler(BaseHTTPRequestHandler):
+          def do_POST(self):
+              try:
+                  length = int(self.headers.get('Content-Length', 0))
+                  data = json.loads(self.rfile.read(length).decode())
+
+                  repo = data.get('repository', {}).get('full_name', 'unknown')
+                  # Extract app name: giteaAdmin/idpbuilder-thinkpad-backstage-manifests -> backstage
+                  parts = repo.split('/')[-1]
+                  if parts.startswith('idpbuilder-'):
+                      segments = parts.split('-')
+                      if len(segments) >= 3:
+                          parts = '-'.join(segments[2:]).replace('-manifests', '').replace('-entities', '')
+
+                  ref = data.get('ref', '').replace('refs/heads/', '')
+                  commits = data.get('commits', [])
+                  timestamp = datetime.now().strftime('%H:%M:%S')
+
+                  if commits:
+                      print(f"\n{CYAN}[{timestamp}]{RESET} {GREEN}{BOLD}{parts}{RESET} {DIM}({ref}){RESET}", flush=True)
+                      for c in commits:
+                          sha_short = c.get('id', '')[:7]
+                          sha_full = c.get('id', '')
+                          msg = c.get('message', '').split('\n')[0][:60]
+                          author = c.get('author', {}).get('name', 'unknown')
+                          added_files = c.get('added', [])
+                          modified_files = c.get('modified', [])
+                          removed_files = c.get('removed', [])
+                          # OSC 8 hyperlink for clickable commit hash
+                          commit_url = f"https://gitea.cnoe.localtest.me:8443/{repo}/commit/{sha_full}"
+                          sha_link = f"\033]8;;{commit_url}\007{sha_short}\033]8;;\007"
+                          print(f"  {YELLOW}{sha_link}{RESET} {msg}", flush=True)
+                          print(f"  {DIM}by {author}{RESET}", flush=True)
+                          # Show files changed
+                          if added_files:
+                              for f in added_files[:5]:
+                                  print(f"    {GREEN}+ {f}{RESET}", flush=True)
+                              if len(added_files) > 5:
+                                  print(f"    {DIM}... and {len(added_files)-5} more added{RESET}", flush=True)
+                          if modified_files:
+                              for f in modified_files[:5]:
+                                  print(f"    {YELLOW}~ {f}{RESET}", flush=True)
+                              if len(modified_files) > 5:
+                                  print(f"    {DIM}... and {len(modified_files)-5} more modified{RESET}", flush=True)
+                          if removed_files:
+                              for f in removed_files[:5]:
+                                  print(f"    {DIM}- {f}{RESET}", flush=True)
+                              if len(removed_files) > 5:
+                                  print(f"    {DIM}... and {len(removed_files)-5} more removed{RESET}", flush=True)
+                          # Print URL for notification script to parse
+                          print(f"  {DIM}→ {commit_url}{RESET}", flush=True)
+                  else:
+                      print(f"\n{CYAN}[{timestamp}]{RESET} {GREEN}{BOLD}{parts}{RESET} {DIM}({ref}) - push (no commits){RESET}", flush=True)
+
+                  self.send_response(200)
+                  self.send_header('Content-Type', 'application/json')
+                  self.end_headers()
+                  self.wfile.write(b'{"status":"ok"}')
+              except Exception as e:
+                  print(f"Error: {e}", flush=True)
+                  self.send_response(500)
+                  self.end_headers()
+
+          def do_GET(self):
+              self.send_response(200)
+              self.send_header('Content-Type', 'text/plain')
+              self.end_headers()
+              self.wfile.write(b'Gitea Webhook Receiver OK')
+
+          def log_message(self, *args):
+              pass  # Suppress HTTP logging
+
+      print(f"{GREEN}{BOLD}Gitea Webhook Receiver{RESET}", flush=True)
+      print(f"{DIM}Listening on :8080...{RESET}", flush=True)
+      print(f"{DIM}Waiting for push events...{RESET}\n", flush=True)
+      HTTPServer(('0.0.0.0', 8080), WebhookHandler).serve_forever()
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: gitea
+spec:
+  selector:
+    app: webhook-receiver
+  ports:
+  - port: 9999
+    targetPort: 8080

@@ -3,6 +3,8 @@ kind: Component
 metadata:
   name: configstatestore
   namespace: backstage
+scopes:
+  - backstage
 spec:
   metadata:
     - name: redisHost
