@@ -5,7 +5,7 @@ data:
     set -e
 
     GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
-    ORG_NAME="giteaAdmin"
+    ORG_NAME="backstage"
 
     # Read credentials from mounted secret
     GITEA_USER=$(cat /gitea-credentials/username)

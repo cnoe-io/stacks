@@ -35,7 +35,7 @@ spec:
       input:
         description: This is an example app
         # Hard coded value for this demo purposes only.
-        repoUrl: gitea.cnoe.localtest.me:8443/giteaAdmin?repo=${{parameters.name}}
+        repoUrl: gitea.cnoe.localtest.me:8443/backstage?repo=${{parameters.name}}
         defaultBranch: main
     - id: create-argocd-app
       name: Create ArgoCD App
@@ -46,7 +46,7 @@ spec:
         argoInstance: in-cluster
         projectName: default
         # necessary until we generate our own cert
-        repoUrl: https://gitea.cnoe.localtest.me:8443/giteaAdmin/${{parameters.name}}
+        repoUrl: https://gitea.cnoe.localtest.me:8443/backstage/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register

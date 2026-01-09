@@ -182,11 +182,19 @@
         description = "Gitea internal HTTP port";
       };
 
-      # Default owner/organization for repos created by templates
+      # Default owner for idpBuilder-created repos (the admin user)
       defaultOwner = lib.mkOption {
         type = lib.types.str;
         default = "giteaAdmin";
-        description = "Default Gitea owner/organization for template-created repos";
+        description = "Default Gitea owner for idpBuilder repos (admin user)";
+      };
+
+      # Default organization for Backstage template-created repos
+      # Must be different from defaultOwner since Gitea users and orgs share namespace
+      defaultOrg = lib.mkOption {
+        type = lib.types.str;
+        default = "backstage";
+        description = "Default Gitea organization for Backstage scaffolder templates";
       };
 
       # Admin username (also used as fallback owner)

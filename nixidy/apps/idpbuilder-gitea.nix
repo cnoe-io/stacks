@@ -5,12 +5,12 @@
 # Key responsibilities:
 # 1. Create the gitea namespace with proper labels
 # 2. Store webhook configuration for ArgoCD
-# 3. Create the default organization (giteaAdmin) for Backstage templates
+# 3. Create the default organization for Backstage templates (separate from admin user)
 { config, lib, ... }:
 let
   # Only include for kind environment
   isKind = config.environmentType == "kind";
-  inherit (config.gitea) namespace serviceName internalPort defaultOwner adminUsername;
+  inherit (config.gitea) namespace serviceName internalPort defaultOwner defaultOrg adminUsername;
   giteaInternalUrl = "http://${serviceName}.${namespace}.svc.cluster.local:${toString internalPort}";
 in
 {
@@ -53,6 +53,7 @@ in
             "argocd-webhook-url" = "http://argocd-server.argocd.svc.cluster.local/api/webhook";
             "gitea-internal-url" = giteaInternalUrl;
             "gitea-default-owner" = defaultOwner;
+            "gitea-default-org" = defaultOrg;
           };
         };
       };
@@ -72,7 +73,7 @@ in
               set -e
 
               GITEA_URL="${giteaInternalUrl}"
-              ORG_NAME="${defaultOwner}"
+              ORG_NAME="${defaultOrg}"
 
               # Read credentials from mounted secret
               GITEA_USER=$(cat /gitea-credentials/username)
