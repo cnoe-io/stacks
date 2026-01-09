@@ -12,6 +12,8 @@ let
   giteaInternalUrl = "http://${serviceName}.${giteaNamespace}.svc.cluster.local:${toString internalPort}";
   giteaExternalHost = "gitea.${ingressHost}${portSuffix}";
   giteaExternalUrl = "https://${giteaExternalHost}";
+  # OCI registries normalize repository paths to lowercase
+  defaultOwnerLower = lib.toLower defaultOwner;
 in
 {
   config = {
@@ -398,8 +400,9 @@ in
               #     branch: main
               #     insecureSkipTLSVerify: true
               # Image subscription with semver filtering
+              # NOTE: OCI registries normalize paths to lowercase, so we use defaultOwnerLower
               - image:
-                  repoURL: ${giteaExternalHost}/${defaultOwner}/backstage
+                  repoURL: ${giteaExternalHost}/${defaultOwnerLower}/backstage
                   imageSelectionStrategy: SemVer
                   # Match semver tags: v1.0.0, 1.0.0, v1.0.0-rc1, etc.
                   allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
@@ -439,7 +442,7 @@ in
                   - name: gitRepoURLExternal
                     value: ${giteaExternalUrl}/${defaultOwner}/idpbuilder-${config.cluster.name}-backstage-manifests.git
                   - name: imageRepoURL
-                    value: ${giteaExternalHost}/${defaultOwner}/backstage
+                    value: ${giteaExternalHost}/${defaultOwnerLower}/backstage
                   - name: baseImage
                     value: ghcr.io/pittampalliorg/backstage
                   - name: argoAppName
