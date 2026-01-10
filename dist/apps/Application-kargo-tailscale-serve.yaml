@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+  name: kargo-tailscale-serve
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/kargo-tailscale-serve
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -2,11 +2,15 @@
 # Declaratively configures external PostgreSQL connections for NoCoDB
 #
 # Architecture:
-#   1. Integration (nc_integrations_v2) - Stores connection credentials
+#   1. Integration (nc_integrations_v2) - Stores FULL connection credentials (host, port, user, password, database)
 #   2. Base (nc_bases_v2) - The "database" container in NocoDB UI
-#   3. Source (nc_sources_v2) - Links base to integration
+#   3. Source (nc_sources_v2) - Links base to integration with MINIMAL config (just database name)
 #   4. Base Users (nc_base_users_v2) - User access control
-#   5. API call to sync/discover tables from external database
+#   5. Meta Sync in UI to discover tables from external database
+#
+# IMPORTANT: Source config should be minimal (just database name). Full credentials must come
+# from the integration via fk_integration_id. If source has full config, NocoDB has issues with
+# password handling ("client password must be a string" error).
 #
 # This creates connections to:
 #   - Backstage Catalog (backstage_plugin_catalog)
@@ -82,17 +86,20 @@ let
       echo "  Base ID: $base_id"
       echo "  Source ID: $source_id"
 
-      # Build config JSON
-      local config='{"client":"pg","connection":{"host":"'"$host"'","port":"'"$port"'","user":"'"$db_user"'","password":"'"$password"'","database":"'"$database"'"},"searchPath":["public"]}'
+      # Build config JSON for integration (full connection details)
+      local int_config='{"client":"pg","connection":{"host":"'"$host"'","port":"'"$port"'","user":"'"$db_user"'","password":"'"$password"'","database":"'"$database"'"},"searchPath":["public"]}'
+
+      # Build minimal config JSON for source (just database name - credentials come from integration)
+      local source_config='{"client":"pg","connection":{"database":"'"$database"'"},"searchPath":["public"]}'
 
       PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb <<EOSQL
-        -- 1. Create/update integration (stores connection credentials)
+        -- 1. Create/update integration (stores FULL connection credentials)
         INSERT INTO nc_integrations_v2 (
           id, title, config, type, sub_type, is_private, deleted,
           created_by, "order", created_at, updated_at, is_default, is_encrypted
         )
         VALUES (
-          '$int_id', '$title', '$config', 'database', 'pg', false, false,
+          '$int_id', '$title', '$int_config', 'database', 'pg', false, false,
           '$ADMIN_USER_ID', 1, NOW(), NOW(), false, false
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -108,14 +115,14 @@ let
           description = EXCLUDED.description,
           updated_at = NOW();
 
-        -- 3. Create/update source (links base to integration)
+        -- 3. Create/update source (MINIMAL config - credentials from integration via fk_integration_id)
         INSERT INTO nc_sources_v2 (
           id, base_id, alias, type, config, is_meta, enabled,
           fk_integration_id, is_local, is_encrypted,
           created_at, updated_at
         )
         VALUES (
-          '$source_id', '$base_id', '$alias', 'pg', '$config', false, true,
+          '$source_id', '$base_id', '$alias', 'pg', '$source_config', false, true,
           '$int_id', false, false,
           NOW(), NOW()
         )

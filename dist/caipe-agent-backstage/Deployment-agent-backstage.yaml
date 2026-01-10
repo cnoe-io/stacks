@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: agent-backstage
+    tier: agent
+  name: agent-backstage
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-backstage
+  template:
+    metadata:
+      labels:
+        app: agent-backstage
+    spec:
+      containers:
+        - env:
+            - name: MCP_MODE
+              value: http
+            - name: MCP_HOST
+              value: mcp-backstage.ai-platform-engineering.svc.cluster.local
+            - name: MCP_PORT
+              value: "8000"
+            - name: BACKSTAGE_URL
+              value: http://backstage.backstage.svc.cluster.local:7007
+            - name: BACKSTAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: BACKSTAGE_API_TOKEN
+                  name: agent-backstage-secret
+          envFrom:
+            - secretRef:
+                name: llm-secret
+          image: ghcr.io/cnoe-io/agent-backstage:latest
+          name: agent-backstage
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

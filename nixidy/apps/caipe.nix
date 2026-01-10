@@ -1516,6 +1516,169 @@ in
     };
   };
 
+  # =========================================================================
+  # MCP Servers (Model Context Protocol)
+  # These provide tool endpoints for the agents via HTTP
+  # =========================================================================
+
+  # CAIPE MCP ArgoCD Server
+  applications.caipe-mcp-argocd = lib.mkIf isKind {
+    inherit namespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "90";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      deployments.mcp-argocd = {
+        metadata = {
+          inherit namespace;
+          labels = {
+            app = "mcp-argocd";
+            tier = "mcp";
+          };
+        };
+        spec = {
+          replicas = 1;
+          selector.matchLabels.app = "mcp-argocd";
+
+          template = {
+            metadata.labels.app = "mcp-argocd";
+
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "mcp-argocd";
+                image = "ghcr.io/cnoe-io/mcp-argocd:stable";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  { name = "MCP_MODE"; value = "http"; }
+                  { name = "MCP_HOST"; value = "0.0.0.0"; }
+                  { name = "MCP_PORT"; value = "8000"; }
+                  { name = "ARGOCD_SERVER"; value = "argocd-server.argocd.svc.cluster.local"; }
+                  { name = "ARGOCD_TOKEN"; valueFrom.secretKeyRef = { name = "agent-argocd-secret"; key = "ARGOCD_AUTH_TOKEN"; }; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "50m";
+                    memory = "128Mi";
+                  };
+                  limits = {
+                    memory = "256Mi";
+                  };
+                };
+              }];
+            };
+          };
+        };
+      };
+
+      services.mcp-argocd = {
+        metadata = {
+          inherit namespace;
+          labels.app = "mcp-argocd";
+        };
+        spec = {
+          ports = [{ name = "http"; port = 8000; targetPort = "http"; }];
+          selector.app = "mcp-argocd";
+        };
+      };
+    };
+  };
+
+  # CAIPE MCP Backstage Server
+  applications.caipe-mcp-backstage = lib.mkIf isKind {
+    inherit namespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "90";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      deployments.mcp-backstage = {
+        metadata = {
+          inherit namespace;
+          labels = {
+            app = "mcp-backstage";
+            tier = "mcp";
+          };
+        };
+        spec = {
+          replicas = 1;
+          selector.matchLabels.app = "mcp-backstage";
+
+          template = {
+            metadata.labels.app = "mcp-backstage";
+
+            spec = {
+              imagePullSecrets = [{ name = "ghcr-pull-secret"; }];
+              containers = [{
+                name = "mcp-backstage";
+                image = "ghcr.io/cnoe-io/mcp-backstage:stable";
+                ports = [{ containerPort = 8000; name = "http"; }];
+                env = [
+                  { name = "MCP_MODE"; value = "http"; }
+                  { name = "MCP_HOST"; value = "0.0.0.0"; }
+                  { name = "MCP_PORT"; value = "8000"; }
+                  { name = "BACKSTAGE_URL"; value = "http://backstage.backstage.svc.cluster.local:7007"; }
+                  { name = "BACKSTAGE_API_TOKEN"; valueFrom.secretKeyRef = { name = "agent-backstage-secret"; key = "BACKSTAGE_API_TOKEN"; }; }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "50m";
+                    memory = "128Mi";
+                  };
+                  limits = {
+                    memory = "256Mi";
+                  };
+                };
+              }];
+            };
+          };
+        };
+      };
+
+      services.mcp-backstage = {
+        metadata = {
+          inherit namespace;
+          labels.app = "mcp-backstage";
+        };
+        spec = {
+          ports = [{ name = "http"; port = 8000; targetPort = "http"; }];
+          selector.app = "mcp-backstage";
+        };
+      };
+    };
+  };
+
+  # =========================================================================
+  # Agent Tier
+  # =========================================================================
+
   # CAIPE ArgoCD Agent
   applications.caipe-agent-argocd = lib.mkIf isKind {
     inherit namespace;
@@ -1559,11 +1722,16 @@ in
                 image = "ghcr.io/cnoe-io/agent-argocd:latest";
                 ports = [{ containerPort = 8000; name = "http"; }];
                 env = [
+                  # MCP HTTP mode configuration
+                  { name = "MCP_MODE"; value = "http"; }
+                  { name = "MCP_HOST"; value = "mcp-argocd.${namespace}.svc.cluster.local"; }
+                  { name = "MCP_PORT"; value = "8000"; }
+                  # ArgoCD server for direct API calls
                   { name = "ARGOCD_SERVER"; value = "argocd-server.argocd.svc.cluster.local"; }
+                  { name = "ARGOCD_TOKEN"; valueFrom.secretKeyRef = { name = "agent-argocd-secret"; key = "ARGOCD_AUTH_TOKEN"; }; }
                 ];
                 envFrom = [
                   { secretRef.name = "llm-secret"; }
-                  { secretRef.name = "agent-argocd-secret"; }
                 ];
                 resources = {
                   requests = {
@@ -1635,10 +1803,12 @@ in
                 name = "agent-github";
                 image = "ghcr.io/cnoe-io/agent-github:latest";
                 ports = [{ containerPort = 8000; name = "http"; }];
-                # Use envFrom to inject all keys from secrets
+                env = [
+                  # Map secret key to expected env var name
+                  { name = "GITHUB_PERSONAL_ACCESS_TOKEN"; valueFrom.secretKeyRef = { name = "agent-github-secret"; key = "GITHUB_TOKEN"; }; }
+                ];
                 envFrom = [
                   { secretRef.name = "llm-secret"; }
-                  { secretRef.name = "agent-github-secret"; }
                 ];
                 resources = {
                   requests = {
@@ -1711,12 +1881,16 @@ in
                 image = "ghcr.io/cnoe-io/agent-backstage:latest";
                 ports = [{ containerPort = 8000; name = "http"; }];
                 env = [
+                  # MCP HTTP mode configuration
+                  { name = "MCP_MODE"; value = "http"; }
+                  { name = "MCP_HOST"; value = "mcp-backstage.${namespace}.svc.cluster.local"; }
+                  { name = "MCP_PORT"; value = "8000"; }
+                  # Backstage API configuration
                   { name = "BACKSTAGE_URL"; value = "http://backstage.backstage.svc.cluster.local:7007"; }
+                  { name = "BACKSTAGE_API_KEY"; valueFrom.secretKeyRef = { name = "agent-backstage-secret"; key = "BACKSTAGE_API_TOKEN"; }; }
                 ];
-                # Use envFrom to inject all keys from secrets
                 envFrom = [
                   { secretRef.name = "llm-secret"; }
-                  { secretRef.name = "agent-backstage-secret"; }
                 ];
                 resources = {
                   requests = {

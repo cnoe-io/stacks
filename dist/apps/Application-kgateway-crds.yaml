@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-125"
+  name: kgateway-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: kgateway-system
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/kgateway-crds
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true

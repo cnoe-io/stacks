@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  name: kargo-cluster-config
+  namespace: argocd
+spec:
+  destination:
+    namespace: kargo
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/kargo-cluster-config
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

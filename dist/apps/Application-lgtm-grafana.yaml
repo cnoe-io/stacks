@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+  name: lgtm-grafana
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/lgtm-grafana
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

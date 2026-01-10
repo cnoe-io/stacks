@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+  name: caipe-milvus
+  namespace: argocd
+spec:
+  destination:
+    namespace: ai-platform-engineering
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/caipe-milvus
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

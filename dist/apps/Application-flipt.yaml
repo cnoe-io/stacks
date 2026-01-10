@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-75"
+  name: flipt
+  namespace: argocd
+spec:
+  destination:
+    namespace: feature-flags
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/flipt
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

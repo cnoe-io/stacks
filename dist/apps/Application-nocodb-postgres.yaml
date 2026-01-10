@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+  name: nocodb-postgres
+  namespace: argocd
+spec:
+  destination:
+    namespace: nocodb
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: ./dist/nocodb-postgres
+    repoURL: cnoe://
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

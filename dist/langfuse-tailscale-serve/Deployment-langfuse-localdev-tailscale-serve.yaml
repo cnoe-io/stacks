@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: langfuse-tailscale-serve
+  name: langfuse-localdev-tailscale-serve
+  namespace: tailscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-tailscale-serve
+  template:
+    metadata:
+      labels:
+        app: langfuse-tailscale-serve
+    spec:
+      containers:
+        - env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  key: authKey
+                  name: tailscale-auth-key
+            - name: TS_HOSTNAME
+              value: langfuse-localdev
+            - name: TS_SERVE_CONFIG
+              value: /config/serve.json
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_EXTRA_ARGS
+              value: --reset
+          image: tailscale/tailscale:v1.86.5
+          name: tailscale
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - mountPath: /var/lib/tailscale
+              name: state
+            - mountPath: /config
+              name: config
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: langfuse-localdev-tailscale-state
+        - configMap:
+            name: langfuse-tailscale-serve-config
+          name: config
