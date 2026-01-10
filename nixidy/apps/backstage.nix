@@ -390,7 +390,12 @@ in
       ingresses.${appName} = {
         metadata = {
           inherit namespace;
-          annotations = lib.optionalAttrs isTalos {
+          annotations = {
+            # Extended timeouts for CAIPE agent responses (can take 60+ seconds)
+            "nginx.ingress.kubernetes.io/proxy-read-timeout" = "300";
+            "nginx.ingress.kubernetes.io/proxy-send-timeout" = "300";
+            "nginx.ingress.kubernetes.io/proxy-connect-timeout" = "60";
+          } // lib.optionalAttrs isTalos {
             "cert-manager.io/cluster-issuer" = config.cluster.tls.clusterIssuer;
           };
         };
