@@ -1,34 +1,56 @@
-# Backstage Developer Portal
-# Mirrors: cdk8s/charts/apps/backstage-chart.ts
+# Backstage Infrastructure
+# Manages namespaces and RBAC for Backstage deployments
+# Application manifests (Deployment, Service, etc.) are managed by Kargo via backstage-config repo
+#
+# Previous version: cdk8s/charts/apps/backstage-chart.ts
 { config, lib, ... }:
 let
-  namespace = "backstage";
+  # Namespace names for each stage
+  baseNamespace = "backstage";
+  devNamespace = "backstage-dev";
+  stagingNamespace = "backstage-staging";
   appName = "backstage";
-  postgresAppName = "postgresql";
 
-  # Environment-specific settings from cluster config
-  ingressHost = config.cluster.ingressHost;
-  isTalos = config.cluster.tls.enabled;
+  # All namespaces where Backstage may be deployed
+  allNamespaces = [ baseNamespace devNamespace stagingNamespace ];
 
-  # Subdomain-based routing: backstage.cnoe.localtest.me
-  backstageHost = "backstage.${ingressHost}";
-
-  # Default values
-  backstageImage = "ghcr.io/pittampalliorg/backstage:v1.1.2";
-  imagePullSecretName = "ghcr-dockercfg";
-  postgresImage = "docker.io/library/postgres:15.3-alpine3.18";
-  postgresStorageSize = "2Gi";
+  # Helper to create RBAC for a specific namespace
+  mkRbacBinding = ns: {
+    "${ns}-argo-workflows" = {
+      roleRef = {
+        apiGroup = "rbac.authorization.k8s.io";
+        kind = "ClusterRole";
+        name = "${baseNamespace}-argo-workflows";
+      };
+      subjects = [{
+        kind = "ServiceAccount";
+        name = appName;
+        namespace = ns;
+      }];
+    };
+    "${ns}-read-all" = {
+      roleRef = {
+        apiGroup = "rbac.authorization.k8s.io";
+        kind = "ClusterRole";
+        name = "${baseNamespace}-read-all";
+      };
+      subjects = [{
+        kind = "ServiceAccount";
+        name = appName;
+        namespace = ns;
+      }];
+    };
+  };
 in
 {
   # =========================================================================
-  # Backstage Namespace - Created early for dependent apps (secrets, dapr)
+  # Backstage Base Namespace - Legacy/primary deployment
   # =========================================================================
   applications.backstage-namespace = {
-    inherit namespace;
+    namespace = baseNamespace;
     createNamespace = true;
 
     annotations = {
-      # Wave -40: Before backstage-secrets (-35) and backstage-dapr-components (15)
       "argocd.argoproj.io/sync-wave" = "-40";
     };
 
@@ -45,7 +67,7 @@ in
     };
 
     resources = {
-      namespaces.${namespace} = {
+      namespaces.${baseNamespace} = {
         metadata.labels = {
           "app.kubernetes.io/managed-by" = "nixidy";
           "app.kubernetes.io/component" = "portal";
@@ -56,51 +78,102 @@ in
   };
 
   # =========================================================================
-  # Backstage Application - Main deployment (managed by Kargo)
+  # Backstage Dev Namespace - Kargo dev stage deployment
   # =========================================================================
-  applications.backstage = {
-    inherit namespace;
-    createNamespace = false;  # Created by backstage-namespace at wave -40
+  applications.backstage-dev-namespace = {
+    namespace = devNamespace;
+    createNamespace = true;
 
     annotations = {
-      "argocd.argoproj.io/sync-wave" = "100";
-      # Allow Kargo Stage to manage this ArgoCD Application
-      "kargo.akuity.io/authorized-stage" = "kargo-pipelines:backstage";
+      "argocd.argoproj.io/sync-wave" = "-40";
     };
 
     syncPolicy = {
-      # Auto-sync disabled: Kargo/Gitea handles image promotion
       autoSync = {
-        enable = false;
+        enable = true;
+        prune = true;
+        selfHeal = true;
       };
       syncOptions = {
-        createNamespace = false;  # Namespace already exists
+        createNamespace = true;
         serverSideApply = true;
       };
     };
 
-    # Allow DevSpace to scale down the deployment without ArgoCD reverting it
-    ignoreDifferences = {
-      ${appName} = {
-        group = "apps";
-        kind = "Deployment";
-        name = appName;
-        namespace = namespace;
-        jsonPointers = [ "/spec/replicas" ];
+    resources = {
+      namespaces.${devNamespace} = {
+        metadata.labels = {
+          "app.kubernetes.io/managed-by" = "nixidy";
+          "app.kubernetes.io/component" = "portal";
+          "app.kubernetes.io/part-of" = "developer-platform";
+          "environment" = "dev";
+          "kargo.akuity.io/stage" = "backstage-dev";
+        };
+      };
+    };
+  };
+
+  # =========================================================================
+  # Backstage Staging Namespace - Kargo staging stage deployment
+  # =========================================================================
+  applications.backstage-staging-namespace = {
+    namespace = stagingNamespace;
+    createNamespace = true;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-40";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        createNamespace = true;
+        serverSideApply = true;
       };
     };
 
     resources = {
-      # NOTE: Namespace is created by backstage-namespace app at wave -40
-      # This ensures namespace exists before backstage-secrets (-35) and backstage-dapr-components (15)
-
-      # ServiceAccount
-      serviceAccounts.${appName} = {
-        metadata.namespace = namespace;
+      namespaces.${stagingNamespace} = {
+        metadata.labels = {
+          "app.kubernetes.io/managed-by" = "nixidy";
+          "app.kubernetes.io/component" = "portal";
+          "app.kubernetes.io/part-of" = "developer-platform";
+          "environment" = "staging";
+          "kargo.akuity.io/stage" = "backstage-staging";
+        };
       };
+    };
+  };
 
-      # ClusterRole for Argo Workflows
-      clusterRoles."${namespace}-argo-worfklows" = {
+  # =========================================================================
+  # Backstage Infrastructure (RBAC) - Shared across all stages
+  # =========================================================================
+  applications.backstage-infra = {
+    namespace = baseNamespace;
+    createNamespace = false;
+
+    annotations = {
+      "argocd.argoproj.io/sync-wave" = "-30";
+    };
+
+    syncPolicy = {
+      autoSync = {
+        enable = true;
+        prune = true;
+        selfHeal = true;
+      };
+      syncOptions = {
+        serverSideApply = true;
+      };
+    };
+
+    resources = {
+      # ClusterRole for Argo Workflows (shared)
+      clusterRoles."${baseNamespace}-argo-workflows" = {
         rules = [{
           apiGroups = [ "argoproj.io" ];
           resources = [ "workflows" ];
@@ -108,8 +181,8 @@ in
         }];
       };
 
-      # ClusterRole for read-all
-      clusterRoles."${namespace}-read-all" = {
+      # ClusterRole for read-all (shared)
+      clusterRoles."${baseNamespace}-read-all" = {
         rules = [{
           apiGroups = [ "*" ];
           resources = [ "*" ];
@@ -117,308 +190,20 @@ in
         }];
       };
 
-      # ClusterRoleBindings
-      clusterRoleBindings."${namespace}-argo-worfklows" = {
-        roleRef = {
-          apiGroup = "rbac.authorization.k8s.io";
-          kind = "ClusterRole";
-          name = "${namespace}-argo-worfklows";
-        };
-        subjects = [{
-          kind = "ServiceAccount";
-          name = appName;
-          inherit namespace;
-        }];
-      };
-
-      clusterRoleBindings."${namespace}-read-all" = {
-        roleRef = {
-          apiGroup = "rbac.authorization.k8s.io";
-          kind = "ClusterRole";
-          name = "${namespace}-read-all";
-        };
-        subjects = [{
-          kind = "ServiceAccount";
-          name = appName;
-          inherit namespace;
-        }];
-      };
-
-      # Backstage Service
-      services.${appName} = {
-        metadata.namespace = namespace;
-        spec = {
-          ports = [{
-            name = "http";
-            port = 7007;
-            targetPort = "http";
-          }];
-          selector.app = appName;
-        };
-      };
-
-      # PostgreSQL Headless Service
-      services.${postgresAppName} = {
-        metadata = {
-          inherit namespace;
-          labels.app = postgresAppName;
-        };
-        spec = {
-          clusterIP = "None";
-          ports = [{
-            name = "postgres";
-            port = 5432;
-          }];
-          selector.app = postgresAppName;
-        };
-      };
-
-      # PostgreSQL StatefulSet
-      statefulSets.${postgresAppName} = {
-        metadata = {
-          inherit namespace;
-          labels.app = postgresAppName;
-          annotations."argocd.argoproj.io/sync-wave" = "10";
-        };
-        spec = {
-          replicas = 1;
-          serviceName = "service-${postgresAppName}";
-          selector.matchLabels.app = postgresAppName;
-
-          template = {
-            metadata.labels.app = postgresAppName;
-
-            spec.containers = [{
-              name = "postgres";
-              image = postgresImage;
-              ports = [{
-                containerPort = 5432;
-                name = "postgresdb";
-              }];
-              env = [
-                {
-                  name = "POSTGRES_DB";
-                  valueFrom.secretKeyRef = {
-                    name = "backstage-env-vars";
-                    key = "POSTGRES_DB";
-                  };
-                }
-                {
-                  name = "POSTGRES_USER";
-                  valueFrom.secretKeyRef = {
-                    name = "backstage-env-vars";
-                    key = "POSTGRES_USER";
-                  };
-                }
-                {
-                  name = "POSTGRES_PASSWORD";
-                  valueFrom.secretKeyRef = {
-                    name = "backstage-env-vars";
-                    key = "POSTGRES_PASSWORD";
-                  };
-                }
-              ];
-              resources = {
-                requests = {
-                  cpu = "100m";
-                  memory = "300Mi";
-                };
-                limits = {
-                  memory = "500Mi";
-                };
-              };
-              volumeMounts = [{
-                name = "data";
-                mountPath = "/var/lib/postgresql/data";
-              }];
-            }];
-          };
-
-          volumeClaimTemplates = [{
-            metadata.name = "data";
-            spec = {
-              accessModes = [ "ReadWriteOnce" ];
-              resources.requests.storage = postgresStorageSize;
-            };
-          }];
-        };
-      };
-
-      # Backstage Deployment
-      deployments.${appName} = {
-        metadata = {
-          inherit namespace;
-          annotations."argocd.argoproj.io/sync-wave" = "20";
-        };
-        spec = {
-          replicas = 1;
-          strategy.type = "Recreate";
-          selector.matchLabels.app = appName;
-
-          template = {
-            metadata = {
-              labels.app = appName;
-              # Dapr sidecar annotations for configuration building block
-              # See: https://docs.dapr.io/operations/resiliency/health-checks/sidecar-health/
-              annotations = {
-                "dapr.io/enabled" = "true";
-                "dapr.io/app-id" = "backstage";
-                "dapr.io/app-port" = "7007";
-                "dapr.io/config" = "backstage-dapr-config";
-                "dapr.io/log-as-json" = "true";
-                "dapr.io/log-level" = "info";
-                # Override sidecar securityContext to allow running with pod's runAsUser: 0
-                # The daprd image defaults to runAsNonRoot: true which conflicts with backstage's root requirement
-                "dapr.io/sidecar-securitycontext" = builtins.toJSON {
-                  allowPrivilegeEscalation = false;
-                  readOnlyRootFilesystem = true;
-                  runAsNonRoot = false;
-                };
-                # Dapr sidecar health probe configuration (best practices)
-                # - Reasonable initial delay (30s) for container startup
-                # - Faster period (10s) for quicker detection
-                # - 3 failures before marking unhealthy
-                "dapr.io/sidecar-liveness-probe-delay-seconds" = "30";
-                "dapr.io/sidecar-liveness-probe-period-seconds" = "10";
-                "dapr.io/sidecar-liveness-probe-threshold" = "3";
-                "dapr.io/sidecar-readiness-probe-delay-seconds" = "5";
-                "dapr.io/sidecar-readiness-probe-period-seconds" = "5";
-                "dapr.io/sidecar-readiness-probe-threshold" = "3";
-                # App health checks - Dapr monitors the app and stops routing traffic if unhealthy
-                # See: https://docs.dapr.io/operations/resiliency/health-checks/app-health/
-                "dapr.io/enable-app-health-check" = "true";
-                "dapr.io/app-health-check-path" = "/.backstage/health/v1/readiness";
-                "dapr.io/app-health-probe-interval" = "5";
-                "dapr.io/app-health-probe-timeout" = "500";
-                "dapr.io/app-health-threshold" = "3";
-              };
-            };
-
-            spec = {
-              serviceAccountName = appName;
-              imagePullSecrets = [{ name = imagePullSecretName; }];
-              # Explicit empty pod-level securityContext to allow Dapr sidecar with runAsNonRoot
-              # The daprd container needs to run as non-root, so we can't have pod-level runAsUser: 0
-              # Container-level securityContext handles backstage's root requirement
-              securityContext = {};
-
-              containers = [{
-                name = appName;
-                image = backstageImage;
-                # Container-level securityContext for backstage (runs as root)
-                securityContext = {
-                  runAsUser = 0;
-                  runAsGroup = 0;
-                  allowPrivilegeEscalation = false;
-                };
-                ports = [{
-                  containerPort = 7007;
-                  name = "http";
-                }];
-                # Load config files in order (last wins for overlapping keys)
-                # Order: base config → Kubernetes environment config (ConfigMap)
-                args = [
-                  "node"
-                  "packages/backend"
-                  "--config"
-                  "/app/app-config.yaml"
-                  "--config"
-                  "/etc/backstage/app-config.yaml"
-                ];
-                env = [
-                  { name = "LOG_LEVEL"; value = "info"; }
-                  { name = "NODE_TLS_REJECT_UNAUTHORIZED"; value = "0"; }
-                  { name = "NODE_ENV"; value = "production"; }
-                ];
-                envFrom = [
-                  { secretRef.name = "backstage-env-vars"; }
-                  { secretRef.name = "gitea-credentials"; }
-                  { secretRef.name = "argocd-credentials"; }
-                ];
-                volumeMounts = [{
-                  name = "app-config";
-                  mountPath = "/etc/backstage/app-config.yaml";
-                  subPath = "app-config.yaml";
-                  readOnly = true;
-                }];
-                # Resource requests/limits (heavy profile for large catalog + plugins)
-                resources = {
-                  requests = {
-                    cpu = "500m";
-                    memory = "1Gi";
-                  };
-                  limits = {
-                    cpu = "2";
-                    memory = "2Gi";
-                  };
-                };
-                # Kubernetes native health probes (complement Dapr app health checks)
-                readinessProbe = {
-                  httpGet = {
-                    path = "/.backstage/health/v1/readiness";
-                    port = 7007;
-                  };
-                  initialDelaySeconds = 30;
-                  periodSeconds = 10;
-                  timeoutSeconds = 5;
-                  successThreshold = 1;
-                  failureThreshold = 3;
-                };
-                livenessProbe = {
-                  httpGet = {
-                    path = "/.backstage/health/v1/liveness";
-                    port = 7007;
-                  };
-                  initialDelaySeconds = 60;
-                  periodSeconds = 30;
-                  timeoutSeconds = 5;
-                  successThreshold = 1;
-                  failureThreshold = 3;
-                };
-              }];
-
-              volumes = [{
-                name = "app-config";
-                configMap.name = "backstage-app-config";
-              }];
-            };
-          };
-        };
-      };
-
-      # Backstage Ingress - subdomain-based routing
-      ingresses.${appName} = {
-        metadata = {
-          inherit namespace;
-          annotations = {
-            # Extended timeouts for CAIPE agent responses (can take 60+ seconds)
-            "nginx.ingress.kubernetes.io/proxy-read-timeout" = "300";
-            "nginx.ingress.kubernetes.io/proxy-send-timeout" = "300";
-            "nginx.ingress.kubernetes.io/proxy-connect-timeout" = "60";
-          } // lib.optionalAttrs isTalos {
-            "cert-manager.io/cluster-issuer" = config.cluster.tls.clusterIssuer;
-          };
-        };
-        spec = {
-          ingressClassName = "nginx";
-          rules = [{
-            host = backstageHost;
-            http.paths = [{
-              path = "/";
-              pathType = "Prefix";
-              backend.service = {
-                name = appName;
-                port.name = "http";
-              };
-            }];
-          }];
-        } // lib.optionalAttrs isTalos {
-          tls = [{
-            hosts = [ backstageHost ];
-            secretName = "${appName}-tls";
-          }];
-        };
-      };
+      # ClusterRoleBindings for all stage namespaces
+      clusterRoleBindings = lib.foldl' (acc: ns: acc // (mkRbacBinding ns)) {} allNamespaces;
     };
   };
+
+  # =========================================================================
+  # NOTE: Application resources (Deployment, Service, Ingress, StatefulSet,
+  # ServiceAccount, ConfigMap) are now managed by Kargo via the
+  # backstage-config repository using Kustomize overlays.
+  #
+  # See: https://github.com/PittampalliOrg/backstage-config
+  #
+  # Kargo Stages:
+  # - backstage-dev: Auto-promoted, deploys to backstage-dev namespace
+  # - backstage-staging: Manual promotion, deploys to backstage-staging namespace
+  # =========================================================================
 }
