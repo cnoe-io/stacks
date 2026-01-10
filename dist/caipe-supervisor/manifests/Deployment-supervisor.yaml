@@ -27,6 +27,22 @@ spec:
               value: http://rag-server.ai-platform-engineering.svc.cluster.local:8000
             - name: ENABLE_RAG_AGENT
               value: "true"
+            - name: ENABLE_GITHUB
+              value: "true"
+            - name: ENABLE_ARGOCD
+              value: "true"
+            - name: ENABLE_BACKSTAGE
+              value: "true"
+            - name: GITHUB_AGENT_HOST
+              value: agent-github.ai-platform-engineering.svc.cluster.local
+            - name: ARGOCD_AGENT_HOST
+              value: agent-argocd.ai-platform-engineering.svc.cluster.local
+            - name: BACKSTAGE_AGENT_HOST
+              value: agent-backstage.ai-platform-engineering.svc.cluster.local
+            - name: RAG_AGENT_AGENT_HOST
+              value: rag-server.ai-platform-engineering.svc.cluster.local
+            - name: SKIP_AGENT_CONNECTIVITY_CHECK
+              value: "false"
           envFrom:
             - secretRef:
                 name: llm-secret

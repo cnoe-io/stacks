@@ -1445,8 +1445,20 @@ in
                 command = ["python" "-m" "ai_platform_engineering.multi_agents" "platform-engineer"];
                 ports = [{ containerPort = 8000; name = "http"; }];
                 env = [
+                  # RAG Server configuration
                   { name = "RAG_SERVER_URL"; value = "http://rag-server.${namespace}.svc.cluster.local:8000"; }
                   { name = "ENABLE_RAG_AGENT"; value = "true"; }
+                  # Enable sub-agents
+                  { name = "ENABLE_GITHUB"; value = "true"; }
+                  { name = "ENABLE_ARGOCD"; value = "true"; }
+                  { name = "ENABLE_BACKSTAGE"; value = "true"; }
+                  # Sub-agent connectivity (uses K8s service discovery)
+                  { name = "GITHUB_AGENT_HOST"; value = "agent-github.${namespace}.svc.cluster.local"; }
+                  { name = "ARGOCD_AGENT_HOST"; value = "agent-argocd.${namespace}.svc.cluster.local"; }
+                  { name = "BACKSTAGE_AGENT_HOST"; value = "agent-backstage.${namespace}.svc.cluster.local"; }
+                  { name = "RAG_AGENT_AGENT_HOST"; value = "rag-server.${namespace}.svc.cluster.local"; }
+                  # Enable connectivity checks to fetch agent cards
+                  { name = "SKIP_AGENT_CONNECTIVITY_CHECK"; value = "false"; }
                 ];
                 # Inject all LLM keys from secret (includes LLM_PROVIDER, AZURE_OPENAI_*, etc.)
                 envFrom = [

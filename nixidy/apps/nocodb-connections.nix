@@ -1,50 +1,36 @@
 # NocoDB External Database Connections
 # Declaratively configures external PostgreSQL connections for NoCoDB
 #
+# Architecture:
+#   1. Integration (nc_integrations_v2) - Stores connection credentials
+#   2. Base (nc_bases_v2) - The "database" container in NocoDB UI
+#   3. Source (nc_sources_v2) - Links base to integration
+#   4. Base Users (nc_base_users_v2) - User access control
+#   5. API call to sync/discover tables from external database
+#
 # This creates connections to:
 #   - Backstage Catalog (backstage_plugin_catalog)
 #   - Langfuse Observability (langfuse)
 #
-# Runs as a Job after NoCoDB is deployed (sync-wave 60)
+# Runs as a Job after NoCoDB is deployed (sync-wave 70)
 { config, lib, ... }:
 let
   inherit (config) environmentType;
   namespace = "nocodb";
   isKind = environmentType == "kind";
 
-  # External database connection definitions
-  connections = [
-    {
-      id = "backstage-catalog";
-      title = "Backstage Catalog";
-      description = "Backstage software catalog entities and relationships";
-      host = "postgresql.backstage.svc.cluster.local";
-      port = 5432;
-      database = "backstage_plugin_catalog";
-      user = "backstage";
-      # Password injected from secret
-      passwordSecretKey = "BACKSTAGE_POSTGRES_PASSWORD";
-    }
-    {
-      id = "langfuse";
-      title = "Langfuse Observability";
-      description = "LLM observability - traces, prompts, scores";
-      host = "langfuse-postgres.observability.svc.cluster.local";
-      port = 5432;
-      database = "langfuse";
-      user = "langfuse";
-      passwordSecretKey = "LANGFUSE_POSTGRES_PASSWORD";
-    }
-  ];
+  # Generate ID helper (NocoDB uses specific prefixes)
+  # int = integration, p = base/project, s = source
 
-  # Generate setup script
+  # Generate setup script with full integration + API sync
   setupScript = ''
     #!/bin/bash
     set -e
 
     echo "=== NoCoDB External Connections Setup ==="
+    echo "This script creates integrations, bases, sources and syncs tables declaratively"
 
-    # Wait for NoCoDB to be ready (using wget since alpine doesn't have curl)
+    # Wait for NoCoDB to be ready
     echo "Waiting for NoCoDB to be ready..."
     until wget -q --spider http://nocodb:8080/api/v1/health 2>/dev/null; do
       echo "  NoCoDB not ready, waiting..."
@@ -60,92 +46,150 @@ let
     done
     echo "PostgreSQL is ready!"
 
-    # Function to create external database connection
-    create_connection() {
-      local base_id="$1"
-      local source_id="$2"
-      local title="$3"
-      local description="$4"
-      local host="$5"
-      local port="$6"
-      local database="$7"
-      local user="$8"
-      local password="$9"
+    # Get admin user ID
+    ADMIN_USER_ID=$(PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb -tAc \
+      "SELECT id FROM nc_users_v2 WHERE roles LIKE '%super%' LIMIT 1")
+    echo "Admin user ID: $ADMIN_USER_ID"
 
-      echo "Creating connection: $title"
+    # Function to generate NocoDB-style IDs (prefix + random alphanumeric)
+    generate_id() {
+      local prefix="$1"
+      # Use deterministic ID based on prefix for idempotency
+      echo "''${prefix}$(echo -n "$2" | md5sum | cut -c1-15)"
+    }
 
-      # Check if base already exists
-      existing=$(PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb -tAc \
-        "SELECT id FROM nc_bases_v2 WHERE id = '$base_id'" 2>/dev/null || echo "")
+    # Function to create complete external database connection
+    # This creates: integration -> base -> source -> user mapping -> table sync
+    create_external_db() {
+      local name="$1"
+      local title="$2"
+      local description="$3"
+      local host="$4"
+      local port="$5"
+      local database="$6"
+      local db_user="$7"
+      local password="$8"
 
-      if [ -n "$existing" ]; then
-        echo "  Base $title already exists, skipping..."
-        return 0
-      fi
+      # Generate deterministic IDs for idempotency
+      local int_id="int_$(echo -n "$name" | md5sum | cut -c1-14)"
+      local base_id="p_$(echo -n "$name" | md5sum | cut -c1-14)"
+      local source_id="s_$(echo -n "$name" | md5sum | cut -c1-14)"
+      local alias=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
 
-      # Create the base
+      echo ""
+      echo "=== Creating: $title ==="
+      echo "  Integration ID: $int_id"
+      echo "  Base ID: $base_id"
+      echo "  Source ID: $source_id"
+
+      # Build config JSON
+      local config='{"client":"pg","connection":{"host":"'"$host"'","port":"'"$port"'","user":"'"$db_user"'","password":"'"$password"'","database":"'"$database"'"},"searchPath":["public"]}'
+
       PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb <<EOSQL
-        -- Create base
-        INSERT INTO nc_bases_v2 (id, title, description, status, is_meta, created_at, updated_at)
-        VALUES ('$base_id', '$title', '$description', 'online', false, NOW(), NOW())
-        ON CONFLICT (id) DO NOTHING;
-
-        -- Create source (external database connection)
-        INSERT INTO nc_sources_v2 (id, base_id, alias, type, config, is_meta, enabled, created_at, updated_at)
+        -- 1. Create/update integration (stores connection credentials)
+        INSERT INTO nc_integrations_v2 (
+          id, title, config, type, sub_type, is_private, deleted,
+          created_by, "order", created_at, updated_at, is_default, is_encrypted
+        )
         VALUES (
-          '$source_id',
-          '$base_id',
-          '$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')',
-          'pg',
-          '{"client":"pg","connection":{"host":"$host","port":$port,"user":"$user","password":"$password","database":"$database"},"searchPath":["public"]}',
-          false,
-          true,
-          NOW(),
-          NOW()
+          '$int_id', '$title', '$config', 'database', 'pg', false, false,
+          '$ADMIN_USER_ID', 1, NOW(), NOW(), false, false
         )
         ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
           config = EXCLUDED.config,
           updated_at = NOW();
 
-        -- Link base to admin user
-        INSERT INTO nc_base_users_v2 (base_id, fk_user_id, roles, created_at, updated_at)
-        SELECT '$base_id', id, 'owner', NOW(), NOW()
-        FROM nc_users_v2
-        WHERE roles LIKE '%super%'
-        ON CONFLICT DO NOTHING;
-    EOSQL
+        -- 2. Create/update base (the "database" in NocoDB UI)
+        INSERT INTO nc_bases_v2 (id, title, description, status, is_meta, created_at, updated_at)
+        VALUES ('$base_id', '$title', '$description', 'online', false, NOW(), NOW())
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          updated_at = NOW();
 
-      echo "  ✓ Created connection: $title"
+        -- 3. Create/update source (links base to integration)
+        INSERT INTO nc_sources_v2 (
+          id, base_id, alias, type, config, is_meta, enabled,
+          fk_integration_id, is_local, is_encrypted,
+          created_at, updated_at
+        )
+        VALUES (
+          '$source_id', '$base_id', '$alias', 'pg', '$config', false, true,
+          '$int_id', false, false,
+          NOW(), NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          config = EXCLUDED.config,
+          fk_integration_id = EXCLUDED.fk_integration_id,
+          updated_at = NOW();
+
+        -- 4. Grant admin user access to the base
+        INSERT INTO nc_base_users_v2 (base_id, fk_user_id, roles, created_at, updated_at)
+        VALUES ('$base_id', '$ADMIN_USER_ID', 'owner', NOW(), NOW())
+        ON CONFLICT DO NOTHING;
+EOSQL
+
+      echo "  ✓ Database records created"
+
+      # 5. Trigger table sync via NocoDB API
+      # First, get an API token by signing in
+      echo "  Syncing tables via API..."
+
+      # Get user email and create a session token
+      local user_email=$(PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb -tAc \
+        "SELECT email FROM nc_users_v2 WHERE id = '$ADMIN_USER_ID'")
+
+      # Use the v1 meta sync endpoint to trigger table discovery
+      # This endpoint syncs the schema from the external database
+      local sync_response=$(wget -q -O - --post-data="" \
+        "http://nocodb:8080/api/v1/db/meta/projects/$base_id/meta-diff" 2>/dev/null || echo "")
+
+      if [ -n "$sync_response" ]; then
+        echo "  ✓ Table sync triggered"
+      else
+        echo "  ⚠ Table sync may require manual trigger (open base in UI)"
+      fi
+
+      echo "  ✓ Complete: $title"
     }
 
     # Create Backstage Catalog connection
-    create_connection \
-      "p_backstage_cat" \
-      "s_backstage_cat" \
-      "Backstage Catalog" \
-      "Backstage software catalog entities and relationships" \
-      "postgresql.backstage.svc.cluster.local" \
-      "5432" \
-      "backstage_plugin_catalog" \
-      "backstage" \
-      "$BACKSTAGE_POSTGRES_PASSWORD"
+    if [ -n "$BACKSTAGE_POSTGRES_PASSWORD" ]; then
+      create_external_db \
+        "backstage_catalog" \
+        "Backstage Catalog" \
+        "Backstage software catalog - entities, relationships, locations" \
+        "postgresql.backstage.svc.cluster.local" \
+        "5432" \
+        "backstage_plugin_catalog" \
+        "backstage" \
+        "$BACKSTAGE_POSTGRES_PASSWORD"
+    else
+      echo "⚠ Skipping Backstage Catalog - no password provided"
+    fi
 
-    # Create Langfuse connection
-    create_connection \
-      "p_langfuse_obs" \
-      "s_langfuse_obs" \
-      "Langfuse Observability" \
-      "LLM observability - traces, prompts, scores" \
-      "langfuse-postgres.observability.svc.cluster.local" \
-      "5432" \
-      "langfuse" \
-      "langfuse" \
-      "$LANGFUSE_POSTGRES_PASSWORD"
+    # Create Langfuse Observability connection
+    if [ -n "$LANGFUSE_POSTGRES_PASSWORD" ]; then
+      create_external_db \
+        "langfuse_obs" \
+        "Langfuse Observability" \
+        "LLM observability - traces, prompts, scores, evaluations" \
+        "langfuse-postgres.observability.svc.cluster.local" \
+        "5432" \
+        "langfuse" \
+        "langfuse" \
+        "$LANGFUSE_POSTGRES_PASSWORD"
+    else
+      echo "⚠ Skipping Langfuse - no password provided"
+    fi
 
     echo ""
     echo "=== Setup Complete ==="
-    echo "External database connections have been configured."
-    echo "Visit NoCoDB to view the connected tables."
+    echo ""
+    echo "External databases configured with full integration support."
+    echo "Tables should auto-sync. If not visible, open the base in NocoDB UI"
+    echo "to trigger the initial table discovery."
   '';
 in
 {

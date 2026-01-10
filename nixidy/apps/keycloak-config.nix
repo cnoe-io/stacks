@@ -323,8 +323,9 @@ in
             rootUrl = "";
             baseUrl = "";
             redirectUris = [
-              "https://${ingressHost}:8443/argo-workflows/oauth2/callback"
-              "https://${ingressHost}/argo-workflows/oauth2/callback"
+              # Domain-based routing (primary)
+              "https://argo-workflows.${ingressHost}${portSuffix}/oauth2/callback"
+              "https://argo-workflows.${ingressHost}/oauth2/callback"
             ];
             webOrigins = [ "/*" ];
           };

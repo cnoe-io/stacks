@@ -4,7 +4,7 @@
 #
 # Includes ref-implementation features:
 # - SSO integration with Keycloak OIDC
-# - Path-based ingress routing (/argo-workflows)
+# - Domain-based ingress routing (argo-workflows.<ingressHost>)
 # - Admin ServiceAccount with cluster-admin for RBAC
 # - ExternalSecret for Keycloak client credentials
 #
@@ -57,15 +57,15 @@ in
               "--loglevel=info"
               "--log-format=text"
             ];
-            # BASE_HREF for path-based routing
+            # BASE_HREF for domain-based routing (root path)
             extraEnv = lib.mkIf isKind [
-              { name = "BASE_HREF"; value = "/argo-workflows/"; }
+              { name = "BASE_HREF"; value = "/"; }
             ];
             # SSO configuration for Keycloak OIDC
             sso = lib.mkIf isKind {
               enabled = true;
               issuer = "${keycloakUrl}/realms/${keycloakRealm}";
-              redirectUrl = "https://${ingressHost}:${toString ingressPort}/argo-workflows/oauth2/callback";
+              redirectUrl = "https://argo-workflows.${ingressHost}:${toString ingressPort}/oauth2/callback";
               clientId = {
                 name = "keycloak-oidc";
                 key = "client-id";
@@ -91,37 +91,22 @@ in
 
       # Additional resources for KIND environment (from ref-implementation)
       resources = lib.mkIf isKind {
-        # Ingress for path-based routing
+        # Ingress for domain-based routing
         ingresses.argo-workflows-ingress = {
           metadata = {
             inherit namespace;
-            annotations = {
-              "nginx.ingress.kubernetes.io/use-regex" = "true";
-              "nginx.ingress.kubernetes.io/rewrite-target" = "/$2";
-            };
           };
           spec = {
             ingressClassName = "nginx";
             rules = [
               {
-                host = "localhost";
+                host = "argo-workflows.${ingressHost}";
                 http.paths = [{
-                  path = "/argo-workflows(/|$)(.*)";
-                  pathType = "ImplementationSpecific";
+                  path = "/";
+                  pathType = "Prefix";
                   backend.service = {
-                    name = "argo-server";
-                    port.name = "web";
-                  };
-                }];
-              }
-              {
-                host = ingressHost;
-                http.paths = [{
-                  path = "/argo-workflows(/|$)(.*)";
-                  pathType = "ImplementationSpecific";
-                  backend.service = {
-                    name = "argo-server";
-                    port.name = "web";
+                    name = "argo-workflows-server";
+                    port.number = 2746;
                   };
                 }];
               }
@@ -176,7 +161,7 @@ in
                 clientSecret:
                   name: keycloak-oidc
                   key: secret-key
-                redirectUrl: https://${ingressHost}:${toString ingressPort}/argo-workflows/oauth2/callback
+                redirectUrl: https://argo-workflows.${ingressHost}:${toString ingressPort}/oauth2/callback
                 rbac:
                   enabled: true
                 scopes:
