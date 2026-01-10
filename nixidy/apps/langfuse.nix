@@ -134,6 +134,79 @@ in
                     { name = "TELEMETRY_ENABLED"; value = "false"; }
                     { name = "AUTH_DISABLE_SIGNUP"; value = "false"; }
                     { name = "LANGFUSE_ENABLE_OTEL_INGESTION"; value = "true"; }
+                    # Headless initialization - auto-creates org, project, user, and API keys
+                    {
+                      name = "LANGFUSE_INIT_ORG_ID";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_ORG_ID";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_ORG_NAME";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_ORG_NAME";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_PROJECT_ID";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_PROJECT_ID";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_PROJECT_NAME";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_PROJECT_NAME";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_USER_EMAIL";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_USER_EMAIL";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_USER_NAME";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_USER_NAME";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_USER_PASSWORD";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_USER_PASSWORD";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_PROJECT_PUBLIC_KEY";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_PROJECT_PUBLIC_KEY";
+                        optional = true;
+                      };
+                    }
+                    {
+                      name = "LANGFUSE_INIT_PROJECT_SECRET_KEY";
+                      valueFrom.secretKeyRef = {
+                        name = "langfuse-init";
+                        key = "LANGFUSE_INIT_PROJECT_SECRET_KEY";
+                        optional = true;
+                      };
+                    }
                   ];
                   resources = {
                     requests = { cpu = "500m"; memory = "1Gi"; };

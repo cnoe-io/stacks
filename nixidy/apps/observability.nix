@@ -109,6 +109,52 @@ in
               remoteRef:
                 key: LANGFUSE-API-AUTH
       ''
+      # Langfuse headless initialization secrets
+      # Auto-creates organization, project, user, and API keys on first startup
+      # Syncs from Azure Key Vault: LANGFUSE-INIT-* and LANGFUSE-PUBLIC/SECRET-KEY
+      ''
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: langfuse-init
+          namespace: ${namespace}
+        spec:
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: azure-keyvault-store
+          target:
+            name: langfuse-init
+            creationPolicy: Owner
+          data:
+            - secretKey: LANGFUSE_INIT_ORG_ID
+              remoteRef:
+                key: LANGFUSE-INIT-ORG-ID
+            - secretKey: LANGFUSE_INIT_ORG_NAME
+              remoteRef:
+                key: LANGFUSE-INIT-ORG-NAME
+            - secretKey: LANGFUSE_INIT_PROJECT_ID
+              remoteRef:
+                key: LANGFUSE-INIT-PROJECT-ID
+            - secretKey: LANGFUSE_INIT_PROJECT_NAME
+              remoteRef:
+                key: LANGFUSE-INIT-PROJECT-NAME
+            - secretKey: LANGFUSE_INIT_USER_EMAIL
+              remoteRef:
+                key: LANGFUSE-INIT-USER-EMAIL
+            - secretKey: LANGFUSE_INIT_USER_NAME
+              remoteRef:
+                key: LANGFUSE-INIT-USER-NAME
+            - secretKey: LANGFUSE_INIT_USER_PASSWORD
+              remoteRef:
+                key: LANGFUSE-INIT-USER-PASSWORD
+            - secretKey: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+              remoteRef:
+                key: LANGFUSE-PUBLIC-KEY
+            - secretKey: LANGFUSE_INIT_PROJECT_SECRET_KEY
+              remoteRef:
+                key: LANGFUSE-SECRET-KEY
+      ''
     ];
   };
 

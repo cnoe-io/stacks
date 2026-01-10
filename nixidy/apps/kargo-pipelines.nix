@@ -430,7 +430,6 @@ in
                         chore(dev): update backstage to ''${{ imageFrom(vars.imageRepoURL).Tag }}
 
                         Image: ''${{ vars.imageRepoURL }}:''${{ imageFrom(vars.imageRepoURL).Tag }}
-                        Freight: ''${{ ctx.freight.alias }}
                   # Push to stage/dev branch
                   - uses: git-push
                     as: push-changes
@@ -518,7 +517,6 @@ in
 
                         Promoted from: dev
                         Image: ''${{ vars.imageRepoURL }}:''${{ imageFrom(vars.imageRepoURL).Tag }}
-                        Freight: ''${{ ctx.freight.alias }}
                   - uses: git-push
                     as: push-changes
                     config:
