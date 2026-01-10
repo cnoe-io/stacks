@@ -24,8 +24,8 @@ spec:
               value: 0.0.0.0
             - name: MCP_PORT
               value: "8000"
-            - name: ARGOCD_SERVER
-              value: argocd-server.argocd.svc.cluster.local
+            - name: ARGOCD_API_URL
+              value: https://argocd-server.argocd.svc.cluster.local
             - name: ARGOCD_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -1567,7 +1567,8 @@ in
                   { name = "MCP_MODE"; value = "http"; }
                   { name = "MCP_HOST"; value = "0.0.0.0"; }
                   { name = "MCP_PORT"; value = "8000"; }
-                  { name = "ARGOCD_SERVER"; value = "argocd-server.argocd.svc.cluster.local"; }
+                  # MCP server requires ARGOCD_API_URL (full URL with protocol)
+                  { name = "ARGOCD_API_URL"; value = "https://argocd-server.argocd.svc.cluster.local"; }
                   { name = "ARGOCD_TOKEN"; valueFrom.secretKeyRef = { name = "agent-argocd-secret"; key = "ARGOCD_AUTH_TOKEN"; }; }
                 ];
                 resources = {
