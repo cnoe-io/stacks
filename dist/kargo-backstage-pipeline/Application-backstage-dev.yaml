@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:backstage-dev
+  labels:
+    app.kubernetes.io/name: backstage-dev
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: backstage-dev
+  namespace: argocd
+spec:
+  destination:
+    namespace: backstage-dev
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: manifests
+    repoURL: https://github.com/PittampalliOrg/backstage-config.git
+    targetRevision: stage/dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=false

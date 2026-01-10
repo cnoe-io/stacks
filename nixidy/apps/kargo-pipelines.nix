@@ -419,7 +419,7 @@ in
                   - uses: kustomize-build
                     as: render-manifests
                     config:
-                      path: ./src/''${{ vars.overlayPath }}
+                      path: ./src/overlays/dev
                       outPath: ./out/manifests/
                   # Commit rendered manifests
                   - uses: git-commit

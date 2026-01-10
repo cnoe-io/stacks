@@ -11,10 +11,11 @@ spec:
   freightCreationPolicy: Automatic
   interval: 5m0s
   subscriptions:
+    - git:
+        branch: main
+        repoURL: https://github.com/PittampalliOrg/backstage-config.git
     - image:
         allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
         discoveryLimit: 20
         imageSelectionStrategy: SemVer
-        insecureSkipTLSVerify: true
-        platform: linux/amd64
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+        repoURL: ghcr.io/pittampalliorg/backstage
