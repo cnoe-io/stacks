@@ -31,6 +31,8 @@ spec:
                 secretKeyRef:
                   key: ARGOCD_AUTH_TOKEN
                   name: agent-argocd-secret
+            - name: ARGOCD_VERIFY_SSL
+              value: "false"
           image: ghcr.io/cnoe-io/mcp-argocd:stable
           name: mcp-argocd
           ports:

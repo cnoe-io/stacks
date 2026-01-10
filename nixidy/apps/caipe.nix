@@ -1570,6 +1570,8 @@ in
                   # MCP server requires ARGOCD_API_URL (full URL with protocol)
                   { name = "ARGOCD_API_URL"; value = "https://argocd-server.argocd.svc.cluster.local"; }
                   { name = "ARGOCD_TOKEN"; valueFrom.secretKeyRef = { name = "agent-argocd-secret"; key = "ARGOCD_AUTH_TOKEN"; }; }
+                  # Skip SSL verification for self-signed certificates
+                  { name = "ARGOCD_VERIFY_SSL"; value = "false"; }
                 ];
                 resources = {
                   requests = {
