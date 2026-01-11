@@ -19,6 +19,8 @@ spec:
           - base/**
           - overlays/**
         repoURL: https://github.com/PittampalliOrg/backstage-config.git
+        # Disable strictSemvers to discover all commits, not just semver-tagged ones
+        strictSemvers: false
     # Outer loop - production images from GHCR
     - image:
         allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$

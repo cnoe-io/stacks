@@ -35,7 +35,9 @@ spec:
             path: ./src/${{ vars.overlayPath }}
           uses: kustomize-set-image
         - as: render-manifests
-          config: ./out/manifests/
+          config:
+            path: ./src/${{ vars.overlayPath }}
+            outPath: ./out/manifests/
           uses: kustomize-build
         - as: commit-changes
           config:
