@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: caipe-rag
+  namespace: ai-platform-engineering
+  labels:
+    app.kubernetes.io/name: caipe-rag
+    app.kubernetes.io/part-of: ai-platform-engineering
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      tier: rag
+  namespaceSelector:
+    matchNames:
+      - ai-platform-engineering
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      scheme: http

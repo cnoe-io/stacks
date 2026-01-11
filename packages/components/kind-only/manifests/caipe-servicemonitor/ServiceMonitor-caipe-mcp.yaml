@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: caipe-mcp
+  namespace: ai-platform-engineering
+  labels:
+    app.kubernetes.io/name: caipe-mcp
+    app.kubernetes.io/part-of: ai-platform-engineering
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      tier: mcp
+  namespaceSelector:
+    matchNames:
+      - ai-platform-engineering
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      scheme: http

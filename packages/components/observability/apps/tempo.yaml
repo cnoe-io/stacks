@@ -1,21 +1,58 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "45"
   name: tempo
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  destination:
-    namespace: observability
-    server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://tempo/manifests
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 1.24.1
+    chart: tempo
+    helm:
+      releaseName: tempo
+      valuesObject:
+        tempo:
+          storage:
+            trace:
+              backend: local
+              local:
+                path: /var/tempo/traces
+              wal:
+                path: /var/tempo/wal
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+                http:
+                  endpoint: 0.0.0.0:4318
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://mimir.observability.svc.cluster.local:9009/api/v1/push
+        persistence:
+          enabled: true
+          size: 10Gi
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        serviceMonitor:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
+      - CreateNamespace=false
       - ServerSideApply=true

@@ -1,21 +1,100 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "60"
   name: grafana
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  destination:
-    namespace: observability
-    server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://grafana/manifests
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 10.5.5
+    chart: grafana
+    helm:
+      releaseName: grafana
+      valuesObject:
+        replicas: 1
+        persistence:
+          enabled: true
+          size: 5Gi
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        adminUser: admin
+        adminPassword: admin
+        grafana.ini:
+          analytics:
+            check_for_updates: true
+          log:
+            mode: console
+          server:
+            domain: grafana.cnoe.localtest.me
+            root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Mimir
+                type: prometheus
+                uid: mimir
+                url: http://mimir.observability.svc.cluster.local:9009/prometheus
+                access: proxy
+                isDefault: true
+                jsonData:
+                  httpMethod: POST
+                  prometheusType: Mimir
+                  timeInterval: 15s
+              - name: Loki
+                type: loki
+                uid: loki
+                url: http://loki.observability.svc.cluster.local:3100
+                access: proxy
+                isDefault: false
+                jsonData:
+                  maxLines: 1000
+              - name: Tempo
+                type: tempo
+                uid: tempo
+                url: http://tempo.observability.svc.cluster.local:3200
+                access: proxy
+                isDefault: false
+                jsonData:
+                  httpMethod: GET
+                  nodeGraph:
+                    enabled: true
+                  search:
+                    hide: false
+                  lokiSearch:
+                    datasourceUid: loki
+                  serviceMap:
+                    datasourceUid: mimir
+                  tracesToLogs:
+                    datasourceUid: loki
+                    filterBySpanID: true
+                    filterByTraceID: true
+        ingress:
+          enabled: true
+          ingressClassName: nginx
+          path: /
+          pathType: Prefix
+          hosts:
+            - grafana.cnoe.localtest.me
+        serviceMonitor:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
+      - CreateNamespace=false
       - ServerSideApply=true

@@ -3,21 +3,30 @@ kind: Component
 
 # Observability stack - monitoring and tracing
 resources:
+  # Namespace and secrets
+  - apps/observability-namespace.yaml
+  - apps/observability-secrets.yaml
+
+  # LGTM stack - Helm-based
+  - apps/loki.yaml
+  - apps/tempo.yaml
   - apps/grafana.yaml
+
+  # Mimir for metrics storage
+  - apps/lgtm-mimir.yaml
+
+  # OpenTelemetry collector
+  - apps/lgtm-otel-collector.yaml
+
+  # Profiling
+  - apps/lgtm-pyroscope.yaml
+
+  # Tracing alternative
   - apps/jaeger.yaml
+
+  # Langfuse LLM observability
   - apps/langfuse-app.yaml
   - apps/langfuse-clickhouse.yaml
   - apps/langfuse-minio.yaml
   - apps/langfuse-postgres.yaml
   - apps/langfuse-redis.yaml
-  - apps/lgtm-grafana.yaml
-  - apps/lgtm-loki.yaml
-  - apps/lgtm-mimir.yaml
-  - apps/lgtm-otel-collector.yaml
-  - apps/lgtm-pyroscope.yaml
-  - apps/lgtm-tempo.yaml
-  - apps/loki.yaml
-  - apps/observability-namespace.yaml
-  - apps/observability-secrets.yaml
-  - apps/prometheus.yaml
-  - apps/tempo.yaml

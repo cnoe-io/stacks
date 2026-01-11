@@ -3,7 +3,10 @@ kind: Component
 
 # Talos-only applications - production cluster
 # Note: These apps are specific to Talos production environment
-# They may need to be added from a Talos nixidy build
-resources: []
-  # - apps/ingress-nginx.yaml
-  # - apps/hub-spoke-*.yaml
+# idpBuilder manages ingress-nginx for KIND environments, but Talos needs its own
+resources:
+  # Ingress controller (idpBuilder manages this for KIND)
+  - apps/ingress-nginx.yaml
+
+  # Production TLS with Let's Encrypt
+  - apps/letsencrypt-issuer.yaml

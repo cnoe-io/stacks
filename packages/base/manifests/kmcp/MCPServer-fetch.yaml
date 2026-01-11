@@ -1,0 +1,16 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcp-fetch
+  namespace: kagent
+  labels:
+    app.kubernetes.io/name: mcp-fetch
+    app.kubernetes.io/part-of: kmcp
+spec:
+  transportType: stdio
+  stdioTransport: {}
+  deployment:
+    cmd: uvx
+    args:
+      - mcp-server-fetch
+    port: 3000
