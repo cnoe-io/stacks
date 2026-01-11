@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/component: stage
     app.kubernetes.io/name: backstage-staging-stage
     app.kubernetes.io/part-of: kargo-pipelines
+    kargo.akuity.io/loop: outer
   name: backstage-staging
   namespace: kargo-pipelines
 spec:

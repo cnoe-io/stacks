@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - Deployment-backstage.yaml
+  - Service-backstage.yaml
+  - Service-postgresql.yaml
+  - StatefulSet-postgresql.yaml
+  - Ingress-backstage.yaml
+  - ServiceAccount-backstage.yaml
+  - ClusterRole-backstage-read-all.yaml
+  - ClusterRole-backstage-argo-worfklows.yaml
+  - ClusterRoleBinding-backstage-read-all.yaml
+  - ClusterRoleBinding-backstage-argo-worfklows.yaml
+
+images:
+  - name: ghcr.io/pittampalliorg/backstage
+    newTag: latest  # Will be overwritten by Kargo kustomize-set-image step

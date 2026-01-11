@@ -5,6 +5,7 @@ metadata:
     app.kubernetes.io/component: warehouse
     app.kubernetes.io/name: backstage-warehouse
     app.kubernetes.io/part-of: kargo-pipelines
+    kargo.akuity.io/loop: outer
   name: backstage
   namespace: kargo-pipelines
 spec:

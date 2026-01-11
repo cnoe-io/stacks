@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:backstage-local-dev
+  labels:
+    app.kubernetes.io/name: backstage-local-dev
+    app.kubernetes.io/part-of: kargo-pipelines
+    kargo.akuity.io/loop: inner
+  name: backstage-local-dev
+  namespace: argocd
+spec:
+  project: default
+  # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
+  source:
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-backstage-manifests.git
+    targetRevision: stage/local-dev
+    path: manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: backstage
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=false
