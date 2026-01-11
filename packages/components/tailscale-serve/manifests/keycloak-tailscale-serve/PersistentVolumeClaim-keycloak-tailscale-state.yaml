@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: loki-thinkpad-tailscale-state
+  name: keycloak-${TAILSCALE_HOST}-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

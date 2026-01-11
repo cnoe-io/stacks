@@ -4,7 +4,7 @@ metadata:
   name: k8s-api-connector
   namespace: tailscale
 spec:
-  hostname: thinkpad-api
+  hostname: ${TAILSCALE_HOST}-api
   subnetRouter:
     advertiseRoutes:
       - 10.43.0.0/16

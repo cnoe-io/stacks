@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: flipt-thinkpad-tailscale-state
+  name: kargo-${TAILSCALE_HOST}-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: grafana-thinkpad-tailscale-state
+  name: caipe-${TAILSCALE_HOST}-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

@@ -8,7 +8,30 @@ PACKAGES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="${PACKAGES_DIR}/dist"
 ENV="${1:-kind}"
 
-echo "Building $ENV environment..."
+# Determine host-specific values for envsubst substitution
+case "$ENV" in
+    kind-ryzen)
+        export TAILSCALE_HOST="ryzen"
+        ;;
+    kind-thinkpad)
+        export TAILSCALE_HOST="thinkpad"
+        ;;
+    kind)
+        export TAILSCALE_HOST="localdev"
+        ;;
+    talos)
+        export TAILSCALE_HOST="talos"
+        ;;
+    hub)
+        export TAILSCALE_HOST="hub"
+        ;;
+    *)
+        export TAILSCALE_HOST="localdev"
+        ;;
+esac
+export TAILSCALE_TAILNET="tail286401.ts.net"
+
+echo "Building $ENV environment (TAILSCALE_HOST=${TAILSCALE_HOST})..."
 mkdir -p "${DIST_DIR}/${ENV}"
 
 # Clean previous build
@@ -108,6 +131,13 @@ case "$ENV" in
         done
         ;;
 esac
+
+# Step 3: Substitute host-specific values in all YAML files
+# This replaces ${TAILSCALE_HOST} and ${TAILSCALE_TAILNET} placeholders using sed
+echo "Substituting host-specific values..."
+find "${DIST_DIR}/${ENV}" -name "*.yaml" -type f | while read -r file; do
+    sed -i "s/\${TAILSCALE_HOST}/${TAILSCALE_HOST}/g; s/\${TAILSCALE_TAILNET}/${TAILSCALE_TAILNET}/g" "$file"
+done
 
 # Count results
 app_count=$(ls -1 "${DIST_DIR}/${ENV}"/*.yaml 2>/dev/null | wc -l)

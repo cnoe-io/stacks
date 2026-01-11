@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mimir-thinkpad-tailscale-state
+  name: grafana-${TAILSCALE_HOST}-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

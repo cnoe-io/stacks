@@ -19,7 +19,7 @@ spec:
       containers:
         - env:
             - name: CLUSTER_NAME
-              value: thinkpad
+              value: ${TAILSCALE_HOST}
             - name: SYNC_INTERVAL
               value: "3600"
             - name: RESOURCE_LIST

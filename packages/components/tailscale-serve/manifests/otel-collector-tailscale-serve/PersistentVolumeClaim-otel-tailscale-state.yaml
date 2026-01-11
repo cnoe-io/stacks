@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: argocd-thinkpad-tailscale-state
+  name: otel-${TAILSCALE_HOST}-tailscale-state
   namespace: tailscale
 spec:
   accessModes:
