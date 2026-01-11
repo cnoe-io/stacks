@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "grafana-ryzen.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://kube-prometheus-stack-grafana.observability.svc.cluster.local:80"
+        }
+      }
+    }
+  }
+}

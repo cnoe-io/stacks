@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "backstage-talos.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://backstage.backstage.svc.cluster.local:7007"
+        }
+      }
+    }
+  }
+}

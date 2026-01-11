@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "loki-thinkpad.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://loki.observability.svc.cluster.local:3100"
+        }
+      }
+    }
+  }
+}

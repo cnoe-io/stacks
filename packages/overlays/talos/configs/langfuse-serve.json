@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "langfuse-talos.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://langfuse-web.langfuse.svc.cluster.local:3000"
+        }
+      }
+    }
+  }
+}

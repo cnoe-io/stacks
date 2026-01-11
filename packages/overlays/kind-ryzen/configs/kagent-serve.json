@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "kagent-ryzen.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://kagent-dashboard.kagent.svc.cluster.local:3000"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "otel-collector-localdev.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://opentelemetry-collector.observability.svc.cluster.local:4318"
+        }
+      }
+    }
+  }
+}

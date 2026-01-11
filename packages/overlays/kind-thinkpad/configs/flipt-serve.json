@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "flipt-thinkpad.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://flipt.feature-flags.svc.cluster.local:8080"
+        }
+      }
+    }
+  }
+}

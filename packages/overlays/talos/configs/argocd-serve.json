@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "argocd-talos.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "https://argocd-server.argocd.svc.cluster.local:443"
+        }
+      }
+    }
+  }
+}

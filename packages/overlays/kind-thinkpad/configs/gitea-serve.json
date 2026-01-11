@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "gitea-thinkpad.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://my-gitea-http.gitea.svc.cluster.local:3000"
+        }
+      }
+    }
+  }
+}
