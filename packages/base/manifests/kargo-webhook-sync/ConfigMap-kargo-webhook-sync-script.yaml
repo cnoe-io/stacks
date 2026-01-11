@@ -9,7 +9,7 @@ data:
 
     # Configuration
     GITEA_URL="https://gitea.cnoe.localtest.me:8443"
-    KARGO_WEBHOOK_URL="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/7090e2e781280fe5dce3c1e9e110ad453602198aa7802cf5f834ee925c085738"
+    KARGO_WEBHOOK_URL="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/5d8a9edcf747d565dfd0d5927f61e1b3d8a8622cee0fe71ad632b72cbc0f986f"
 
     # Get credentials from mounted secrets
     GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaAdmin")
