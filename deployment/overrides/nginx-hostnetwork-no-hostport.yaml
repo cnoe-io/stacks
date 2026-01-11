@@ -122,6 +122,7 @@ spec:
               readOnly: true
       nodeSelector:
         kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 0
       tolerations:

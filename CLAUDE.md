@@ -4,40 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-GitOps infrastructure repository using **nixidy** (Nix-based) to define Kubernetes manifests, deployed via IdpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
+GitOps infrastructure repository using **Kustomize** to define Kubernetes manifests, deployed via idpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
 
 **CNOE** (Cloud Native Operational Excellence): Open-source-first, Kubernetes-powered platform framework. See `docs/cnoe-overview.md`.
-
-**nixidy**: Nix-based GitOps framework for generating Kubernetes YAML. Uses NixOS module system for type-safe configuration. Environments → Applications → Resources → YAML manifests.
 
 **idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages.
 
 ## Common Commands
 
-### Nixidy Development
+### Package Development
 ```bash
-cd nixidy
-nix develop                        # Enter dev shell with nixidy CLI
-nixidy build .#kind                # Build manifests for KIND cluster
-nixidy build .#talos               # Build manifests for Talos cluster
-nixidy build .#hub                 # Build manifests for Hub cluster
-ls result/                         # View generated applications
-ls result/<app>/                   # View manifests for specific app
-```
-
-### Legacy CDK8s (Archived)
-```bash
-# CDK8s has been replaced by nixidy. See cdk8s/ for historical reference.
-# Use nixidy for all new manifest generation.
+cd packages
+make build-kind           # Build KIND local dev environment
+make build-kind-ryzen     # Build KIND for Ryzen host
+make build-kind-thinkpad  # Build KIND for Thinkpad host
+make build-talos          # Build Talos production environment
+make build-hub            # Build Hub multi-cluster environment
+make build-all            # Build all environments
+make validate-kind        # Validate KIND build output
+make clean                # Remove generated files
 ```
 
 ### IdpBuilder Deployment
 ```bash
-idpbuilder create --package nixidy-dist/             # Deploy all from nixidy
-idpbuilder create --package nixidy-dist/<app>        # Deploy specific
-idpbuilder create --use-path-routing --package ...   # Path-based routing
-idpbuilder get secrets -p gitea                      # Get secrets
-idpbuilder delete --name localdev                    # Delete cluster
+cd packages
+make deploy-kind                                   # Build and deploy KIND
+idpbuilder create --package dist/kind/             # Deploy KIND build
+idpbuilder create --package dist/kind/<app>        # Deploy specific app
+idpbuilder create --use-path-routing --package ... # Path-based routing
+idpbuilder get secrets -p gitea                    # Get secrets
+idpbuilder delete --name localdev                  # Delete cluster
 ```
 
 ### Talos Linux Cluster Bootstrap
@@ -72,6 +68,32 @@ kargo promote --project kargo-pipelines --stage backstage-staging --freight <nam
 **Architecture**: Inner Loop (Gitea → local-dev, auto, <60s) | Outer Loop (GHCR → dev → staging → prod)
 
 See `specs/105-setup-kargo-pipelines/quickstart.md`.
+
+### Gitea System Webhooks
+
+System webhooks automatically notify ArgoCD and Kargo on **every push** to any Gitea repository, enabling instant syncs without polling delays.
+
+```bash
+# Verify system webhooks are configured
+kubectl run -i --rm curl --image=curlimages/curl:8.5.0 -n gitea -- \
+  curl -s -u giteaAdmin:developer \
+  "http://my-gitea-http.gitea.svc.cluster.local:3000/api/v1/admin/hooks"
+```
+
+**Webhooks created automatically via PostSync hooks:**
+
+| Service | Webhook URL | App |
+|---------|-------------|-----|
+| ArgoCD | `http://argocd-server.argocd.svc.cluster.local/api/webhook` | `argocd-webhook-setup` |
+| Kargo | `http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/<hash>` | `kargo-webhook-sync` |
+
+**How it works:**
+1. `ingress-nginx-cert` (sync-wave: -99) copies TLS cert for external access
+2. ExternalSecrets fetch Gitea admin credentials from Azure Key Vault
+3. PostSync Jobs create system webhooks using Gitea admin API
+4. Any push to Gitea triggers instant sync in ArgoCD/Kargo (vs 3-5 min polling)
+
+See `docs/gitea-webhooks.md` for detailed architecture.
 
 ### kagent/kmcp (AI Agent Platform)
 ```bash
@@ -122,25 +144,81 @@ See `specs/108-hub-and-spoke/` and `docs/hub-recovery-runbook.md`.
 
 ## Architecture
 
-### Code Organization
+### Package Structure
 
-- **Entry point**: `cdk8s/main-v2.ts` - loads config, creates charts, synthesizes to `cdk8s/dist/<app>/manifests/`
-- **Config**: `cdk8s/config/applications.ts` - declarative ApplicationConfig[]
-- **Charts**: `cdk8s/charts/{apps,platform,pipelines,secrets,infra}/`
-- **Libraries**: `cdk8s/lib/` - factory, sync builders, ESO helpers, Kargo RBAC
-- **Imports**: `cdk8s/imports/` - k8s.ts, argoproj.io.ts, external-secrets.io.ts, kargo.akuity.io.ts
+```
+packages/
+├── Makefile                    # Build commands
+├── scripts/build.sh            # idpbuilder-compatible build script
+├── base/                       # Shared infrastructure (all environments)
+│   ├── kustomization.yaml      # Lists ~51 shared apps
+│   ├── apps/                   # ArgoCD Application YAMLs
+│   └── manifests/              # Raw K8s manifests (non-Helm)
+├── components/                 # Environment-specific app groups
+│   ├── kind-only/              # KIND-specific apps (~31)
+│   ├── talos-only/             # Talos production apps
+│   ├── tailscale-serve/        # Tailscale proxy apps (~20)
+│   └── observability/          # LGTM monitoring stack (~18)
+├── overlays/                   # Environment configurations
+│   ├── kind/                   # KIND local dev (base + kind-only + tailscale + observability)
+│   ├── kind-ryzen/             # Per-host KIND variant
+│   ├── kind-thinkpad/          # Per-host KIND variant
+│   ├── talos/                  # Talos production
+│   └── hub/                    # Hub multi-cluster
+└── dist/                       # Generated output (gitignored)
+    └── <env>/                  # idpbuilder-compatible structure
+        ├── <app>.yaml          # ArgoCD Application
+        └── <app>/manifests/    # K8s manifests for cnoe://
+```
 
-### CDK8s Pattern
+### Application Types
 
-TypeScript over YAML templating for type safety, IDE support, reusability.
+**Helm-based** (ArgoCD manages Helm):
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-95"
+spec:
+  source:
+    repoURL: https://charts.jetstack.io
+    targetRevision: v1.14.4
+    chart: cert-manager
+    helm:
+      valuesObject:
+        installCRDs: true
+```
 
-**Resource APIs**:
-- `imports/k8s` (low-level): Exact YAML control, CRDs, precise specs
-- `cdk8s-plus-32` (high-level): Standard resources with ergonomics
+**Manifest-based** (local manifests via cnoe://):
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: backstage-secrets
+  namespace: argocd
+spec:
+  source:
+    repoURL: cnoe://backstage-secrets
+    targetRevision: HEAD
+    path: "."
+```
 
-This repo primarily uses `imports/k8s` for consistency.
+### Kustomize Components
 
-### IdpBuilder Packages & cnoe:// URLs
+Environment-specific apps are organized into Kustomize components:
+
+| Component | Apps | Purpose |
+|-----------|------|---------|
+| base | ~51 | Shared infrastructure (cert-manager, external-secrets, keycloak, backstage, etc.) |
+| kind-only | ~31 | KIND-specific (CAIPE, idpbuilder-gitea, azure-workload-identity, etc.) |
+| tailscale-serve | ~20 | Tailscale proxies (*-tailscale-serve apps) |
+| observability | ~18 | LGTM stack (grafana, loki, tempo, langfuse, etc.) |
+| talos-only | - | Talos production (placeholder) |
+
+### IdpBuilder & cnoe:// URLs
 
 1. `cnoe://<package>/manifests` in ArgoCD Application source
 2. IdpBuilder creates Gitea repo, pushes manifests
@@ -155,48 +233,94 @@ ESO with Azure Key Vault via Workload Identity:
 
 ## Adding New Applications
 
-```typescript
-// 1. Create chart: cdk8s/charts/apps/my-app-chart.ts
-export class MyAppChart extends Chart {
-  constructor(scope: Construct, id: string, props?: ChartProps) {
-    super(scope, id, props);
-    // Define resources...
-  }
-}
+### Helm-based App
+```yaml
+# packages/base/apps/my-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.example.com
+    targetRevision: 1.0.0
+    chart: my-app
+    helm:
+      valuesObject:
+        key: value
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
 
-// 2. Add to config/applications.ts
-{
-  name: 'my-app',
-  namespace: 'my-app',
-  chart: { type: 'MyAppChart', props: {} },
-  argocd: { syncWave: '100', syncPolicy: { automated: { prune: true, selfHeal: true } } }
-}
+### Manifest-based App
+```yaml
+# packages/base/apps/my-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: cnoe://my-app
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-app
+  syncPolicy:
+    automated: {}
+```
+
+```yaml
+# packages/base/manifests/my-app/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+# ...
 ```
 
 ```bash
-# 3. Synthesize and deploy
-cd cdk8s && npm run synth
-idpbuilder create --package dist/my-app
+# Update kustomization.yaml and deploy
+echo "  - apps/my-app.yaml" >> packages/base/kustomization.yaml
+cd packages && make build-kind
+idpbuilder create --package dist/kind/my-app
 ```
 
 ## Best Practices
 
-1. **Sync Waves**: `-110` namespaces → `-90` RBAC → `-70` secrets → `0` deployments → `100+` ingresses
-2. **Resource Naming**: `<app>-<env>-<resource>` pattern
+1. **Sync Waves**: `-100` CRDs → `-80` namespaces → `-60` secrets → `0` apps → `60` ingresses
+2. **Resource Naming**: `<app>-<component>` pattern
 3. **Security**: External Secrets for sensitive data, SecurityContext, resource limits
-4. **Type Safety**: Interfaces for chart props, validate configurations
+4. **Components**: Use Kustomize components for environment-specific apps
 
 ## Troubleshooting
 
 ```bash
-# TypeScript errors
-rm -rf cdk8s/node_modules/.cache && cd cdk8s && npm run compile
+# Validate kustomize build
+kubectl kustomize packages/overlays/kind | head -100
 
-# Synthesis failures
-cd cdk8s && rm -rf dist/ && npm run synth
+# Check build output
+make build-kind
+ls packages/dist/kind/
 
-# Import issues
-cd cdk8s && npm run import
+# idpBuilder logs
+idpbuilder get logs
+
+# ArgoCD sync issues
+argocd app sync argocd/<app> --prune --insecure
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
 ```
 
 ## CNOE Technology Stack
@@ -209,15 +333,16 @@ cd cdk8s && npm run import
 | CD | ArgoCD | GitOps |
 | Identity | Keycloak | SSO |
 | Portal | Backstage | Catalog, templates |
-| Packaging | cdk8s | TypeScript manifests |
+| Packaging | Kustomize | YAML manifests |
 | Deployment | Kargo | Progressive delivery |
 
 ## Documentation
 
 See `docs/` for detailed guides:
-- `cnoe-overview.md`, `cdk8s-typescript-docs.md`, `cdk8s-architecture-and-packaging.md`
-- `development-workflow.md`, `gitops-architecture-overview.md`
-- `secrets-management.md`, `AZURE_WORKLOAD_IDENTITY.md`, `tailscale-cluster-access.md`
+- `cnoe-overview.md`, `gitops-architecture-overview.md`
+- `development-workflow.md`, `secrets-management.md`
+- `AZURE_WORKLOAD_IDENTITY.md`, `tailscale-cluster-access.md`
+- `gitea-webhooks.md` - System webhooks for instant ArgoCD/Kargo syncs
 
 ## Reference Implementation
 

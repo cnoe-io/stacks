@@ -1,0 +1,59 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared applications - deployed to all environments
+resources:
+  - apps/argocd-secretstore.yaml
+  - apps/argocd-webhook-setup.yaml
+  - apps/argo-workflows.yaml
+  - apps/ingress-nginx-cert.yaml
+  - apps/backstage-api-token-sync.yaml
+  - apps/backstage-dapr-components.yaml
+  - apps/backstage-dev-dapr-components.yaml
+  - apps/backstage-dev-namespace.yaml
+  - apps/backstage-infra.yaml
+  - apps/backstage-namespace.yaml
+  - apps/backstage-secrets-backstage-dev.yaml
+  - apps/backstage-secrets-backstage-staging.yaml
+  - apps/backstage-secrets-backstage.yaml
+  - apps/backstage-secrets.yaml
+  - apps/backstage-staging-namespace.yaml
+  - apps/backstage-templates.yaml
+  - apps/backstage-token-sync.yaml
+  - apps/backstage.yaml
+  - apps/cert-manager.yaml
+  - apps/dapr-agents-redis.yaml
+  - apps/dapr-agents-secrets.yaml
+  - apps/dapr-components.yaml
+  - apps/dapr-dashboard.yaml
+  - apps/dapr-runtime.yaml
+  - apps/default-secretstore.yaml
+  - apps/example-namespace.yaml
+  - apps/external-secrets.yaml
+  - apps/azure-keyvault-store.yaml
+  - apps/gateway-api-crds.yaml
+  - apps/gitea-secretstore.yaml
+  - apps/kagent-crds.yaml
+  - apps/kagent-secrets.yaml
+  - apps/kagent.yaml
+  - apps/kargo-backstage-pipeline.yaml
+  - apps/kargo-ca-certificates.yaml
+  - apps/kargo-cluster-config.yaml
+  - apps/kargo-pipelines-credentials.yaml
+  - apps/kargo-pipelines-project.yaml
+  - apps/kargo-webhook-sync.yaml
+  - apps/kargo.yaml
+  - apps/keycloak-config.yaml
+  - apps/keycloak-secrets.yaml
+  - apps/keycloak.yaml
+  - apps/kgateway-crds.yaml
+  - apps/kgateway.yaml
+  - apps/kmcp.yaml
+  - apps/metrics-server.yaml
+  - apps/neo4j.yaml
+  - apps/nginx-tls-secret.yaml
+  - apps/ollama.yaml
+  - apps/postgres.yaml
+  - apps/redis.yaml
+  - apps/selfsigned-issuer.yaml
+  - apps/speckit-agents-rbac.yaml

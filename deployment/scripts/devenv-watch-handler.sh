@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# devenv-watch-handler.sh - Called by watchexec when source manifests change
+# This script rebuilds kustomize packages and applies them via idpbuilder
+
+set -e
+
+CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
+STACKS_DIR="${DEVENV_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+
+echo ""
+echo "🔄 Change detected, rebuilding..."
+cd "$STACKS_DIR/packages" && make "build-kind-$CLUSTER_NAME" 2>&1
+
+echo ""
+echo "🚀 Applying to cluster..."
+idpbuilder create \
+  --name "$CLUSTER_NAME" \
+  -p "$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/" \
+  --package-custom-file "nginx:$STACKS_DIR/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
+  --kind-config "$STACKS_DIR/deployment/config/kind-config.yaml" \
+  --dev-password \
+  --color
+
+echo ""
+echo "✅ Applied. Watching for changes..."

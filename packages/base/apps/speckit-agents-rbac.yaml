@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+  name: speckit-agents-rbac
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-agents
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://speckit-agents-rbac/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

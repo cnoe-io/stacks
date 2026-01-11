@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# KIND-only applications - local development
+resources:
+  - apps/azure-workload-identity.yaml
+  - apps/caipe-agent-argocd.yaml
+  - apps/caipe-agent-backstage.yaml
+  - apps/caipe-agent-github.yaml
+  - apps/caipe-mcp-argocd.yaml
+  - apps/caipe-mcp-backstage.yaml
+  - apps/caipe-milvus.yaml
+  - apps/caipe-namespace.yaml
+  - apps/caipe-neo4j.yaml
+  - apps/caipe-nexigraph.yaml
+  - apps/caipe-rag-ingestors.yaml
+  - apps/caipe-rag-k8s-ingestor.yaml
+  - apps/caipe-rag-server.yaml
+  - apps/caipe-rag-webui.yaml
+  - apps/caipe-redis.yaml
+  - apps/caipe-secrets.yaml
+  - apps/caipe-servicemonitor.yaml
+  - apps/caipe-supervisor.yaml
+  - apps/caipe-token-sync.yaml
+  - apps/dagger-infra.yaml
+  - apps/feature-flags-namespace.yaml
+  - apps/feature-flags-repo-init.yaml
+  - apps/feature-flags-secrets.yaml
+  - apps/flipt.yaml
+  - apps/idpbuilder-gitea.yaml
+  - apps/nocodb-connections.yaml
+  - apps/nocodb-external-secrets.yaml
+  - apps/nocodb-postgres.yaml
+  - apps/nocodb-secrets.yaml
+  - apps/nocodb.yaml
+  - apps/spark-operator.yaml

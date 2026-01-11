@@ -292,99 +292,63 @@ check-azure-auth() {
   return 0
 }
 
-# Ensure nixidy is ready (nix available and flake exists)
-ensure-nixidy-ready() {
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
-
-  # Check if nix is available
-  if ! command -v nix &>/dev/null; then
-    echo "❌ nix is not installed. Please install Nix first."
-    echo "   Visit: https://nixos.org/download.html"
+# Ensure kustomize packages are ready
+ensure-kustomize-ready() {
+  # Check if kustomize or kubectl (with kustomize built-in) is available
+  if ! command -v kustomize &>/dev/null && ! command -v kubectl &>/dev/null; then
+    echo "❌ kustomize or kubectl required"
     return 1
   fi
 
-  # Check if flake.nix exists
-  if [ ! -f "$NIXIDY_DIR/flake.nix" ]; then
-    echo "❌ nixidy/flake.nix not found"
+  # Check if packages directory exists
+  if [[ ! -d "$STACKS_DIR/packages" ]]; then
+    echo "❌ packages/ directory not found"
     return 1
   fi
 
   return 0
 }
 
-# Synthesize nixidy manifests and restructure for idpBuilder
-nixidy-synth() {
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
+# Build kustomize packages for idpBuilder
+kustomize-build() {
   local ENV="${1:-kind}"
-  local OUTPUT_DIR="$STACKS_DIR/dist"
-
-  # Detect host for per-host KIND environments
   local DETECTED_HOST
   DETECTED_HOST="$(detect_hostname 2>/dev/null)" || DETECTED_HOST=""
 
-  # For KIND environments, use per-host environment name (kind-ryzen, kind-thinkpad, etc.)
-  # This enables pure Nix builds without --impure flag
-  local NIXIDY_ENV="$ENV"
+  # Derive build environment (kind-thinkpad, kind-ryzen, etc.)
+  local BUILD_ENV="$ENV"
   if [[ "$ENV" == "kind" ]] && [[ -n "$DETECTED_HOST" ]]; then
-    NIXIDY_ENV="kind-${DETECTED_HOST}"
-    echo "🏷️  Detected host: ${DETECTED_HOST} -> using environment: ${NIXIDY_ENV}"
+    BUILD_ENV="kind-${DETECTED_HOST}"
+    echo "🏷️  Detected host: ${DETECTED_HOST} -> using environment: ${BUILD_ENV}"
   fi
 
-  echo "🔨 Synthesizing nixidy manifests for $NIXIDY_ENV..."
+  # Export for use in idpbuilder -p flag
+  export KUSTOMIZE_BUILD_ENV="$BUILD_ENV"
 
-  # Source environment variables for nixidy (Azure credentials, etc.)
+  echo "🔨 Building kustomize packages for $BUILD_ENV..."
+
+  # Source environment variables (Azure credentials, etc.)
   if [ -f "$STACKS_DIR/.env-files/kind.env" ] && [[ "$ENV" == "kind"* ]]; then
     echo "📋 Loading environment from kind.env..."
     source "$STACKS_DIR/.env-files/kind.env"
   fi
 
-  cd "$NIXIDY_DIR"
+  cd "$STACKS_DIR/packages"
 
-  # Remove stale result symlink to force fresh nix evaluation
-  rm -f result
-
-  # Stage modified nix files so nix flake can see them in dirty git tree
-  # Nix flakes only see staged/committed files, not unstaged modifications
-  git -C "$STACKS_DIR" add -u "*.nix" ".env-files/*.env" 2>/dev/null || true
-
-  # Build nixidy manifests (creates result symlink)
-  # Per-host environments (kind-ryzen, kind-thinkpad, etc.) enable pure builds
-  # --refresh forces re-evaluation of flake inputs from remotes
-  # --option eval-cache false disables evaluation caching for dirty git trees
-  local SYSTEM
-  case "$(uname -m)" in
-    x86_64)  SYSTEM="x86_64-linux" ;;
-    aarch64) SYSTEM="aarch64-linux" ;;
-    *)       SYSTEM="x86_64-linux" ;;
-  esac
-  if ! nix build --refresh --option eval-cache false ".#nixidyEnvs.${SYSTEM}.${NIXIDY_ENV}.environmentPackage" -o result 2>&1; then
-    echo "❌ Nixidy synthesis failed"
-    return 1
-  fi
-
-  echo "✅ Nixidy build complete. Restructuring for idpBuilder..."
-
-  # Restructure nixidy output to idpBuilder format
-  # This creates <app>.yaml + <app>/manifests/ structure
-  if [ -f "$STACKS_DIR/scripts/nixidy-to-idpbuilder.sh" ]; then
-    cd "$STACKS_DIR"
-    if ./scripts/nixidy-to-idpbuilder.sh --env "$ENV" --output "$OUTPUT_DIR" 2>&1; then
-      echo "✅ Restructuring complete. Manifests in: $OUTPUT_DIR/"
-      return 0
-    else
-      echo "❌ Restructuring failed"
-      return 1
-    fi
-  else
-    echo "⚠️  nixidy-to-idpbuilder.sh not found, using raw nixidy output"
+  if make "build-${BUILD_ENV}" 2>&1; then
+    local APP_COUNT=$(ls -1 "dist/${BUILD_ENV}"/*.yaml 2>/dev/null | wc -l)
+    echo "✅ Build complete: ${APP_COUNT} applications in packages/dist/${BUILD_ENV}/"
     return 0
+  else
+    echo "❌ Kustomize build failed"
+    return 1
   fi
 }
 
-# Legacy: Ensure CDK8s dependencies are installed (deprecated - use nixidy)
+# Legacy: Ensure CDK8s dependencies are installed (deprecated - use kustomize)
 ensure-cdk8s-dependencies() {
-  echo "⚠️  CDK8s is deprecated. Using nixidy instead."
-  ensure-nixidy-ready
+  echo "⚠️  CDK8s is deprecated. Using kustomize instead."
+  ensure-kustomize-ready
 }
 
 # Generate kind-config.yaml from template with STACKS_DIR substitution
@@ -502,8 +466,131 @@ ensure-kargo-repos() {
   echo "✅ Kargo repositories verified"
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Nginx Override Generation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# generate-nginx-override: Generate nginx override file with persistent TLS if available
+# Returns the path to the nginx override file via echo
+# Uses: Azure Key Vault persistent TLS if available, otherwise falls back to simple override
+generate-nginx-override() {
+  local NGINX_OVERRIDE_SCRIPT="$STACKS_DIR/deployment/scripts/persistent-secrets/generate-nginx-override.sh"
+  local NGINX_OVERRIDE_FILE=""
+
+  if [ -f "$NGINX_OVERRIDE_SCRIPT" ]; then
+    echo "🔐 Generating nginx override with persistent TLS certificate..." >&2
+    NGINX_OVERRIDE_FILE=$("$NGINX_OVERRIDE_SCRIPT" 2>/dev/null) || NGINX_OVERRIDE_FILE=""
+
+    if [ -n "$NGINX_OVERRIDE_FILE" ] && [ -f "$NGINX_OVERRIDE_FILE" ]; then
+      echo "✅ Using persistent TLS certificate from Azure Key Vault" >&2
+      echo "$NGINX_OVERRIDE_FILE"
+      return 0
+    else
+      echo "⚠️  Persistent cert not available, using standard nginx override" >&2
+    fi
+  fi
+
+  # Fallback to standard override
+  echo "${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Portable Core - Manifest Application (no infrastructure dependencies)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# cluster-apply-manifests: Portable core for kustomize + idpbuilder
+# This function contains the infrastructure-agnostic manifest application logic.
+# It can be used by both cluster-deploy (full setup) and cluster-update (manifest only).
+#
+# Arguments:
+#   $1 - nginx override file (optional, defaults to simple override)
+#   $2 - argocd override file (optional, for CA trust injection)
+#   $@ - additional args passed to idpbuilder (optional)
+#
+# Required environment:
+#   CLUSTER_HOST - hostname for cluster naming (set before calling)
+#   STACKS_DIR   - path to stacks repository
+#
+# Exports:
+#   KUSTOMIZE_BUILD_ENV - the resolved build environment (e.g., kind-thinkpad)
+#
+cluster-apply-manifests() {
+  local NGINX_OVERRIDE_FILE="${1:-${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml}"
+  shift 2>/dev/null || true  # Consume first arg
+  local ARGOCD_OVERRIDE_FILE="${1:-}"
+  if [ -n "$ARGOCD_OVERRIDE_FILE" ]; then
+    shift 2>/dev/null || true  # Consume second arg if present
+  fi
+  local DEPLOY_DIR="$STACKS_DIR/deployment"
+  local ORIG_DIR="$(pwd)"
+
+  # Validate required environment
+  if [ -z "${CLUSTER_HOST:-}" ]; then
+    echo "❌ CLUSTER_HOST not set. Call detect_hostname first."
+    return 1
+  fi
+
+  local CLUSTER_NAME="$CLUSTER_HOST"
+
+  # Source environment files (kind.env for KIND clusters)
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
+
+  # Clear any WSL Docker environment variables
+  if [[ -S /var/run/docker.sock ]]; then
+    unset DOCKER_HOST
+    unset DOCKER_TLS_VERIFY
+    unset DOCKER_CERT_PATH
+    export DOCKER_HOST=""
+  fi
+
+  # Ensure kustomize packages are ready
+  echo "🔍 Checking kustomize packages..."
+  ensure-kustomize-ready || { cd "$ORIG_DIR"; return 1; }
+
+  # Build kustomize packages (sets KUSTOMIZE_BUILD_ENV)
+  kustomize-build "kind" || { cd "$ORIG_DIR"; return 1; }
+
+  # Generate kind-config.yaml from template with current STACKS_DIR
+  generate-kind-config
+
+  echo ""
+  echo "🚀 Applying manifests to cluster: ${CLUSTER_NAME}..."
+  echo ""
+
+  # Build idpbuilder command with optional ArgoCD override
+  local IDPBUILDER_ARGS=(
+    --name "${CLUSTER_NAME}"
+    -p "$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/"
+    --package-custom-file "nginx:${NGINX_OVERRIDE_FILE}"
+    --kind-config "$DEPLOY_DIR/config/kind-config.yaml"
+    --dev-password
+  )
+
+  # Add ArgoCD override if provided (for CA trust injection at creation time)
+  if [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
+    echo "   Including ArgoCD CA trust configuration..."
+    IDPBUILDER_ARGS+=(--package-custom-file "argocd:${ARGOCD_OVERRIDE_FILE}")
+  fi
+
+  # Apply using idpbuilder (idempotent operation)
+  # Any extra args ($@) are passed through to idpbuilder
+  idpbuilder create "${IDPBUILDER_ARGS[@]}" "$@"
+
+  local result=$?
+
+  cd "$ORIG_DIR"
+  return $result
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Base functions - always non-interactive
+# ═══════════════════════════════════════════════════════════════════════════════
+
 cluster-deploy() {
+  # Full cluster creation with infrastructure setup
+  # Uses portable core (cluster-apply-manifests) for manifest application
+  # Infrastructure-specific: Azure TLS, CA injection, JWKS sync, Kargo repos, ArgoCD auth, Tailscale
+
   # Check if being called internally (skip auth check if SKIP_AZURE_CHECK is set)
   if [ "${SKIP_AZURE_CHECK:-}" != "true" ]; then
     echo "🔐 Checking Azure authentication..."
@@ -511,15 +598,13 @@ cluster-deploy() {
     echo ""
   fi
 
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   local ORIG_DIR="$(pwd)"
 
   # Source environment files FIRST (before any operations that need them)
-  # Use kind.env for KIND clusters (renamed from wi.env in feature 106)
   [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
 
-  # Export hostname for synthesis (host-aware Tailscale names)
+  # Export hostname for cluster naming (required by cluster-apply-manifests)
   export CLUSTER_HOST="$(detect_hostname)" || { cd "$ORIG_DIR"; return 1; }
   echo "🏷️  Detected host: ${CLUSTER_HOST}"
 
@@ -528,37 +613,15 @@ cluster-deploy() {
     load-1password-token && echo "✅ 1Password service account token loaded"
   fi
 
-  # Clear any WSL Docker environment variables
-  # Check if we have a native Docker socket
-  if [[ -S /var/run/docker.sock ]]; then
-    unset DOCKER_HOST
-    unset DOCKER_TLS_VERIFY
-    unset DOCKER_CERT_PATH
-    export DOCKER_HOST=""
-  fi
-
-  # Ensure nixidy is ready
-  echo "🔍 Checking nixidy dependencies..."
-  ensure-nixidy-ready || { cd "$ORIG_DIR"; return 1; }
-
   # Check for legacy cluster and handle migration
   check_legacy_cluster || { cd "$ORIG_DIR"; return 1; }
 
-  # Synthesize nixidy manifests
-  nixidy-synth "kind" || { cd "$ORIG_DIR"; return 1; }
-
-  echo "🚀 Creating cluster with idpbuilder..."
-
-  # Generate kind-config.yaml from template with current STACKS_DIR
-  generate-kind-config
-
-  # Generate nginx override with persistent TLS certificate from Azure Key Vault
-  # This creates a combined YAML with both the TLS secret and deployment
-  # Also generates ArgoCD override with CA trust for Gitea access
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Infrastructure-specific: Generate nginx + ArgoCD overrides with persistent TLS
+  # ─────────────────────────────────────────────────────────────────────────────
   local NGINX_OVERRIDE_SCRIPT="$STACKS_DIR/deployment/scripts/persistent-secrets/generate-nginx-override.sh"
   local NGINX_OVERRIDE_FILE="/tmp/nginx-override-with-cert.yaml"
   local ARGOCD_OVERRIDE_FILE="/tmp/argocd-override-with-ca.yaml"
-  local ARGOCD_OVERRIDE_ARG=""
 
   if [ -f "$NGINX_OVERRIDE_SCRIPT" ]; then
     echo "🔐 Generating nginx override with persistent TLS certificate..."
@@ -568,110 +631,64 @@ cluster-deploy() {
     if [ ! -f "$NGINX_OVERRIDE_FILE" ]; then
       echo "⚠️  Persistent cert not available, using standard nginx override"
       NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+      ARGOCD_OVERRIDE_FILE=""
     else
       echo "✅ Using persistent TLS certificate from Azure Key Vault"
-      # ArgoCD override is generated alongside nginx override
-      if [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
-        echo "✅ Using declarative ArgoCD CA trust configuration"
-        ARGOCD_OVERRIDE_ARG="--argocd-override $ARGOCD_OVERRIDE_FILE"
-      fi
     fi
   else
     NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+    ARGOCD_OVERRIDE_FILE=""
   fi
 
-  # Start background process to apply persistent CA to ArgoCD as soon as it's ready
-  # This runs in parallel with idpbuilder so apps aren't blocked waiting for CA trust
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Background CA injection: Runs in parallel with idpbuilder
+  # This patches ArgoCD CA trust as soon as ArgoCD is ready, rather than waiting
+  # for idpbuilder to complete. Required because idpbuilder overwrites
+  # argocd-tls-certs-cm with its auto-generated cert.
+  # ─────────────────────────────────────────────────────────────────────────────
   local ARGOCD_CA_PID=""
-  local CA_INJECTION_LOG="/tmp/argocd-ca-injection.log"
   if [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
-    # Use a separate script approach to avoid subshell variable issues
-    cat > /tmp/inject-argocd-ca.sh << 'INJECT_SCRIPT'
-#!/usr/bin/env bash
-set -x  # Enable debug output
-exec > /tmp/argocd-ca-injection.log 2>&1
+    (
+      exec > /tmp/argocd-ca-injection.log 2>&1
+      echo "$(date): Starting background ArgoCD CA injection..."
 
-VAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
+      # Wait for ArgoCD ConfigMap to exist
+      waited=0
+      while ! kubectl get configmap argocd-tls-certs-cm -n argocd 2>/dev/null; do
+        sleep 5
+        waited=$((waited + 5))
+        echo "$(date): Waiting for argocd-tls-certs-cm (${waited}s)..."
+        if [ $waited -ge 300 ]; then
+          echo "$(date): TIMEOUT waiting for argocd-tls-certs-cm"
+          exit 1
+        fi
+      done
 
-echo "$(date): Starting ArgoCD CA injection..."
-echo "VAULT_NAME: $VAULT_NAME"
+      echo "$(date): ConfigMap exists, applying custom CA trust..."
+      kubectl apply -f "$ARGOCD_OVERRIDE_FILE"
 
-# Wait for argocd-tls-certs-cm to exist (idpbuilder creates it)
-echo "$(date): Waiting for ArgoCD ConfigMap..."
-waited=0
-while ! kubectl get configmap argocd-tls-certs-cm -n argocd 2>/dev/null; do
-  sleep 2
-  waited=$((waited + 2))
-  echo "$(date): Waited ${waited}s for argocd-tls-certs-cm..."
-  if [ $waited -ge 300 ]; then
-    echo "$(date): TIMEOUT waiting for argocd-tls-certs-cm"
-    exit 1
-  fi
-done
+      echo "$(date): Restarting ArgoCD components..."
+      kubectl rollout restart deployment argocd-repo-server -n argocd
+      kubectl rollout restart statefulset argocd-application-controller -n argocd
+      kubectl rollout status deployment argocd-repo-server -n argocd --timeout=120s
 
-echo "$(date): ConfigMap exists, fetching CA from Key Vault..."
-
-# Apply our persistent CA certificate
-CA_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-CA-CRT" --query value -o tsv 2>&1)
-echo "$(date): AZ CLI result length: ${#CA_CRT}"
-
-if [[ "$CA_CRT" == *"BEGIN CERTIFICATE"* ]] || [[ ${#CA_CRT} -gt 100 ]]; then
-  # Decode if base64 encoded
-  DECODED_CRT=$(echo "$CA_CRT" | base64 -d 2>/dev/null) || DECODED_CRT="$CA_CRT"
-
-  echo "$(date): Applying CA to ArgoCD ConfigMap..."
-  kubectl create configmap argocd-tls-certs-cm -n argocd \
-    --from-literal="gitea.cnoe.localtest.me=${DECODED_CRT}" \
-    --from-literal="cnoe.localtest.me=${DECODED_CRT}" \
-    --dry-run=client -o yaml | kubectl apply -f -
-
-  echo "$(date): Restarting repo-server..."
-  kubectl rollout restart deployment argocd-repo-server -n argocd
-  kubectl rollout status deployment argocd-repo-server -n argocd --timeout=120s
-
-  # Also restart application-controller to pick up new trust
-  kubectl rollout restart statefulset argocd-application-controller -n argocd
-  kubectl rollout status statefulset argocd-application-controller -n argocd --timeout=120s
-
-  echo "$(date): SUCCESS - ArgoCD CA trust configured"
-else
-  echo "$(date): FAILED - Could not fetch CA from Key Vault"
-  echo "CA_CRT value: $CA_CRT"
-  exit 1
-fi
-INJECT_SCRIPT
-    chmod +x /tmp/inject-argocd-ca.sh
-
-    # Run the injection script in background
-    /tmp/inject-argocd-ca.sh &
+      echo "$(date): SUCCESS - ArgoCD CA trust configured"
+    ) &
     ARGOCD_CA_PID=$!
-    echo "   Started background CA injection process (PID: $ARGOCD_CA_PID, log: $CA_INJECTION_LOG)"
+    echo "   Started background CA injection (PID: $ARGOCD_CA_PID, log: /tmp/argocd-ca-injection.log)"
   fi
 
-  # Check if Linux deployment script exists and use it
-  if [ -f "$DEPLOY_DIR/scripts/deploy-linux-ssh.sh" ]; then
-    echo "Using Linux deployment script with direct key mounting and Azure integration..."
-    cd "$DEPLOY_DIR/scripts" && ./deploy-linux-ssh.sh \
-      --package "$STACKS_DIR/dist/" \
-      --nginx-override "$NGINX_OVERRIDE_FILE" \
-      $ARGOCD_OVERRIDE_ARG \
-      "$@"
-  else
-    # Fallback to standard idpbuilder with post-setup JWKS sync
-    command -v idpbuilder >/dev/null 2>&1 || { echo "❌ idpbuilder not found. Please install it first."; cd "$ORIG_DIR"; return 1; }
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Apply manifests using portable core (cluster-apply-manifests)
+  # ─────────────────────────────────────────────────────────────────────────────
+  local result=0
 
-    # Use hostname as cluster name
-    local CLUSTER_NAME="$(detect_cluster_name)"
-    echo "🏷️  Creating cluster: ${CLUSTER_NAME}"
+  echo "🚀 Creating cluster with idpbuilder..."
+  cluster-apply-manifests "$NGINX_OVERRIDE_FILE" "$ARGOCD_OVERRIDE_FILE" "$@"
+  result=$?
 
-    idpbuilder create \
-      --name "${CLUSTER_NAME}" \
-      -p "$STACKS_DIR/dist/" \
-      --package-custom-file "nginx:${NGINX_OVERRIDE_FILE}" \
-      --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
-      --dev-password "$@"
-
-    # Sync JWKS after cluster creation
+  # Sync JWKS after cluster creation (infrastructure-specific)
+  if [ $result -eq 0 ]; then
     local JWKS_SCRIPT="$STACKS_DIR/ref-implementation/azure-workload-identity/sync-jwks-to-azure.sh"
     if [ -f "$JWKS_SCRIPT" ]; then
       echo "🔄 Syncing JWKS to Azure for External Secrets..."
@@ -679,25 +696,18 @@ INJECT_SCRIPT
     fi
   fi
 
-  local result=$?
-
-  # Note: Docker Hub auth is now configured via Kind mount (containerd/certs.d)
-  # The generate-docker-registry-config.sh script runs before cluster creation
-  # and the Kind config mounts the generated config at /etc/containerd/certs.d
-
-  # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
-  if [ $result -eq 0 ]; then
-    fix-kind-hosts "${CLUSTER_NAME}"
-
-    # Ensure Kargo repositories exist with correct host suffix
-    ensure-kargo-repos "${CLUSTER_NAME}"
-  fi
-
-  # Wait for background CA injection to complete (if running)
-  # This ensures CA is applied before we try to use ArgoCD CLI
-  if [ -n "$ARGOCD_CA_PID" ] && kill -0 "$ARGOCD_CA_PID" 2>/dev/null; then
+  # Wait for background CA injection to complete before ArgoCD auth init
+  if [ -n "$ARGOCD_CA_PID" ]; then
     echo "   Waiting for background CA injection to complete..."
     wait "$ARGOCD_CA_PID" 2>/dev/null || true
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Post-deployment infrastructure setup
+  # ─────────────────────────────────────────────────────────────────────────────
+  if [ $result -eq 0 ]; then
+    fix-kind-hosts "${CLUSTER_HOST}"
+    ensure-kargo-repos "${CLUSTER_HOST}"
   fi
 
   # Initialize ArgoCD authentication and save token to 1Password after successful deployment
@@ -795,8 +805,7 @@ TAILSCALE_SCRIPT
   return $result
 }
 
-cluster-synth() {
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
+cluster-build() {
   local ORIG_DIR="$(pwd)"
   local ENV="${1:-kind}"
 
@@ -811,21 +820,26 @@ cluster-synth() {
 
   [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
 
-  # Ensure nixidy is ready
-  echo "🔍 Checking nixidy dependencies..."
-  ensure-nixidy-ready || { cd "$ORIG_DIR"; return 1; }
+  # Ensure kustomize packages are ready
+  echo "🔍 Checking kustomize packages..."
+  ensure-kustomize-ready || { cd "$ORIG_DIR"; return 1; }
 
-  # Synthesize nixidy manifests
-  nixidy-synth "$ENV"
+  # Build kustomize packages
+  kustomize-build "$ENV"
   local result=$?
 
   cd "$ORIG_DIR"
   return $result
 }
 
+# Legacy alias for cluster-synth
+cluster-synth() {
+  cluster-build "$@"
+}
+
 cluster-recreate() {
   # Health check script for timing and summary
-  local HEALTH_CHECK="$STACKS_DIR/scripts/cluster-health-check.sh"
+  local HEALTH_CHECK="$STACKS_DIR/deployment/scripts/cluster-health-check.sh"
 
   # Initialize timing
   if [ -f "$HEALTH_CHECK" ]; then
@@ -1006,22 +1020,22 @@ cluster-update-gum() {
     kubectl config use-context "$HOST_CONTEXT" >/dev/null 2>&1 || true
   fi
 
-  # Ensure nixidy is ready
-  gum spin --spinner dot --title "🔍 Checking nixidy dependencies..." -- \
-    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; ensure-nixidy-ready >/dev/null 2>&1"
+  # Ensure kustomize packages are ready
+  gum spin --spinner dot --title "🔍 Checking kustomize packages..." -- \
+    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; ensure-kustomize-ready >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
-    gum style --foreground 196 "❌ Failed to ensure nixidy is ready"
+    gum style --foreground 196 "❌ Failed to ensure kustomize packages are ready"
     return 1
   fi
 
-  # Step 1: Synthesize with spinner (includes restructuring for idpBuilder)
-  gum spin --spinner dot --title "🔨 Synthesizing nixidy manifests..." -- \
-    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; nixidy-synth kind >/dev/null 2>&1"
+  # Step 1: Build with spinner (includes restructuring for idpBuilder)
+  gum spin --spinner dot --title "🔨 Building kustomize packages..." -- \
+    env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; kustomize-build kind >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
-    gum style --foreground 196 "❌ Nixidy synthesis failed"
-    nixidy-synth "kind"
+    gum style --foreground 196 "❌ Kustomize build failed"
+    kustomize-build "kind"
     cd "$ORIG_DIR"
     return 1
   fi
@@ -1033,7 +1047,7 @@ cluster-update-gum() {
 
   # Step 2: Update cluster with spinner
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
-    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$STACKS_DIR/dist/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
+    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"
@@ -1069,7 +1083,7 @@ MESSAGE:.status.conditions[0].message | \
 
 cluster-update() {
   # Update existing cluster with idpbuilder (idempotent operation)
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
+  # Uses portable core (cluster-apply-manifests) for manifest application
   local HOST_CONTEXT="$(detect_host_context)"
   local NO_EXIT=""
   local ORIG_DIR="$(pwd)"
@@ -1080,35 +1094,20 @@ cluster-update() {
     shift
   fi
 
-  # Mirror deploy workflow by validating Azure authentication up front
+  # Optional Azure auth check (for environment variables)
   if [ "${SKIP_AZURE_CHECK:-}" != "true" ]; then
     echo "🔐 Checking Azure authentication..."
     check-azure-auth || return 1
     echo ""
   fi
 
-  # Source environment files FIRST (kind.env for KIND clusters)
-  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
-    echo "📋 Loading environment from kind.env..."
-    source "$STACKS_DIR/.env-files/kind.env"
-  }
-
-  # Export hostname for CDK8s synthesis (host-aware Tailscale names)
+  # Export hostname for cluster naming (required by cluster-apply-manifests)
   export CLUSTER_HOST="$(detect_hostname)" || return 1
-  local CLUSTER_NAME="$CLUSTER_HOST"
   echo "🏷️  Detected host: ${CLUSTER_HOST}"
 
   # Load 1Password service account token for automated secret access
   if command -v op &>/dev/null; then
     load-1password-token && echo "✅ 1Password service account token loaded"
-  fi
-
-  # Clear any WSL Docker environment variables
-  if [[ -S /var/run/docker.sock ]]; then
-    unset DOCKER_HOST
-    unset DOCKER_TLS_VERIFY
-    unset DOCKER_CERT_PATH
-    export DOCKER_HOST=""
   fi
 
   # Check if cluster exists
@@ -1121,44 +1120,23 @@ cluster-update() {
     kubectl config use-context "$HOST_CONTEXT" >/dev/null 2>&1 || true
   fi
 
-  # Ensure nixidy is ready
-  echo "🔍 Checking nixidy dependencies..."
-  ensure-nixidy-ready || return 1
+  # For updates, use static deployment file only (no secret generation needed)
+  # The TLS secret already exists from initial creation or ExternalSecret sync
+  # This is faster and doesn't require Azure auth
+  local NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+  echo "📄 Using static nginx deployment override (TLS secret already exists)"
 
-  # Step 1: Synthesize nixidy manifests (includes restructuring for idpBuilder)
-  nixidy-synth "kind" || {
+  # Apply manifests using portable core
+  cluster-apply-manifests "$NGINX_OVERRIDE_FILE" || {
     cd "$ORIG_DIR"
     return 1
   }
 
-  # Step 2: Update cluster using idpbuilder
-  echo ""
-  echo "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..."
-  echo ""
-
-  # Generate kind-config.yaml from template with current STACKS_DIR
-  generate-kind-config
-
-  local DEPLOY_DIR="$STACKS_DIR/deployment"
-  idpbuilder create \
-    --name "${CLUSTER_NAME}" \
-    -p "$STACKS_DIR/dist/" \
-    --package-custom-file "nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
-    --kind-config "$DEPLOY_DIR/config/kind-config.yaml" \
-    --dev-password
-
-  if [ $? -ne 0 ]; then
-    echo ""
-    echo "❌ Cluster update failed"
-    cd "$ORIG_DIR"
-    return 1
-  fi
-
   echo ""
   echo "✅ Cluster update complete"
 
-  # Step 3: Fix /etc/hosts on KIND nodes for Gitea OCI registry access
-  fix-kind-hosts "${CLUSTER_NAME}"
+  # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
+  fix-kind-hosts "${CLUSTER_HOST}"
 
   # Step 4: Show ArgoCD application status
   echo ""
@@ -1254,7 +1232,7 @@ cluster-menu() {
     echo "Install with: nix-env -iA nixpkgs.gum"
     echo ""
     echo "Available commands without gum:"
-    echo "  cluster-synth (cls)    - Synthesize manifests"
+    echo "  cluster-build (clb)    - Build kustomize packages"
     echo "  cluster-deploy (cld)   - Deploy cluster"
     echo "  cluster-update (clu)   - Update cluster"
     echo "  cluster-recreate (clr) - Recreate cluster"
@@ -1266,17 +1244,17 @@ cluster-menu() {
 
   while true; do
     local choice=$(gum choose \
-      "Synthesize Only" \
+      "Build Only" \
       "Update Cluster (idempotent)" \
-      "Synthesize & Deploy" \
-      "Synthesize & Deploy (with spinner)" \
+      "Build & Deploy" \
+      "Build & Deploy (with spinner)" \
       "Recreate Cluster" \
       "Show Status" \
       "Exit")
 
     case "$choice" in
-      "Synthesize Only")
-        cluster-synth
+      "Build Only")
+        cluster-build
         echo ""
         gum style --foreground 82 "Press any key to continue..."
         read -n 1 -s
@@ -1287,7 +1265,7 @@ cluster-menu() {
         gum style --foreground 82 "Press any key to continue..."
         read -n 1 -s
         ;;
-      "Synthesize & Deploy")
+      "Build & Deploy")
         cluster-deploy
         echo ""
         gum style --foreground 82 "Press any key to continue..."
@@ -1323,7 +1301,8 @@ cluster-menu() {
 }
 
 # Aliases
-alias cls="cluster-synth"
+alias clb="cluster-build"      # Build kustomize packages
+alias cls="cluster-build"      # Legacy alias (was cluster-synth)
 alias cld="cluster-deploy"
 alias clu="cluster-update"
 alias cluw="cluster-update --no-exit"
@@ -1353,15 +1332,8 @@ if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
   alias ts-kubeconfig-test="$TAILSCALE_KUBECONFIG_SCRIPT test"
 fi
 
-# Nixidy watch mode aliases (auto-rebuild on file changes)
-NIXIDY_WATCH_HANDLER="$STACKS_DIR/scripts/nixidy-watch-handler.sh"
-if [ -f "$NIXIDY_WATCH_HANDLER" ]; then
-  alias clwatch="nixidy-watch"
-  alias clrebuild="$NIXIDY_WATCH_HANDLER"
-fi
-
 # Cluster health check and summary
-CLUSTER_HEALTH_CHECK="$STACKS_DIR/scripts/cluster-health-check.sh"
+CLUSTER_HEALTH_CHECK="$STACKS_DIR/deployment/scripts/cluster-health-check.sh"
 if [ -f "$CLUSTER_HEALTH_CHECK" ]; then
   alias clhealth="$CLUSTER_HEALTH_CHECK summary"
   alias clwait="$CLUSTER_HEALTH_CHECK wait"
@@ -1381,7 +1353,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  Or run directly to execute cluster-menu: ./cluster-menu.sh"
   echo ""
   echo "Available functions:"
-  echo "  cluster-synth (cls)      - Synthesize CDK8s manifests"
+  echo "  cluster-synth (cls)      - Build kustomize packages"
   echo "  cluster-deploy (cld)     - Create/deploy cluster from scratch"
   echo "  cluster-update (clu)     - Update existing cluster (idempotent)"
   echo "  cluster-update-gum (clug) - Interactive update with gum"

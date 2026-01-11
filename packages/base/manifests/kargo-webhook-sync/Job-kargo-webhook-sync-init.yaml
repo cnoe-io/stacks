@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app.kubernetes.io/name: kargo-webhook-sync
+  name: kargo-webhook-sync-init
+  namespace: kargo
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+        - command:
+            - /bin/sh
+            - /scripts/sync-webhooks.sh
+          image: dwdraju/alpine-curl-jq:latest
+          name: webhook-setup
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /scripts
+              name: script
+              readOnly: true
+            - mountPath: /gitea-credentials
+              name: gitea-credentials
+              readOnly: true
+            - mountPath: /kargo-credentials
+              name: kargo-credentials
+              readOnly: true
+      restartPolicy: OnFailure
+      volumes:
+        - configMap:
+            defaultMode: 493
+            name: kargo-webhook-sync-script
+          name: script
+        - name: gitea-credentials
+          secret:
+            items:
+              - key: password
+                path: password
+              - key: username
+                path: username
+            secretName: kargo-gitea-credentials
+        - name: kargo-credentials
+          secret:
+            items:
+              - key: secret
+                path: secret
+            secretName: kargo-gitea-cluster-webhook-secret
+  ttlSecondsAfterFinished: 3600

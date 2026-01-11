@@ -2,9 +2,9 @@
 .env
 
 idpbuilder.tar.gz
-cdk8s/.tsbuild/.tsbuildinfo
-.gitignore
-cdk8s/datree.tar.gz
+
+# Generated kubeconfigs (contain cluster credentials)
+remote-kubeconfig.yaml
 
 # Private keys - NEVER commit these
 **/keys/sa.key
@@ -18,7 +18,6 @@ node_modules/tsx/dist/
 node_modules/
 
 # Temporary clone directories
-cdk8s/idpbuilder-localdev-backstage-manifests/
 temp-backstage-repo/
 # Certificate cache (regenerated from cluster)
 scripts/certificates/cache/
@@ -32,12 +31,7 @@ scripts/certificates/system/
 **/kubeconfig.yaml
 **/.kube/
 
-# CDK8s build artifacts (except talos/ which is committed for ArgoCD)
-cdk8s/dist/*
-!cdk8s/dist/talos/
-cdk8s/imports/
-
-# Nixidy build artifacts (generated from nixidy/)
+# Nixidy build artifacts (legacy, removed)
 nixidy-dist/
 
 # NixOS VM images (large binary files, built from Nix configs)
@@ -76,4 +70,6 @@ argocd-*-screenshot.png
 .devenv.flake.nix
 devenv.lock
 result
-nixidy/dist/
+
+# Kustomize packages build output
+packages/dist/

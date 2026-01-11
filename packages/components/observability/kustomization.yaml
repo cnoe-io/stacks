@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Observability stack - monitoring and tracing
+resources:
+  - apps/grafana.yaml
+  - apps/jaeger.yaml
+  - apps/langfuse-app.yaml
+  - apps/langfuse-clickhouse.yaml
+  - apps/langfuse-minio.yaml
+  - apps/langfuse-postgres.yaml
+  - apps/langfuse-redis.yaml
+  - apps/lgtm-grafana.yaml
+  - apps/lgtm-loki.yaml
+  - apps/lgtm-mimir.yaml
+  - apps/lgtm-otel-collector.yaml
+  - apps/lgtm-pyroscope.yaml
+  - apps/lgtm-tempo.yaml
+  - apps/loki.yaml
+  - apps/observability-namespace.yaml
+  - apps/observability-secrets.yaml
+  - apps/prometheus.yaml
+  - apps/tempo.yaml

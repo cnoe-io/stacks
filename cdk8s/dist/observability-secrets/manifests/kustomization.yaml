@@ -1,7 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ExternalSecret.langfuse-api.k8s.yaml
-  - ExternalSecret.langfuse-auth.k8s.yaml
-  - ExternalSecret.langfuse-init.k8s.yaml
-  - ExternalSecret.langfuse-postgres-credentials.k8s.yaml

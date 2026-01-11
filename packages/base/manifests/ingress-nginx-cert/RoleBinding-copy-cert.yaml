@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: tls-cert
+    app.kubernetes.io/name: ingress-nginx-cert
+  name: copy-cert-rolebinding
+  namespace: ingress-nginx
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: copy-cert-role
+subjects:
+  - kind: ServiceAccount
+    name: copy-cert-sa
+    namespace: ingress-nginx

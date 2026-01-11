@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "72"
+  name: kargo-ca-certificates
+  namespace: argocd
+spec:
+  destination:
+    namespace: kargo-pipelines
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://kargo-ca-certificates/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

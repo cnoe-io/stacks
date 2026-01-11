@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgateway-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: cr.kgateway.dev/kgateway-dev/charts
+    chart: kgateway-crds
+    targetRevision: v2.2.0-beta.3
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kgateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

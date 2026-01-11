@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Tailscale applications - remote access
+resources:
+  - apps/argocd-tailscale-serve.yaml
+  - apps/backstage-tailscale-serve.yaml
+  - apps/caipe-tailscale-serve.yaml
+  - apps/flipt-tailscale-serve.yaml
+  - apps/gitea-tailscale-serve.yaml
+  - apps/grafana-tailscale-serve.yaml
+  - apps/k8s-api-tailscale-serve.yaml
+  - apps/kagent-tailscale-serve.yaml
+  - apps/kargo-tailscale-serve.yaml
+  - apps/keycloak-tailscale-serve.yaml
+  - apps/langfuse-tailscale-serve.yaml
+  - apps/loki-tailscale-serve.yaml
+  - apps/mimir-tailscale-serve.yaml
+  - apps/otel-collector-tailscale-serve.yaml
+  - apps/tailscale-crds.yaml
+  - apps/tailscale-operator-secrets.yaml
+  - apps/tailscale-operator.yaml
+  - apps/tailscale-rbac.yaml
+  - apps/tailscale-secrets.yaml
+  - apps/tailscale-subnet-router.yaml

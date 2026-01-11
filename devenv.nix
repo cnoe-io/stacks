@@ -13,8 +13,9 @@
     pkgs.skopeo
     pkgs.kubectl
     pkgs.kubernetes-helm
+    pkgs.kustomize
     pkgs.argocd
-    pkgs.watchexec  # File watcher for nixidy development
+    pkgs.watchexec  # File watcher for auto-rebuild on manifest changes
   ];
 
   # Custom scripts for development workflows
@@ -68,91 +69,82 @@
       argocd --server argocd-hub.tail286401.ts.net --grpc-web app sync --all
     '';
 
-    # Nixidy watch mode - watches nixidy/ and .env-files/ for changes
-    "nixidy-watch".exec = ''
-      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-      echo "Starting nixidy file watcher..."
-      echo "Watching: $STACKS_DIR/nixidy/, $STACKS_DIR/.env-files/"
-      echo "Debounce: ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms"
-      echo "ArgoCD sync: ''${NIXIDY_WATCH_SYNC_ARGOCD:-true}"
-      echo ""
-      echo "Press Ctrl+C to stop"
-      echo ""
+    # Build kustomize packages for the current host
+    "kustomize-build".exec = ''
+      cd "$DEVENV_ROOT/packages"
+      make build-kind
+    '';
 
-      exec watchexec \
-        --debounce "''${NIXIDY_WATCH_DEBOUNCE:-2000}ms" \
-        --exts nix,env,yaml \
-        --watch "$STACKS_DIR/nixidy" \
-        --watch "$STACKS_DIR/.env-files" \
-        --ignore "result*" \
+    # Apply manifests to cluster (one-shot, exits when done)
+    "apply-manifests".exec = ''
+      source "$DEVENV_ROOT/deployment/scripts/cluster-menu.sh"
+      cluster-update
+    '';
+
+    # Watch source manifests and rebuild on change (manual alternative to devenv up)
+    "watch-kustomize".exec = ''
+      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+      echo "👁️  Watching packages/ for changes (Ctrl+C to stop)..."
+      watchexec \
+        --debounce 2000ms \
+        --exts yaml,yml \
+        --watch "$DEVENV_ROOT/packages/base" \
+        --watch "$DEVENV_ROOT/packages/components" \
+        --watch "$DEVENV_ROOT/packages/overlays" \
         --ignore "dist" \
-        --ignore ".direnv" \
-        --ignore "*.lock" \
-        -- "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
-    '';
-
-    # Manual nixidy rebuild (one-shot, no watching)
-    "nixidy-rebuild".exec = ''
-      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-      "$STACKS_DIR/scripts/nixidy-watch-handler.sh"
-    '';
-
-    # Gitea webhook listener - streams push notifications with desktop notifications
-    # KIND on Linux can't reach host, so we deploy a receiver pod and stream its logs
-    "gitea-listen".exec = ''
-      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-      exec "$STACKS_DIR/scripts/gitea-webhook-notify.sh"
-    '';
-
-    # Register webhooks with all Gitea repos (one-time setup)
-    "gitea-webhook-setup".exec = ''
-      STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-      source "$STACKS_DIR/.env-files/kind.env" 2>/dev/null || true
-      exec "$STACKS_DIR/scripts/gitea-webhook-setup-devenv.sh"
+        -- sh -c "echo '🔄 Change detected...'; cd '$DEVENV_ROOT/packages' && make build-kind-$CLUSTER_NAME"
     '';
   };
 
   # Background processes for `devenv up`
   processes = {
-    # Nixidy file watcher - auto-rebuilds and deploys on file changes
-    nixidy-watch = {
+    # Unified file watcher + idpbuilder process
+    # Watches source manifests, rebuilds kustomize, and applies via idpbuilder
+    idpbuilder = {
       exec = ''
-        STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-        # Use script -q to create a pseudo-TTY, enabling watchexec to forward child output
-        # The -c option runs the command, -q suppresses script's own messages
-        exec script -q -c "watchexec \
-          --debounce ''${NIXIDY_WATCH_DEBOUNCE:-2000}ms \
-          --exts nix,env,yaml \
-          --watch $STACKS_DIR/nixidy \
-          --watch $STACKS_DIR/.env-files \
-          --ignore 'result*' \
-          --ignore dist \
-          --ignore .direnv \
-          --ignore '*.lock' \
-          -- $STACKS_DIR/scripts/nixidy-watch-handler.sh" /dev/null
-      '';
-      # Restart policy for process-compose
-      process-compose = {
-        availability = {
-          restart = "on_failure";
-          max_restarts = 10;
-          backoff_seconds = 5;
-        };
-      };
-    };
+        CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+        KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
 
-    # Gitea webhook listener - streams push notifications with desktop notifications
-    # KIND on Linux can't reach host, so we deploy a receiver pod and stream its logs
-    gitea-webhook = {
-      exec = ''
-        STACKS_DIR="''${STACKS_DIR:-$DEVENV_ROOT}"
-        exec "$STACKS_DIR/scripts/gitea-webhook-notify.sh"
+        # Initial build
+        echo "🔨 Initial kustomize build..."
+        cd "$DEVENV_ROOT/packages"
+        make build-kind-$CLUSTER_NAME 2>&1
+
+        # Initial apply
+        echo ""
+        echo "🚀 Initial idpbuilder apply..."
+        idpbuilder create \
+          --name "$CLUSTER_NAME" \
+          -p "$DEVENV_ROOT/packages/dist/$KUSTOMIZE_BUILD_ENV/" \
+          --package-custom-file "nginx:$DEVENV_ROOT/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
+          --kind-config "$DEVENV_ROOT/deployment/config/kind-config.yaml" \
+          --dev-password \
+          --color \
+          --log-level warn
+
+        # Start file watcher - rebuilds and re-applies on source changes
+        echo ""
+        echo "👁️  Watching source manifests for changes..."
+        echo "   Directories: packages/base/, components/, overlays/"
+        echo "   Debounce: 2000ms"
+        echo ""
+        exec watchexec \
+          --debounce 2000ms \
+          --exts yaml,yml \
+          --watch "$DEVENV_ROOT/packages/base" \
+          --watch "$DEVENV_ROOT/packages/components" \
+          --watch "$DEVENV_ROOT/packages/overlays" \
+          --ignore "dist" \
+          --ignore ".direnv" \
+          --ignore "result*" \
+          --on-busy-update restart \
+          -- "$DEVENV_ROOT/deployment/scripts/devenv-watch-handler.sh"
       '';
       process-compose = {
         availability = {
           restart = "on_failure";
           max_restarts = 5;
-          backoff_seconds = 3;
+          backoff_seconds = 10;
         };
       };
     };
@@ -161,18 +153,14 @@
   # Shell initialization message
   enterShell = ''
     echo "=================================================================="
-    echo "  Hub-and-Spoke GitOps Development Environment"
+    echo "  Kustomize GitOps Development Environment"
     echo "=================================================================="
     echo ""
-    echo "Nixidy Watch Mode (Auto-rebuild on file changes):"
-    echo "  devenv up                        # Start watcher as background process"
-    echo "  nixidy-watch                     # Start watcher in foreground"
-    echo "  nixidy-rebuild                   # One-shot rebuild (no watching)"
-    echo ""
-    echo "CDK8s Commands (Legacy):"
-    echo "  synth-kind                       # Synthesize manifests for KIND"
-    echo "  synth-talos                      # Synthesize manifests for Talos (hub)"
-    echo "  compile                          # TypeScript compilation check"
+    echo "Manifest Development:"
+    echo "  devenv up                        # Watch + rebuild + apply (unified)"
+    echo "  watch-kustomize                  # Watch + rebuild only (no apply)"
+    echo "  kustomize-build                  # Build kustomize packages (one-shot)"
+    echo "  apply-manifests                  # Apply manifests (one-shot)"
     echo ""
     echo "Hub Kargo Commands:"
     echo "  hub-kargo-status                 # Show hub Kargo resources"
@@ -182,17 +170,6 @@
     echo "  hub-argocd-apps                  # List hub ArgoCD applications"
     echo "  hub-argocd-sync-all              # Sync all hub ArgoCD apps"
     echo ""
-    echo "Gitea Change Notifications:"
-    echo "  gitea-listen                     # Start webhook listener (foreground)"
-    echo "  gitea-webhook-setup              # Register webhooks with all repos (one-time)"
-    echo "  (devenv up starts listener automatically on port 9999)"
-    echo ""
-    echo "Configuration:"
-    echo "  NIXIDY_WATCH_DEBOUNCE=2000       # Debounce delay in ms"
-    echo "  NIXIDY_WATCH_POLL=1000           # Poll interval in ms (for Claude Code edits)"
-    echo "  NIXIDY_WATCH_SYNC_ARGOCD=true    # Auto-sync ArgoCD after deploy"
-    echo "  NIXIDY_WATCH_SHOW_DIFF=false     # Show detailed manifest diffs"
-    echo ""
   '';
 
   # Environment variables
@@ -201,13 +178,5 @@
     CLUSTER_TYPE = "kind";
     # Tailnet name for service URLs
     TAILNET_NAME = "tail286401";
-    # Nixidy watch mode configuration
-    NIXIDY_WATCH_DEBOUNCE = "2000";      # Debounce delay in milliseconds
-    NIXIDY_WATCH_POLL = "1000";          # Poll interval in ms (needed for Claude Code edits)
-    NIXIDY_WATCH_SYNC_ARGOCD = "true";   # Auto-sync ArgoCD after deploy
-    NIXIDY_WATCH_SHOW_DIFF = "false";    # Show detailed diff of changed manifests
-    # Gitea webhook listener configuration
-    GITEA_WEBHOOK_PORT = "9999";         # Port for webhook listener
-    GITEA_URL = "https://gitea.cnoe.localtest.me:8443";  # Gitea server URL
   };
 }

@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app.kubernetes.io/component: tls-cert
+    app.kubernetes.io/name: ingress-nginx-cert
+  name: copy-ingress-tls-cert
+  namespace: ingress-nginx
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+        - command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Copying idpbuilder-cert to persistent-tls-cert..."
+              if kubectl get secret persistent-tls-cert -n ingress-nginx 2>/dev/null; then
+                echo "persistent-tls-cert already exists, skipping"
+                exit 0
+              fi
+              kubectl get secret idpbuilder-cert -n ingress-nginx -o json | \
+                jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.managedFields) | .metadata.name = "persistent-tls-cert"' | \
+                kubectl apply -f -
+              echo "Certificate copied successfully"
+          image: bitnami/kubectl:1.30
+          name: copy-cert
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+      restartPolicy: OnFailure
+      serviceAccountName: copy-cert-sa
+  ttlSecondsAfterFinished: 3600

@@ -1,0 +1,77 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    kargo.akuity.io/color: yellow
+  labels:
+    app.kubernetes.io/component: stage
+    app.kubernetes.io/name: backstage-staging-stage
+    app.kubernetes.io/part-of: kargo-pipelines
+  name: backstage-staging
+  namespace: kargo-pipelines
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+        - as: clone-repo
+          config:
+            checkout:
+              - branch: main
+                path: ./src
+              - branch: stage/staging
+                create: true
+                path: ./out
+            repoURL: ${{ vars.gitRepoURL }}
+          uses: git-clone
+        - as: clear-output
+          config:
+            path: ./out
+          uses: git-clear
+        - as: update-image
+          config:
+            images:
+              - image: ${{ vars.imageRepoURL }}
+                tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
+            path: ./src/${{ vars.overlayPath }}
+          uses: kustomize-set-image
+        - as: render-manifests
+          config: ./out/manifests/
+          uses: kustomize-build
+        - as: commit-changes
+          config:
+            message: |
+              chore(staging): update backstage to ${{ imageFrom(vars.imageRepoURL).Tag }}
+
+              Promoted from: dev
+              Image: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
+            path: ./out
+          uses: git-commit
+        - as: push-changes
+          config:
+            path: ./out
+          uses: git-push
+        - as: sync-argocd
+          config:
+            apps:
+              - name: ${{ vars.argoAppName }}
+                namespace: argocd
+                sources:
+                  - desiredRevision: ${{ outputs['push-changes'].commit }}
+                    repoURL: ${{ vars.gitRepoURL }}
+          uses: argocd-update
+      vars:
+        - name: gitRepoURL
+          value: https://github.com/PittampalliOrg/backstage-config.git
+        - name: imageRepoURL
+          value: ghcr.io/pittampalliorg/backstage
+        - name: overlayPath
+          value: overlays/staging
+        - name: argoAppName
+          value: backstage-staging
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: backstage
+      sources:
+        stages:
+          - backstage-dev
