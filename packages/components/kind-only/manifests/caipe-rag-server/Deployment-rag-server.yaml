@@ -19,16 +19,19 @@ spec:
       containers:
         - args:
             - |
-              # Set PYTHONPATH so patched module is found first
-              export PYTHONPATH=/tmp/patched:$PYTHONPATH
-              # Verify patch
+              # Verify patches
               grep "_index_params = " /tmp/patched/server/restapi.py | head -2
-              # Start the server
+              echo "Embeddings chunk_size:"
+              grep "chunk_size" /tmp/patched/common/embeddings_factory.py
+              # Start the server (PYTHONPATH set via env var)
               exec python -m uvicorn server.restapi:app --host 0.0.0.0 --port 9446
           command:
             - /bin/sh
             - -c
           env:
+            # PYTHONPATH for patched modules (common, server)
+            - name: PYTHONPATH
+              value: /tmp/patched
             - name: MILVUS_URI
               value: http://milvus.ai-platform-engineering.svc.cluster.local:19530
             - name: SKIP_INIT_TESTS
@@ -48,9 +51,26 @@ spec:
             - name: EMBEDDINGS_MODEL
               value: text-embedding-3-large
             - name: EMBEDDING_BATCH_SIZE
-              value: "16"
+              value: "8"
             - name: MAX_DOCS_PER_INGEST
-              value: "50"
+              value: "25"
+            # Override Azure OpenAI for embeddings (900 req/min vs S0 limits)
+            # These override values from llm-secret for embedding calls
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_OPENAI_EMBEDDINGS_API_KEY
+                  name: embeddings-secret
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  key: AZURE_OPENAI_EMBEDDINGS_ENDPOINT
+                  name: embeddings-secret
+            # Override Azure deployment for embeddings (llm-secret has gpt-4o)
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: text-embedding-3-large
+            - name: OPENAI_API_TYPE
+              value: azure
             - name: ENABLE_GRAPH_RAG
               value: "true"
             # Tracing configuration
@@ -131,8 +151,16 @@ spec:
               # Patch 4: Update index_params in healthz response (remove sparse)
               sed -i 's/"index_params": {"dense": dense_index_params, "sparse": sparse_index_params}/"index_params": {"dense": dense_index_params}/' /tmp/patched/server/restapi.py
 
+              # Patch 5: Add chunk_size to embeddings to avoid rate limits
+              # Copy entire common module and patch embeddings_factory
+              cp -r /app/server/.venv/lib/python3.13/site-packages/common /tmp/patched/
+              # Patch: Add chunk_size=16 to AzureOpenAIEmbeddings
+              sed -i 's/return AzureOpenAIEmbeddings(model=model)/return AzureOpenAIEmbeddings(model=model, chunk_size=16)/' /tmp/patched/common/embeddings_factory.py
+
               echo "Patched for Milvus 2.4.x compatibility (dense-only vectors):"
               grep -n "vector_field\|index_params=" /tmp/patched/server/restapi.py | head -6
+              echo "Patched embeddings_factory for chunk_size=16:"
+              grep -n "chunk_size" /tmp/patched/common/embeddings_factory.py
           command:
             - /bin/sh
             - -c
