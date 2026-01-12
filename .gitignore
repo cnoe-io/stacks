@@ -31,7 +31,9 @@ scripts/certificates/system/
 **/kubeconfig.yaml
 **/.kube/
 
-# Nixidy build artifacts (legacy, removed)
+# Legacy approaches (removed in kustomize migration)
+cdk8s/
+nixidy/
 nixidy-dist/
 
 # NixOS VM images (large binary files, built from Nix configs)
