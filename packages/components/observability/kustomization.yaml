@@ -7,6 +7,9 @@ resources:
   - apps/observability-namespace.yaml
   - apps/observability-secrets.yaml
 
+  # Prometheus CRDs (for ServiceMonitor support)
+  - apps/prometheus-crds.yaml
+
   # LGTM stack - Helm-based
   - apps/loki.yaml
   - apps/tempo.yaml
