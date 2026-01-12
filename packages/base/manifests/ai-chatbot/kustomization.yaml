@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - Namespace-ai-chatbot.yaml
   - ServiceAccount-ai-chatbot.yaml
-  - PersistentVolumeClaim-ai-chatbot-uploads.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - StatefulSet-redis.yaml

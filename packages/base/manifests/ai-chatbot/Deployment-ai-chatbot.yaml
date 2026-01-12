@@ -43,6 +43,11 @@ spec:
               value: "/app/uploads"
             - name: NEXT_PUBLIC_APP_URL
               value: "https://ai-chatbot.cnoe.localtest.me:8443"
+            # NextAuth configuration - trust the proxy/ingress host
+            - name: AUTH_TRUST_HOST
+              value: "true"
+            - name: AUTH_URL
+              value: "https://ai-chatbot.cnoe.localtest.me:8443"
             # OpenTelemetry configuration
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector.observability.svc.cluster.local:4318"
@@ -85,7 +90,6 @@ spec:
             runAsUser: 1001
       volumes:
         - name: uploads
-          persistentVolumeClaim:
-            claimName: ai-chatbot-uploads
+          emptyDir: {}
       securityContext:
         fsGroup: 1001
