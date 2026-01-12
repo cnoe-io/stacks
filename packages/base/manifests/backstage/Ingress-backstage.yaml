@@ -1,7 +1,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations: {}
+  annotations:
+    # Increased timeouts for CAIPE agent requests (Azure OpenAI rate limiting can cause 50s+ retries)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
   name: backstage
   namespace: backstage
 spec:
