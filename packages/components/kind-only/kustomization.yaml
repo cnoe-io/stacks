@@ -10,6 +10,7 @@ resources:
   - apps/caipe-mcp-argocd.yaml
   - apps/caipe-mcp-backstage.yaml
   - apps/caipe-mcp-github.yaml
+  - apps/caipe-attu.yaml
   - apps/caipe-milvus.yaml
   - apps/caipe-namespace.yaml
   - apps/caipe-neo4j.yaml

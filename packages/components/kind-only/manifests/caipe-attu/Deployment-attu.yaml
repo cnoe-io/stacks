@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: attu
+    app.kubernetes.io/component: web-ui
+    app.kubernetes.io/name: attu
+    app.kubernetes.io/part-of: caipe
+  name: attu
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attu
+  template:
+    metadata:
+      labels:
+        app: attu
+        app.kubernetes.io/component: web-ui
+        app.kubernetes.io/name: attu
+        app.kubernetes.io/part-of: caipe
+    spec:
+      containers:
+        - env:
+            - name: MILVUS_URL
+              value: milvus.ai-platform-engineering.svc.cluster.local:19530
+          image: zilliz/attu:v2.4
+          name: attu
+          ports:
+            - containerPort: 3000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi

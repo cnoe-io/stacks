@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: attu
+    app.kubernetes.io/component: web-ui
+    app.kubernetes.io/name: attu
+    app.kubernetes.io/part-of: caipe
+  name: attu
+  namespace: ai-platform-engineering
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+  selector:
+    app: attu

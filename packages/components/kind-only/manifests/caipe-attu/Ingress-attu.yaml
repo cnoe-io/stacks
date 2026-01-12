@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  labels:
+    app: attu
+    app.kubernetes.io/component: web-ui
+    app.kubernetes.io/name: attu
+    app.kubernetes.io/part-of: caipe
+  name: attu
+  namespace: ai-platform-engineering
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: attu.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: attu
+                port:
+                  number: 3000
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - attu.cnoe.localtest.me
