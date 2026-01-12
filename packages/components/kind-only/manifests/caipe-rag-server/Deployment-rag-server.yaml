@@ -47,6 +47,10 @@ spec:
               value: http://nexigraph.ai-platform-engineering.svc.cluster.local:8000
             - name: EMBEDDINGS_MODEL
               value: text-embedding-3-large
+            - name: EMBEDDING_BATCH_SIZE
+              value: "16"
+            - name: MAX_DOCS_PER_INGEST
+              value: "50"
             - name: ENABLE_GRAPH_RAG
               value: "true"
             # Tracing configuration

@@ -74,8 +74,12 @@ spec:
               value: ${TAILSCALE_HOST}
             - name: SYNC_INTERVAL
               value: "3600"
+            - name: MAX_DOCS_PER_INGEST
+              value: "50"
+            # Reduced resource types to avoid Azure OpenAI S0 rate limits
+            # Full list: Deployment,Service,Ingress,Namespace,ConfigMap,StatefulSet,DaemonSet,CronJob,Job,Pod
             - name: RESOURCE_LIST
-              value: Deployment,Service,Ingress,Namespace,ConfigMap,StatefulSet,DaemonSet,CronJob,Job,Pod
+              value: Deployment,Service,Ingress,Namespace
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
