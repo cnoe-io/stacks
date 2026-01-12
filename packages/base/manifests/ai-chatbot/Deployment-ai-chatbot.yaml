@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: ai-chatbot
+  namespace: ai-chatbot
+  labels:
+    app.kubernetes.io/name: ai-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-chatbot
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ai-chatbot
+        app.kubernetes.io/name: ai-chatbot
+    spec:
+      serviceAccountName: ai-chatbot
+      containers:
+        - name: ai-chatbot
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: UPLOAD_DIR
+              value: "/app/uploads"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://ai-chatbot.cnoe.localtest.me:8443"
+            # OpenTelemetry configuration
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4318"
+            - name: OTEL_SERVICE_NAME
+              value: "ai-chatbot"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=production,service.namespace=ai-chatbot"
+          envFrom:
+            - secretRef:
+                name: ai-chatbot-secrets
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: ai-chatbot-uploads
+      securityContext:
+        fsGroup: 1001

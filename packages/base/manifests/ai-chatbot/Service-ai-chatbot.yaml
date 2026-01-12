@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-chatbot
+  namespace: ai-chatbot
+  labels:
+    app.kubernetes.io/name: ai-chatbot
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: ai-chatbot

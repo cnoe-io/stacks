@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  name: ai-chatbot
+  namespace: ai-chatbot
+  labels:
+    app.kubernetes.io/name: ai-chatbot
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ai-chatbot.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-chatbot
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - ai-chatbot.cnoe.localtest.me
+      secretName: nginx-tls
