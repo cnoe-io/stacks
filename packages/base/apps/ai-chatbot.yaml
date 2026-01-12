@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://ai-chatbot/manifests
-    targetRevision: HEAD
-    path: "."
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: main
+    path: packages/base/manifests/ai-chatbot
   destination:
     server: https://kubernetes.default.svc
     namespace: ai-chatbot
