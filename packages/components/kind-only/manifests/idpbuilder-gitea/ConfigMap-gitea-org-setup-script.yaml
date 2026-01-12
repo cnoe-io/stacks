@@ -5,7 +5,6 @@ data:
     set -e
 
     GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
-    ORG_NAME="backstage"
 
     # Read credentials from mounted secret
     GITEA_USER=$(cat /gitea-credentials/username)
@@ -18,36 +17,46 @@ data:
     done
     echo "Gitea is ready!"
 
-    # Check if organization already exists
-    echo "Checking if organization '$ORG_NAME' exists..."
-    ORG_CHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
-      -u "$GITEA_USER:$GITEA_PASS" \
-      "$GITEA_URL/api/v1/orgs/$ORG_NAME" 2>/dev/null || echo "000")
+    # Function to create an organization if it doesn't exist
+    create_org() {
+      local org_name="$1"
+      local description="$2"
 
-    if [ "$ORG_CHECK" = "200" ]; then
-      echo "Organization '$ORG_NAME' already exists, skipping creation"
-      exit 0
-    fi
+      echo "Checking if organization '$org_name' exists..."
+      ORG_CHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
+        -u "$GITEA_USER:$GITEA_PASS" \
+        "$GITEA_URL/api/v1/orgs/$org_name" 2>/dev/null || echo "000")
 
-    echo "Creating organization '$ORG_NAME'..."
-    RESULT=$(curl -sf -X POST \
-      -u "$GITEA_USER:$GITEA_PASS" \
-      -H "Content-Type: application/json" \
-      -d "{\"username\": \"$ORG_NAME\", \"visibility\": \"public\", \"description\": \"Default organization for Backstage templates\"}" \
-      "$GITEA_URL/api/v1/orgs" 2>&1) || {
-        echo "Failed to create organization: $RESULT"
-        # Check if it was created by someone else
-        ORG_RECHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
-          -u "$GITEA_USER:$GITEA_PASS" \
-          "$GITEA_URL/api/v1/orgs/$ORG_NAME" 2>/dev/null || echo "000")
-        if [ "$ORG_RECHECK" = "200" ]; then
-          echo "Organization exists now (created by another process)"
-          exit 0
-        fi
-        exit 1
-      }
+      if [ "$ORG_CHECK" = "200" ]; then
+        echo "Organization '$org_name' already exists, skipping creation"
+        return 0
+      fi
 
-    echo "Organization '$ORG_NAME' created successfully!"
+      echo "Creating organization '$org_name'..."
+      RESULT=$(curl -sf -X POST \
+        -u "$GITEA_USER:$GITEA_PASS" \
+        -H "Content-Type: application/json" \
+        -d "{\"username\": \"$org_name\", \"visibility\": \"public\", \"description\": \"$description\"}" \
+        "$GITEA_URL/api/v1/orgs" 2>&1) || {
+          echo "Failed to create organization: $RESULT"
+          # Check if it was created by someone else
+          ORG_RECHECK=$(curl -sf -o /dev/null -w "%{http_code}" \
+            -u "$GITEA_USER:$GITEA_PASS" \
+            "$GITEA_URL/api/v1/orgs/$org_name" 2>/dev/null || echo "000")
+          if [ "$ORG_RECHECK" = "200" ]; then
+            echo "Organization exists now (created by another process)"
+            return 0
+          fi
+          return 1
+        }
+
+      echo "Organization '$org_name' created successfully!"
+    }
+
+    # Create required organizations
+    create_org "backstage" "Default organization for Backstage templates"
+
+    echo "All organizations setup complete!"
 kind: ConfigMap
 metadata:
   name: gitea-org-setup-script
