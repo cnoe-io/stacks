@@ -44,7 +44,7 @@ spec:
             - name: REDIS_URL
               value: redis://redis.ai-platform-engineering.svc.cluster.local:6379/0
             - name: ONTOLOGY_AGENT_RESTAPI_ADDR
-              value: http://nexigraph.ai-platform-engineering.svc.cluster.local:8098
+              value: http://nexigraph.ai-platform-engineering.svc.cluster.local:8000
             - name: EMBEDDINGS_MODEL
               value: text-embedding-3-large
             - name: ENABLE_GRAPH_RAG
