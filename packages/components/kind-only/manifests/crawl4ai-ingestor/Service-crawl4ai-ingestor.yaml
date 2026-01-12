@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: crawl4ai-ingestor
+    app.kubernetes.io/component: ingestor
+    app.kubernetes.io/name: crawl4ai-ingestor
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai-ingestor
+  namespace: ai-platform-engineering
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: crawl4ai-ingestor

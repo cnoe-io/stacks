@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: crawl4ai-ingestor
+    app.kubernetes.io/component: ingestor
+    app.kubernetes.io/name: crawl4ai-ingestor
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai-ingestor
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawl4ai-ingestor
+  template:
+    metadata:
+      labels:
+        app: crawl4ai-ingestor
+        app.kubernetes.io/component: ingestor
+        app.kubernetes.io/name: crawl4ai-ingestor
+    spec:
+      initContainers:
+        - name: install-deps
+          image: python:3.11-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              pip install --target=/app/deps fastapi uvicorn pymilvus openai
+          volumeMounts:
+            - name: deps
+              mountPath: /app/deps
+      containers:
+        - name: ingestor
+          image: python:3.11-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              export PYTHONPATH=/app/deps:$PYTHONPATH
+              python /app/main.py
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: MILVUS_URI
+              value: "http://milvus.ai-platform-engineering.svc.cluster.local:19530"
+            - name: COLLECTION_NAME
+              value: "crawl4ai_documents"
+            - name: EMBEDDING_MODEL
+              value: "text-embedding-3-large"
+            - name: EMBEDDING_DIM
+              value: "3072"
+            - name: LOG_LEVEL
+              value: "INFO"
+          envFrom:
+            - secretRef:
+                name: embeddings-secret
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: deps
+              mountPath: /app/deps
+            - name: code
+              mountPath: /app/main.py
+              subPath: main.py
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: deps
+          emptyDir: {}
+        - name: code
+          configMap:
+            name: crawl4ai-ingestor-code

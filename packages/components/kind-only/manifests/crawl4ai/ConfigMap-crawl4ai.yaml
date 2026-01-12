@@ -71,6 +71,15 @@ data:
           - "--allow-insecure-localhost"
           - "--ignore-certificate-errors"
 
+    # API Configuration - Webhook for auto-ingestion to Milvus
+    api:
+      crawler:
+        webhook:
+          default_url: "http://crawl4ai-ingestor.ai-platform-engineering.svc.cluster.local:8080/webhook/crawl4ai"
+          default_headers:
+            X-Webhook-Source: "crawl4ai"
+            Content-Type: "application/json"
+
     # Logging
     logging:
       level: "INFO"
