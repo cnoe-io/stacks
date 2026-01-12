@@ -46,12 +46,30 @@ data:
 
     # Crawler Configuration
     crawler:
+      base_config:
+        simulate_user: true
+      pool:
+        max_pages: 40
+        idle_ttl_sec: 300
       memory_threshold_percent: 85.0
       rate_limiter:
+        enabled: true
         base_delay: [1.0, 2.0]
       timeouts:
         stream_init: 30.0
         batch_process: 300.0
+      browser:
+        kwargs:
+          headless: true
+          text_mode: true
+        extra_args:
+          - "--no-sandbox"
+          - "--disable-dev-shm-usage"
+          - "--disable-gpu"
+          - "--disable-software-rasterizer"
+          - "--disable-web-security"
+          - "--allow-insecure-localhost"
+          - "--ignore-certificate-errors"
 
     # Logging
     logging:
