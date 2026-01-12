@@ -145,7 +145,7 @@ spec:
             - name: RAG_AGENT_HOST
               value: rag-server.ai-platform-engineering.svc.cluster.local
             - name: SKIP_AGENT_CONNECTIVITY_CHECK
-              value: "true"
+              value: "false"
             # Tracing configuration
             - name: ENABLE_TRACING
               value: "true"
