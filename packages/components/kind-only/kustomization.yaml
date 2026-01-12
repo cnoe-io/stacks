@@ -13,6 +13,7 @@ resources:
   - apps/caipe-attu.yaml
   - apps/caipe-milvus.yaml
   - apps/crawl4ai.yaml
+  - apps/crawl4ai-ingestor.yaml
   - apps/caipe-namespace.yaml
   - apps/caipe-neo4j.yaml
   - apps/caipe-nexigraph.yaml

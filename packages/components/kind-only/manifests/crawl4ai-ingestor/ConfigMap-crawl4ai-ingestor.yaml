@@ -1,0 +1,326 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: crawl4ai-ingestor
+    app.kubernetes.io/component: ingestor
+    app.kubernetes.io/name: crawl4ai-ingestor
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai-ingestor-code
+  namespace: ai-platform-engineering
+data:
+  main.py: |
+    """
+    Crawl4AI Ingestor Service
+
+    Receives webhooks from Crawl4AI, chunks content by markdown headers,
+    generates embeddings via Azure OpenAI, and stores in Milvus.
+
+    Based on Milvus best practices:
+    https://milvus.io/docs/build_RAG_with_milvus_and_crawl4ai.md
+    """
+    import os
+    import hashlib
+    import logging
+    from datetime import datetime
+    from typing import Optional
+
+    import uvicorn
+    from fastapi import FastAPI, HTTPException
+    from pydantic import BaseModel
+    from pymilvus import MilvusClient, DataType
+    from openai import AzureOpenAI
+
+    # Configuration from environment
+    MILVUS_URI = os.getenv("MILVUS_URI", "http://milvus:19530")
+    COLLECTION_NAME = os.getenv("COLLECTION_NAME", "crawl4ai_documents")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
+    EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "3072"))
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    MAX_CHUNK_SIZE = int(os.getenv("MAX_CHUNK_SIZE", "2000"))
+
+    # Azure OpenAI configuration
+    AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+    AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+    AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT", "text-embedding-3-large")
+
+    # Setup logging
+    logging.basicConfig(level=getattr(logging, LOG_LEVEL))
+    logger = logging.getLogger(__name__)
+
+    app = FastAPI(title="Crawl4AI Ingestor", version="1.0.0")
+
+    # Initialize clients (lazy)
+    milvus_client: Optional[MilvusClient] = None
+    openai_client: Optional[AzureOpenAI] = None
+
+
+    def get_milvus_client() -> MilvusClient:
+        """Get or create Milvus client"""
+        global milvus_client
+        if milvus_client is None:
+            logger.info(f"Connecting to Milvus at {MILVUS_URI}")
+            milvus_client = MilvusClient(uri=MILVUS_URI)
+            ensure_collection_exists()
+        return milvus_client
+
+
+    def get_openai_client() -> AzureOpenAI:
+        """Get or create Azure OpenAI client"""
+        global openai_client
+        if openai_client is None:
+            logger.info(f"Initializing Azure OpenAI client")
+            openai_client = AzureOpenAI(
+                api_key=AZURE_OPENAI_API_KEY,
+                api_version=AZURE_OPENAI_API_VERSION,
+                azure_endpoint=AZURE_OPENAI_ENDPOINT
+            )
+        return openai_client
+
+
+    def ensure_collection_exists():
+        """Create Milvus collection if it doesn't exist"""
+        client = milvus_client
+        if not client.has_collection(COLLECTION_NAME):
+            logger.info(f"Creating collection {COLLECTION_NAME}")
+            client.create_collection(
+                collection_name=COLLECTION_NAME,
+                dimension=EMBEDDING_DIM,
+                metric_type="COSINE",
+                auto_id=True
+            )
+            logger.info(f"Collection {COLLECTION_NAME} created")
+
+
+    def chunk_by_headers(markdown: str, max_chunk_size: int = MAX_CHUNK_SIZE) -> list[str]:
+        """
+        Chunk markdown content by headers (Milvus best practice).
+
+        Splits on markdown headers while respecting max chunk size.
+        Preserves header context in each chunk.
+        """
+        chunks = []
+        current_chunk = ""
+        current_header = ""
+
+        for line in markdown.split("\n"):
+            # Check if line is a header
+            if line.startswith("#"):
+                # Save current chunk if not empty
+                if current_chunk.strip():
+                    chunks.append(current_chunk.strip())
+                current_header = line
+                current_chunk = line + "\n"
+            else:
+                potential_chunk = current_chunk + line + "\n"
+
+                # Split if exceeds max size
+                if len(potential_chunk) > max_chunk_size and current_chunk.strip():
+                    chunks.append(current_chunk.strip())
+                    # Start new chunk with header context
+                    current_chunk = current_header + "\n" + line + "\n" if current_header else line + "\n"
+                else:
+                    current_chunk = potential_chunk
+
+        # Don't forget the last chunk
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+
+        # Filter out empty or very small chunks
+        chunks = [c for c in chunks if len(c) > 50]
+
+        return chunks
+
+
+    def generate_embeddings(texts: list[str]) -> list[list[float]]:
+        """Generate embeddings using Azure OpenAI"""
+        client = get_openai_client()
+
+        # Process in batches to avoid rate limits
+        batch_size = 16
+        all_embeddings = []
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            response = client.embeddings.create(
+                model=AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT,
+                input=batch
+            )
+            all_embeddings.extend([d.embedding for d in response.data])
+
+        return all_embeddings
+
+
+    class WebhookPayload(BaseModel):
+        """Crawl4AI webhook payload model"""
+        task_id: str
+        task_type: str = "crawl"
+        status: str
+        timestamp: str
+        urls: list[str]
+        data: Optional[dict] = None
+        error: Optional[str] = None
+
+
+    class ManualIngestPayload(BaseModel):
+        """Manual ingestion payload"""
+        url: str
+        markdown: str
+        metadata: Optional[dict] = None
+
+
+    @app.get("/health")
+    async def health():
+        """Health check endpoint"""
+        return {"status": "healthy", "service": "crawl4ai-ingestor"}
+
+
+    @app.get("/")
+    async def root():
+        """Root endpoint"""
+        return {
+            "service": "crawl4ai-ingestor",
+            "version": "1.0.0",
+            "endpoints": {
+                "webhook": "/webhook/crawl4ai",
+                "ingest": "/ingest",
+                "health": "/health",
+                "stats": "/stats"
+            }
+        }
+
+
+    @app.get("/stats")
+    async def stats():
+        """Get collection statistics"""
+        try:
+            client = get_milvus_client()
+            stats = client.get_collection_stats(COLLECTION_NAME)
+            return {
+                "collection": COLLECTION_NAME,
+                "stats": stats
+            }
+        except Exception as e:
+            logger.error(f"Error getting stats: {e}")
+            return {"error": str(e)}
+
+
+    @app.post("/webhook/crawl4ai")
+    async def webhook_crawl4ai(payload: WebhookPayload):
+        """
+        Webhook endpoint for Crawl4AI job completion.
+
+        Receives completed crawl jobs and ingests content into Milvus.
+        """
+        logger.info(f"Received webhook: task_id={payload.task_id}, status={payload.status}")
+
+        # Only process completed jobs
+        if payload.status != "completed":
+            logger.info(f"Ignoring non-completed job: {payload.status}")
+            return {"status": "ignored", "reason": f"status is {payload.status}"}
+
+        if not payload.data or "markdown" not in payload.data:
+            logger.warning("No markdown data in payload")
+            return {"status": "ignored", "reason": "no markdown data"}
+
+        url = payload.urls[0] if payload.urls else "unknown"
+        markdown = payload.data.get("markdown", "")
+
+        if not markdown:
+            return {"status": "ignored", "reason": "empty markdown"}
+
+        try:
+            result = await ingest_content(url, markdown, payload.timestamp)
+            return result
+        except Exception as e:
+            logger.error(f"Error ingesting content: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+    @app.post("/ingest")
+    async def manual_ingest(payload: ManualIngestPayload):
+        """
+        Manual ingestion endpoint.
+
+        Allows direct ingestion without going through Crawl4AI.
+        """
+        logger.info(f"Manual ingest request for URL: {payload.url}")
+
+        try:
+            timestamp = datetime.utcnow().isoformat()
+            result = await ingest_content(payload.url, payload.markdown, timestamp)
+            return result
+        except Exception as e:
+            logger.error(f"Error in manual ingest: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+    async def ingest_content(url: str, markdown: str, timestamp: str) -> dict:
+        """
+        Core ingestion logic.
+
+        1. Generate URL hash for deduplication
+        2. Delete existing entries for this URL
+        3. Chunk content by headers
+        4. Generate embeddings
+        5. Insert into Milvus
+        """
+        client = get_milvus_client()
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+
+        # Delete existing entries for this URL (deduplication)
+        try:
+            client.delete(
+                collection_name=COLLECTION_NAME,
+                filter=f'url_hash == "{url_hash}"'
+            )
+            logger.info(f"Deleted existing entries for URL hash: {url_hash}")
+        except Exception as e:
+            logger.warning(f"Could not delete existing entries: {e}")
+
+        # Chunk content
+        chunks = chunk_by_headers(markdown)
+        logger.info(f"Created {len(chunks)} chunks from content")
+
+        if not chunks:
+            return {"status": "skipped", "reason": "no valid chunks", "url": url}
+
+        # Generate embeddings
+        logger.info("Generating embeddings...")
+        embeddings = generate_embeddings(chunks)
+
+        # Prepare data for insertion
+        data = [
+            {
+                "vector": emb,
+                "text": chunk,
+                "url": url,
+                "url_hash": url_hash,
+                "chunk_index": i,
+                "crawled_at": timestamp
+            }
+            for i, (chunk, emb) in enumerate(zip(chunks, embeddings))
+        ]
+
+        # Insert into Milvus
+        logger.info(f"Inserting {len(data)} records into Milvus...")
+        result = client.insert(
+            collection_name=COLLECTION_NAME,
+            data=data
+        )
+
+        logger.info(f"Successfully ingested {len(chunks)} chunks for {url}")
+
+        return {
+            "status": "ingested",
+            "url": url,
+            "url_hash": url_hash,
+            "chunks": len(chunks),
+            "insert_count": result.get("insert_count", len(chunks))
+        }
+
+
+    if __name__ == "__main__":
+        logger.info("Starting Crawl4AI Ingestor service...")
+        uvicorn.run(app, host="0.0.0.0", port=8080)
