@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: crawl4ai
+    app.kubernetes.io/component: crawler
+    app.kubernetes.io/name: crawl4ai
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawl4ai
+  template:
+    metadata:
+      labels:
+        app: crawl4ai
+        app.kubernetes.io/component: crawler
+        app.kubernetes.io/name: crawl4ai
+    spec:
+      containers:
+        - name: crawl4ai
+          image: unclecode/crawl4ai:0.7.6
+          ports:
+            - containerPort: 11235
+              name: http
+              protocol: TCP
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          envFrom:
+            - secretRef:
+                name: llm-secret
+            - secretRef:
+                name: crawl4ai-secret
+          env:
+            - name: REDIS_HOST
+              value: "redis.ai-platform-engineering.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_DB
+              value: "1"
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: "http://langfuse.observability.svc.cluster.local:3000"
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - name: config
+              mountPath: /app/config.yml
+              subPath: config.yml
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 11235
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 11235
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 11235
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 30
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "1Gi"
+        - name: config
+          configMap:
+            name: crawl4ai-config

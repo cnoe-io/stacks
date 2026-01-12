@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+  labels:
+    app: crawl4ai
+    app.kubernetes.io/component: crawler
+    app.kubernetes.io/name: crawl4ai
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai
+  namespace: ai-platform-engineering
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: crawl4ai.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: crawl4ai
+                port:
+                  number: 11235
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - crawl4ai.cnoe.localtest.me

@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: crawl4ai
+    app.kubernetes.io/component: crawler
+    app.kubernetes.io/name: crawl4ai
+    app.kubernetes.io/part-of: caipe
+  name: crawl4ai-config
+  namespace: ai-platform-engineering
+data:
+  config.yml: |
+    # Crawl4AI Server Configuration for CAIPE Platform
+    app:
+      title: "Crawl4AI API"
+      version: "0.7.6"
+      host: "0.0.0.0"
+      port: 11235
+      reload: false
+      timeout_keep_alive: 300
+
+    # LLM Configuration - Azure OpenAI via environment variables
+    llm:
+      provider: "azure/gpt-4o-mini"
+
+    # Redis Configuration - Uses CAIPE Redis
+    redis:
+      host: "redis.ai-platform-engineering.svc.cluster.local"
+      port: 6379
+      db: 1
+      password: ""
+
+    # Rate Limiting with Redis backend
+    rate_limiting:
+      enabled: true
+      default_limit: "100/minute"
+      trusted_proxies: []
+      storage_uri: "redis://redis.ai-platform-engineering.svc.cluster.local:6379/1"
+
+    # Security - disabled for internal cluster use
+    security:
+      enabled: false
+      jwt_enabled: false
+      https_redirect: false
+      trusted_hosts: ["*"]
+
+    # Crawler Configuration
+    crawler:
+      memory_threshold_percent: 85.0
+      rate_limiter:
+        base_delay: [1.0, 2.0]
+      timeouts:
+        stream_init: 30.0
+        batch_process: 300.0
+
+    # Logging
+    logging:
+      level: "INFO"
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    # Observability - Prometheus metrics enabled
+    observability:
+      prometheus:
+        enabled: true
+        endpoint: "/metrics"
+      health_check:
+        endpoint: "/health"

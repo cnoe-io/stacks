@@ -12,6 +12,7 @@ resources:
   - apps/caipe-mcp-github.yaml
   - apps/caipe-attu.yaml
   - apps/caipe-milvus.yaml
+  - apps/crawl4ai.yaml
   - apps/caipe-namespace.yaml
   - apps/caipe-neo4j.yaml
   - apps/caipe-nexigraph.yaml
