@@ -123,7 +123,7 @@ data:
               timeout: { minutes: 3 }
       locations:
         - type: url
-          target: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-ryzen-backstage-templates-entities/raw/branch/main/catalog-info.yaml
+          target: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-backstage-templates-entities/raw/branch/main/catalog-info.yaml
           rules:
             - allow: [Component, System, API, Resource, Location, Template, User, Group]
         # Keep local examples for fallback

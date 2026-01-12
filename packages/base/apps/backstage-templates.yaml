@@ -13,6 +13,8 @@ spec:
     repoURL: cnoe://backstage-templates/entities
     targetRevision: HEAD
     path: "."
+    directory:
+      exclude: 'catalog-info.yaml'
   destination:
     server: https://kubernetes.default.svc
     namespace: backstage
