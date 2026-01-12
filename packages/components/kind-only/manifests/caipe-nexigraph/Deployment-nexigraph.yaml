@@ -18,6 +18,9 @@ spec:
     spec:
       containers:
         - env:
+            # Override default port 8098 to match service
+            - name: SERVER_PORT
+              value: "8000"
             - name: NEO4J_ADDR
               value: neo4j://neo4j.ai-platform-engineering.svc.cluster.local:7687
             - name: NEO4J_ONTOLOGY_ADDR
