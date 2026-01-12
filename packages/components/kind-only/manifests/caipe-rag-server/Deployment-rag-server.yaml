@@ -49,6 +49,38 @@ spec:
               value: text-embedding-3-large
             - name: ENABLE_GRAPH_RAG
               value: "true"
+            # Tracing configuration
+            - name: ENABLE_TRACING
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_SERVICE_NAME
+              value: caipe-rag-server
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            # Langfuse configuration
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: http://langfuse.observability.svc.cluster.local:3000
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_PUBLIC_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_SECRET_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SESSION_ID
+              value: ai-platform-engineering
+            - name: LANGFUSE_USER_ID
+              value: rag-server
           envFrom:
             - secretRef:
                 name: llm-secret

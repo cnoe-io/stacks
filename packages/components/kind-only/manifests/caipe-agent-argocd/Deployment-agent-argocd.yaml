@@ -31,6 +31,38 @@ spec:
                 secretKeyRef:
                   key: ARGOCD_AUTH_TOKEN
                   name: agent-argocd-secret
+            # Tracing configuration
+            - name: ENABLE_TRACING
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_SERVICE_NAME
+              value: caipe-agent-argocd
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            # Langfuse configuration
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: http://langfuse.observability.svc.cluster.local:3000
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_PUBLIC_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_SECRET_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SESSION_ID
+              value: ai-platform-engineering
+            - name: LANGFUSE_USER_ID
+              value: argocd-agent
           envFrom:
             - secretRef:
                 name: llm-secret

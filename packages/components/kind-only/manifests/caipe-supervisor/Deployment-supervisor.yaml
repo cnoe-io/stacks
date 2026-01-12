@@ -16,16 +16,119 @@ spec:
       labels:
         app: supervisor
     spec:
+      initContainers:
+        - name: patch-rag-connectivity
+          image: ghcr.io/cnoe-io/ai-platform-engineering:latest
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              # Create startup patch script that monkey-patches the prompts module
+              cat > /tmp/patched/patch_rag.py << 'PATCH_EOF'
+              # Monkey-patch for RAG connectivity check
+              # This patch fixes the issue where RAG tools are loaded via MCP but
+              # the system prompt generation checks the A2A registry which doesn't include RAG
+              import ai_platform_engineering.multi_agents.platform_engineer.prompts as prompts
+              from ai_platform_engineering.multi_agents.platform_engineer.rag_prompts import get_rag_instructions
+              import logging
+              from typing import Dict, Any, Optional
+
+              # Get module-level variables from original module
+              _config = prompts.config
+              _agent_prompts = prompts.agent_prompts
+
+              def patched_generate_system_prompt(agents: Dict[str, Any], rag_config: Optional[Dict[str, Any]] = None):
+                  """Patched version that checks rag_config in addition to agents dict."""
+                  logger = logging.getLogger("ai_platform_engineering.multi_agents.platform_engineer.prompts")
+                  tool_instructions = []
+
+                  # PATCHED: Check both agents dict AND rag_config
+                  # Original: rag_connected = agents.get("rag") is not None
+                  rag_connected = agents.get("rag") is not None or (rag_config is not None and len(rag_config) > 0)
+
+                  if rag_connected:
+                      logger.info("[PATCH] RAG connected via config; including RAG instructions in system prompt")
+                      rag_instructions = get_rag_instructions(rag_config or {})
+                  else:
+                      logger.info("RAG agent not connected; disabling RAG guidance in system prompt")
+                      rag_instructions = (
+                          "RAG tools are NOT available in this deployment. Do NOT mention a RAG knowledge base. "
+                          "If information is missing (org/owner/repo/etc.), ask the user directly."
+                      )
+
+                  # Add instructions for each agent (unchanged from original)
+                  for agent_key, agent_card in agents.items():
+                      logger.debug(f"Generating tool instruction for agent_key: {agent_key}")
+                      if agent_card is None:
+                          logger.warning(f"Agent {agent_key} is None, skipping...")
+                          continue
+                      try:
+                          if agent_card is None:
+                              logger.warning(f"Agent {agent_key} has no agent card, skipping...")
+                              continue
+                          description = agent_card['description']
+                      except (AttributeError, KeyError, TypeError) as e:
+                          logger.warning(f"Agent {agent_key} does not have description: {e}, skipping...")
+                          continue
+                      except Exception as e:
+                          logger.error(f"Error getting agent card for {agent_key}: {e}, skipping...")
+                          continue
+
+                      system_prompt_override = _agent_prompts.get(agent_key, {}).get("system_prompt", None)
+                      if system_prompt_override:
+                          agent_system_prompt = system_prompt_override
+                      else:
+                          agent_system_prompt = description
+
+                      instruction = f"""{agent_key}:\n  {agent_system_prompt}"""
+                      tool_instructions.append(instruction.strip())
+
+                  tool_instructions_str = "\n\n".join(tool_instructions)
+                  yaml_template = _config.get("system_prompt_template")
+
+                  if yaml_template:
+                      return yaml_template.format(
+                          rag_instructions=rag_instructions,
+                          tool_instructions=tool_instructions_str
+                      )
+                  else:
+                      return f"""You are an AI Platform Engineer, a multi-agent system designed to manage operations across various tools.
+
+              LLM Instructions:
+              - Only respond to requests related to the integrated tools. Always call the appropriate agent or tool.
+              - When responding, use markdown format. Make sure all URLs are presented as clickable links.
+
+              {rag_instructions}
+
+              {tool_instructions_str}
+              """
+
+              prompts.generate_system_prompt = patched_generate_system_prompt
+              print("[PATCH] RAG connectivity check patched successfully")
+              PATCH_EOF
+
+              echo "Created monkey-patch script:"
+              head -30 /tmp/patched/patch_rag.py
+          volumeMounts:
+            - mountPath: /tmp/patched
+              name: patched-src
       containers:
         - command:
             - python
-            - -m
-            - ai_platform_engineering.multi_agents
-            - platform-engineer
+            - -c
+          args:
+            - |
+              # Apply patch before importing main module
+              exec(open('/tmp/patched/patch_rag.py').read())
+
+              # Now run the main application
+              from ai_platform_engineering.multi_agents.__main__ import main
+              main(['platform-engineer'])
           env:
             - name: RAG_SERVER_URL
               value: http://rag-server.ai-platform-engineering.svc.cluster.local:8000
-            - name: ENABLE_RAG_AGENT
+            - name: ENABLE_RAG
               value: "true"
             - name: ENABLE_GITHUB
               value: "true"
@@ -39,10 +142,42 @@ spec:
               value: agent-argocd.ai-platform-engineering.svc.cluster.local
             - name: BACKSTAGE_AGENT_HOST
               value: agent-backstage.ai-platform-engineering.svc.cluster.local
-            - name: RAG_AGENT_AGENT_HOST
+            - name: RAG_AGENT_HOST
               value: rag-server.ai-platform-engineering.svc.cluster.local
             - name: SKIP_AGENT_CONNECTIVITY_CHECK
-              value: "false"
+              value: "true"
+            # Tracing configuration
+            - name: ENABLE_TRACING
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_SERVICE_NAME
+              value: caipe-supervisor
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            # Langfuse configuration
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: http://langfuse.observability.svc.cluster.local:3000
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_PUBLIC_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: LANGFUSE_SECRET_KEY
+                  name: langfuse-secret
+            - name: LANGFUSE_SESSION_ID
+              value: ai-platform-engineering
+            - name: LANGFUSE_USER_ID
+              value: platform-engineer
           envFrom:
             - secretRef:
                 name: llm-secret
@@ -57,5 +192,17 @@ spec:
             requests:
               cpu: 200m
               memory: 512Mi
+          volumeMounts:
+            - name: rag-prompt-config
+              mountPath: /app/prompt_config.rag.yaml
+              subPath: prompt_config.rag.yaml
+            - name: patched-src
+              mountPath: /tmp/patched
       imagePullSecrets:
         - name: ghcr-pull-secret
+      volumes:
+        - name: rag-prompt-config
+          configMap:
+            name: prompt-config-rag
+        - name: patched-src
+          emptyDir: {}

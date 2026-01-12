@@ -16,11 +16,55 @@ spec:
       labels:
         app: k8s-ingestor
     spec:
+      initContainers:
+        - name: patch-ingestor
+          image: ghcr.io/cnoe-io/caipe-rag-ingestors:latest
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              # Copy ingestor source to writable location
+              mkdir -p /tmp/patched/ingestors/src/ingestors/k8s
+              cp /app/ingestors/src/ingestors/k8s/ingestor.py /tmp/patched/ingestors/src/ingestors/k8s/
+
+              # Patch: Fix in-cluster client creation using Python
+              # The bug is that new_client_from_config() ignores load_incluster_config()
+              # After load_incluster_config(), we need to use client.ApiClient() which uses the loaded config
+              python3 << 'PATCH_EOF'
+              import re
+
+              with open('/tmp/patched/ingestors/src/ingestors/k8s/ingestor.py', 'r') as f:
+                  content = f.read()
+
+              # Add import for kubernetes.client after the config import
+              content = content.replace(
+                  'from kubernetes import config as kconfig',
+                  'from kubernetes import config as kconfig\nfrom kubernetes import client as kclient'
+              )
+
+              # Fix the DynamicClient creation to use kclient.ApiClient()
+              content = content.replace(
+                  'kconfig.new_client_from_config()',
+                  'kclient.ApiClient()'
+              )
+
+              with open('/tmp/patched/ingestors/src/ingestors/k8s/ingestor.py', 'w') as f:
+                  f.write(content)
+
+              print("Patch applied successfully")
+              PATCH_EOF
+
+              echo "Patched k8s ingestor for in-cluster config:"
+              grep -n "kclient\|DynamicClient" /tmp/patched/ingestors/src/ingestors/k8s/ingestor.py
+          volumeMounts:
+            - name: patched-src
+              mountPath: /tmp/patched
       containers:
         - command:
             - python3
           args:
-            - /app/ingestors/src/ingestors/k8s/ingestor.py
+            - /tmp/patched/ingestors/src/ingestors/k8s/ingestor.py
           env:
             - name: IN_CLUSTER
               value: "true"
@@ -56,6 +100,12 @@ spec:
             requests:
               cpu: 100m
               memory: 256Mi
+          volumeMounts:
+            - name: patched-src
+              mountPath: /tmp/patched
       imagePullSecrets:
         - name: ghcr-pull-secret
       serviceAccountName: k8s-ingestor
+      volumes:
+        - name: patched-src
+          emptyDir: {}
