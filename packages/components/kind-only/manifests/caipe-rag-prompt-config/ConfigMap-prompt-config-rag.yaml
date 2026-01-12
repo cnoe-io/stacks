@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prompt-config-rag
+  namespace: ai-platform-engineering
+  labels:
+    app: rag
+    tier: config
+data:
+  prompt_config.rag.yaml: |
+    # RAG (Retrieval-Augmented Generation) Prompt Configuration
+    # This file contains configurable prompts for RAG knowledge base tools
+    # Used by the Platform Engineer supervisor agent
+
+    # ============================================================================
+    # Search Tool Prompt
+    # ============================================================================
+    search_tool_prompt: |
+      ### Search Tool Usage:
+
+      **Search Modes:**
+      - **Semantic (default, `keyword_search=False`)**: Use FULL SENTENCES for natural language
+        - Good: "What is the nexus deployment process?"
+        - Bad: "nexus deployment"
+      - **Keyword (`keyword_search=True`)**: Use SPECIFIC KEYWORDS or exact terms
+        - Good: "ERROR-404", "S3BucketEncryptionDisabled"
+        - Use for error codes, exact names, IP addresses, technical identifiers
+
+      **Search Returns:**
+      The search automatically returns BOTH types in a dictionary:
+      - graph_entity_documents: structured entities from knowledge graph
+      - text_documents: regular docs, wikis, Slack/Webex threads
+
+      **Key Metadata:**
+      - **Graph entities**: `graph_entity_type`, `graph_entity_pk` (or `_entity_pk`), `document_id`
+      - **Text docs**: `document_id`, `title`, `datasource_id`, `document_type`, `source_url`, `source`
+
+      **Recommended Workflow:**
+      1. **Start with search** - Use natural language to get both entities and documents
+      2. **Review both result types**:
+         - Graph entities = structured data with relationships
+         - Text documents = documentation and procedures
+      3. **Dive deeper**:
+         - Entities: Use `graph_explore_data_entity` with type/pk to see relationships
+         - Documents: Use `fetch_document` with document_id for full content
+         - Slack/Webex: Extract info and speak naturally like a colleague
+      4. **Combine insights** - Best answers often use BOTH structured entities AND documentation
+
+      **BE PERSISTENT - Minimum 3 approaches:**
+      - Vary search terms: synonyms, abbreviations, broader/narrower
+      - Toggle semantic/keyword modes
+      - Try different datasource filters
+
+    # ============================================================================
+    # Graph Tools Prompt (used when graph_rag_enabled=true)
+    # ============================================================================
+    graph_tools_prompt: |
+      ### Graph Database Overview:
+
+      **Two Graphs:**
+      1. **Ontology Graph** (Schema): Entity types, properties, and possible relations
+      2. **Data Graph** (Actual Data): Specific entity instances and relationships
+
+      ### Workflow:
+      1. **Search first** - Get entities with `graph_entity_type` and `graph_entity_pk` in metadata
+      2. **Understand schema** (if needed) - Use `graph_explore_ontology_entity` to see properties and relations
+      3. **Explore entities** - Use `graph_explore_data_entity` with type and pk from search. Set `depth` (1-3) for neighbors
+      4. **Complex queries** - Use `graph_raw_query_data` for counts, filtering, aggregations
+
+      **Tool Quick Reference:**
+      - `graph_explore_ontology_entity` - Schema for entity type
+      - `graph_explore_data_entity` - Entity + neighbors (use depth parameter)
+      - `graph_fetch_data_entity_details` - Single entity details only
+      - `graph_raw_query_data` - Complex Cypher queries
+
+    # ============================================================================
+    # Graph Raw Query Notes (used when graph_rag_enabled=true)
+    # ============================================================================
+    graph_raw_query_notes: |
+      ### Raw Cypher Queries (Neo4J):
+
+      **BEFORE Writing Queries:**
+      1. Explore schema with `graph_explore_ontology_entity` to get EXACT property names (case-sensitive!)
+      2. Get entity identifiers from search results (`graph_entity_pk` or `_entity_pk`)
+
+      **Query Rules:**
+      - Use backticks for property names
+      - Always use LIMIT (default 100, use 10 for testing)
+      - Start simple, add complexity incrementally
+
+      **Security:**
+      - ONLY read-only queries (MATCH, RETURN, WHERE, WITH)
+      - NEVER run destructive operations (CREATE/DELETE/SET)
+
+    # ============================================================================
+    # Answer Format Prompt
+    # ============================================================================
+    answer_format_prompt: |
+      ### Answer Format:
+
+      **Do's:**
+      - Use markdown, tables, lists - combine graph entities + documents
+      - Include "References" section with source links from metadata
+      - Only use tool results - NO hallucinations
+      - After 3+ search attempts, if nothing found: "I searched multiple datasources but couldn't find X"
+
+      **Don'ts:**
+      - Show raw JSON/Cypher or mention tool names
+      - Say "According to knowledge base..." - speak naturally
+      - Invent answers or provide general knowledge
+
+      **Historical vs Live Data:**
+      - RAG only: "How do I configure ArgoCD?" (Documentation)
+      - RAG + Sub-agents: "What ArgoCD apps are out of sync?" (RAG for context + ArgoCD agent for live status)
+
+    # ============================================================================
+    # Start RAG Prompt (intro section)
+    # ============================================================================
+    start_rag_prompt: |
+      **Knowledge Base Access:**
+      Text docs (wikis, Confluence, PDFs, Slack/Webex) + Graph entities (structured data: K8s, ArgoCD, infrastructure)
+
+      **Start:** Call `fetch_datasources_and_entity_types` to discover available datasources and entity types
+
+      **BE PERSISTENT - MINIMUM 3 APPROACHES:**
+      1. **Vary terms**: Synonyms, broader/narrower scope, toggle semantic/keyword modes
+      2. **Different datasources**: Filter by datasource_id
+      3. **Change granularity**: Broad to narrow or narrow to broad
+      4. **Explore graph**: Check ontology, use raw queries
+      5. **Related info**: Parent concepts, related threads
+
+      **Stay Grounded:**
+      - Only use tool results - NO hallucinations
+      - After 3+ attempts with no results: "I searched multiple datasources but couldn't find X"
+
+    # ============================================================================
+    # Fallback message when RAG is not available
+    # ============================================================================
+    rag_not_available_message: "RAG tools are not available"

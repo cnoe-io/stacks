@@ -16,6 +16,7 @@ resources:
   - apps/caipe-nexigraph.yaml
   - apps/caipe-rag-ingestors.yaml
   - apps/caipe-rag-k8s-ingestor.yaml
+  - apps/caipe-rag-prompt-config.yaml
   - apps/caipe-rag-server.yaml
   - apps/caipe-rag-webui.yaml
   - apps/caipe-redis.yaml
