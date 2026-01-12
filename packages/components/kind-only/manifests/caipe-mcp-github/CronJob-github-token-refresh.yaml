@@ -1,0 +1,145 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: caipe-github-token-refresh
+  namespace: ai-platform-engineering
+  labels:
+    app.kubernetes.io/name: github-token-refresh
+    app.kubernetes.io/part-of: caipe
+spec:
+  # Run every 45 minutes (installation tokens expire in 1 hour)
+  schedule: "*/45 * * * *"
+  concurrencyPolicy: Replace
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: github-token-refresh
+          restartPolicy: OnFailure
+          containers:
+            - name: token-refresh
+              image: python:3.12-slim
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  pip install -q pyjwt cryptography requests kubernetes
+                  python3 << 'PYTHON'
+                  import jwt
+                  import time
+                  import requests
+                  import os
+                  from kubernetes import client, config
+
+                  # Load in-cluster config
+                  config.load_incluster_config()
+                  v1 = client.CoreV1Api()
+
+                  # Get app credentials from environment
+                  app_id = os.environ['APP_ID']
+                  private_key = os.environ['PRIVATE_KEY']
+                  installation_id = os.environ['INSTALLATION_ID']
+
+                  print(f"Generating token for App ID: {app_id}, Installation: {installation_id}")
+
+                  # Generate JWT
+                  payload = {
+                      "iat": int(time.time()) - 60,
+                      "exp": int(time.time()) + (10 * 60),
+                      "iss": int(app_id)
+                  }
+                  jwt_token = jwt.encode(payload, private_key, algorithm="RS256")
+
+                  # Get installation access token
+                  resp = requests.post(
+                      f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+                      headers={
+                          "Authorization": f"Bearer {jwt_token}",
+                          "Accept": "application/vnd.github+json"
+                      }
+                  )
+
+                  if resp.status_code != 201:
+                      print(f"Failed to get installation token: {resp.status_code}")
+                      print(resp.text)
+                      exit(1)
+
+                  access_token = resp.json()['token']
+                  expires_at = resp.json().get('expires_at', 'unknown')
+                  print(f"Got installation token, expires: {expires_at}")
+
+                  # Update the agent-github-secret
+                  import base64
+                  namespace = "ai-platform-engineering"
+                  secret_name = "agent-github-secret"
+
+                  try:
+                      secret = v1.read_namespaced_secret(secret_name, namespace)
+                      secret.data['GITHUB_TOKEN'] = base64.b64encode(access_token.encode()).decode()
+                      v1.replace_namespaced_secret(secret_name, namespace, secret)
+                      print(f"Updated secret {secret_name}")
+                  except client.exceptions.ApiException as e:
+                      # Secret doesn't exist, create it
+                      secret = client.V1Secret(
+                          metadata=client.V1ObjectMeta(name=secret_name),
+                          data={'GITHUB_TOKEN': base64.b64encode(access_token.encode()).decode()}
+                      )
+                      v1.create_namespaced_secret(namespace, secret)
+                      print(f"Created secret {secret_name}")
+
+                  print("Token refresh complete!")
+                  PYTHON
+              env:
+                - name: APP_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: caipe-github-app-credentials
+                      key: APP_ID
+                - name: PRIVATE_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: caipe-github-app-credentials
+                      key: PRIVATE_KEY
+                - name: INSTALLATION_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: caipe-github-app-credentials
+                      key: INSTALLATION_ID
+              resources:
+                limits:
+                  memory: 256Mi
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-token-refresh
+  namespace: ai-platform-engineering
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-token-refresh
+  namespace: ai-platform-engineering
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "update", "patch", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-token-refresh
+  namespace: ai-platform-engineering
+subjects:
+  - kind: ServiceAccount
+    name: github-token-refresh
+    namespace: ai-platform-engineering
+roleRef:
+  kind: Role
+  name: github-token-refresh
+  apiGroup: rbac.authorization.k8s.io

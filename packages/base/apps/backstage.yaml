@@ -17,8 +17,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: backstage
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync disabled - Kargo manages Backstage deployments via backstage-local-dev
     syncOptions:
       - ServerSideApply=true

@@ -9,6 +9,7 @@ resources:
   - apps/caipe-agent-github.yaml
   - apps/caipe-mcp-argocd.yaml
   - apps/caipe-mcp-backstage.yaml
+  - apps/caipe-mcp-github.yaml
   - apps/caipe-milvus.yaml
   - apps/caipe-namespace.yaml
   - apps/caipe-neo4j.yaml

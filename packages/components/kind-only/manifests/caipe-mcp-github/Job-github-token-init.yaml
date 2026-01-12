@@ -1,0 +1,113 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: caipe-github-token-init
+  namespace: ai-platform-engineering
+  labels:
+    app.kubernetes.io/name: github-token-init
+    app.kubernetes.io/part-of: caipe
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: github-token-refresh
+      restartPolicy: OnFailure
+      containers:
+        - name: token-init
+          image: python:3.12-slim
+          command:
+            - /bin/bash
+            - -c
+            - |
+              pip install -q pyjwt cryptography requests kubernetes
+              python3 << 'PYTHON'
+              import jwt
+              import time
+              import requests
+              import os
+              from kubernetes import client, config
+
+              # Load in-cluster config
+              config.load_incluster_config()
+              v1 = client.CoreV1Api()
+
+              # Get app credentials from environment
+              app_id = os.environ['APP_ID']
+              private_key = os.environ['PRIVATE_KEY']
+              installation_id = os.environ['INSTALLATION_ID']
+
+              print(f"Generating initial token for App ID: {app_id}, Installation: {installation_id}")
+
+              # Generate JWT
+              payload = {
+                  "iat": int(time.time()) - 60,
+                  "exp": int(time.time()) + (10 * 60),
+                  "iss": int(app_id)
+              }
+              jwt_token = jwt.encode(payload, private_key, algorithm="RS256")
+
+              # Get installation access token
+              resp = requests.post(
+                  f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+                  headers={
+                      "Authorization": f"Bearer {jwt_token}",
+                      "Accept": "application/vnd.github+json"
+                  }
+              )
+
+              if resp.status_code != 201:
+                  print(f"Failed to get installation token: {resp.status_code}")
+                  print(resp.text)
+                  exit(1)
+
+              access_token = resp.json()['token']
+              expires_at = resp.json().get('expires_at', 'unknown')
+              print(f"Got installation token, expires: {expires_at}")
+
+              # Update the agent-github-secret
+              import base64
+              namespace = "ai-platform-engineering"
+              secret_name = "agent-github-secret"
+
+              try:
+                  secret = v1.read_namespaced_secret(secret_name, namespace)
+                  secret.data['GITHUB_TOKEN'] = base64.b64encode(access_token.encode()).decode()
+                  v1.replace_namespaced_secret(secret_name, namespace, secret)
+                  print(f"Updated secret {secret_name}")
+              except Exception as e:
+                  print(f"Error updating secret: {e}")
+                  # Try to create it
+                  secret = client.V1Secret(
+                      metadata=client.V1ObjectMeta(name=secret_name),
+                      data={'GITHUB_TOKEN': base64.b64encode(access_token.encode()).decode()}
+                  )
+                  v1.create_namespaced_secret(namespace, secret)
+                  print(f"Created secret {secret_name}")
+
+              print("Initial token generation complete!")
+              PYTHON
+          env:
+            - name: APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: caipe-github-app-credentials
+                  key: APP_ID
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: caipe-github-app-credentials
+                  key: PRIVATE_KEY
+            - name: INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: caipe-github-app-credentials
+                  key: INSTALLATION_ID
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi

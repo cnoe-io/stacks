@@ -18,6 +18,8 @@ spec:
     spec:
       containers:
         - env:
+            - name: MCP_MODE
+              value: http
             - name: GITHUB_PERSONAL_ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:

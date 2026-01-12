@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: caipe-mcp-github
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+  labels:
+    app.kubernetes.io/name: caipe-mcp-github
+    app.kubernetes.io/part-of: caipe
+spec:
+  project: default
+  source:
+    repoURL: cnoe://caipe-mcp-github
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-platform-engineering
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
