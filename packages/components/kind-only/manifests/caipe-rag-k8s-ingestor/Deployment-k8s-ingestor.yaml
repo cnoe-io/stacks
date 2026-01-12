@@ -7,7 +7,7 @@ metadata:
   name: k8s-ingestor
   namespace: ai-platform-engineering
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: k8s-ingestor
@@ -17,7 +17,15 @@ spec:
         app: k8s-ingestor
     spec:
       containers:
-        - env:
+        - command:
+            - python3
+          args:
+            - /app/ingestors/src/ingestors/k8s/ingestor.py
+          env:
+            - name: IN_CLUSTER
+              value: "true"
+            - name: RAG_SERVER_URL
+              value: http://rag-server.ai-platform-engineering.svc.cluster.local:8000
             - name: CLUSTER_NAME
               value: ${TAILSCALE_HOST}
             - name: SYNC_INTERVAL
