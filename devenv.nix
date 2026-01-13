@@ -16,6 +16,10 @@
     pkgs.kustomize
     pkgs.argocd
     pkgs.watchexec  # File watcher for auto-rebuild on manifest changes
+    # Open SWE / LangGraph development
+    pkgs.python311
+    pkgs.python311Packages.pip
+    pkgs.python311Packages.virtualenv
   ];
 
   # Custom scripts for development workflows
@@ -94,6 +98,25 @@
         --ignore "dist" \
         -- sh -c "echo '🔄 Change detected...'; cd '$DEVENV_ROOT/packages' && make build-kind-$CLUSTER_NAME"
     '';
+
+    # Open SWE status check
+    "open-swe-status".exec = ''
+      echo "=== Open SWE Status ==="
+      echo ""
+      echo "Agent Sandbox:"
+      kubectl get sandboxes,sandboxtemplates,sandboxwarmpools -n agent-sandbox 2>/dev/null || echo "  Not deployed yet"
+      echo ""
+      echo "Open SWE Pods:"
+      kubectl get pods -n open-swe 2>/dev/null || echo "  Not deployed yet"
+      echo ""
+      echo "External Secrets:"
+      kubectl get externalsecrets -n open-swe 2>/dev/null || echo "  Not deployed yet"
+    '';
+
+    # Open SWE logs
+    "open-swe-logs".exec = ''
+      kubectl logs -n open-swe -l app.kubernetes.io/name=langgraph-cloud-api-server -f --tail=100
+    '';
   };
 
   # Background processes for `devenv up`
@@ -169,6 +192,10 @@
     echo "Hub ArgoCD Commands:"
     echo "  hub-argocd-apps                  # List hub ArgoCD applications"
     echo "  hub-argocd-sync-all              # Sync all hub ArgoCD apps"
+    echo ""
+    echo "Open SWE Commands:"
+    echo "  open-swe-status                  # Show Open SWE deployment status"
+    echo "  open-swe-logs                    # Tail Open SWE API server logs"
     echo ""
   '';
 

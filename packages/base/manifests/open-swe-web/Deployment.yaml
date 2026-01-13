@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-swe-web
+  namespace: open-swe
+  labels:
+    app: open-swe-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-swe-web
+  template:
+    metadata:
+      labels:
+        app: open-swe-web
+    spec:
+      containers:
+        - name: web
+          image: open-swe-web:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            # GitHub App OAuth (for user authentication)
+            - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: open-swe-github
+                  key: GITHUB_APP_CLIENT_ID
+                  optional: true
+            - name: GITHUB_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: open-swe-github
+                  key: GITHUB_APP_CLIENT_SECRET
+                  optional: true
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: open-swe-github
+                  key: GITHUB_APP_ID
+                  optional: true
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: open-swe-github
+                  key: GITHUB_APP_PRIVATE_KEY
+                  optional: true
+            - name: GITHUB_APP_NAME
+              value: "open-swe-pittampalli"
+            - name: GITHUB_APP_REDIRECT_URI
+              value: "https://open-swe-ui.cnoe.localtest.me:8443/api/auth/github/callback"
+            # LangGraph API connection
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://open-swe-ui.cnoe.localtest.me:8443/api"
+            - name: LANGGRAPH_API_URL
+              value: "http://open-swe-langgraph-cloud-api-server.open-swe.svc.cluster.local:80"
+            # Encryption key (must match the agent)
+            - name: SECRETS_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: open-swe-encryption
+                  key: SECRETS_ENCRYPTION_KEY
+                  optional: true
+            # Local mode - allow all users without API keys
+            - name: NODE_ENV
+              value: "development"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20

@@ -1,0 +1,70 @@
+apiVersion: agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: open-swe-dev
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: open-swe-dev
+    app.kubernetes.io/part-of: open-swe
+spec:
+  description: "Development sandbox template for Open SWE code execution"
+  defaultTimeout: "30m"
+  resourceLimits:
+    cpu: "2"
+    memory: "4Gi"
+    storage: "10Gi"
+  securityPolicy:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    networkPolicy: restricted
+  podTemplate:
+    spec:
+      containers:
+        - name: sandbox
+          image: python:3.11-slim-bookworm
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Install common development tools
+              apt-get update && apt-get install -y --no-install-recommends \
+                git \
+                curl \
+                wget \
+                build-essential \
+                nodejs \
+                npm \
+                && rm -rf /var/lib/apt/lists/*
+              # Keep container running
+              tail -f /dev/null
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: workspace
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30

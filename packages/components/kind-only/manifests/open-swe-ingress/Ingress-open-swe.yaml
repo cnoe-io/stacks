@@ -1,0 +1,115 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: open-swe
+  namespace: open-swe
+  labels:
+    app.kubernetes.io/name: open-swe
+    app.kubernetes.io/part-of: open-swe
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - open-swe.cnoe.localtest.me
+      secretName: nginx-tls
+  rules:
+    - host: open-swe.cnoe.localtest.me
+      http:
+        paths:
+          # Studio UI paths - served by Studio container
+          - path: /studio
+            pathType: Prefix
+            backend:
+              service:
+                name: open-swe-langgraph-cloud-studio
+                port:
+                  number: 80
+          - path: /assets
+            pathType: Prefix
+            backend:
+              service:
+                name: open-swe-langgraph-cloud-studio
+                port:
+                  number: 80
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: open-swe-langgraph-cloud-studio
+                port:
+                  number: 80
+          # API paths - served by API server (default for everything else)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-swe-langgraph-cloud-api-server
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: open-swe-ui
+  namespace: open-swe
+  labels:
+    app.kubernetes.io/name: open-swe-ui
+    app.kubernetes.io/part-of: open-swe
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - open-swe-ui.cnoe.localtest.me
+      secretName: nginx-tls
+  rules:
+    - host: open-swe-ui.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-swe-web
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: open-swe-api
+  namespace: open-swe
+  labels:
+    app.kubernetes.io/name: open-swe-api
+    app.kubernetes.io/part-of: open-swe
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - open-swe-api.cnoe.localtest.me
+      secretName: nginx-tls
+  rules:
+    - host: open-swe-api.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-swe-langgraph-cloud-api-server
+                port:
+                  number: 80

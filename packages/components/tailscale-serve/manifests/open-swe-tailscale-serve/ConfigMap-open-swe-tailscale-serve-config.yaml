@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open-swe-tailscale-serve-config
+  namespace: tailscale
+data:
+  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"open-swe-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}:443":{"Handlers":{"/":{"Proxy":"http://langgraph-cloud-studio.open-swe.svc.cluster.local:3968"}}}}}'

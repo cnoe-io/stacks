@@ -59,3 +59,9 @@ resources:
   - apps/redis.yaml
   - apps/selfsigned-issuer.yaml
   - apps/speckit-agents-rbac.yaml
+  # Open SWE - LangChain async coding agent
+  - apps/agent-sandbox-crds.yaml
+  - apps/agent-sandbox.yaml
+  - apps/open-swe-secrets.yaml
+  - apps/open-swe.yaml
+  - apps/open-swe-web.yaml

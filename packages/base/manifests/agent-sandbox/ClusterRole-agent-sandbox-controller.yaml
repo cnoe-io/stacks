@@ -1,0 +1,87 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-sandbox-controller
+  labels:
+    app.kubernetes.io/name: agent-sandbox-controller
+    app.kubernetes.io/part-of: agent-sandbox
+rules:
+  # Sandbox CRD management
+  - apiGroups:
+      - agents.x-k8s.io
+    resources:
+      - sandboxes
+      - sandboxtemplates
+      - sandboxclaims
+      - sandboxwarmpools
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - agents.x-k8s.io
+    resources:
+      - sandboxes/status
+      - sandboxclaims/status
+      - sandboxwarmpools/status
+    verbs:
+      - get
+      - patch
+      - update
+  # Pod management for sandbox execution
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+      - pods/log
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # Events for status reporting
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  # ConfigMaps and Secrets for sandbox configuration
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  # PVC management for persistent sandboxes
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - watch
+  # Namespace access
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch

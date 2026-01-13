@@ -1,0 +1,139 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: open-swe
+  namespace: argocd
+spec:
+  destination:
+    namespace: open-swe
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    chart: langgraph-cloud
+    helm:
+      valuesObject:
+        # LangGraph Cloud Self-Hosted Lite configuration
+        images:
+          # Custom Open SWE agent image built from https://github.com/langchain-ai/open-swe
+          # Loaded into kind cluster via: kind load docker-image open-swe-agent:latest --name <cluster>
+          apiServerImage:
+            repository: open-swe-agent
+            tag: latest
+            pullPolicy: Never
+          # Use latest studio image which may have jq bug fix
+          studioImage:
+            repository: docker.io/langchain/langgraph-debugger
+            tag: "0.12.75"
+
+        # API Server configuration
+        apiServer:
+          replicas: 1
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          service:
+            type: ClusterIP
+            port: 8000
+          deployment:
+            extraEnv:
+              - name: ANTHROPIC_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: ANTHROPIC_API_KEY
+              - name: OPENAI_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: OPENAI_API_KEY
+              # LANGSMITH_API_KEY is injected by Helm chart from open-swe-langgraph-cloud-secrets
+              - name: LANGFUSE_PUBLIC_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-langfuse
+                    key: LANGFUSE_PUBLIC_KEY
+              - name: LANGFUSE_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-langfuse
+                    key: LANGFUSE_SECRET_KEY
+              - name: LANGFUSE_HOST
+                value: "http://langfuse.observability.svc.cluster.local:3000"
+              - name: GITHUB_APP_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-github
+                    key: GITHUB_APP_ID
+                    optional: true
+              - name: GITHUB_APP_PRIVATE_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-github
+                    key: GITHUB_APP_PRIVATE_KEY
+                    optional: true
+              # Enable local mode to allow testing without GitHub integration
+              - name: OPEN_SWE_LOCAL_MODE
+                value: "true"
+
+        # Studio UI configuration
+        # API is served on same domain via ingress routing
+        studio:
+          enabled: true
+          localGraphUrl: "https://open-swe.cnoe.localtest.me:8443"
+          replicas: 1
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          service:
+            type: ClusterIP
+            port: 3968
+
+        # Use internal PostgreSQL
+        postgres:
+          enabled: true
+          statefulSet:
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: 1000m
+                memory: 2Gi
+            persistence:
+              size: 8Gi
+
+        # Use internal Redis
+        redis:
+          enabled: true
+          deployment:
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+
+        # Configuration secrets (Self-Hosted Lite - no license key needed)
+        config:
+          langGraphCloudLicenseKey: ""
+          apiKey: ""
+    repoURL: https://langchain-ai.github.io/helm/
+    targetRevision: "*"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

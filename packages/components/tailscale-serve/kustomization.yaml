@@ -14,6 +14,7 @@ resources:
   - apps/kargo-tailscale-serve.yaml
   - apps/keycloak-tailscale-serve.yaml
   - apps/langfuse-tailscale-serve.yaml
+  - apps/open-swe-tailscale-serve.yaml
   - apps/loki-tailscale-serve.yaml
   - apps/mimir-tailscale-serve.yaml
   - apps/otel-collector-tailscale-serve.yaml
