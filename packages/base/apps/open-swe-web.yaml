@@ -11,7 +11,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    repoURL: cnoe://open-swe-web
+    repoURL: cnoe://open-swe-web/manifests
     targetRevision: HEAD
     path: "."
   syncPolicy:

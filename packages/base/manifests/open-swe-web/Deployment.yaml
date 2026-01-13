@@ -64,9 +64,9 @@ spec:
                   name: open-swe-encryption
                   key: SECRETS_ENCRYPTION_KEY
                   optional: true
-            # Local mode - allow all users without API keys
+            # Production mode - matches the build configuration
             - name: NODE_ENV
-              value: "development"
+              value: "production"
           resources:
             requests:
               cpu: 250m
