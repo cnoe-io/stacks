@@ -33,6 +33,9 @@ spec:
             spec:
               type: object
               properties:
+                replicas:
+                  type: integer
+                  description: Number of replicas (if applicable)
                 podTemplate:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
@@ -55,6 +58,32 @@ spec:
                     - Terminated
                 podName:
                   type: string
+                replicas:
+                  type: integer
+                selector:
+                  type: string
+                service:
+                  type: string
+                serviceFQDN:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                      reason:
+                        type: string
+                      message:
+                        type: string
                 startTime:
                   type: string
                   format: date-time

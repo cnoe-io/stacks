@@ -3,6 +3,7 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "60"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:open-swe-local-dev
   name: open-swe
   namespace: argocd
 spec:
@@ -18,7 +19,7 @@ spec:
         images:
           apiServerImage:
             repository: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-agent
-            tag: latest
+            tag: v1.0.1
             pullPolicy: IfNotPresent
           # Use latest studio image which may have jq bug fix
           studioImage:
@@ -37,9 +38,13 @@ spec:
               memory: 2Gi
           service:
             type: ClusterIP
-            port: 8000
+            port: 80
           deployment:
             extraEnv:
+              - name: DATABASE_URI
+                value: "postgresql://postgres:postgres@open-swe-langgraph-cloud-postgres.open-swe.svc.cluster.local:5432/postgres?sslmode=disable"
+              - name: OPEN_SWE_LOCAL_MODE
+                value: "true"
               - name: ANTHROPIC_API_KEY
                 valueFrom:
                   secretKeyRef:
@@ -102,11 +107,12 @@ spec:
               memory: 1Gi
           service:
             type: ClusterIP
-            port: 3968
+            port: 80
 
         # Use internal PostgreSQL
         postgres:
           enabled: true
+          password: postgres
           statefulSet:
             resources:
               requests:

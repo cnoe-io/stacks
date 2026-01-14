@@ -26,28 +26,17 @@ spec:
       serviceAccountName: agent-sandbox-controller
       containers:
         - name: controller
-          # Using kubectl as a simple placeholder controller
-          # In production, replace with official agent-sandbox controller image
-          image: bitnami/kubectl:latest
+          image: registry.k8s.io/agent-sandbox/agent-sandbox-controller:v0.1.0
           imagePullPolicy: IfNotPresent
-          command:
-            - /bin/sh
-            - -c
-            - |
-              echo "Agent Sandbox Controller Placeholder"
-              echo "Watching for Sandbox CRDs..."
-              while true; do
-                echo "$(date): Watching sandbox resources..."
-                kubectl get sandboxes,sandboxtemplates,sandboxclaims,sandboxwarmpools -A --no-headers 2>/dev/null || echo "No sandbox resources found"
-                sleep 60
-              done
+          args:
+            - --extensions
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

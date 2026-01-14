@@ -1,11 +1,11 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: sandboxclaims.agents.x-k8s.io
+  name: sandboxclaims.extensions.agents.x-k8s.io
   labels:
     app.kubernetes.io/name: agent-sandbox
 spec:
-  group: agents.x-k8s.io
+  group: extensions.agents.x-k8s.io
   names:
     kind: SandboxClaim
     listKind: SandboxClaimList
@@ -33,9 +33,9 @@ spec:
             spec:
               type: object
               required:
-                - templateRef
+                - sandboxTemplateRef
               properties:
-                templateRef:
+                sandboxTemplateRef:
                   type: object
                   required:
                     - name
@@ -63,6 +63,10 @@ spec:
                     - Bound
                     - Ready
                     - Failed
+                sandbox:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Details of the allocated Sandbox
                 sandboxRef:
                   type: object
                   properties:
@@ -70,18 +74,36 @@ spec:
                       type: string
                     namespace:
                       type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                      reason:
+                        type: string
+                      message:
+                        type: string
                 message:
                   type: string
       additionalPrinterColumns:
         - name: Template
           type: string
-          jsonPath: .spec.templateRef.name
+          jsonPath: .spec.sandboxTemplateRef.name
         - name: Phase
           type: string
           jsonPath: .status.phase
         - name: Sandbox
           type: string
-          jsonPath: .status.sandboxRef.name
+          jsonPath: .status.sandbox
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp

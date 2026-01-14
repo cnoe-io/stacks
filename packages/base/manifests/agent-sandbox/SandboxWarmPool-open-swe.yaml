@@ -1,4 +1,4 @@
-apiVersion: agents.x-k8s.io/v1alpha1
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
 kind: SandboxWarmPool
 metadata:
   name: open-swe-warm-pool
@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/name: open-swe-warm-pool
     app.kubernetes.io/part-of: open-swe
 spec:
-  templateRef:
+  sandboxTemplateRef:
     name: open-swe-dev
     namespace: agent-sandbox
-  size: 2
+  replicas: 2
   minReady: 1

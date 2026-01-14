@@ -39,6 +39,46 @@ rules:
       - pods
       - pods/exec
       - pods/log
+      - services
+      - nodes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # Sandbox Extensions management
+  - apiGroups:
+      - extensions.agents.x-k8s.io
+    resources:
+      - sandboxclaims
+      - sandboxwarmpools
+      - sandboxtemplates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - extensions.agents.x-k8s.io
+    resources:
+      - sandboxclaims/status
+      - sandboxwarmpools/status
+      - sandboxtemplates/status
+    verbs:
+      - get
+      - patch
+      - update
+  # Leader election
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
     verbs:
       - create
       - delete

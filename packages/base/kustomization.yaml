@@ -38,6 +38,7 @@ resources:
   - apps/kagent-crds.yaml
   - apps/kagent-secrets.yaml
   - apps/kagent.yaml
+  - apps/kargo-open-swe-pipeline.yaml
   - apps/kargo-backstage-pipeline.yaml
   - apps/kargo-ca-certificates.yaml
   - apps/kargo-cluster-config.yaml

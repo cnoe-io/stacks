@@ -36,12 +36,10 @@ spec:
             - name: GITEA_RUNNER_LABELS
               value: ubuntu-latest:docker://node:16-bullseye,ubuntu-22.04:docker://node:16-bullseye,ubuntu-20.04:docker://node:16-bullseye,ubuntu-18.04:docker://node:16-buster
             - name: DOCKER_HOST
-              value: unix:///var/run/docker.sock
+              value: tcp://localhost:2375
           volumeMounts:
             - name: runner-data
               mountPath: /data
-            - name: docker-sock
-              mountPath: /var/run
         - name: dind
           image: docker:24-dind
           imagePullPolicy: IfNotPresent
@@ -53,12 +51,8 @@ spec:
           volumeMounts:
             - name: docker-lib
               mountPath: /var/lib/docker
-            - name: docker-sock
-              mountPath: /var/run
       volumes:
         - name: runner-data
           emptyDir: {}
         - name: docker-lib
-          emptyDir: {}
-        - name: docker-sock
           emptyDir: {}

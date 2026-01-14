@@ -1,0 +1,66 @@
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: chrome
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: chrome
+    app.kubernetes.io/part-of: agent-sandbox
+spec:
+  description: "Sandbox template for Chrome browser execution (Headless + CDP)"
+  defaultTimeout: "30m"
+  resourceLimits:
+    cpu: "2"
+    memory: "4Gi"
+    storage: "10Gi"
+  securityPolicy:
+    runAsNonRoot: false
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: true
+    networkPolicy: restricted
+  podTemplate:
+    spec:
+      containers:
+        - name: sandbox
+          image: docker.io/browserless/chrome:latest
+          ports:
+            - containerPort: 3000
+              name: http
+            - containerPort: 9222
+              name: cdp
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: tmp
+              mountPath: /tmp
+            - name: dev-shm
+              mountPath: /dev/shm
+      volumes:
+        - name: workspace
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: dev-shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30

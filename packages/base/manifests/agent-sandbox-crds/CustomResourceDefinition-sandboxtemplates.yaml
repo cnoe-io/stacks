@@ -1,11 +1,11 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: sandboxtemplates.agents.x-k8s.io
+  name: sandboxtemplates.extensions.agents.x-k8s.io
   labels:
     app.kubernetes.io/name: agent-sandbox
 spec:
-  group: agents.x-k8s.io
+  group: extensions.agents.x-k8s.io
   names:
     kind: SandboxTemplate
     listKind: SandboxTemplateList

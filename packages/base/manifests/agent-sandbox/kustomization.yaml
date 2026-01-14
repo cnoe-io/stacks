@@ -7,5 +7,8 @@ resources:
   - ClusterRoleBinding-agent-sandbox-controller.yaml
   - Deployment-agent-sandbox-controller.yaml
   - SandboxTemplate-open-swe-dev.yaml
+  - SandboxTemplate-chrome.yaml
   - SandboxWarmPool-open-swe.yaml
+  - SandboxWarmPool-chrome.yaml
+  - SandboxClaim-chrome-test.yaml
   - ClusterRole-open-swe-sandbox-user.yaml

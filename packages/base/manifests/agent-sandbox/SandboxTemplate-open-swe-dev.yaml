@@ -1,4 +1,4 @@
-apiVersion: agents.x-k8s.io/v1alpha1
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
 kind: SandboxTemplate
 metadata:
   name: open-swe-dev
@@ -14,9 +14,9 @@ spec:
     memory: "4Gi"
     storage: "10Gi"
   securityPolicy:
-    runAsNonRoot: true
+    runAsNonRoot: false
     readOnlyRootFilesystem: false
-    allowPrivilegeEscalation: false
+    allowPrivilegeEscalation: true
     networkPolicy: restricted
   podTemplate:
     spec:
@@ -46,10 +46,10 @@ spec:
               cpu: "2"
               memory: 4Gi
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
             readOnlyRootFilesystem: false
             capabilities:
               drop:
