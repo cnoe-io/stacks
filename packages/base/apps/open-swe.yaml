@@ -77,6 +77,12 @@ spec:
                     name: open-swe-github
                     key: GITHUB_APP_PRIVATE_KEY
                     optional: true
+              # Encryption key for secrets (must match web app)
+              - name: SECRETS_ENCRYPTION_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-encryption
+                    key: SECRETS_ENCRYPTION_KEY
               # Enable local mode to allow testing without GitHub integration
               - name: OPEN_SWE_LOCAL_MODE
                 value: "true"
