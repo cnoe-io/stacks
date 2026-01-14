@@ -245,8 +245,10 @@ fi
 # - nginx: avoid hostPort (prevents stale CNI hostport DNAT rules after reboot)
 # - argocd: CA trust for persistent TLS certificate
 NGINX_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
+GITEA_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/gitea-actions.yaml"
 ARGOCD_OVERRIDE_FILE=""
 USE_NGINX_OVERRIDE="true"
+USE_GITEA_OVERRIDE="true"
 USE_ARGOCD_OVERRIDE="true"
 FILTERED_ARGS=()
 prev_arg=""
@@ -273,6 +275,17 @@ for arg in "$@"; do
         prev_arg="$arg"
         continue
     fi
+    # Check for --gitea-override flag (used to override gitea config)
+    if [[ "$prev_arg" == "--gitea-override" ]]; then
+        GITEA_OVERRIDE_FILE="$arg"
+        echo -e "${BLUE}Using custom Gitea override: ${GITEA_OVERRIDE_FILE}${NC}"
+        prev_arg=""
+        continue
+    fi
+    if [[ "$arg" == "--gitea-override" ]]; then
+        prev_arg="$arg"
+        continue
+    fi
     # Check for inline nginx overrides
     if [[ "$arg" == --package-custom-file=nginx:* ]] || [[ "$arg" == -c=nginx:* ]]; then
         USE_NGINX_OVERRIDE="false"
@@ -286,6 +299,13 @@ for arg in "$@"; do
     fi
     if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == argocd:* ]]; then
         USE_ARGOCD_OVERRIDE="false"
+    fi
+    # Check for inline gitea overrides
+    if [[ "$arg" == --package-custom-file=gitea:* ]] || [[ "$arg" == -c=gitea:* ]]; then
+        USE_GITEA_OVERRIDE="false"
+    fi
+    if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == gitea:* ]]; then
+        USE_GITEA_OVERRIDE="false"
     fi
     FILTERED_ARGS+=("$arg")
     prev_arg="$arg"
@@ -310,7 +330,13 @@ if [[ "$USE_ARGOCD_OVERRIDE" == "true" ]] && [ -n "$ARGOCD_OVERRIDE_FILE" ] && [
     ARGOCD_CUSTOM_ARG="--package-custom-file=argocd:${ARGOCD_OVERRIDE_FILE}"
 fi
 
-idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password ${NGINX_CUSTOM_ARG:+$NGINX_CUSTOM_ARG} ${ARGOCD_CUSTOM_ARG:+$ARGOCD_CUSTOM_ARG} $IDPBUILDER_ARGS
+GITEA_CUSTOM_ARG=""
+if [[ "$USE_GITEA_OVERRIDE" == "true" ]] && [ -f "$GITEA_OVERRIDE_FILE" ]; then
+    echo -e "${BLUE}Applying Gitea Actions override${NC}"
+    GITEA_CUSTOM_ARG="--package-custom-file=gitea:${GITEA_OVERRIDE_FILE}"
+fi
+
+idpbuilder create --name "${CLUSTER_NAME}" --kind-config "${CONFIG_FILE}" --dev-password ${NGINX_CUSTOM_ARG:+$NGINX_CUSTOM_ARG} ${ARGOCD_CUSTOM_ARG:+$ARGOCD_CUSTOM_ARG} ${GITEA_CUSTOM_ARG:+$GITEA_CUSTOM_ARG} $IDPBUILDER_ARGS
 
 # Verify cluster was created with expected name
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then

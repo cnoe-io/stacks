@@ -14,10 +14,16 @@ cd "$STACKS_DIR/packages" && make "build-kind-$CLUSTER_NAME" 2>&1
 
 echo ""
 echo "🚀 Applying to cluster..."
+GITEA_OVERRIDE_FILE="$STACKS_DIR/deployment/overrides/gitea-actions.yaml"
+GITEA_CUSTOM_ARG=""
+if [ -f "$GITEA_OVERRIDE_FILE" ]; then
+  GITEA_CUSTOM_ARG="--package-custom-file gitea:${GITEA_OVERRIDE_FILE}"
+fi
 idpbuilder create \
   --name "$CLUSTER_NAME" \
   -p "$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/" \
   --package-custom-file "nginx:$STACKS_DIR/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
+  ${GITEA_CUSTOM_ARG} \
   --kind-config "$STACKS_DIR/deployment/config/kind-config.yaml" \
   --dev-password \
   --color

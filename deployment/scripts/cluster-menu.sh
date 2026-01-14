@@ -516,11 +516,14 @@ generate-nginx-override() {
 #
 cluster-apply-manifests() {
   local NGINX_OVERRIDE_FILE="${1:-${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml}"
-  shift 2>/dev/null || true  # Consume first arg
-  local ARGOCD_OVERRIDE_FILE="${1:-}"
-  if [ -n "$ARGOCD_OVERRIDE_FILE" ]; then
-    shift 2>/dev/null || true  # Consume second arg if present
+  if [ $# -gt 0 ]; then
+    shift
   fi
+  local ARGOCD_OVERRIDE_FILE="${1:-}"
+  if [ $# -gt 0 ]; then
+    shift
+  fi
+  local GITEA_OVERRIDE_FILE="${GITEA_OVERRIDE_FILE:-${STACKS_DIR}/deployment/overrides/gitea-actions.yaml}"
   local DEPLOY_DIR="$STACKS_DIR/deployment"
   local ORIG_DIR="$(pwd)"
 
@@ -557,7 +560,22 @@ cluster-apply-manifests() {
   echo "🚀 Applying manifests to cluster: ${CLUSTER_NAME}..."
   echo ""
 
-  # Build idpbuilder command with optional ArgoCD override
+  # Detect if caller already provided a gitea override
+  local HAS_GITEA_OVERRIDE="false"
+  local prev_arg=""
+  for arg in "$@"; do
+    if [[ "$arg" == --package-custom-file=gitea:* ]] || [[ "$arg" == -c=gitea:* ]]; then
+      HAS_GITEA_OVERRIDE="true"
+      break
+    fi
+    if [[ "$prev_arg" == "--package-custom-file" || "$prev_arg" == "-c" ]] && [[ "$arg" == gitea:* ]]; then
+      HAS_GITEA_OVERRIDE="true"
+      break
+    fi
+    prev_arg="$arg"
+  done
+
+  # Build idpbuilder command with optional overrides
   local IDPBUILDER_ARGS=(
     --name "${CLUSTER_NAME}"
     -p "$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/"
@@ -570,6 +588,12 @@ cluster-apply-manifests() {
   if [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
     echo "   Including ArgoCD CA trust configuration..."
     IDPBUILDER_ARGS+=(--package-custom-file "argocd:${ARGOCD_OVERRIDE_FILE}")
+  fi
+
+  # Add Gitea Actions override if present and not explicitly provided
+  if [ "$HAS_GITEA_OVERRIDE" = "false" ] && [ -f "$GITEA_OVERRIDE_FILE" ]; then
+    echo "   Including Gitea Actions configuration..."
+    IDPBUILDER_ARGS+=(--package-custom-file "gitea:${GITEA_OVERRIDE_FILE}")
   fi
 
   # Apply using idpbuilder (idempotent operation)
@@ -1046,8 +1070,15 @@ cluster-update-gum() {
   generate-kind-config
 
   # Step 2: Update cluster with spinner
+  # Ensure build env is set in this shell (gum runs build in a subshell)
+  export KUSTOMIZE_BUILD_ENV="kind-${CLUSTER_NAME}"
+  local GITEA_OVERRIDE_FILE="${STACKS_DIR}/deployment/overrides/gitea-actions.yaml"
+  local GITEA_CUSTOM_ARG=""
+  if [ -f "$GITEA_OVERRIDE_FILE" ]; then
+    GITEA_CUSTOM_ARG="--package-custom-file 'gitea:${GITEA_OVERRIDE_FILE}'"
+  fi
   gum spin --spinner dot --title "🚀 Updating cluster: ${CLUSTER_NAME} (idempotent)..." -- \
-    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
+    bash -lc "idpbuilder create --name '$CLUSTER_NAME' -p '$STACKS_DIR/packages/dist/$KUSTOMIZE_BUILD_ENV/' --package-custom-file 'nginx:${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml' ${GITEA_CUSTOM_ARG} --kind-config '$DEPLOY_DIR/config/kind-config.yaml' --dev-password >/dev/null 2>&1"
 
   if [ $? -ne 0 ]; then
     gum style --foreground 196 "❌ Cluster update failed"

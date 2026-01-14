@@ -32,6 +32,7 @@ resources:
   - apps/feature-flags-repo-init.yaml
   - apps/feature-flags-secrets.yaml
   - apps/flipt.yaml
+  - apps/gitea-actions-runner.yaml
   - apps/idpbuilder-gitea.yaml
   - apps/nocodb-connections.yaml
   - apps/nocodb-external-secrets.yaml

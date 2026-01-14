@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-gitea-inline-config
+  namespace: gitea
+  labels:
+    app: gitea
+    app.kubernetes.io/instance: my-gitea
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: gitea
+    app.kubernetes.io/version: "1.24.3"
+    helm.sh/chart: gitea-12.1.2
+    version: "1.24.3"
+type: Opaque
+stringData:
+  _generals_: ""
+  cache: |-
+    ADAPTER=memory
+    HOST=
+  database: DB_TYPE=sqlite3
+  indexer: ISSUE_INDEXER_TYPE=db
+  metrics: ENABLED=false
+  queue: |-
+    CONN_STR=
+    TYPE=level
+  repository: ROOT=/data/git/gitea-repositories
+  security: INSTALL_LOCK=true
+  server: |-
+    APP_DATA_PATH=/data
+    DOMAIN=gitea.cnoe.localtest.me
+    ENABLE_PPROF=false
+    HTTP_PORT=3000
+    PROTOCOL=http
+    ROOT_URL=https://gitea.cnoe.localtest.me:8443
+    SSH_DOMAIN=gitea.cnoe.localtest.me
+    SSH_LISTEN_PORT=2222
+    SSH_PORT=32222
+    START_SSH_SERVER=true
+  session: |-
+    PROVIDER=memory
+    PROVIDER_CONFIG=
+  webhook: |-
+    ALLOWED_HOST_LIST=private
+    SKIP_TLS_VERIFY=true
+  actions: |-
+    ENABLED=true

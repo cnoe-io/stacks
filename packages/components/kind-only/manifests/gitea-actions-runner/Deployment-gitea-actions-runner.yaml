@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea-actions-runner
+  namespace: gitea
+  labels:
+    app.kubernetes.io/name: gitea-actions-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gitea-actions-runner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gitea-actions-runner
+    spec:
+      containers:
+        - name: runner
+          image: docker.io/gitea/act_runner:0.2.12
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GITEA_INSTANCE_URL
+              value: http://my-gitea-http.gitea.svc.cluster.local:3000/
+            - name: GITEA_RUNNER_REGISTRATION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-actions-runner-token
+                  key: GITEA_RUNNER_REGISTRATION_TOKEN
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: GITEA_RUNNER_NAME
+              value: $(POD_NAME)
+            - name: GITEA_RUNNER_LABELS
+              value: ubuntu-latest:docker://node:16-bullseye,ubuntu-22.04:docker://node:16-bullseye,ubuntu-20.04:docker://node:16-bullseye,ubuntu-18.04:docker://node:16-buster
+            - name: DOCKER_HOST
+              value: unix:///var/run/docker.sock
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+            - name: docker-sock
+              mountPath: /var/run
+        - name: dind
+          image: docker:24-dind
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-lib
+              mountPath: /var/lib/docker
+            - name: docker-sock
+              mountPath: /var/run
+      volumes:
+        - name: runner-data
+          emptyDir: {}
+        - name: docker-lib
+          emptyDir: {}
+        - name: docker-sock
+          emptyDir: {}
