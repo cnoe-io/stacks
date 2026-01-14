@@ -40,3 +40,6 @@ subjects:
   - kind: ServiceAccount
     name: default
     namespace: open-swe
+  - kind: ServiceAccount
+    name: open-swe-langgraph-cloud-api-server
+    namespace: open-swe

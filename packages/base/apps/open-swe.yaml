@@ -19,7 +19,7 @@ spec:
         images:
           apiServerImage:
             repository: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-agent
-            tag: v1.0.1
+            tag: v1.0.3
             pullPolicy: IfNotPresent
           # Use latest studio image which may have jq bug fix
           studioImage:
@@ -44,7 +44,7 @@ spec:
               - name: DATABASE_URI
                 value: "postgresql://postgres:postgres@open-swe-langgraph-cloud-postgres.open-swe.svc.cluster.local:5432/postgres?sslmode=disable"
               - name: OPEN_SWE_LOCAL_MODE
-                value: "true"
+                value: "false"
               - name: ANTHROPIC_API_KEY
                 valueFrom:
                   secretKeyRef:
