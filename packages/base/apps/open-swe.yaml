@@ -52,7 +52,12 @@ spec:
                   secretKeyRef:
                     name: open-swe-llm-keys
                     key: OPENAI_API_KEY
-              # LANGSMITH_API_KEY is injected by Helm chart from open-swe-langgraph-cloud-secrets
+              # LangSmith API key for LangGraph Cloud license validation
+              - name: LANGSMITH_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-langsmith
+                    key: LANGSMITH_API_KEY
               - name: LANGFUSE_PUBLIC_KEY
                 valueFrom:
                   secretKeyRef:
