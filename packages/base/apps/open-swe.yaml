@@ -52,12 +52,6 @@ spec:
                   secretKeyRef:
                     name: open-swe-llm-keys
                     key: OPENAI_API_KEY
-              # LangSmith API key for LangGraph Cloud license validation
-              - name: LANGSMITH_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: open-swe-langsmith
-                    key: LANGSMITH_API_KEY
               - name: LANGFUSE_PUBLIC_KEY
                 valueFrom:
                   secretKeyRef:
@@ -138,10 +132,9 @@ spec:
                 cpu: 500m
                 memory: 1Gi
 
-        # Configuration secrets (Self-Hosted Lite - no license key needed)
+        # Configuration secrets - use ExternalSecret-managed secret
         config:
-          langGraphCloudLicenseKey: ""
-          apiKey: ""
+          existingSecretName: "open-swe-langgraph-config"
     repoURL: https://langchain-ai.github.io/helm/
     targetRevision: "*"
   syncPolicy:

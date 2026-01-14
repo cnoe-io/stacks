@@ -8,3 +8,4 @@ resources:
   - ExternalSecret-open-swe-langsmith.yaml
   - ExternalSecret-open-swe-github.yaml
   - ExternalSecret-open-swe-encryption.yaml
+  - ExternalSecret-open-swe-langgraph-config.yaml
