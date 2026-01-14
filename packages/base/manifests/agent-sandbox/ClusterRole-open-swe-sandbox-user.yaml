@@ -1,0 +1,42 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: open-swe-sandbox-user
+  labels:
+    app.kubernetes.io/name: open-swe-sandbox-user
+    app.kubernetes.io/part-of: open-swe
+rules:
+  # Pod management in agent-sandbox namespace
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  # Pod exec for command execution
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  # Pod logs for debugging
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  # Pod status for monitoring
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: open-swe-sandbox-user
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: open-swe-sandbox-user
+    app.kubernetes.io/part-of: open-swe
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: open-swe-sandbox-user
+subjects:
+  # Default service account in open-swe namespace (used by the agent)
+  - kind: ServiceAccount
+    name: default
+    namespace: open-swe

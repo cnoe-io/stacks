@@ -83,9 +83,12 @@ spec:
                   secretKeyRef:
                     name: open-swe-encryption
                     key: SECRETS_ENCRYPTION_KEY
-              # Enable local mode to allow testing without GitHub integration
-              - name: OPEN_SWE_LOCAL_MODE
-                value: "true"
+              # Kubernetes execution mode - uses K8s pods instead of Daytona
+              - name: OPEN_SWE_EXECUTION_MODE
+                value: "kubernetes"
+              # Namespace where sandbox pods are created
+              - name: OPEN_SWE_SANDBOX_NAMESPACE
+                value: "agent-sandbox"
 
         # Studio UI configuration
         # API is served on same domain via ingress routing

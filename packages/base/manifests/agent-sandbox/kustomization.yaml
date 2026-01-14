@@ -8,3 +8,4 @@ resources:
   - Deployment-agent-sandbox-controller.yaml
   - SandboxTemplate-open-swe-dev.yaml
   - SandboxWarmPool-open-swe.yaml
+  - ClusterRole-open-swe-sandbox-user.yaml

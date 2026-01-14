@@ -7,5 +7,4 @@ resources:
   - ExternalSecret-open-swe-langfuse.yaml
   - ExternalSecret-open-swe-langsmith.yaml
   - ExternalSecret-open-swe-github.yaml
-  - ExternalSecret-open-swe-chart-secrets.yaml
   - ExternalSecret-open-swe-encryption.yaml
