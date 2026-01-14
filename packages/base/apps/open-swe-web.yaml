@@ -15,8 +15,8 @@ spec:
     targetRevision: HEAD
     path: "."
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync disabled - Kargo manages open-swe deployments via open-swe-local-dev
+    # This also allows devspace to swap images without ArgoCD reverting changes
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
