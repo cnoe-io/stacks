@@ -16,12 +16,10 @@ spec:
       valuesObject:
         # LangGraph Cloud Self-Hosted Lite configuration
         images:
-          # Custom Open SWE agent image built from https://github.com/langchain-ai/open-swe
-          # Loaded into kind cluster via: kind load docker-image open-swe-agent:latest --name <cluster>
           apiServerImage:
-            repository: open-swe-agent
+            repository: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-agent
             tag: latest
-            pullPolicy: Never
+            pullPolicy: IfNotPresent
           # Use latest studio image which may have jq bug fix
           studioImage:
             repository: docker.io/langchain/langgraph-debugger

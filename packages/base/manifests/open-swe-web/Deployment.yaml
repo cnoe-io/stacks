@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: web
-          image: open-swe-web:latest
-          imagePullPolicy: Never
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-web:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: http
