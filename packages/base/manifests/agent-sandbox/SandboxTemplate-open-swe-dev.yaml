@@ -36,6 +36,14 @@ spec:
                 nodejs \
                 npm \
                 && rm -rf /var/lib/apt/lists/*
+              # Configure git
+              git config --global user.email "open-swe@users.noreply.github.com"
+              git config --global user.name "open-swe[bot]"
+              git config --global init.defaultBranch main
+              # Create symlink for compatibility with Daytona workspace path
+              mkdir -p /home
+              ln -sfn /workspace /home/daytona
+              echo "Sandbox ready"
               # Keep container running
               tail -f /dev/null
           resources:
@@ -51,9 +59,9 @@ spec:
             runAsGroup: 0
             allowPrivilegeEscalation: true
             readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL
+            # Note: We don't drop ALL capabilities because apt-get needs
+            # SETUID/SETGID for user switching during package installation.
+            # For production, consider using a pre-built image with tools installed.
           volumeMounts:
             - name: workspace
               mountPath: /workspace

@@ -6,7 +6,15 @@ metadata:
     app.kubernetes.io/name: open-swe-sandbox-user
     app.kubernetes.io/part-of: open-swe
 rules:
-  # Pod management in agent-sandbox namespace
+  # SandboxClaim management for agent-sandbox CRD integration
+  - apiGroups: ["extensions.agents.x-k8s.io"]
+    resources: ["sandboxclaims"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  # Sandbox CR access for getting pod selector
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes"]
+    verbs: ["get", "list", "watch"]
+  # Pod management in agent-sandbox namespace (for warm pool pods)
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["create", "get", "list", "watch", "delete"]
