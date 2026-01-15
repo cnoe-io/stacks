@@ -10,10 +10,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["create", "get", "list", "watch", "delete"]
-  # Pod exec for command execution
+  # Pod exec for command execution (requires both get and create)
   - apiGroups: [""]
     resources: ["pods/exec"]
-    verbs: ["create"]
+    verbs: ["create", "get"]
   # Pod logs for debugging
   - apiGroups: [""]
     resources: ["pods/log"]
