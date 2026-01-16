@@ -57,6 +57,8 @@ spec:
               # Create symlink for compatibility with Daytona workspace path
               mkdir -p /home
               ln -sfn /workspace /home/daytona
+              # Signal that initialization is complete (used by readiness probe)
+              touch /workspace/.sandbox-ready
               echo "Sandbox ready"
               # Keep container running
               tail -f /dev/null
@@ -88,11 +90,12 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - test -f /workspace/.sandbox-ready || echo ready > /workspace/.sandbox-ready
-            initialDelaySeconds: 5
+                # Wait for initialization script to complete (creates .sandbox-ready file)
+                - test -f /workspace/.sandbox-ready && which git
+            initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 3
+            failureThreshold: 30
           livenessProbe:
             exec:
               command:
