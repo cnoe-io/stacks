@@ -32,6 +32,15 @@ esac
 export TAILSCALE_TAILNET="tail286401.ts.net"
 
 echo "Building $ENV environment (TAILSCALE_HOST=${TAILSCALE_HOST})..."
+
+# Step 0: Generate Kargo inner-loop pipelines from config
+KARGO_GENERATOR="${PACKAGES_DIR}/scripts/generate-kargo-pipelines.sh"
+if [ -f "$KARGO_GENERATOR" ]; then
+    echo ""
+    "$KARGO_GENERATOR"
+    echo ""
+fi
+
 mkdir -p "${DIST_DIR}/${ENV}"
 
 # Clean previous build

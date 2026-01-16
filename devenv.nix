@@ -75,8 +75,9 @@
 
     # Build kustomize packages for the current host
     "kustomize-build".exec = ''
+      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
       cd "$DEVENV_ROOT/packages"
-      make build-kind
+      make build-kustomize-kind-$CLUSTER_NAME
     '';
 
     # Apply manifests to cluster (one-shot, exits when done)
@@ -96,7 +97,7 @@
         --watch "$DEVENV_ROOT/packages/components" \
         --watch "$DEVENV_ROOT/packages/overlays" \
         --ignore "dist" \
-        -- sh -c "echo '🔄 Change detected...'; cd '$DEVENV_ROOT/packages' && make build-kind-$CLUSTER_NAME"
+        -- sh -c "echo '🔄 Change detected...'; cd '$DEVENV_ROOT/packages' && make build-kustomize-kind-$CLUSTER_NAME"
     '';
 
     # Open SWE status check
@@ -117,6 +118,12 @@
     "open-swe-logs".exec = ''
       kubectl logs -n open-swe -l app.kubernetes.io/name=langgraph-cloud-api-server -f --tail=100
     '';
+
+    # Image preloading from Docker cache to KIND + Gitea
+    "preload-images".exec = ''
+      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+      "$DEVENV_ROOT/deployment/scripts/preload-images.sh" "$CLUSTER_NAME"
+    '';
   };
 
   # Background processes for `devenv up`
@@ -131,7 +138,7 @@
         # Initial build
         echo "🔨 Initial kustomize build..."
         cd "$DEVENV_ROOT/packages"
-        make build-kind-$CLUSTER_NAME 2>&1
+        make build-kustomize-kind-$CLUSTER_NAME 2>&1
 
         # Initial apply
         echo ""
@@ -196,6 +203,9 @@
     echo "Open SWE Commands:"
     echo "  open-swe-status                  # Show Open SWE deployment status"
     echo "  open-swe-logs                    # Tail Open SWE API server logs"
+    echo ""
+    echo "Image Management:"
+    echo "  preload-images                   # Load Docker cache images to KIND + Gitea"
     echo ""
   '';
 

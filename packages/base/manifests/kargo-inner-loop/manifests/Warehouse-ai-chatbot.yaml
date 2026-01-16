@@ -1,0 +1,18 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  labels:
+    app.kubernetes.io/component: warehouse
+    app.kubernetes.io/name: ai-chatbot-warehouse
+    app.kubernetes.io/part-of: kargo-inner-loop
+  name: ai-chatbot
+  namespace: kargo-pipelines
+spec:
+  freightCreationPolicy: Automatic
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+        imageSelectionStrategy: Lexical
+        allowTags: .*
+        insecureSkipTLSVerify: true

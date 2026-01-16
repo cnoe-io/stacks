@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "40"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:backstage-local-dev
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

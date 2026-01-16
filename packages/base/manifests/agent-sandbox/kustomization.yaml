@@ -6,6 +6,10 @@ resources:
   - ClusterRole-agent-sandbox-controller.yaml
   - ClusterRoleBinding-agent-sandbox-controller.yaml
   - Deployment-agent-sandbox-controller.yaml
+  - Deployment-sandbox-router.yaml
+  - Service-sandbox-router.yaml
+  - RuntimeClass-gvisor.yaml
+  - NetworkPolicy-sandbox-isolation.yaml
   - SandboxTemplate-open-swe-dev.yaml
   - SandboxTemplate-chrome.yaml
   - SandboxWarmPool-open-swe.yaml

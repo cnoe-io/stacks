@@ -335,7 +335,22 @@ kustomize-build() {
 
   cd "$STACKS_DIR/packages"
 
-  if make "build-${BUILD_ENV}" 2>&1; then
+  # Check if yq-go is available, otherwise wrap with nix-shell
+  local BUILD_CMD="make build-kustomize-${BUILD_ENV}"
+  local BUILD_SUCCESS=false
+
+  if command -v yq &>/dev/null && yq --version 2>&1 | grep -q "mikefarah"; then
+    # yq-go available (inside devenv or installed globally)
+    $BUILD_CMD 2>&1 && BUILD_SUCCESS=true
+  elif command -v nix-shell &>/dev/null; then
+    # Use nix-shell to provide yq-go
+    nix-shell -p yq-go --run "$BUILD_CMD" 2>&1 && BUILD_SUCCESS=true
+  else
+    echo "❌ yq-go required. Install via: nix-shell -p yq-go, or run inside devenv shell"
+    return 1
+  fi
+
+  if $BUILD_SUCCESS; then
     local APP_COUNT=$(ls -1 "dist/${BUILD_ENV}"/*.yaml 2>/dev/null | wc -l)
     echo "✅ Build complete: ${APP_COUNT} applications in packages/dist/${BUILD_ENV}/"
     return 0
@@ -700,6 +715,25 @@ cluster-deploy() {
     ) &
     ARGOCD_CA_PID=$!
     echo "   Started background CA injection (PID: $ARGOCD_CA_PID, log: /tmp/argocd-ca-injection.log)"
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Background Image Preloading (runs in PARALLEL with idpbuilder)
+  # Starts early so images are in Gitea before apps try to pull them
+  # ─────────────────────────────────────────────────────────────────────────────
+  local IMAGE_PRELOAD_PID=""
+  local IMAGE_PRELOAD_LOG="/tmp/image-preload.log"
+  local IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
+
+  if [ "${SKIP_IMAGE_PRELOAD:-}" != "true" ] && [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
+    echo "🖼️  Starting background image preload (parallel with idpbuilder)..."
+    (
+      # Preload script has its own wait_for_gitea, so it's safe to start now
+      "$IMAGE_PRELOAD_SCRIPT" "$CLUSTER_HOST"
+    ) > "$IMAGE_PRELOAD_LOG" 2>&1 &
+    IMAGE_PRELOAD_PID=$!
+    echo "   Started background image preload (PID: $IMAGE_PRELOAD_PID)"
+    echo "   Log: $IMAGE_PRELOAD_LOG"
   fi
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -1373,6 +1407,12 @@ if [ -f "$CLUSTER_HEALTH_CHECK" ]; then
   cluster-health() {
     "$CLUSTER_HEALTH_CHECK" "${1:-summary}"
   }
+fi
+
+# Image preloading (loads from Docker cache to KIND + Gitea)
+IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
+if [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
+  alias preload-images="$IMAGE_PRELOAD_SCRIPT"
 fi
 
 # If script is being run directly (not sourced), show help

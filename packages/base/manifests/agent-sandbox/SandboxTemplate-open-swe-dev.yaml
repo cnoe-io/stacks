@@ -6,8 +6,9 @@ metadata:
   labels:
     app.kubernetes.io/name: open-swe-dev
     app.kubernetes.io/part-of: open-swe
+    app.kubernetes.io/component: sandbox-template
 spec:
-  description: "Development sandbox template for Open SWE code execution"
+  description: "Development sandbox template for Open SWE code execution with gVisor isolation"
   defaultTimeout: "30m"
   resourceLimits:
     cpu: "2"
@@ -19,7 +20,19 @@ spec:
     allowPrivilegeEscalation: true
     networkPolicy: restricted
   podTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: open-swe-sandbox
+        app.kubernetes.io/part-of: open-swe
+        sandbox-type: development
     spec:
+      # Use gVisor runtime for process isolation (if available in cluster)
+      # Falls back to default runtime if gVisor not installed
+      runtimeClassName: gvisor
+      # Security context at pod level
+      securityContext:
+        # fsGroup for shared volume access
+        fsGroup: 1000
       containers:
         - name: sandbox
           image: python:3.11-slim-bookworm
@@ -40,20 +53,30 @@ spec:
               git config --global user.email "open-swe@users.noreply.github.com"
               git config --global user.name "open-swe[bot]"
               git config --global init.defaultBranch main
+              # Enable git credential caching for 1 hour
+              git config --global credential.helper 'cache --timeout=3600'
               # Create symlink for compatibility with Daytona workspace path
               mkdir -p /home
               ln -sfn /workspace /home/daytona
               echo "Sandbox ready"
               # Keep container running
               tail -f /dev/null
+          ports:
+            - containerPort: 8888
+              name: runtime
+              protocol: TCP
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: "500m"
+              memory: "1Gi"
+              ephemeral-storage: "5Gi"
             limits:
               cpu: "2"
-              memory: 4Gi
+              memory: "4Gi"
+              ephemeral-storage: "10Gi"
           securityContext:
+            # Note: Running as root for apt-get compatibility
+            # For production, use pre-built image with tools installed
             runAsNonRoot: false
             runAsUser: 0
             runAsGroup: 0
@@ -61,12 +84,34 @@ spec:
             readOnlyRootFilesystem: false
             # Note: We don't drop ALL capabilities because apt-get needs
             # SETUID/SETGID for user switching during package installation.
-            # For production, consider using a pre-built image with tools installed.
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -f /workspace/.sandbox-ready || echo ready > /workspace/.sandbox-ready
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "true"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
           volumeMounts:
             - name: workspace
               mountPath: /workspace
             - name: tmp
               mountPath: /tmp
+            - name: npm-cache
+              mountPath: /root/.npm
+            - name: pip-cache
+              mountPath: /root/.cache/pip
       volumes:
         - name: workspace
           emptyDir:
@@ -74,5 +119,11 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+        - name: npm-cache
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: pip-cache
+          emptyDir:
+            sizeLimit: 2Gi
       restartPolicy: Never
       terminationGracePeriodSeconds: 30

@@ -3,7 +3,7 @@ kind: Application
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "65"
-    kargo.akuity.io/authorized-stage: kargo-pipelines:open-swe-local-dev
+    kargo.akuity.io/authorized-stage: kargo-pipelines:open-swe-web-local-dev
   name: open-swe-web
   namespace: argocd
 spec:

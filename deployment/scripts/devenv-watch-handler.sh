@@ -9,8 +9,8 @@ KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
 STACKS_DIR="${DEVENV_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
 echo ""
-echo "🔄 Change detected, rebuilding..."
-cd "$STACKS_DIR/packages" && make "build-kind-$CLUSTER_NAME" 2>&1
+echo "🔄 Change detected, rebuilding (kustomize)..."
+cd "$STACKS_DIR/packages" && make "build-kustomize-kind-$CLUSTER_NAME" 2>&1
 
 echo ""
 echo "🚀 Applying to cluster..."

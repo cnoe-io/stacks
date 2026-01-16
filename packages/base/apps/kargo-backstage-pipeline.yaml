@@ -17,5 +17,15 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # Retry on webhook failures during initial sync (webhooks may still be starting)
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - ServerSideApply=true
+      - CreateNamespace=true
+      # Skip dry-run validation if Kargo CRDs not yet established
+      - SkipDryRunOnMissingResource=true

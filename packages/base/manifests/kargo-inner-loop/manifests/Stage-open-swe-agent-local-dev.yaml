@@ -1,0 +1,42 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    # Sync after Applications (65) to ensure ArgoCD app exists before first promotion
+    argocd.argoproj.io/sync-wave: "70"
+    kargo.akuity.io/color: green
+  labels:
+    app.kubernetes.io/component: stage
+    app.kubernetes.io/name: open-swe-agent-local-dev-stage
+    app.kubernetes.io/part-of: kargo-inner-loop
+    kargo.akuity.io/loop: inner
+  name: open-swe-agent-local-dev
+  namespace: kargo-pipelines
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: open-swe-agent
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        - name: imageRepoURL
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-agent
+        - name: argoAppName
+          value: open-swe
+      steps:
+        - as: sync-argocd
+          uses: argocd-update
+          config:
+            apps:
+              - name: ${{ vars.argoAppName }}
+                namespace: argocd
+                sources:
+                  - repoURL: https://langchain-ai.github.io/helm/
+                    chart: langgraph-cloud
+                    helm:
+                      images:
+                        - key: images.apiServerImage.tag
+                          value: ${{ imageFrom(vars.imageRepoURL).Tag }}

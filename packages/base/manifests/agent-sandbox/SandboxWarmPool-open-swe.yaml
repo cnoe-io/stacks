@@ -6,9 +6,20 @@ metadata:
   labels:
     app.kubernetes.io/name: open-swe-warm-pool
     app.kubernetes.io/part-of: open-swe
+    app.kubernetes.io/component: warm-pool
 spec:
   sandboxTemplateRef:
     name: open-swe-dev
     namespace: agent-sandbox
-  replicas: 2
-  minReady: 1
+  # Scale up warm pool for better availability
+  replicas: 5
+  # Minimum number of ready sandboxes before accepting claims
+  minReady: 2
+  # Topology spread for high availability across zones
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: open-swe-sandbox

@@ -1,0 +1,56 @@
+# Inner Loop Image Configuration
+# Each entry generates a Warehouse + Stage for local development
+# Generated pipelines are output to ./manifests/ directory
+#
+# Global config:
+#   clusterHost  - Hostname used by idpbuilder (detected from CLUSTER_HOST env or hostname -s)
+#   giteaOrg     - Gitea organization for manifests (default: giteaAdmin)
+#
+# Image fields:
+#   name         - Image name (used for Warehouse/Stage naming)
+#   argocdApp    - ArgoCD Application name to update
+#   registry     - Container registry URL
+#   org          - Registry organization/namespace
+#   tagStrategy  - Kargo image selection: SemVer or Lexical
+#   tagPattern   - Regex pattern for allowed tags
+#   promotionType - kustomize or helm
+#
+# For helm apps, you must also specify:
+#   helmRepoURL  - Helm chart repository URL (to match ArgoCD source)
+#   helmImageKey - Helm values key for image repository
+#
+# Global configuration
+config:
+  giteaOrg: giteaAdmin
+  giteaRegistry: gitea.cnoe.localtest.me:8443
+
+images:
+  - name: ai-chatbot
+    argocdApp: ai-chatbot
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: open-swe-web
+    argocdApp: open-swe-web
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: SemVer
+    tagPattern: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
+    promotionType: kustomize
+
+  - name: open-swe-agent
+    argocdApp: open-swe
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: SemVer
+    tagPattern: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
+    promotionType: helm
+    helmRepoURL: https://langchain-ai.github.io/helm/
+    helmChart: langgraph-cloud
+    helmImageKey: images.apiServerImage.tag
+
+  # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
+  # to avoid conflicts with the existing pipeline

@@ -5,16 +5,16 @@ metadata:
     kargo.akuity.io/color: blue
   labels:
     app.kubernetes.io/component: stage
-    app.kubernetes.io/name: open-swe-local-dev-stage
+    app.kubernetes.io/name: open-swe-agent-local-dev-stage
     app.kubernetes.io/part-of: kargo-pipelines
     kargo.akuity.io/loop: inner
-  name: open-swe-local-dev
+  name: open-swe-agent-local-dev
   namespace: kargo-pipelines
 spec:
   requestedFreight:
     - origin:
         kind: Warehouse
-        name: open-swe
+        name: open-swe-agent
       sources:
         direct: true
   promotionTemplate:
@@ -22,32 +22,21 @@ spec:
       vars:
         - name: agentImageRepoURL
           value: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-agent
-        - name: webImageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-web
         - name: argoAppName
           value: open-swe
       steps:
-        # Trigger ArgoCD update directly for both agent and web apps
         - as: sync-argocd
           uses: argocd-update
           config:
             apps:
-              - name: open-swe
+              - name: ${{ vars.argoAppName }}
                 namespace: argocd
                 sources:
                   - repoURL: https://langchain-ai.github.io/helm/
                     chart: langgraph-cloud
                     helm:
                       images:
-                        - key: images.apiServerImage.tag
-                          value: ${{ imageFrom(vars.agentImageRepoURL).Tag }}
                         - key: images.apiServerImage.repository
                           value: ${{ vars.agentImageRepoURL }}
-              - name: open-swe-web
-                namespace: argocd
-                sources:
-                  - repoURL: cnoe://open-swe-web/manifests
-                    kustomize:
-                      images:
-                        - repoURL: ${{ vars.webImageRepoURL }}
-                          tag: ${{ imageFrom(vars.webImageRepoURL).Tag }}
+                        - key: images.apiServerImage.tag
+                          value: ${{ imageFrom(vars.agentImageRepoURL).Tag }}

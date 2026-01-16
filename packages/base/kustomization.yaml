@@ -46,6 +46,7 @@ resources:
   - apps/kargo-pipelines-project.yaml
   - apps/kargo-webhook-sync.yaml
   - apps/kargo.yaml
+  - apps/kargo-inner-loop.yaml
   - apps/keycloak-config.yaml
   - apps/keycloak-secrets.yaml
   - apps/keycloak.yaml
