@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: open-swe
     app.kubernetes.io/component: sandbox-template
 spec:
-  description: "Development sandbox template for Open SWE code execution with gVisor isolation"
+  description: "Development sandbox template for Open SWE code execution"
   defaultTimeout: "30m"
   resourceLimits:
     cpu: "2"
@@ -26,9 +26,8 @@ spec:
         app.kubernetes.io/part-of: open-swe
         sandbox-type: development
     spec:
-      # Use gVisor runtime for process isolation (if available in cluster)
-      # Falls back to default runtime if gVisor not installed
-      runtimeClassName: gvisor
+      # Note: gVisor (runtimeClassName: gvisor) can be enabled for process isolation
+      # when gVisor is installed on the cluster. Currently using default runtime.
       # Security context at pod level
       securityContext:
         # fsGroup for shared volume access
