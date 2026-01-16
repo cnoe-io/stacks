@@ -24,6 +24,16 @@ spec:
               ADMIN_PASSWORD=$(cat /var/secrets/KEYCLOAK_ADMIN_PASSWORD)
               USER1_PASSWORD=$(cat /var/secrets/USER_PASSWORD)
 
+              # GitHub IdP credentials (optional - may not exist)
+              GITHUB_IDP_CLIENT_ID=""
+              GITHUB_IDP_CLIENT_SECRET=""
+              if [ -f /var/github-idp/GITHUB_IDP_CLIENT_ID ]; then
+                GITHUB_IDP_CLIENT_ID=$(cat /var/github-idp/GITHUB_IDP_CLIENT_ID)
+              fi
+              if [ -f /var/github-idp/GITHUB_IDP_CLIENT_SECRET ]; then
+                GITHUB_IDP_CLIENT_SECRET=$(cat /var/github-idp/GITHUB_IDP_CLIENT_SECRET)
+              fi
+
               # Domain-based routing: no path prefix needed
               KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080
 
@@ -230,17 +240,74 @@ spec:
                 fi
               }
 
+              # Helper function to ensure GitHub IdP exists
+              ensure_github_idp() {
+                if [ -z "$GITHUB_IDP_CLIENT_ID" ] || [ -z "$GITHUB_IDP_CLIENT_SECRET" ]; then
+                  echo "GitHub IdP credentials not configured, skipping GitHub IdP setup"
+                  return 0
+                fi
+
+                echo "ensuring GitHub IdP exists..."
+                local github_idp_exists
+                github_idp_exists=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances | jq -r '.[] | select(.alias == "github") | .alias')
+
+                if [ -z "$github_idp_exists" ] || [ "$github_idp_exists" = "null" ]; then
+                  echo "creating GitHub IdP..."
+                  # Substitute environment variables in the payload
+                  local github_idp_payload
+                  github_idp_payload=$(cat /var/config/github-idp-payload.json | \
+                    sed "s|\${GITHUB_IDP_CLIENT_ID}|${GITHUB_IDP_CLIENT_ID}|g" | \
+                    sed "s|\${GITHUB_IDP_CLIENT_SECRET}|${GITHUB_IDP_CLIENT_SECRET}|g")
+
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data "$github_idp_payload" \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances
+
+                  echo "adding GitHub IdP mappers..."
+                  # Add username mapper
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/github-idp-mapper-username.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github/mappers 2>/dev/null || true
+
+                  # Add email mapper
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/github-idp-mapper-email.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github/mappers 2>/dev/null || true
+                else
+                  echo "GitHub IdP already exists, updating configuration..."
+                  # Update the IdP configuration to ensure it has the latest settings
+                  local github_idp_payload
+                  github_idp_payload=$(cat /var/config/github-idp-payload.json | \
+                    sed "s|\${GITHUB_IDP_CLIENT_ID}|${GITHUB_IDP_CLIENT_ID}|g" | \
+                    sed "s|\${GITHUB_IDP_CLIENT_SECRET}|${GITHUB_IDP_CLIENT_SECRET}|g")
+
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT --data "$github_idp_payload" \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github 2>/dev/null || true
+                fi
+
+                echo "GitHub IdP configured successfully"
+              }
+
               # If realm exists, check if keycloak-clients secret exists
               if [ $REALM_EXISTS -eq 0 ]; then
                 # Realm exists: ensure all resources are present (idempotent)
                 ensure_groups_scope
                 ensure_groups
                 ensure_users
+                ensure_github_idp
 
                 # Ensure redirect URIs and web origins match the desired payloads
                 patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
                 patch_client_config "backstage" "/var/config/backstage-client-payload.json"
                 patch_client_config "flipt" "/var/config/flipt-client-payload.json"
+                patch_client_config "open-swe" "/var/config/open-swe-client-payload.json"
 
                 # Check if secret already exists
                 if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
@@ -422,6 +489,22 @@ spec:
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                 -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
 
+              echo "creating Open-SWE client (public client with PKCE)"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/open-swe-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "open-swe") | .id')
+
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              # Configure GitHub IdP (if credentials are available)
+              ensure_github_idp
+
               ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
 
               ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"${ARGOCD_PASSWORD}\"}" | jq -r .token)
@@ -456,6 +539,9 @@ spec:
             - mountPath: /var/config/
               name: config-payloads
               readOnly: true
+            - mountPath: /var/github-idp/
+              name: github-idp
+              readOnly: true
       restartPolicy: Never
       serviceAccountName: keycloak-config
       volumes:
@@ -465,3 +551,7 @@ spec:
         - configMap:
             name: config-job
           name: config-payloads
+        - name: github-idp
+          secret:
+            secretName: github-idp
+            optional: true
