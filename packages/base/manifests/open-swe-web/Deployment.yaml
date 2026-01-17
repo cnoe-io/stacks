@@ -49,9 +49,16 @@ spec:
                   key: GITHUB_APP_PRIVATE_KEY
                   optional: true
             - name: GITHUB_APP_NAME
-              value: "open-swe-pittampalli"
+              value: "open-swe-self-hosted"
             - name: GITHUB_APP_REDIRECT_URI
               value: "https://open-swe-ui.cnoe.localtest.me:8443/api/auth/github/callback"
+            # Keycloak OIDC authentication
+            - name: NEXT_PUBLIC_KEYCLOAK_URL
+              value: "https://keycloak.cnoe.localtest.me:8443"
+            - name: NEXT_PUBLIC_KEYCLOAK_REALM
+              value: "cnoe"
+            - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+              value: "open-swe"
             # LangGraph API connection
             - name: NEXT_PUBLIC_API_URL
               value: "https://open-swe-ui.cnoe.localtest.me:8443/api"
