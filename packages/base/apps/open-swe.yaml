@@ -79,6 +79,9 @@ spec:
                     name: open-swe-github
                     key: GITHUB_APP_PRIVATE_KEY
                     optional: true
+              # GitHub App name (slug) for commit author attribution
+              - name: GITHUB_APP_NAME
+                value: "open-swe-self-hosted"
               # Encryption key for secrets (must match web app)
               - name: SECRETS_ENCRYPTION_KEY
                 valueFrom:
@@ -91,6 +94,9 @@ spec:
               # Namespace where sandbox pods are created
               - name: OPEN_SWE_SANDBOX_NAMESPACE
                 value: "agent-sandbox"
+              # Keycloak OIDC configuration for JWT validation
+              - name: KEYCLOAK_ISSUER
+                value: "https://keycloak.cnoe.localtest.me:8443/realms/cnoe"
 
         # Studio UI configuration
         # API is served on same domain via ingress routing
