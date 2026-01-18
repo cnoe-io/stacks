@@ -55,6 +55,44 @@ spec:
               value: "ai-chatbot"
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "deployment.environment=production,service.namespace=ai-chatbot"
+            # GitHub App OAuth configuration (for coding agent)
+            # Note: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID must also be set at build time via Docker ARG
+            - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_APP_CLIENT_ID
+                  optional: true
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_APP_CLIENT_ID
+                  optional: true
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_APP_CLIENT_SECRET
+                  optional: true
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_APP_ID
+                  optional: true
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_APP_PRIVATE_KEY
+                  optional: true
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ai-chatbot-github
+                  key: GITHUB_WEBHOOK_SECRET
+                  optional: true
           envFrom:
             - secretRef:
                 name: ai-chatbot-secrets
