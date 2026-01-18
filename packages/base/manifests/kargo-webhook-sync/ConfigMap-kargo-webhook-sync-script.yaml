@@ -5,16 +5,29 @@ data:
     set -e
 
     echo "Configuring Gitea System Webhook for Kargo..."
-    echo "Target: http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/<hash>"
 
     # Configuration
     GITEA_URL="https://gitea.cnoe.localtest.me:8443"
-    KARGO_WEBHOOK_URL="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/5d8a9edcf747d565dfd0d5927f61e1b3d8a8622cee0fe71ad632b72cbc0f986f"
+    KARGO_WEBHOOK_BASE="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80"
 
     # Get credentials from mounted secrets
     GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaAdmin")
     GITEA_PASS=$(cat /gitea-credentials/password)
     KARGO_WEBHOOK_SECRET=$(cat /kargo-credentials/secret)
+
+    # Fetch the webhook path from Kargo ClusterConfig status (cluster-level webhook)
+    echo "Fetching webhook URL from Kargo ClusterConfig..."
+    WEBHOOK_PATH=$(kubectl get clusterconfig cluster \
+      -o jsonpath='{.status.webhookReceivers[?(@.name=="gitea-cluster-webhook")].path}' 2>/dev/null || echo "")
+
+    if [ -z "$WEBHOOK_PATH" ]; then
+      echo "[-] ERROR: Could not get webhook path from ClusterConfig."
+      echo "    Make sure ClusterConfig has webhookReceivers configured."
+      exit 1
+    fi
+
+    KARGO_WEBHOOK_URL="${KARGO_WEBHOOK_BASE}${WEBHOOK_PATH}"
+    echo "Target: $KARGO_WEBHOOK_URL"
 
     # Check if Kargo system webhook already exists
     echo "Checking for existing system webhook..."

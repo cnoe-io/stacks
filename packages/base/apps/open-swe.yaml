@@ -55,6 +55,32 @@ spec:
                   secretKeyRef:
                     name: open-swe-llm-keys
                     key: OPENAI_API_KEY
+              - name: GOOGLE_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: GOOGLE_API_KEY
+                    optional: true
+              - name: FIRECRAWL_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: FIRECRAWL_API_KEY
+                    optional: true
+              # Daytona API key for cloud sandboxes (alternative to kubernetes execution)
+              - name: DAYTONA_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: DAYTONA_API_KEY
+                    optional: true
+              # Tavily API key for V2 web search functionality
+              - name: TAVILY_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-llm-keys
+                    key: TAVILY_API_KEY
+                    optional: true
               - name: LANGFUSE_PUBLIC_KEY
                 valueFrom:
                   secretKeyRef:
@@ -79,21 +105,33 @@ spec:
                     name: open-swe-github
                     key: GITHUB_APP_PRIVATE_KEY
                     optional: true
+              - name: GITHUB_WEBHOOK_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: open-swe-github
+                    key: GITHUB_WEBHOOK_SECRET
+                    optional: true
               # GitHub App name (slug) for commit author attribution
               - name: GITHUB_APP_NAME
-                value: "open-swe-self-hosted"
+                value: "open-swe-pittampalli"
+              # GitHub username to trigger runs from PR comments
+              - name: GITHUB_TRIGGER_USERNAME
+                value: "open-swe-pittampalli[bot]"
+              # Web app URL for creating run links in GitHub comments
+              - name: OPEN_SWE_APP_URL
+                value: "https://open-swe-ui.cnoe.localtest.me:8443"
+              # Skip CI until last commit for cleaner PR history
+              - name: SKIP_CI_UNTIL_LAST_COMMIT
+                value: "true"
+              # Enable LangChain tracing
+              - name: LANGCHAIN_TRACING_V2
+                value: "true"
               # Encryption key for secrets (must match web app)
               - name: SECRETS_ENCRYPTION_KEY
                 valueFrom:
                   secretKeyRef:
                     name: open-swe-encryption
                     key: SECRETS_ENCRYPTION_KEY
-              # Kubernetes execution mode - uses K8s pods instead of Daytona
-              - name: OPEN_SWE_EXECUTION_MODE
-                value: "kubernetes"
-              # Namespace where sandbox pods are created
-              - name: OPEN_SWE_SANDBOX_NAMESPACE
-                value: "agent-sandbox"
               # Keycloak OIDC configuration for JWT validation
               - name: KEYCLOAK_ISSUER
                 value: "https://keycloak.cnoe.localtest.me:8443/realms/cnoe"

@@ -2,8 +2,6 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
-    # Sync after Applications (65) to ensure ArgoCD app exists before first promotion
-    argocd.argoproj.io/sync-wave: "70"
     kargo.akuity.io/color: green
   labels:
     app.kubernetes.io/component: stage

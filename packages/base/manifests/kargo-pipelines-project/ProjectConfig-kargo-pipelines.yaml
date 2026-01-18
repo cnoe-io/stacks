@@ -10,6 +10,7 @@ metadata:
   name: kargo-pipelines
   namespace: kargo-pipelines
 spec:
+  # Webhooks configured at cluster-level via ClusterConfig (kargo-cluster-config)
   promotionPolicies:
     - autoPromotionEnabled: true
       stageSelector:

@@ -5,6 +5,9 @@ metadata:
   namespace: open-swe
   labels:
     app: open-swe-web
+    app.kubernetes.io/name: open-swe
+    app.kubernetes.io/component: open-swe-web
+    app.kubernetes.io/instance: open-swe
 spec:
   replicas: 1
   selector:
@@ -14,10 +17,13 @@ spec:
     metadata:
       labels:
         app: open-swe-web
+        app.kubernetes.io/name: open-swe
+        app.kubernetes.io/component: open-swe-web
+        app.kubernetes.io/instance: open-swe
     spec:
       containers:
         - name: web
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-web:v1.0.7
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe-web:v1.2.10
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -49,9 +55,12 @@ spec:
                   key: GITHUB_APP_PRIVATE_KEY
                   optional: true
             - name: GITHUB_APP_NAME
-              value: "open-swe-self-hosted"
+              value: "open-swe-pittampalli"
             - name: GITHUB_APP_REDIRECT_URI
               value: "https://open-swe-ui.cnoe.localtest.me:8443/api/auth/github/callback"
+            # Allowed users list (JSON array of GitHub usernames)
+            - name: NEXT_PUBLIC_ALLOWED_USERS_LIST
+              value: '["vpittamp"]'
             # Keycloak OIDC authentication
             - name: NEXT_PUBLIC_KEYCLOAK_URL
               value: "https://keycloak.cnoe.localtest.me:8443"
