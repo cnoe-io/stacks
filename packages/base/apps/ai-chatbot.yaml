@@ -18,8 +18,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: ai-chatbot
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync disabled to allow DevSpace development
+    # Manual sync required: argocd app sync ai-chatbot
     syncOptions:
       - ServerSideApply=true
