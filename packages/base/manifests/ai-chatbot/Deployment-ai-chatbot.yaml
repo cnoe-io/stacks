@@ -35,6 +35,9 @@ spec:
           env:
             - name: NODE_ENV
               value: production
+            # Allow self-signed certificates for local K8s ingress
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
             - name: PORT
               value: "3000"
             - name: HOSTNAME
