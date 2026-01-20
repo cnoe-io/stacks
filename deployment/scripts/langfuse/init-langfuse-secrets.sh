@@ -49,7 +49,7 @@ generate_random() {
 # Generate API keys with Langfuse format prefix
 LANGFUSE_PUBLIC_KEY="${LANGFUSE_PUBLIC_KEY:-lf_pk_$(generate_random 24)}"
 LANGFUSE_SECRET_KEY="${LANGFUSE_SECRET_KEY:-lf_sk_$(generate_random 32)}"
-LANGFUSE_USER_PASSWORD="${LANGFUSE_USER_PASSWORD:-developer}"
+LANGFUSE_USER_PASSWORD="${LANGFUSE_USER_PASSWORD:-$(generate_random 16)}"
 
 echo -e "${GREEN}=== Langfuse Headless Initialization Secrets ===${NC}"
 echo -e "Vault: ${YELLOW}${VAULT_NAME}${NC}"
@@ -121,13 +121,6 @@ echo ""
 echo "API keys (used for both headless init and SDK):"
 set_secret "LANGFUSE-PUBLIC-KEY" "$LANGFUSE_PUBLIC_KEY" "Langfuse API public key"
 set_secret "LANGFUSE-SECRET-KEY" "$LANGFUSE_SECRET_KEY" "Langfuse API secret key"
-
-# Create the OTEL collector auth header (Basic auth format)
-# Format: "Basic <base64(public_key:secret_key)>"
-LANGFUSE_API_AUTH="Basic $(echo -n "${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}" | base64 -w 0)"
-echo ""
-echo "OTEL ingestion authentication:"
-set_secret "LANGFUSE-API-AUTH" "$LANGFUSE_API_AUTH" "Langfuse OTEL ingestion Basic auth header"
 
 echo ""
 echo -e "${GREEN}=== Secrets Created Successfully ===${NC}"

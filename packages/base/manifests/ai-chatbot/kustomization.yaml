@@ -7,6 +7,11 @@ resources:
   - ClusterRole-ai-chatbot-sandbox-manager.yaml
   - ClusterRoleBinding-ai-chatbot-sandbox-manager.yaml
   - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - Configuration-ai-chatbot-dapr.yaml
+  - Component-sandboxregistry.yaml
+  - Component-taskpubsub.yaml
+  - Subscription-taskevents.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - StatefulSet-redis.yaml

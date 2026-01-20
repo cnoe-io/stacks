@@ -1,0 +1,16 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: taskpubsub
+  namespace: ai-chatbot
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: redis.ai-chatbot.svc.cluster.local:6379
+    - name: redisPassword
+      value: ""
+    # Enable CloudEvents for structured event envelope
+    - name: consumerID
+      value: ai-chatbot-consumer

@@ -11,6 +11,7 @@ resources:
   - RuntimeClass-gvisor.yaml
   - NetworkPolicy-sandbox-isolation.yaml
   - ConfigMap-sandbox-otel-config.yaml
+  - Configuration-sandbox-dapr.yaml
   - SandboxTemplate-open-swe-dev.yaml
   - SandboxTemplate-chrome.yaml
   - SandboxWarmPool-open-swe.yaml

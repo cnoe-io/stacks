@@ -22,6 +22,14 @@ spec:
       labels:
         app: ai-chatbot
         app.kubernetes.io/name: ai-chatbot
+      annotations:
+        # Dapr sidecar injection for distributed tracing
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "ai-chatbot"
+        dapr.io/app-port: "3000"
+        dapr.io/config: "ai-chatbot-dapr-config"
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/api/health"
     spec:
       serviceAccountName: ai-chatbot
       initContainers:
@@ -130,6 +138,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: ai-chatbot-otel-config
+            - configMapRef:
+                name: ai-chatbot-dapr-config
             - secretRef:
                 name: ai-chatbot-secrets
           volumeMounts:

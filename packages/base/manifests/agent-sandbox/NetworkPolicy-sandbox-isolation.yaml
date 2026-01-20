@@ -59,6 +59,18 @@ spec:
           port: 4318  # OTLP HTTP
         - protocol: TCP
           port: 4317  # OTLP gRPC
+    # Allow Dapr system communication (placement, sentry, operator)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dapr-system
+      ports:
+        - protocol: TCP
+          port: 50001  # Dapr placement
+        - protocol: TCP
+          port: 50002  # Dapr sentry (mTLS)
+        - protocol: TCP
+          port: 6500   # Dapr operator
     # Allow HTTPS (GitHub, npm, pip, etc.)
     - to: []
       ports:

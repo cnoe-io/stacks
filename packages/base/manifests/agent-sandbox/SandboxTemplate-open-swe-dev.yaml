@@ -25,6 +25,12 @@ spec:
         app.kubernetes.io/name: open-swe-sandbox
         app.kubernetes.io/part-of: open-swe
         sandbox-type: development
+      annotations:
+        # Dapr sidecar injection for distributed tracing
+        # Note: app-id is templated by the sandbox controller
+        dapr.io/enabled: "true"
+        dapr.io/app-port: "8091"
+        dapr.io/config: "sandbox-dapr-config"
     spec:
       containers:
         - name: sandbox
@@ -50,7 +56,7 @@ spec:
             - name: GIT_COMMITTER_EMAIL
               value: "open-swe@users.noreply.github.com"
           ports:
-            - containerPort: 8080
+            - containerPort: 8091
               name: http
               protocol: TCP
           resources:
