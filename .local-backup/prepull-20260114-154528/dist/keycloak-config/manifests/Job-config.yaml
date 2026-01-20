@@ -1,0 +1,467 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+  name: config
+  namespace: keycloak
+spec:
+  activeDeadlineSeconds: 900
+  backoffLimit: 10
+  template:
+    metadata:
+      generateName: config
+    spec:
+      containers:
+        - args:
+            - |
+              #!/bin/bash
+              set -ex -o pipefail
+
+              apt -qq update && apt -qq install curl jq -y
+
+              ADMIN_PASSWORD=$(cat /var/secrets/KEYCLOAK_ADMIN_PASSWORD)
+              USER1_PASSWORD=$(cat /var/secrets/USER_PASSWORD)
+
+              # Domain-based routing: no path prefix needed
+              KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080
+
+              KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+                --data-urlencode "username=cnoe-admin" \
+                --data-urlencode "password=${ADMIN_PASSWORD}" \
+                --data-urlencode "grant_type=password" \
+                --data-urlencode "client_id=admin-cli" \
+                ${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token | jq -e -r '.access_token')
+
+              set +e
+
+              # Check if realm exists
+              curl --fail-with-body -H "Authorization: bearer ${KEYCLOAK_TOKEN}"  "${KEYCLOAK_URL}/admin/realms/cnoe"  &> /dev/null
+              REALM_EXISTS=$?
+              set -e
+
+              # Always need kubectl for secret creation
+              curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
+              chmod +x kubectl
+
+              patch_client_config() {
+                local client_name="$1"
+                local payload_file="$2"
+
+                if [ ! -f "$payload_file" ]; then
+                  echo "payload file not found: $payload_file"
+                  return 1
+                fi
+
+                local desired_redirects desired_weborigins
+                desired_redirects=$(jq -c '.redirectUris' "$payload_file")
+                desired_weborigins=$(jq -c '.webOrigins' "$payload_file")
+
+                local existing_client_id
+                existing_client_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -r --arg name "$client_name" '.[] | select(.clientId == $name) | .id' | head -1)
+
+                if [ -z "$existing_client_id" ] || [ "$existing_client_id" = "null" ]; then
+                  echo "client ${client_name}' not found; creating"
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @"$payload_file" \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+                  existing_client_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -r --arg name "$client_name" '.[] | select(.clientId == $name) | .id' | head -1)
+                fi
+
+                echo "ensuring redirectUris and webOrigins for client ${client_name}' (${existing_client_id}')"
+                local existing_json updated_json
+                existing_json=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${existing_client_id})
+                updated_json=$(echo "$existing_json" | jq --argjson redirects "$desired_redirects" --argjson origins "$desired_weborigins" '.redirectUris = $redirects | .webOrigins = $origins')
+
+                curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X PUT --data "$updated_json" \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${existing_client_id} >/dev/null
+
+                # Ensure groups scope is added to client (idempotent - no error if already exists)
+                echo "ensuring groups scope for client ${client_name}'"
+                local groups_scope_id
+                groups_scope_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+                if [ -n "$groups_scope_id" ] && [ "$groups_scope_id" != "null" ]; then
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${existing_client_id}/default-client-scopes/${groups_scope_id} 2>/dev/null || true
+                fi
+              }
+
+              # Helper function to ensure groups scope exists
+              ensure_groups_scope() {
+                echo "ensuring groups scope exists..."
+                local groups_scope_id
+                groups_scope_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+
+                if [ -z "$groups_scope_id" ] || [ "$groups_scope_id" = "null" ]; then
+                  echo "creating groups scope..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/client-scope-groups-payload.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes
+
+                  groups_scope_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -r '.[] | select(.name == "groups") | .id')
+
+                  echo "adding group mapper to groups scope..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/group-mapper-payload.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes/${groups_scope_id}/protocol-mappers/models
+                fi
+                echo "groups scope id: $groups_scope_id"
+              }
+
+              # Helper function to ensure groups exist
+              ensure_groups() {
+                echo "ensuring groups exist..."
+                local admin_group_id base_user_group_id
+
+                admin_group_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "admin") | .id')
+
+                if [ -z "$admin_group_id" ] || [ "$admin_group_id" = "null" ]; then
+                  echo "creating admin group..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/group-admin-payload.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/groups
+                fi
+
+                base_user_group_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "base-user") | .id')
+
+                if [ -z "$base_user_group_id" ] || [ "$base_user_group_id" = "null" ]; then
+                  echo "creating base-user group..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/group-base-user-payload.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/groups
+                fi
+              }
+
+              # Helper function to ensure users exist
+              ensure_users() {
+                echo "ensuring users exist..."
+
+                # Check/create user1
+                local user1_id
+                user1_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  "${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user1" | jq -r '.[0].id // empty')
+
+                if [ -z "$user1_id" ]; then
+                  echo "creating user1..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/user-user1.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+                  user1_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    "${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user1" | jq -r '.[0].id')
+
+                  echo "setting user1 password..."
+                  jq -r --arg pass ${USER1_PASSWORD} '.value = $pass' /var/config/user-password.json > /tmp/user-password-to-be-applied.json
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT --data @/tmp/user-password-to-be-applied.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/users/${user1_id}/reset-password
+
+                  echo "adding user1 to admin group..."
+                  local admin_group_id
+                  admin_group_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "admin") | .id')
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT ${KEYCLOAK_URL}/admin/realms/cnoe/users/${user1_id}/groups/${admin_group_id}
+                fi
+
+                # Check/create user2
+                local user2_id
+                user2_id=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  "${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user2" | jq -r '.[0].id // empty')
+
+                if [ -z "$user2_id" ]; then
+                  echo "creating user2..."
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/user-user2.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+                  user2_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    "${KEYCLOAK_URL}/admin/realms/cnoe/users?username=user2" | jq -r '.[0].id')
+
+                  echo "setting user2 password..."
+                  jq -r --arg pass ${USER1_PASSWORD} '.value = $pass' /var/config/user-password.json > /tmp/user-password-to-be-applied.json
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT --data @/tmp/user-password-to-be-applied.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/users/${user2_id}/reset-password
+
+                  echo "adding user2 to base-user group..."
+                  local base_user_group_id
+                  base_user_group_id=$(curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/groups | jq -r '.[] | select(.name == "base-user") | .id')
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X PUT ${KEYCLOAK_URL}/admin/realms/cnoe/users/${user2_id}/groups/${base_user_group_id}
+                fi
+              }
+
+              # If realm exists, check if keycloak-clients secret exists
+              if [ $REALM_EXISTS -eq 0 ]; then
+                # Realm exists: ensure all resources are present (idempotent)
+                ensure_groups_scope
+                ensure_groups
+                ensure_users
+
+                # Ensure redirect URIs and web origins match the desired payloads
+                patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
+                patch_client_config "backstage" "/var/config/backstage-client-payload.json"
+                patch_client_config "flipt" "/var/config/flipt-client-payload.json"
+
+                # Check if secret already exists
+                if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
+                  echo "Realm and secret already exist; all resources reconciled"
+                  exit 0
+                fi
+                echo "Realm exists but secret missing, recreating secret..."
+
+                # Get existing client secrets from Keycloak
+                KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+                  --data-urlencode "username=cnoe-admin" \
+                  --data-urlencode "password=${ADMIN_PASSWORD}" \
+                  --data-urlencode "grant_type=password" \
+                  --data-urlencode "client_id=admin-cli" \
+                  ${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token | jq -e -r '.access_token')
+
+                # Get Argo Workflows client secret
+                CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "argo-workflows") | .id')
+                ARGO_WORKFLOWS_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+                # Get Backstage client secret
+                CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "backstage") | .id')
+                BACKSTAGE_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+                # Get Flipt client secret
+                CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "flipt") | .id')
+                FLIPT_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+                # Get ArgoCD session token
+                ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
+                ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"${ARGOCD_PASSWORD}\"}" | jq -r .token)
+
+                # Create the secret
+                echo "
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: keycloak-clients
+                namespace: keycloak
+              type: Opaque
+              stringData:
+                ARGO_WORKFLOWS_CLIENT_SECRET: ${ARGO_WORKFLOWS_CLIENT_SECRET}
+                ARGO_WORKFLOWS_CLIENT_ID: argo-workflows
+                ARGOCD_SESSION_TOKEN: ${ARGOCD_SESSION_TOKEN}
+                BACKSTAGE_CLIENT_SECRET: ${BACKSTAGE_CLIENT_SECRET}
+                BACKSTAGE_CLIENT_ID: backstage
+                FLIPT_CLIENT_SECRET: ${FLIPT_CLIENT_SECRET}
+                FLIPT_CLIENT_ID: flipt
+              " > /tmp/secret.yaml
+
+                ./kubectl apply -f /tmp/secret.yaml
+                exit 0
+              fi
+
+              echo "creating cnoe realm and groups"
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/realm-payload.json \
+                ${KEYCLOAK_URL}/admin/realms
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/client-scope-groups-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/group-admin-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/groups
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/group-base-user-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/groups
+
+              # Create scope mapper
+              echo 'adding group claim to tokens'
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/group-mapper-payload.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes/${CLIENT_SCOPE_GROUPS_ID}/protocol-mappers/models
+
+              echo "creating test users"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/user-user1.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/user-user2.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/users
+
+              USER1ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" "${KEYCLOAK_URL}/admin/realms/cnoe/users?lastName=one" | jq -r '.[0].id')
+              USER2ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" "${KEYCLOAK_URL}/admin/realms/cnoe/users?lastName=two" | jq -r '.[0].id')
+
+              echo "setting user passwords"
+              jq -r --arg pass ${USER1_PASSWORD}  '.value = $pass' /var/config/user-password.json > /tmp/user-password-to-be-applied.json
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT --data @/tmp/user-password-to-be-applied.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/users/${USER1ID}/reset-password
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT --data @/tmp/user-password-to-be-applied.json \
+                ${KEYCLOAK_URL}/admin/realms/cnoe/users/${USER2ID}/reset-password
+
+              echo "creating Argo Workflows client"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X POST --data @/var/config/argo-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "argo-workflows") | .id')
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              ARGO_WORKFLOWS_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+              -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+              -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+              echo "creating Backstage client"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/backstage-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "backstage") | .id')
+
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              BACKSTAGE_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+              echo "creating Flipt client"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/flipt-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "flipt") | .id')
+
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              FLIPT_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+              ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
+
+              ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"${ARGOCD_PASSWORD}\"}" | jq -r .token)
+
+              echo "
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: keycloak-clients
+                namespace: keycloak
+              type: Opaque
+              stringData:
+                ARGO_WORKFLOWS_CLIENT_SECRET: ${ARGO_WORKFLOWS_CLIENT_SECRET}
+                ARGO_WORKFLOWS_CLIENT_ID: argo-workflows
+                ARGOCD_SESSION_TOKEN: ${ARGOCD_SESSION_TOKEN}
+                BACKSTAGE_CLIENT_SECRET: ${BACKSTAGE_CLIENT_SECRET}
+                BACKSTAGE_CLIENT_ID: backstage
+                FLIPT_CLIENT_SECRET: ${FLIPT_CLIENT_SECRET}
+                FLIPT_CLIENT_ID: flipt
+              " > /tmp/secret.yaml
+
+              ./kubectl apply -f /tmp/secret.yaml
+          command:
+            - /bin/bash
+            - -c
+          image: docker.io/library/ubuntu:22.04
+          name: kubectl
+          volumeMounts:
+            - mountPath: /var/secrets/
+              name: keycloak-config
+              readOnly: true
+            - mountPath: /var/config/
+              name: config-payloads
+              readOnly: true
+      restartPolicy: Never
+      serviceAccountName: keycloak-config
+      volumes:
+        - name: keycloak-config
+          secret:
+            secretName: keycloak-config
+        - configMap:
+            name: config-job
+          name: config-payloads

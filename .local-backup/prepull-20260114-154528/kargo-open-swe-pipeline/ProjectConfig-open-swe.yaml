@@ -1,0 +1,23 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-pipelines
+  namespace: kargo-pipelines
+spec:
+  promotionPolicies:
+    # Inner loop - auto-promote
+    - autoPromotionEnabled: true
+      stageSelector:
+        name: open-swe-local-dev
+    # Outer loop dev - auto-promote
+    - autoPromotionEnabled: true
+      stageSelector:
+        name: open-swe-dev
+    # Staging - manual approval
+    - autoPromotionEnabled: false
+      stageSelector:
+        name: open-swe-staging
+    # Production - manual approval
+    - autoPromotionEnabled: false
+      stageSelector:
+        name: open-swe-prod

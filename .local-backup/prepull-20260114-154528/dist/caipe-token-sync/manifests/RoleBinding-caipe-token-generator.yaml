@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: caipe-token-generator
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: caipe-token-generator
+subjects:
+  - kind: ServiceAccount
+    name: caipe-token-generator
+    namespace: argocd

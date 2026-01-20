@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  note: ServiceMonitor requires Prometheus Operator CRDs. Install kube-prometheus-stack to enable metrics scraping.
+  status: placeholder
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: caipe-servicemonitor
+    app.kubernetes.io/part-of: ai-platform-engineering
+  name: caipe-servicemonitor-placeholder
+  namespace: ai-platform-engineering

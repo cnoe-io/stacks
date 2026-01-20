@@ -10,5 +10,5 @@ spec:
   sandboxTemplateRef:
     name: chrome
     namespace: agent-sandbox
-  replicas: 2
+  replicas: 1
   minReady: 1

@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-130"
+  name: gateway-api-crds-helm
+  namespace: argocd
+spec:
+  destination:
+    namespace: kgateway-system
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: config/crd/standard
+    repoURL: https://github.com/kubernetes-sigs/gateway-api
+    targetRevision: v1.2.0
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

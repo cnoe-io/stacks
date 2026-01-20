@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  note: CRDs deployed via Helm chart in ArgoCD
+kind: ConfigMap
+metadata:
+  name: tailscale-crds-placeholder
+  namespace: tailscale

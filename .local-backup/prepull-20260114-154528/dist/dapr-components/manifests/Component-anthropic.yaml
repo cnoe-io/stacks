@@ -1,0 +1,17 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: anthropic
+  namespace: dapr-agents
+spec:
+  metadata:
+    - name: key
+      secretKeyRef:
+        key: ANTHROPIC_API_KEY
+        name: dapr-agents-llm-providers
+    - name: model
+      value: claude-opus-4-5-20251101
+    - name: cacheTTL
+      value: 10m
+  type: conversation.anthropic
+  version: v1

@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  name: keycloak-ingress
+  namespace: keycloak
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: keycloak.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: keycloak
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - keycloak.cnoe.localtest.me

@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app.kubernetes.io/component: presync-hook
+    app.kubernetes.io/name: wait-cert-manager-webhook
+    app.kubernetes.io/part-of: kargo
+  name: wait-cert-manager-webhook
+  namespace: kargo
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      containers:
+        - command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for cert-manager webhook to be ready..."
+              WEBHOOK_URL="https://cert-manager-webhook.cert-manager.svc:443/validate"
+              MAX_ATTEMPTS=60
+              ATTEMPT=0
+
+              while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+                ATTEMPT=$((ATTEMPT + 1))
+                echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Checking $WEBHOOK_URL"
+
+                # Check if webhook responds (expect 400 Bad Request for empty body, not connection refused)
+                HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "$WEBHOOK_URL" 2>/dev/null || echo "000")
+
+                if [ "$HTTP_CODE" != "000" ]; then
+                  echo "cert-manager webhook is ready! (HTTP $HTTP_CODE)"
+                  exit 0
+                fi
+
+                echo "Webhook not ready (HTTP $HTTP_CODE), waiting 5s..."
+                sleep 5
+              done
+
+              echo "ERROR: cert-manager webhook not ready after $MAX_ATTEMPTS attempts"
+              exit 1
+          image: curlimages/curl:8.5.0
+          name: wait-webhook
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+      restartPolicy: OnFailure
+  ttlSecondsAfterFinished: 300

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/name: kargo-pipelines
+    app.kubernetes.io/part-of: kargo
+    kargo.akuity.io/project: "true"
+  name: kargo-pipelines

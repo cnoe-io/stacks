@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  argocd-webhook-url: http://argocd-server.argocd.svc.cluster.local/api/webhook
+  description: Gitea webhook configuration for ArgoCD notifications
+  gitea-default-org: backstage
+  gitea-default-owner: giteaAdmin
+  gitea-internal-url: http://my-gitea-http.gitea.svc.cluster.local:3000
+kind: ConfigMap
+metadata:
+  name: gitea-webhook-config
+  namespace: gitea

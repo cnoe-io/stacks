@@ -7,7 +7,7 @@ metadata:
   name: agent-github
   namespace: ai-platform-engineering
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: agent-github

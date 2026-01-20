@@ -1,0 +1,13 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: messagepubsub
+  namespace: dapr-agents
+spec:
+  metadata:
+    - name: redisHost
+      value: redis-service.dapr-agents.svc.cluster.local:6379
+    - name: redisPassword
+      value: ""
+  type: pubsub.redis
+  version: v1

@@ -24,6 +24,36 @@ spec:
         app.kubernetes.io/name: ai-chatbot
     spec:
       serviceAccountName: ai-chatbot
+      initContainers:
+        - name: db-migrate
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+          imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Running database migrations..."
+              node lib/db/migrate.bundle.js
+              echo "Migrations complete"
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+          envFrom:
+            - secretRef:
+                name: ai-chatbot-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
       containers:
         - name: ai-chatbot
           image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
@@ -51,13 +81,14 @@ spec:
               value: "true"
             - name: AUTH_URL
               value: "https://ai-chatbot.cnoe.localtest.me:8443"
-            # OpenTelemetry configuration
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://otel-collector.observability.svc.cluster.local:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "ai-chatbot"
+            # OpenTelemetry - environment-specific override
             - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "deployment.environment=production,service.namespace=ai-chatbot"
+              value: "deployment.environment=production,service.namespace=ai-chatbot,service.version=1.0.0"
+            # Sandbox configuration for agent execution
+            - name: SANDBOX_MODE
+              value: "k8s"
+            - name: SANDBOX_NAMESPACE
+              value: "agent-sandbox"
             # GitHub App OAuth configuration (for coding agent)
             # Note: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID must also be set at build time via Docker ARG
             - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
@@ -97,6 +128,8 @@ spec:
                   key: GITHUB_WEBHOOK_SECRET
                   optional: true
           envFrom:
+            - configMapRef:
+                name: ai-chatbot-otel-config
             - secretRef:
                 name: ai-chatbot-secrets
           volumeMounts:

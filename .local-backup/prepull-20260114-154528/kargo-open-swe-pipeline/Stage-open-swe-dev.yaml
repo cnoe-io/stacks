@@ -1,0 +1,56 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: open-swe-dev
+  namespace: kargo-pipelines
+  annotations:
+    kargo.akuity.io/color: green
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: open-swe
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitRepoURL
+          value: https://github.com/PittampalliOrg/open-swe-config.git
+        - name: gitRepoBranch
+          value: stage/dev
+        - name: imageRepoURL
+          value: ghcr.io/pittampalliorg/open-swe
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitRepoURL }}
+            branch: ${{ vars.gitRepoBranch }}
+            path: ./out
+        - uses: git-clear
+          config:
+            path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./src/overlays/dev
+            images:
+              - image: ${{ vars.imageRepoURL }}
+        - uses: kustomize-build
+          config:
+            path: ./src/overlays/dev
+            outPath: ./out
+        - uses: git-commit
+          config:
+            path: ./out
+            message: "chore(dev): update open-swe to ${{ imageFrom(vars.imageRepoURL).Tag }}"
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: open-swe-dev
+                namespace: argocd
+                sources:
+                  - repoURL: ${{ vars.gitRepoURL }}
+                    desiredRevision: ${{ commitFrom(vars.gitRepoURL, vars.gitRepoBranch).ID }}

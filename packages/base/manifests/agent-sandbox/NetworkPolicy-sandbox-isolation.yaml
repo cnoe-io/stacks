@@ -32,6 +32,11 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: agent-sandbox
+    # Allow from ai-chatbot namespace (for direct pod-to-pod HTTP API calls)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-chatbot
   # Egress rules: Allow necessary outbound traffic
   egress:
     # Allow DNS resolution

@@ -1,0 +1,53 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: open-swe-local-dev
+  namespace: kargo-pipelines
+  annotations:
+    kargo.akuity.io/color: blue
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: open-swe-local
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitRepoURL
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-open-swe-manifests.git
+        - name: gitRepoBranch
+          value: main
+        - name: srcImageRepoURL
+          value: ghcr.io/pittampalliorg/open-swe
+        - name: destImageRepoURL
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitRepoURL }}
+            branch: ${{ vars.gitRepoBranch }}
+            path: ./manifests
+            insecureSkipTLSVerify: true
+        - uses: kustomize-set-image
+          as: update-image
+          config:
+            path: ./manifests/overlays/local-dev
+            images:
+              - image: ${{ vars.srcImageRepoURL }}
+                newName: ${{ vars.destImageRepoURL }}
+                useDigest: false
+        - uses: git-commit
+          config:
+            path: ./manifests
+            message: "chore(local-dev): update open-swe to ${{ imageFrom(vars.destImageRepoURL).Tag }}"
+        - uses: git-push
+          config:
+            path: ./manifests
+            insecureSkipTLSVerify: true
+        - uses: argocd-update
+          config:
+            apps:
+              - name: open-swe
+                namespace: argocd

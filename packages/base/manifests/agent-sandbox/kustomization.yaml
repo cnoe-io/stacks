@@ -14,5 +14,5 @@ resources:
   - SandboxTemplate-chrome.yaml
   - SandboxWarmPool-open-swe.yaml
   - SandboxWarmPool-chrome.yaml
-  - SandboxClaim-chrome-test.yaml
+  # Removed: SandboxClaim-chrome-test.yaml (test resource, not needed in production)
   - ClusterRole-open-swe-sandbox-user.yaml

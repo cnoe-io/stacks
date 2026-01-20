@@ -1,0 +1,20 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: open-swe-local
+  namespace: kargo-pipelines
+spec:
+  subscriptions:
+    # Watch Gitea manifests repo
+    - git:
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-open-swe-manifests.git
+        branch: main
+        insecureSkipTLSVerify: true
+    # Watch Gitea registry for dev images
+    - image:
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe
+        # Lexical ordering for dev tags (dev-YYYYMMDD-HHMMSS-commit)
+        imageSelectionStrategy: Lexical
+        discoveryLimit: 50
+        insecureSkipTLSVerify: true
+  interval: 30s

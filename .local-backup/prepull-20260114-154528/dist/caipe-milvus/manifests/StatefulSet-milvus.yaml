@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: milvus
+    tier: storage
+  name: milvus
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: milvus
+  serviceName: milvus
+  template:
+    metadata:
+      labels:
+        app: milvus
+    spec:
+      containers:
+        - command:
+            - milvus
+            - run
+            - standalone
+          env:
+            - name: ETCD_USE_EMBED
+              value: "true"
+            - name: COMMON_STORAGETYPE
+              value: local
+          image: milvusdb/milvus:v2.4.17
+          name: milvus
+          ports:
+            - containerPort: 19530
+              name: grpc
+            - containerPort: 9091
+              name: metrics
+          resources:
+            limits:
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /var/lib/milvus
+              name: data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi

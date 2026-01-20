@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rag-webui
+  namespace: ai-platform-engineering
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rag-webui.cnoe.localtest.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: rag-server
+                port:
+                  number: 8000
+            path: /healthz
+            pathType: Exact
+          - backend:
+              service:
+                name: rag-server
+                port:
+                  number: 8000
+            path: /v1
+            pathType: Prefix
+          - backend:
+              service:
+                name: rag-webui
+                port:
+                  name: http
+            path: /
+            pathType: Prefix

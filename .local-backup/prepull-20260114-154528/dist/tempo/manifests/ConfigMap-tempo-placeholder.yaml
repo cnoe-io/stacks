@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  note: Tempo distributed tracing. See cdk8s/charts/infra/lgtm-tempo-chart.ts. Jaeger is available as alternative.
+  status: placeholder
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: tempo
+    app.kubernetes.io/part-of: observability
+  name: tempo-placeholder
+  namespace: observability

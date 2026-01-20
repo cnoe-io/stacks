@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  note: KMCP MCP servers for AI agents. See cdk8s/charts/infra/kmcp-chart.ts
+  status: placeholder
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: kmcp
+    app.kubernetes.io/part-of: kagent
+  name: kmcp-placeholder
+  namespace: kagent

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-ingestor
+    tier: rag
+  name: k8s-ingestor
+  namespace: ai-platform-engineering
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: k8s-ingestor
+  template:
+    metadata:
+      labels:
+        app: k8s-ingestor
+    spec:
+      containers:
+        - env:
+            - name: CLUSTER_NAME
+              value: thinkpad
+            - name: SYNC_INTERVAL
+              value: "3600"
+            - name: RESOURCE_LIST
+              value: Deployment,Service,Ingress,Namespace,ConfigMap,StatefulSet,DaemonSet,CronJob,Job,Pod
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: OPENAI_API_KEY
+                  name: embeddings-secret
+            - name: NEO4J_URI
+              value: bolt://neo4j.ai-platform-engineering.svc.cluster.local:7687
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_AUTH
+                  name: neo4j-secret
+            - name: MILVUS_HOST
+              value: milvus.ai-platform-engineering.svc.cluster.local
+            - name: MILVUS_PORT
+              value: "19530"
+          image: ghcr.io/cnoe-io/caipe-rag-ingestors:latest
+          name: k8s-ingestor
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      serviceAccountName: k8s-ingestor

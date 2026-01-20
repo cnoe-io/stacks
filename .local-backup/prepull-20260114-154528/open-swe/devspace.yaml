@@ -1,0 +1,107 @@
+version: v2beta1
+name: open-swe
+
+vars:
+  IMAGE_REPO: gitea.cnoe.localtest.me:8443/giteaadmin/open-swe
+
+dev:
+  open-swe-api:
+    # Target the existing open-swe deployment
+    imageSelector: open-swe-agent:latest
+    namespace: open-swe
+    # Swap to dev image with Nix + Node.js
+    devImage: docker.io/vpittamp23/ubuntu-nix-node:v1
+
+    # Container resources for development
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "4Gi"
+      limits:
+        cpu: "4"
+        memory: "16Gi"
+        ephemeral-storage: "100Gi"
+
+    # Persistent volumes for caches
+    persistentVolumeClaims:
+      nix-store:
+        size: 100Gi
+        mountPath: /nix
+      yarn-cache:
+        size: 20Gi
+        mountPath: /home/code/.cache
+
+    # Working directory
+    workingDir: /workspace
+
+    # Override command to prevent production start
+    command: ["sleep", "infinity"]
+
+    # Bidirectional file sync
+    sync:
+      - path: ${DEVSPACE_USER_HOME}/repos/PittampalliOrg/open-swe/main:/workspace
+        excludePaths:
+          - node_modules/
+          - .git/
+          - dist/
+          - .next/
+          - .yarn/cache/
+        uploadExcludePaths:
+          - "**/.build-version"
+        onUpload:
+          restartContainer: false
+          exec:
+            - command: sh
+              args: ["-c", "cd /workspace && yarn dev"]
+              once: true
+
+    # Port forwarding
+    ports:
+      - port: "8000:8000"   # LangGraph API server
+      - port: "3000:3000"   # Next.js web app
+      - port: "7007:7007"   # Backend API
+
+    # Terminal access
+    terminal:
+      enabled: true
+      command: /bin/bash
+      workDir: /workspace
+
+    # SSH for IDE remote development
+    ssh:
+      enabled: true
+      localPort: 2222
+
+  # Separate dev container for web app (optional)
+  open-swe-web:
+    imageSelector: ghcr.io/pittampalliorg/open-swe-web
+    devImage: node:20-bookworm
+
+    sync:
+      - path: ${DEVSPACE_USER_HOME}/repos/PittampalliOrg/open-swe/main/apps/web:/workspace
+        excludePaths:
+          - node_modules/
+          - .next/
+        onUpload:
+          exec:
+            - command: sh
+              args: ["-c", "cd /workspace && yarn dev"]
+              once: true
+
+    ports:
+      - port: "3001:3000"
+
+    terminal:
+      enabled: true
+
+pipelines:
+  dev:
+    run: |
+      echo "Starting Open-SWE development mode..."
+      start_dev --all
+
+  deploy:
+    run: |
+      echo "Building and deploying Open-SWE..."
+      build_images --all
+      create_deployments --all

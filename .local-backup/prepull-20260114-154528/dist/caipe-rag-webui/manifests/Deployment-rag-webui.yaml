@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rag-webui
+    tier: rag
+  name: rag-webui
+  namespace: ai-platform-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-webui
+  template:
+    metadata:
+      labels:
+        app: rag-webui
+    spec:
+      containers:
+        - env:
+            - name: RAG_SERVER_URL
+              value: http://rag-server.ai-platform-engineering.svc.cluster.local:8000
+          image: ghcr.io/cnoe-io/caipe-rag-webui:0.2.8
+          name: rag-webui
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      imagePullSecrets:
+        - name: ghcr-pull-secret

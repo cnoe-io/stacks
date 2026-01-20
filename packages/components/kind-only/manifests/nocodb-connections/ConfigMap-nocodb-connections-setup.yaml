@@ -28,6 +28,21 @@ data:
           "SELECT id FROM nc_users_v2 WHERE roles LIKE '%super%' LIMIT 1")
         echo "Admin user ID: $ADMIN_USER_ID"
 
+        # Get default workspace ID (from Getting Started base or first available)
+        # Note: Use <> '' to exclude empty strings, not just IS NOT NULL
+        WORKSPACE_ID=$(PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb -tAc \
+          "SELECT fk_workspace_id FROM nc_bases_v2 WHERE fk_workspace_id IS NOT NULL AND fk_workspace_id <> '' LIMIT 1")
+        echo "Workspace ID: $WORKSPACE_ID"
+
+        # Verify we have required IDs
+        if [ -z "$ADMIN_USER_ID" ] || [ -z "$WORKSPACE_ID" ]; then
+          echo "ERROR: Could not retrieve admin user ID or workspace ID"
+          echo "  Admin User ID: '$ADMIN_USER_ID'"
+          echo "  Workspace ID: '$WORKSPACE_ID'"
+          echo "  Please ensure NocoDB has been initialized with at least one admin user"
+          exit 1
+        fi
+
         # Function to generate NocoDB-style IDs (prefix + random alphanumeric)
         generate_id() {
           local prefix="$1"
@@ -69,26 +84,30 @@ data:
             -- 1. Create/update integration (stores FULL connection credentials)
             INSERT INTO nc_integrations_v2 (
               id, title, config, type, sub_type, is_private, deleted,
-              created_by, "order", created_at, updated_at, is_default, is_encrypted
+              created_by, "order", created_at, updated_at, is_default, is_encrypted, fk_workspace_id
             )
             VALUES (
               '$int_id', '$title', '$int_config', 'database', 'pg', false, false,
-              '$ADMIN_USER_ID', 1, NOW(), NOW(), false, false
+              '$ADMIN_USER_ID', 1, NOW(), NOW(), false, false, '$WORKSPACE_ID'
             )
             ON CONFLICT (id) DO UPDATE SET
               title = EXCLUDED.title,
               config = EXCLUDED.config,
+              fk_workspace_id = EXCLUDED.fk_workspace_id,
               updated_at = NOW();
 
             -- 2. Create/update base (the "database" in NocoDB UI)
-            INSERT INTO nc_bases_v2 (id, title, description, status, is_meta, created_at, updated_at)
-            VALUES ('$base_id', '$title', '$description', 'online', false, NOW(), NOW())
+            INSERT INTO nc_bases_v2 (id, title, description, status, is_meta, fk_workspace_id, created_at, updated_at)
+            VALUES ('$base_id', '$title', '$description', 'online', false, '$WORKSPACE_ID', NOW(), NOW())
             ON CONFLICT (id) DO UPDATE SET
               title = EXCLUDED.title,
               description = EXCLUDED.description,
+              fk_workspace_id = EXCLUDED.fk_workspace_id,
               updated_at = NOW();
 
             -- 3. Create/update source (MINIMAL config - credentials from integration via fk_integration_id)
+            -- Delete existing source first to avoid constraint issues, then insert fresh
+            DELETE FROM nc_sources_v2 WHERE base_id = '$base_id' AND id = '$source_id';
             INSERT INTO nc_sources_v2 (
               id, base_id, alias, type, config, is_meta, enabled,
               fk_integration_id, is_local, is_encrypted,
@@ -98,16 +117,14 @@ data:
               '$source_id', '$base_id', '$alias', 'pg', '$source_config', false, true,
               '$int_id', false, false,
               NOW(), NOW()
-            )
-            ON CONFLICT (id) DO UPDATE SET
-              config = EXCLUDED.config,
-              fk_integration_id = EXCLUDED.fk_integration_id,
-              updated_at = NOW();
+            );
 
             -- 4. Grant admin user access to the base
             INSERT INTO nc_base_users_v2 (base_id, fk_user_id, roles, created_at, updated_at)
             VALUES ('$base_id', '$ADMIN_USER_ID', 'owner', NOW(), NOW())
-            ON CONFLICT DO NOTHING;
+            ON CONFLICT (base_id, fk_user_id) DO UPDATE SET
+              roles = EXCLUDED.roles,
+              updated_at = NOW();
     EOSQL
 
           echo "  ✓ Database records created"
@@ -162,6 +179,21 @@ data:
             "$LANGFUSE_POSTGRES_PASSWORD"
         else
           echo "⚠ Skipping Langfuse - no password provided"
+        fi
+
+        # Create AI Chatbot connection
+        if [ -n "$AI_CHATBOT_POSTGRES_PASSWORD" ]; then
+          create_external_db \
+            "ai_chatbot" \
+            "AI Chatbot" \
+            "AI Chatbot application - conversations, messages, users" \
+            "postgresql.ai-chatbot.svc.cluster.local" \
+            "5432" \
+            "ai_chatbot" \
+            "postgres" \
+            "$AI_CHATBOT_POSTGRES_PASSWORD"
+        else
+          echo "⚠ Skipping AI Chatbot - no password provided"
         fi
 
         echo ""

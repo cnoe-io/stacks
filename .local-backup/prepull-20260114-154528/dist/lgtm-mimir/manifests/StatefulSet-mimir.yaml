@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: mimir
+  name: mimir
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mimir
+  serviceName: mimir
+  template:
+    metadata:
+      labels:
+        app: mimir
+    spec:
+      containers:
+        - args:
+            - -config.file=/etc/mimir/mimir.yaml
+          image: grafana/mimir:2.14.0
+          name: mimir
+          ports:
+            - containerPort: 9009
+              name: http
+          volumeMounts:
+            - mountPath: /etc/mimir
+              name: config
+            - mountPath: /data
+              name: data
+      volumes:
+        - configMap:
+            name: mimir-config
+          name: config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi

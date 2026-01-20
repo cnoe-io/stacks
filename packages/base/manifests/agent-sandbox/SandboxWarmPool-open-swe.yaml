@@ -11,10 +11,10 @@ spec:
   sandboxTemplateRef:
     name: open-swe-dev
     namespace: agent-sandbox
-  # Scale up warm pool for better availability
-  replicas: 5
+  # Scale down warm pool to save resources (minimum 1)
+  replicas: 1
   # Minimum number of ready sandboxes before accepting claims
-  minReady: 2
+  minReady: 1
   # Topology spread for high availability across zones
   topologySpreadConstraints:
     - maxSkew: 1

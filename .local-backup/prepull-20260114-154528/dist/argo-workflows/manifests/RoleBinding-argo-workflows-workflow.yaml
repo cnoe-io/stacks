@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: workflow-controller
+    app.kubernetes.io/component: workflow-controller
+    app.kubernetes.io/instance: argo-workflows
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argo-workflows-workflow-controller
+    app.kubernetes.io/part-of: argo-workflows
+    helm.sh/chart: argo-workflows-0.46.2
+  name: argo-workflows-workflow
+  namespace: argo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-workflows-workflow
+subjects:
+  - kind: ServiceAccount
+    name: argo-workflow
+    namespace: argo

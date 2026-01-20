@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: langfuse-postgres
+  name: langfuse-postgres
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-postgres
+  serviceName: langfuse-postgres
+  template:
+    metadata:
+      labels:
+        app: langfuse-postgres
+    spec:
+      containers:
+        - env:
+            - name: POSTGRES_DB
+              value: langfuse
+            - name: POSTGRES_USER
+              value: langfuse
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: langfuse-postgres-credentials
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          image: postgres:15-alpine
+          name: postgres
+          ports:
+            - containerPort: 5432
+              name: postgres
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

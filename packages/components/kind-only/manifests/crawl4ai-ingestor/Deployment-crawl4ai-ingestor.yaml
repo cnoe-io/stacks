@@ -9,7 +9,7 @@ metadata:
   name: crawl4ai-ingestor
   namespace: ai-platform-engineering
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: crawl4ai-ingestor

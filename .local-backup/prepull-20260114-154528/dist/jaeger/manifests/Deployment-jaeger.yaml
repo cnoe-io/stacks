@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: jaeger
+  name: jaeger
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - env:
+            - name: COLLECTOR_ZIPKIN_HOST_PORT
+              value: :9411
+            - name: SPAN_STORAGE_TYPE
+              value: badger
+            - name: BADGER_EPHEMERAL
+              value: "false"
+            - name: BADGER_DIRECTORY_VALUE
+              value: /badger/data
+            - name: BADGER_DIRECTORY_KEY
+              value: /badger/key
+            - name: BADGER_SPAN_STORE_TTL
+              value: 168h
+          image: jaegertracing/all-in-one:1.66.0
+          name: jaeger
+          ports:
+            - containerPort: 5775
+              name: zipkin-compact
+              protocol: UDP
+            - containerPort: 6831
+              name: jaeger-compact
+              protocol: UDP
+            - containerPort: 6832
+              name: jaeger-binary
+              protocol: UDP
+            - containerPort: 5778
+              name: config-rest
+            - containerPort: 16686
+              name: query
+            - containerPort: 14250
+              name: grpc
+            - containerPort: 14268
+              name: jaeger-http
+            - containerPort: 14269
+              name: admin
+            - containerPort: 9411
+              name: zipkin
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /badger
+              name: data
+      volumes:
+        - emptyDir: {}
+          name: data

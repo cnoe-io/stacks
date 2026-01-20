@@ -18,9 +18,6 @@ spec:
     targetRevision: stage/local-dev
     path: manifests
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

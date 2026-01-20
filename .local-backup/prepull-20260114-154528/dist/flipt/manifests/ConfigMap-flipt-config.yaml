@@ -1,0 +1,79 @@
+apiVersion: v1
+data:
+  flipt.yml: |
+    log:
+      level: debug
+      encoding: json
+
+    server:
+      protocol: http
+      http_port: 8080
+      grpc_port: 9000
+
+    # Declarative Git storage (v2 format)
+    # https://docs.flipt.io/configuration/storage
+    # Authentication values are overridden by env vars:
+    # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_USERNAME
+    # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
+    storage:
+      default:
+        remote: "http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/feature-flags.git"
+        ref: "main"
+        poll_interval: "30s"
+        insecure_skip_tls: true
+        authentication:
+          basic:
+            # Placeholder values - overridden by env vars from flipt-git-credentials secret
+            username: "placeholder"
+            password: "placeholder"
+        backend:
+          type: git
+
+    # Authentication configuration
+    authentication:
+      required: true
+      exclude:
+        metadata: true
+        evaluation: true
+      session:
+        domain: "flipt.cnoe.localtest.me"
+        secure: true
+      methods:
+        token:
+          enabled: false
+        oidc:
+          enabled: true
+          cleanup:
+            interval: "10m"
+            grace_period: "30m"
+          providers:
+            keycloak:
+              # Domain-based routing for Keycloak
+              issuer_url: "https://keycloak.cnoe.localtest.me:8443/realms/cnoe"
+              client_id: "flipt"
+              # client_secret provided via FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET env var
+              redirect_address: "https://flipt.cnoe.localtest.me:8443"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+
+    # Audit logging
+    audit:
+      sinks:
+        log:
+          enabled: true
+
+    # Telemetry
+    telemetry:
+      enabled: true
+kind: ConfigMap
+metadata:
+  labels:
+    app: flipt
+    app.kubernetes.io/component: management-ui
+    app.kubernetes.io/name: flipt
+    app.kubernetes.io/part-of: feature-flags
+  name: flipt-config
+  namespace: feature-flags

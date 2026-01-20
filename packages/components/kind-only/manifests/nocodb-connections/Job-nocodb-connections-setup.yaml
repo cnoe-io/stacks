@@ -35,6 +35,11 @@ spec:
                 secretKeyRef:
                   key: LANGFUSE_POSTGRES_PASSWORD
                   name: nocodb-external-db-credentials
+            - name: AI_CHATBOT_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: AI_CHATBOT_POSTGRES_PASSWORD
+                  name: nocodb-external-db-credentials
           image: postgres:15-alpine
           name: setup
           volumeMounts:

@@ -1,0 +1,22 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app: dapr-scheduler-server
+    app.kubernetes.io/component: scheduler
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.14.4
+  name: dapr-scheduler-server-disruption-budget
+  namespace: dapr-system
+spec:
+  maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: dapr-scheduler-server
+      app.kubernetes.io/component: scheduler
+      app.kubernetes.io/managed-by: helm
+      app.kubernetes.io/name: dapr
+      app.kubernetes.io/part-of: dapr
+      app.kubernetes.io/version: 1.14.4

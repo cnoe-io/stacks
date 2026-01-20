@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - Namespace-ai-chatbot.yaml
   - ServiceAccount-ai-chatbot.yaml
+  - ClusterRole-ai-chatbot-sandbox-manager.yaml
+  - ClusterRoleBinding-ai-chatbot-sandbox-manager.yaml
+  - ConfigMap-otel-config.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - StatefulSet-redis.yaml
