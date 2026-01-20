@@ -10,6 +10,7 @@ resources:
   - Service-sandbox-router.yaml
   - RuntimeClass-gvisor.yaml
   - NetworkPolicy-sandbox-isolation.yaml
+  - ConfigMap-sandbox-otel-config.yaml
   - SandboxTemplate-open-swe-dev.yaml
   - SandboxTemplate-chrome.yaml
   - SandboxWarmPool-open-swe.yaml

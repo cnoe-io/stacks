@@ -32,6 +32,11 @@ spec:
           # Pre-installed: git, curl, wget, nodejs, python, headless Chrome
           # Docs: https://sandbox.agent-infra.com/
           image: ghcr.io/agent-infra/sandbox:1.0.0.152
+          envFrom:
+            # OpenTelemetry configuration for observability
+            # Traces are sent to OTEL collector which routes to Tempo and Langfuse
+            - configMapRef:
+                name: sandbox-otel-config
           env:
             # AIO Sandbox working directory
             - name: WORKSPACE

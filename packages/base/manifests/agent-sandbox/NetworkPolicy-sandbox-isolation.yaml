@@ -49,6 +49,16 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    # Allow OpenTelemetry traces to OTEL collector in observability namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - protocol: TCP
+          port: 4318  # OTLP HTTP
+        - protocol: TCP
+          port: 4317  # OTLP gRPC
     # Allow HTTPS (GitHub, npm, pip, etc.)
     - to: []
       ports:

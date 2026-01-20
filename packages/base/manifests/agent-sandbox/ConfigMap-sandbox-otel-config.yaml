@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sandbox-otel-config
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: sandbox-otel-config
+    app.kubernetes.io/part-of: agent-sandbox
+    app.kubernetes.io/component: observability
+data:
+  # OpenTelemetry Configuration for Sandbox Containers
+  # These environment variables are automatically picked up by OTEL SDKs
+  # when code running in sandboxes is instrumented with OpenTelemetry.
+  #
+  # Architecture:
+  #   Sandbox Container ──► OTEL Collector ──► Tempo ──► Grafana
+  #                                        └──► Langfuse
+
+  # OTEL Exporter Configuration
+  # Uses the cluster-internal OTEL collector which fans out to Tempo and Langfuse
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+
+  # Service identification
+  OTEL_SERVICE_NAME: "agent-sandbox"
+
+  # Resource attributes for trace correlation
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=production,service.namespace=agent-sandbox,service.version=1.0.0"
+
+  # Trace sampling (1.0 = 100% sampling for full observability)
+  OTEL_TRACES_SAMPLER: "parentbased_always_on"
+
+  # Propagation format for distributed tracing
+  OTEL_PROPAGATORS: "tracecontext,baggage"
+
+  # Node.js specific auto-instrumentation settings
+  NODE_OPTIONS: "--require @opentelemetry/auto-instrumentations-node/register"
+
+  # Python specific auto-instrumentation
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"

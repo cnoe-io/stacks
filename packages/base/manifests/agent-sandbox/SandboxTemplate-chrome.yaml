@@ -23,6 +23,11 @@ spec:
       containers:
         - name: sandbox
           image: docker.io/browserless/chrome:latest
+          envFrom:
+            # OpenTelemetry configuration for observability
+            # Traces are sent to OTEL collector which routes to Tempo and Langfuse
+            - configMapRef:
+                name: sandbox-otel-config
           ports:
             - containerPort: 3000
               name: http
