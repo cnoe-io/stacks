@@ -23,3 +23,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  # Service management for Dapr service invocation
+  # Since Dapr Operator doesn't create services for CRD-owned pods,
+  # we create them ourselves to enable Dapr service invocation
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "delete", "get", "list"]

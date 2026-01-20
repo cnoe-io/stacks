@@ -84,6 +84,11 @@ spec:
               value: placement
             - name: ACTORS_SERVICE_ADDRESS
               value: dapr-placement-server:50005
+            # Allow sandbox controller to create pods with Dapr sidecars
+            # Without this, sidecar injection is blocked for pods created by the agent-sandbox-controller
+            # Format is namespace:serviceAccount (not full system:serviceaccount:ns:sa format)
+            - name: ALLOWED_SERVICE_ACCOUNTS
+              value: "agent-sandbox:agent-sandbox-controller"
           image: ghcr.io/dapr/injector:1.14.4
           imagePullPolicy: IfNotPresent
           livenessProbe:
