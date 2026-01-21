@@ -41,6 +41,8 @@ spec:
                       - linux
       containers:
         - args:
+            - --mode
+            - kubernetes
             - --log-level
             - info
             - --log-as-json
