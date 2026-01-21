@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: diagrid-dashboard
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: diagrid-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: diagrid-dashboard
+  template:
+    metadata:
+      labels:
+        app: diagrid-dashboard
+        app.kubernetes.io/name: diagrid-dashboard
+    spec:
+      containers:
+        - name: diagrid-dashboard
+          image: ghcr.io/diagridio/diagrid-dashboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: COMPONENT_FILE
+              value: "/app/components/custom_state.yaml"
+          volumeMounts:
+            - name: state-component
+              mountPath: /app/components/custom_state.yaml
+              subPath: state_redis.yaml
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: state-component
+          configMap:
+            name: diagrid-dashboard-config

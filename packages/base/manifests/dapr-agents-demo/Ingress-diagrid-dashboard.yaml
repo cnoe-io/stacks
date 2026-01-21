@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: diagrid-dashboard
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: diagrid-dashboard
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: diagrid-dashboard.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: diagrid-dashboard
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - diagrid-dashboard.cnoe.localtest.me
+      secretName: nginx-tls
