@@ -21,6 +21,8 @@ spec:
         dapr.io/enabled: "true"
         dapr.io/app-id: "frodo"
         dapr.io/metrics-port: "59190"
+        dapr.io/config: "speckit-tracing"
+        dapr.io/enable-api-logging: "true"
     spec:
       containers:
         - name: frodo

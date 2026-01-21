@@ -6,5 +6,14 @@ metadata:
 spec:
   tracing:
     samplingRate: "1"
-    zipkin:
-      endpointAddress: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
+    otel:
+      endpointAddress: otel-collector.observability.svc.cluster.local:4317
+      isSecure: false
+      protocol: grpc
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false
+      omitHealthChecks: true
+  metrics:
+    enabled: true

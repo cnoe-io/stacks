@@ -22,6 +22,8 @@ spec:
         dapr.io/app-id: "workflow-llm"
         dapr.io/app-port: "8004"
         dapr.io/metrics-port: "59213"
+        dapr.io/config: "speckit-tracing"
+        dapr.io/enable-api-logging: "true"
     spec:
       containers:
         - name: workflow-llm
