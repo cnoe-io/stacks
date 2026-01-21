@@ -22,3 +22,5 @@ data:
           value: ""
         - name: actorStateStore
           value: "true"
+        - name: keyPrefix
+          value: "workflow-llm"
