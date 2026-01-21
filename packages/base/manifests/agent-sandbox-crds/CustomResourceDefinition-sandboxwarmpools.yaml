@@ -49,13 +49,33 @@ spec:
                       description: Namespace of the SandboxTemplate
                 replicas:
                   type: integer
-                  minimum: 1
+                  minimum: 0
                   maximum: 10
                   description: Number of pre-warmed sandbox pods to maintain
                 minReady:
                   type: integer
                   minimum: 0
                   description: Minimum number of ready sandboxes before scaling
+                topologySpreadConstraints:
+                  type: array
+                  description: Topology spread constraints for distributing sandboxes across zones/nodes
+                  items:
+                    type: object
+                    properties:
+                      maxSkew:
+                        type: integer
+                        description: Maximum difference in pod count between topology domains
+                      topologyKey:
+                        type: string
+                        description: Node label key for topology domain
+                      whenUnsatisfiable:
+                        type: string
+                        enum: ["DoNotSchedule", "ScheduleAnyway"]
+                        description: Action when constraints cannot be satisfied
+                      labelSelector:
+                        type: object
+                        description: Label selector for matching pods
+                        x-kubernetes-preserve-unknown-fields: true
             status:
               type: object
               properties:

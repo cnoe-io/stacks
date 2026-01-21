@@ -17,6 +17,8 @@ spec:
       releaseName: grafana
       valuesObject:
         replicas: 1
+        initChownData:
+          enabled: false
         persistence:
           enabled: true
           size: 5Gi
