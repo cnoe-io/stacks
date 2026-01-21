@@ -97,11 +97,13 @@ spec:
               value: "k8s"
             - name: SANDBOX_NAMESPACE
               value: "agent-sandbox"
-            # Redis configuration for workflow API
+            # Redis configuration for workflow API (pointing to dapr-agents Redis)
             - name: REDIS_HOST
-              value: "redis"
+              value: "redis-service.dapr-agents.svc.cluster.local"
             - name: REDIS_PORT
               value: "6379"
+            - name: WORKFLOW_STATE_KEY
+              value: "workflow-llm||llm.orchestrator:LLMOrchestrator:workflow_state"
             # GitHub App OAuth configuration (for coding agent)
             # Note: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID must also be set at build time via Docker ARG
             - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
