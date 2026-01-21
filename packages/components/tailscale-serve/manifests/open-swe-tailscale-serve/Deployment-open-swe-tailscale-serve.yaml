@@ -6,7 +6,7 @@ metadata:
   name: open-swe-${TAILSCALE_HOST}-tailscale-serve
   namespace: tailscale
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: open-swe-tailscale-serve

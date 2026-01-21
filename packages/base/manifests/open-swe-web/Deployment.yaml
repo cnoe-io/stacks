@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/component: open-swe-web
     app.kubernetes.io/instance: open-swe
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: open-swe-web

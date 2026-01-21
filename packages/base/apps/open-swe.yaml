@@ -28,7 +28,7 @@ spec:
 
         # API Server configuration
         apiServer:
-          replicas: 1
+          replicas: 0
           resources:
             requests:
               cpu: 500m
@@ -141,7 +141,7 @@ spec:
         studio:
           enabled: true
           localGraphUrl: "https://open-swe.cnoe.localtest.me:8443"
-          replicas: 1
+          replicas: 0
           resources:
             requests:
               cpu: 250m
@@ -153,9 +153,9 @@ spec:
             type: ClusterIP
             port: 80
 
-        # Use internal PostgreSQL
+        # Use internal PostgreSQL (disabled to save resources)
         postgres:
-          enabled: true
+          enabled: false
           password: postgres
           statefulSet:
             resources:
@@ -168,9 +168,9 @@ spec:
             persistence:
               size: 8Gi
 
-        # Use internal Redis
+        # Use internal Redis (disabled to save resources)
         redis:
-          enabled: true
+          enabled: false
           deployment:
             resources:
               requests:
