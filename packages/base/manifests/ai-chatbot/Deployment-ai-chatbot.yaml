@@ -97,6 +97,11 @@ spec:
               value: "k8s"
             - name: SANDBOX_NAMESPACE
               value: "agent-sandbox"
+            # Redis configuration for workflow API
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
             # GitHub App OAuth configuration (for coding agent)
             # Note: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID must also be set at build time via Docker ARG
             - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
