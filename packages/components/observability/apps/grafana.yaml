@@ -79,6 +79,21 @@ spec:
                     datasourceUid: loki
                     filterBySpanID: true
                     filterByTraceID: true
+                  tracesToMetrics:
+                    datasourceUid: mimir
+                    spanStartTimeShift: '-1h'
+                    spanEndTimeShift: '1h'
+                    tags:
+                      - key: service.name
+                        value: service
+                      - key: job
+                    queries:
+                      - name: 'Request rate'
+                        query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+                      - name: 'Error rate'
+                        query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))'
+                      - name: 'Duration (p95)'
+                        query: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])) by (le))'
         ingress:
           enabled: true
           ingressClassName: nginx
