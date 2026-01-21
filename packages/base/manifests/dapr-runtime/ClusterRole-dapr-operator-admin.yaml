@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: dapr
     app.kubernetes.io/part-of: dapr
-    app.kubernetes.io/version: 1.14.4
+    app.kubernetes.io/version: 1.16.6
   name: dapr-operator-admin
 rules:
   - apiGroups:

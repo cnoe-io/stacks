@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: dapr
     app.kubernetes.io/part-of: dapr
-    app.kubernetes.io/version: 1.14.4
+    app.kubernetes.io/version: 1.16.6
   name: dapr-sidecar-injector
   namespace: dapr-system
 spec:
@@ -28,7 +28,7 @@ spec:
         app.kubernetes.io/managed-by: helm
         app.kubernetes.io/name: dapr
         app.kubernetes.io/part-of: dapr
-        app.kubernetes.io/version: 1.14.4
+        app.kubernetes.io/version: 1.16.6
     spec:
       affinity:
         nodeAffinity:
@@ -61,7 +61,7 @@ spec:
             - name: KUBE_CLUSTER_DOMAIN
               value: cluster.local
             - name: SIDECAR_IMAGE
-              value: ghcr.io/dapr/daprd:1.14.4
+              value: ghcr.io/dapr/daprd:1.16.6
             - name: SIDECAR_IMAGE_PULL_POLICY
               value: IfNotPresent
             - name: SIDECAR_RUN_AS_NON_ROOT
@@ -89,7 +89,7 @@ spec:
             # Format is namespace:serviceAccount (not full system:serviceaccount:ns:sa format)
             - name: ALLOWED_SERVICE_ACCOUNTS
               value: "agent-sandbox:agent-sandbox-controller"
-          image: ghcr.io/dapr/injector:1.14.4
+          image: ghcr.io/dapr/injector:1.16.6
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 5
