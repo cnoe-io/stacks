@@ -8,4 +8,7 @@ metadata:
     app.kubernetes.io/part-of: dapr
     app.kubernetes.io/version: 1.16.6
   name: dapr-scheduler
-rules: []
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]

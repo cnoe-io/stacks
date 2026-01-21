@@ -32,6 +32,8 @@ spec:
         app.kubernetes.io/part-of: dapr
         app.kubernetes.io/version: 1.16.6
     spec:
+      securityContext:
+        fsGroup: 65532
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -98,11 +100,12 @@ spec:
             periodSeconds: 3
           resources: {}
           securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: true
-            runAsUser: 0
           volumeMounts:
             - mountPath: /var/run/secrets/dapr.io/tls
               name: dapr-trust-bundle
