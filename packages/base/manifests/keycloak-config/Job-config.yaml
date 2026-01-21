@@ -307,7 +307,6 @@ spec:
                 patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
                 patch_client_config "backstage" "/var/config/backstage-client-payload.json"
                 patch_client_config "flipt" "/var/config/flipt-client-payload.json"
-                patch_client_config "open-swe" "/var/config/open-swe-client-payload.json"
 
                 # Check if secret already exists
                 if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
@@ -488,19 +487,6 @@ spec:
               FLIPT_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                 -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
-
-              echo "creating Open-SWE client (public client with PKCE)"
-              curl -sS -H "Content-Type: application/json" \
-                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-                -X POST --data @/var/config/open-swe-client-payload.json \
-                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
-
-              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
-                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "open-swe") | .id')
-
-              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
-              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
 
               # Configure GitHub IdP (if credentials are available)
               ensure_github_idp

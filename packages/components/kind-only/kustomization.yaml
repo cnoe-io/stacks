@@ -40,5 +40,3 @@ resources:
   - apps/nocodb-secrets.yaml
   - apps/nocodb.yaml
   - apps/spark-operator.yaml
-  # Open SWE - Ingress for local access
-  - apps/open-swe-ingress.yaml

@@ -18,9 +18,7 @@ spec:
     targetRevision: stage/local-dev
     path: manifests
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync disabled for DevSpace development - manual sync required
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

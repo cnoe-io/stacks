@@ -4,7 +4,8 @@ kind: Kustomization
 # Shared applications - deployed to all environments
 resources:
   - apps/ai-chatbot-secrets.yaml
-  - apps/ai-chatbot.yaml
+  # ai-chatbot.yaml removed - Kargo inner-loop manages deployment via ai-chatbot-local-dev
+  # The ai-chatbot Application was causing SharedResourceWarning conflicts
   - apps/argocd-secretstore.yaml
   - apps/argocd-webhook-setup.yaml
   - apps/argo-workflows.yaml
@@ -39,7 +40,6 @@ resources:
   - apps/kagent-crds.yaml
   - apps/kagent-secrets.yaml
   - apps/kagent.yaml
-  - apps/kargo-open-swe-pipeline.yaml
   - apps/kargo-backstage-pipeline.yaml
   - apps/kargo-ca-certificates.yaml
   - apps/kargo-cluster-config.yaml
@@ -62,9 +62,3 @@ resources:
   - apps/redis.yaml
   - apps/selfsigned-issuer.yaml
   - apps/speckit-agents-rbac.yaml
-  # Open SWE - LangChain async coding agent
-  - apps/agent-sandbox-crds.yaml
-  - apps/agent-sandbox.yaml
-  - apps/open-swe-secrets.yaml
-  - apps/open-swe.yaml
-  - apps/open-swe-web.yaml

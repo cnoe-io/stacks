@@ -33,24 +33,5 @@ images:
     tagPattern: ".*"
     promotionType: kustomize
 
-  - name: open-swe-web
-    argocdApp: open-swe-web
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: SemVer
-    tagPattern: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
-    promotionType: kustomize
-
-  - name: open-swe-agent
-    argocdApp: open-swe
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: SemVer
-    tagPattern: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
-    promotionType: helm
-    helmRepoURL: https://langchain-ai.github.io/helm/
-    helmChart: langgraph-cloud
-    helmImageKey: images.apiServerImage.tag
-
   # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
   # to avoid conflicts with the existing pipeline
