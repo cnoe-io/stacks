@@ -1,0 +1,17 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: openai
+  namespace: dapr-agents
+spec:
+  type: conversation.openai
+  version: v1
+  metadata:
+    - name: key
+      secretKeyRef:
+        name: dapr-agents-llm-providers
+        key: OPENAI_API_KEY
+    - name: model
+      value: gpt-4o-mini
+    - name: cacheTTL
+      value: 10m

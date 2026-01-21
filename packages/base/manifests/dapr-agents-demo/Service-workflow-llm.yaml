@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflow-llm
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: workflow-llm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8004
+      protocol: TCP
+      name: http
+  selector:
+    app: workflow-llm

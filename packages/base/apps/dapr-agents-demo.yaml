@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+  name: dapr-agents-demo
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-agents
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://dapr-agents-demo/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

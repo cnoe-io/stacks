@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sam
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: sam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sam
+  template:
+    metadata:
+      labels:
+        app: sam
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: sam
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "sam"
+        dapr.io/metrics-port: "59193"
+    spec:
+      containers:
+        - name: sam
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/dapr-agents-sam:latest
+          imagePullPolicy: Always
+          env:
+            - name: DAPR_LLM_COMPONENT
+              value: "anthropic"
+            - name: APP_ID
+              value: "sam"
+            - name: DAPR_METRICS_PORT
+              value: "59193"
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

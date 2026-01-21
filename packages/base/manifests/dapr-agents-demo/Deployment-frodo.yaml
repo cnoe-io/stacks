@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frodo
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: frodo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frodo
+  template:
+    metadata:
+      labels:
+        app: frodo
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: frodo
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "frodo"
+        dapr.io/metrics-port: "59190"
+    spec:
+      containers:
+        - name: frodo
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/dapr-agents-frodo:latest
+          imagePullPolicy: Always
+          env:
+            - name: DAPR_LLM_COMPONENT
+              value: "anthropic"
+            - name: APP_ID
+              value: "frodo"
+            - name: DAPR_METRICS_PORT
+              value: "59190"
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

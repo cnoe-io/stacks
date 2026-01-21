@@ -29,6 +29,7 @@ resources:
   - apps/dapr-components.yaml
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
+  - apps/dapr-agents-demo.yaml
   - apps/default-secretstore.yaml
   - apps/example-namespace.yaml
   - apps/external-secrets.yaml

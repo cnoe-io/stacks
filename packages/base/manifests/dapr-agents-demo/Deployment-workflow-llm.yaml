@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-llm
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: workflow-llm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-llm
+  template:
+    metadata:
+      labels:
+        app: workflow-llm
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: workflow-llm
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflow-llm"
+        dapr.io/app-port: "8004"
+        dapr.io/metrics-port: "59213"
+    spec:
+      containers:
+        - name: workflow-llm
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/dapr-agents-workflow-llm:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+              name: http
+              protocol: TCP
+          env:
+            - name: DAPR_LLM_COMPONENT
+              value: "anthropic"
+            - name: APP_ID
+              value: "workflow-llm"
+            - name: APP_PORT
+              value: "8004"
+            - name: DAPR_METRICS_PORT
+              value: "59213"
+            - name: DEBUG
+              value: "true"
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
