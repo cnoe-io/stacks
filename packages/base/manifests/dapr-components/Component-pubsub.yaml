@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: messagepubsub
+  name: pubsub
   namespace: dapr-agents
 spec:
   metadata:

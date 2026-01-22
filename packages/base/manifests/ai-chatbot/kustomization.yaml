@@ -20,7 +20,7 @@ resources:
   - Service-ai-chatbot.yaml
   - Ingress-ai-chatbot.yaml
 
-# Image tag managed by Kargo pipeline
+# Image tag - using latest available version
 images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
-    newTag: v1.0.0
+    newTag: v1.4.0
