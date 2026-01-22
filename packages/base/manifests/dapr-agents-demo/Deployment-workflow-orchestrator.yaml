@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-orchestrator
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: workflow-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-orchestrator
+  template:
+    metadata:
+      labels:
+        app: workflow-orchestrator
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: workflow-orchestrator
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflow-orchestrator"
+        dapr.io/app-port: "3000"
+        dapr.io/metrics-port: "59210"
+        dapr.io/config: "speckit-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: workflow-orchestrator
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: DAPR_HOST
+              value: "127.0.0.1"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_GRPC_PORT
+              value: "50001"
+            - name: DAPR_STATE_STORE
+              value: "statestore"
+            - name: PLANNER_APP_ID
+              value: "claude-planner"
+            - name: CODE_AGENT_APP_ID
+              value: "claude-code-agent"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10

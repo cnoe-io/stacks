@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-planner
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: claude-planner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: claude-planner
+  template:
+    metadata:
+      labels:
+        app: claude-planner
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: claude-planner
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "claude-planner"
+        dapr.io/app-port: "3002"
+        dapr.io/metrics-port: "59211"
+        dapr.io/config: "speckit-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: claude-planner
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/claude-planner:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3002
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3002"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: WORKING_DIRECTORY
+              value: "/workspace"
+            - name: STATE_STORE_DIR
+              value: "/data/plans"
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: plan-data
+              mountPath: /data/plans
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: plan-data
+          emptyDir: {}

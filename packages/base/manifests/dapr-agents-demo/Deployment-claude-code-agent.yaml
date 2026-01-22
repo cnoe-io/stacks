@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-code-agent
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: dapr-agents-demo
+    app.kubernetes.io/component: claude-code-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: claude-code-agent
+  template:
+    metadata:
+      labels:
+        app: claude-code-agent
+        app.kubernetes.io/name: dapr-agents-demo
+        app.kubernetes.io/component: claude-code-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "claude-code-agent"
+        dapr.io/app-port: "3001"
+        dapr.io/metrics-port: "59212"
+        dapr.io/config: "speckit-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: claude-code-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/claude-code-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3001"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: WORKING_DIRECTORY
+              value: "/workspace"
+            - name: CLAUDE_MODEL
+              value: "claude-sonnet-4-20250514"
+            - name: EXECUTION_TIMEOUT
+              value: "300000"
+          envFrom:
+            - secretRef:
+                name: dapr-agents-llm-providers
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          emptyDir: {}
