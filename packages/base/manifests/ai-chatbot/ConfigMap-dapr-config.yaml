@@ -16,3 +16,7 @@ data:
 
   # Dapr sidecar HTTP port (default: 3500)
   DAPR_HTTP_PORT: "3500"
+
+  # Enable Workflow Patterns feature
+  # When enabled, the workflow patterns runtime is initialized for Dapr workflows
+  WORKFLOW_PATTERNS_ENABLED: "true"
