@@ -7,7 +7,7 @@ metadata:
   namespace: argocd
 spec:
   destination:
-    namespace: planner-agent
+    namespace: ai-chatbot
     server: https://kubernetes.default.svc
   project: default
   source:

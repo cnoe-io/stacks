@@ -5,7 +5,6 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "60"
-    kargo.akuity.io/authorized-stage: kargo-pipelines:ai-chatbot-local-dev
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

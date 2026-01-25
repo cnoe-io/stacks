@@ -24,14 +24,6 @@ config:
   giteaOrg: giteaAdmin
   giteaRegistry: gitea.cnoe.localtest.me:8443
 
-images:
-  - name: ai-chatbot
-    argocdApp: ai-chatbot
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: Lexical
-    tagPattern: ".*"
-    promotionType: kustomize
-
+images: []
   # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
   # to avoid conflicts with the existing pipeline
