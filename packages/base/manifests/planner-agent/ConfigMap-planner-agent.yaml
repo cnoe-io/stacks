@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: planner-agent-config
+  namespace: planner-agent
+data:
+  WORKSPACE_DIR: "/workspace"
+  PLANS_DIR: "/plans"
+  LOG_LEVEL: "INFO"

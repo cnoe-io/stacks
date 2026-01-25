@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planner-agent
+  namespace: planner-agent
+  labels:
+    app.kubernetes.io/name: planner-agent
+    app.kubernetes.io/component: agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: planner-agent
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: planner-agent
+        app.kubernetes.io/component: agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "planner-agent"
+        dapr.io/app-port: "8080"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      initContainers:
+        - name: clone-code
+          image: alpine/git:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cd /app
+              if [ ! -d "planner-agent" ]; then
+                git clone --depth 1 https://github.com/PittampalliOrg/claude-quickstarts.git temp
+                mv temp/planner-agent .
+                rm -rf temp
+              fi
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      containers:
+        - name: planner-agent
+          image: python:3.11-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apt-get update && apt-get install -y git
+              cd /app/planner-agent
+              pip install --no-cache-dir -r requirements.txt
+              uvicorn workflow_service:app --host 0.0.0.0 --port 8080
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: planner-agent-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: WORKSPACE_DIR
+              value: /workspace
+            - name: PLANS_DIR
+              value: /plans
+          envFrom:
+            - configMapRef:
+                name: planner-agent-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+            - name: workspace
+              mountPath: /workspace
+            - name: plans
+              mountPath: /plans
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: app-code
+          emptyDir: {}
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: planner-workspace-pvc
+        - name: plans
+          persistentVolumeClaim:
+            claimName: planner-plans-pvc
+      terminationGracePeriodSeconds: 30

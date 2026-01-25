@@ -4,8 +4,7 @@ kind: Kustomization
 # Shared applications - deployed to all environments
 resources:
   - apps/ai-chatbot-secrets.yaml
-  # ai-chatbot.yaml removed - Kargo inner-loop manages deployment via ai-chatbot-local-dev
-  # The ai-chatbot Application was causing SharedResourceWarning conflicts
+  - apps/ai-chatbot.yaml  # Needed to push manifests to Gitea for Kargo inner-loop
   - apps/argocd-secretstore.yaml
   - apps/argocd-webhook-setup.yaml
   - apps/argo-workflows.yaml
@@ -31,6 +30,7 @@ resources:
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
   - apps/dapr-agents-demo.yaml
+  - apps/planner-agent.yaml
   - apps/default-secretstore.yaml
   - apps/example-namespace.yaml
   - apps/external-secrets.yaml
