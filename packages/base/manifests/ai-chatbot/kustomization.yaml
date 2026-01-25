@@ -11,7 +11,10 @@ resources:
   - Configuration-ai-chatbot-dapr.yaml
   - Component-sandboxregistry.yaml
   - Component-taskpubsub.yaml
+  - Component-pubsub.yaml
+  - Component-statestore.yaml
   - Subscription-taskevents.yaml
+  - Subscription-workflow.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - StatefulSet-redis.yaml

@@ -3,6 +3,11 @@ kind: Ingress
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "65"
+    # SSE (Server-Sent Events) support for workflow streaming
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   name: ai-chatbot
   namespace: ai-chatbot
   labels:

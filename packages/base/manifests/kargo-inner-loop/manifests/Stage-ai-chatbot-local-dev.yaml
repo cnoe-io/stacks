@@ -1,0 +1,92 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    kargo.akuity.io/color: green
+  labels:
+    app.kubernetes.io/component: stage
+    app.kubernetes.io/name: ai-chatbot-local-dev-stage
+    app.kubernetes.io/part-of: kargo-inner-loop
+    kargo.akuity.io/loop: inner
+  name: ai-chatbot-local-dev
+  namespace: kargo-pipelines
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: ai-chatbot
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        # ${TAILSCALE_HOST} is substituted by build.sh at build time
+        - name: gitRepoURL
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-ai-chatbot-manifests.git
+        - name: imageRepoURL
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+        - name: argoAppName
+          value: ai-chatbot-local-dev
+      steps:
+        # Step 1: Clone the manifest repo
+        - as: clone-repo
+          uses: git-clone
+          config:
+            repoURL: ${{ vars.gitRepoURL }}
+            insecureSkipTLSVerify: true
+            checkout:
+              - branch: main
+                path: ./src
+              - branch: stage/local-dev
+                create: true
+                path: ./out
+
+        # Step 2: Clear previous output
+        - as: clear-output
+          uses: git-clear
+          config:
+            path: ./out
+
+        # Step 3: Update image in kustomization
+        - as: update-image
+          uses: kustomize-set-image
+          config:
+            path: ./src
+            images:
+              - image: ${{ vars.imageRepoURL }}
+                tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
+
+        # Step 4: Render manifests
+        - as: render-manifests
+          uses: kustomize-build
+          config:
+            path: ./src
+            outPath: ./out/manifests/
+
+        # Step 5: Commit changes
+        - as: commit-changes
+          uses: git-commit
+          config:
+            path: ./out
+            message: |
+              chore(local-dev): update ai-chatbot to ${{ imageFrom(vars.imageRepoURL).Tag }}
+
+              Image: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
+
+        # Step 6: Push to stage branch
+        - as: push-changes
+          uses: git-push
+          config:
+            path: ./out
+            targetBranch: stage/local-dev
+
+        # Step 7: Sync ArgoCD
+        - as: sync-argocd
+          uses: argocd-update
+          config:
+            apps:
+              - name: ${{ vars.argoAppName }}
+                namespace: argocd
+                sources:
+                  - repoURL: ${{ vars.gitRepoURL }}
+                    desiredRevision: ${{ outputs['push-changes'].commit }}

@@ -97,13 +97,24 @@ spec:
               value: "k8s"
             - name: SANDBOX_NAMESPACE
               value: "agent-sandbox"
-            # Redis configuration for workflow API (pointing to dapr-agents Redis)
+            # Workflow configuration (now internal to ai-chatbot)
+            - name: DAPR_STATE_STORE
+              value: "statestore"
+            - name: PUBSUB_NAME
+              value: "pubsub"
+            - name: WORKING_DIRECTORY
+              value: "/workspace"
+            - name: CLAUDE_MODEL
+              value: "claude-sonnet-4-20250514"
+            - name: EXECUTION_TIMEOUT
+              value: "300000"
+            - name: USE_BUILT_IN_AGENTS
+              value: "true"
+            # Redis configuration (local ai-chatbot instance)
             - name: REDIS_HOST
-              value: "redis-service.dapr-agents.svc.cluster.local"
+              value: "redis.ai-chatbot.svc.cluster.local"
             - name: REDIS_PORT
               value: "6379"
-            - name: WORKFLOW_STATE_KEY
-              value: "workflow-llm||llm.orchestrator:LLMOrchestrator:workflow_state"
             # GitHub App OAuth configuration (for coding agent)
             # Note: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID must also be set at build time via Docker ARG
             - name: NEXT_PUBLIC_GITHUB_APP_CLIENT_ID
@@ -152,6 +163,8 @@ spec:
           volumeMounts:
             - name: uploads
               mountPath: /app/uploads
+            - name: workspace
+              mountPath: /workspace
           livenessProbe:
             httpGet:
               path: /api/health
@@ -181,6 +194,8 @@ spec:
             runAsUser: 1001
       volumes:
         - name: uploads
+          emptyDir: {}
+        - name: workspace
           emptyDir: {}
       securityContext:
         fsGroup: 1001

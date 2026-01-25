@@ -1,0 +1,15 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: ai-chatbot
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: redis.ai-chatbot.svc.cluster.local:6379
+    - name: redisPassword
+      value: ""

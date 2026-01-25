@@ -8,7 +8,7 @@ metadata:
   name: ai-chatbot
   namespace: kargo-pipelines
 spec:
-  freightCreationPolicy: Manual
+  freightCreationPolicy: Automatic
   interval: 30s
   subscriptions:
     - image:
