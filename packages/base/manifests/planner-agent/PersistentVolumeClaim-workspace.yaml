@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: planner-workspace-pvc
-  namespace: ai-chatbot
+  namespace: planner-agent
 spec:
   accessModes:
     - ReadWriteOnce

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: planner-agent-config
-  namespace: ai-chatbot
+  namespace: planner-agent
 data:
   WORKSPACE_DIR: "/app/workspace"
   PLANS_DIR: "/app/plans"

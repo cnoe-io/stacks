@@ -381,6 +381,12 @@ generate-kind-config() {
   # Ensure containerd config directory exists
   mkdir -p "$STACKS_DIR/deployment/config/containerd"
 
+  # Setup registry authentication (docker.io, ghcr.io, gitea)
+  local REGISTRY_AUTH_SCRIPT="$STACKS_DIR/deployment/scripts/setup-registry-auth.sh"
+  if [ -f "$REGISTRY_AUTH_SCRIPT" ]; then
+    "$REGISTRY_AUTH_SCRIPT"
+  fi
+
   # Substitute STACKS_DIR in template using sed (envsubst not always available)
   sed "s|\${STACKS_DIR}|$STACKS_DIR|g" "$TEMPLATE_FILE" > "$OUTPUT_FILE"
 

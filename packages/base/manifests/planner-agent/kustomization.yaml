@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - Namespace-planner-agent.yaml
   - ConfigMap-planner-agent.yaml
   - ExternalSecret-planner-agent.yaml
   - PersistentVolumeClaim-workspace.yaml
