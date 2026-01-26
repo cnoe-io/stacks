@@ -24,33 +24,10 @@ spec:
         dapr.io/app-protocol: "http"
         dapr.io/enable-api-logging: "true"
     spec:
-      initContainers:
-        - name: clone-code
-          image: alpine/git:latest
-          command:
-            - /bin/sh
-            - -c
-            - |
-              cd /app
-              if [ ! -d "planner-agent" ]; then
-                git clone --depth 1 https://github.com/PittampalliOrg/claude-quickstarts.git temp
-                mv temp/planner-agent .
-                rm -rf temp
-              fi
-          volumeMounts:
-            - name: app-code
-              mountPath: /app
       containers:
         - name: planner-agent
-          image: python:3.11-slim
-          command:
-            - /bin/sh
-            - -c
-            - |
-              apt-get update && apt-get install -y git
-              cd /app/planner-agent
-              pip install --no-cache-dir -r requirements.txt
-              uvicorn workflow_service:app --host 0.0.0.0 --port 8080
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-agent:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
@@ -62,9 +39,9 @@ spec:
                   name: planner-agent-secrets
                   key: ANTHROPIC_API_KEY
             - name: WORKSPACE_DIR
-              value: /workspace
+              value: /app/workspace
             - name: PLANS_DIR
-              value: /plans
+              value: /app/plans
           envFrom:
             - configMapRef:
                 name: planner-agent-config
@@ -76,17 +53,15 @@ spec:
               memory: "4Gi"
               cpu: "2000m"
           volumeMounts:
-            - name: app-code
-              mountPath: /app
             - name: workspace
-              mountPath: /workspace
+              mountPath: /app/workspace
             - name: plans
-              mountPath: /plans
+              mountPath: /app/plans
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 300
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
@@ -94,13 +69,11 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 180
+            initialDelaySeconds: 30
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 10
       volumes:
-        - name: app-code
-          emptyDir: {}
         - name: workspace
           persistentVolumeClaim:
             claimName: planner-workspace-pvc

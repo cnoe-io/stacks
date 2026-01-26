@@ -4,6 +4,6 @@ metadata:
   name: planner-agent-config
   namespace: ai-chatbot
 data:
-  WORKSPACE_DIR: "/workspace"
-  PLANS_DIR: "/plans"
+  WORKSPACE_DIR: "/app/workspace"
+  PLANS_DIR: "/app/plans"
   LOG_LEVEL: "INFO"
