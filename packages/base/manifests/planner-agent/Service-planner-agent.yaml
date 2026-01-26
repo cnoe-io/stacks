@@ -3,16 +3,11 @@ kind: Service
 metadata:
   name: planner-agent
   namespace: ai-chatbot
-  labels:
-    app.kubernetes.io/name: planner-agent
-    app.kubernetes.io/component: agent
 spec:
   type: ClusterIP
   ports:
     - port: 8080
       targetPort: 8080
       protocol: TCP
-      name: http
   selector:
-    app.kubernetes.io/name: planner-agent
-    app.kubernetes.io/component: agent
+    app: planner-agent

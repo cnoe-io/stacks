@@ -3,20 +3,15 @@ kind: Deployment
 metadata:
   name: planner-agent
   namespace: ai-chatbot
-  labels:
-    app.kubernetes.io/name: planner-agent
-    app.kubernetes.io/component: agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: planner-agent
-      app.kubernetes.io/component: agent
+      app: planner-agent
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: planner-agent
-        app.kubernetes.io/component: agent
+        app: planner-agent
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "planner-agent"
@@ -30,19 +25,20 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
-              name: http
-              protocol: TCP
           env:
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: planner-agent-secrets
-                  key: ANTHROPIC_API_KEY
+            - name: APP_PORT
+              value: "8080"
+            - name: APP_ID
+              value: "planner-agent"
+            - name: DEBUG
+              value: "false"
             - name: WORKSPACE_DIR
               value: /app/workspace
             - name: PLANS_DIR
               value: /app/plans
           envFrom:
+            - secretRef:
+                name: planner-agent-secrets
             - configMapRef:
                 name: planner-agent-config
           resources:
@@ -63,16 +59,12 @@ spec:
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 10
       volumes:
         - name: workspace
           persistentVolumeClaim:
@@ -80,4 +72,3 @@ spec:
         - name: plans
           persistentVolumeClaim:
             claimName: planner-plans-pvc
-      terminationGracePeriodSeconds: 30
