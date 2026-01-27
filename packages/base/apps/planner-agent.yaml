@@ -13,7 +13,4 @@ spec:
   source:
     path: .
     repoURL: cnoe://planner-agent/manifests
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+  syncPolicy: {}
