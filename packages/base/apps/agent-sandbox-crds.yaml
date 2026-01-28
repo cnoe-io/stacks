@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-125"
+  name: agent-sandbox-crds
+  namespace: argocd
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://agent-sandbox-crds/manifests
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

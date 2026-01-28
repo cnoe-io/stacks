@@ -26,4 +26,4 @@ resources:
 # Image tag - using latest available version
 images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
-    newTag: v1.4.0
+    newTag: v1.7.0

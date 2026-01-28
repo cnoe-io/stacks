@@ -1,0 +1,110 @@
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: dapr-agent
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: dapr-agent
+    app.kubernetes.io/part-of: agent-sandbox
+spec:
+  podTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sandbox-agent
+        app.kubernetes.io/part-of: agent-sandbox
+        app.kubernetes.io/managed-by: agent-sandbox
+      annotations:
+        # Dapr sidecar injection annotations
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "sandbox-agent"
+        dapr.io/app-port: "8080"
+        dapr.io/config: "sandbox-dapr-config"
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/health"
+        dapr.io/app-health-probe-interval: "5"
+        dapr.io/app-health-probe-timeout: "3000"
+        dapr.io/app-health-threshold: "3"
+        # Enable metrics and tracing
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+        # Logging
+        dapr.io/log-level: "info"
+        dapr.io/log-as-json: "true"
+        # Sidecar resource configuration
+        dapr.io/sidecar-cpu-limit: "500m"
+        dapr.io/sidecar-cpu-request: "100m"
+        dapr.io/sidecar-memory-limit: "256Mi"
+        dapr.io/sidecar-memory-request: "64Mi"
+    spec:
+      containers:
+        - name: agent
+          # Base Python image - actual agent code will be injected or mounted
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            # Dapr HTTP/gRPC ports for service invocation
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_GRPC_PORT
+              value: "50001"
+            # Pod identity
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+          # Default command that keeps container running
+          # Actual agent workloads will override this via exec or image replacement
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Sandbox ready for agent workload"
+              # Simple HTTP server for health checks
+              python3 -c "
+              from http.server import HTTPServer, BaseHTTPRequestHandler
+              import json
+              class Handler(BaseHTTPRequestHandler):
+                  def do_GET(self):
+                      if self.path == '/health':
+                          self.send_response(200)
+                          self.send_header('Content-Type', 'application/json')
+                          self.end_headers()
+                          self.wfile.write(json.dumps({'status': 'healthy'}).encode())
+                      else:
+                          self.send_response(404)
+                          self.end_headers()
+                  def log_message(self, format, *args):
+                      pass
+              HTTPServer(('0.0.0.0', 8080), Handler).serve_forever()
+              "
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      # Security context at pod level
+      securityContext:
+        fsGroup: 1000
+      # DNS configuration for service discovery
+      dnsPolicy: ClusterFirst

@@ -1,0 +1,55 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-sandbox-controller
+  labels:
+    app.kubernetes.io/name: agent-sandbox-controller
+    app.kubernetes.io/part-of: agent-sandbox
+rules:
+  # Core Sandbox CRD management
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes/finalizers"]
+    verbs: ["update"]
+  # Extensions CRDs management
+  - apiGroups: ["extensions.agents.x-k8s.io"]
+    resources: ["sandboxtemplates", "sandboxclaims", "sandboxwarmpools"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["extensions.agents.x-k8s.io"]
+    resources: ["sandboxtemplates/status", "sandboxclaims/status", "sandboxwarmpools/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["extensions.agents.x-k8s.io"]
+    resources: ["sandboxtemplates/finalizers", "sandboxclaims/finalizers", "sandboxwarmpools/finalizers"]
+    verbs: ["update"]
+  # Pod management for sandbox workloads
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+  # Events for recording sandbox lifecycle events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # ConfigMaps and Secrets for sandbox configuration
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  # Services for sandbox networking
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Namespace access for multi-namespace sandbox management
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  # Leader election
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

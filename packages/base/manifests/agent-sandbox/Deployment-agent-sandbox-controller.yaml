@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-sandbox-controller
+  namespace: agent-sandbox
+  labels:
+    app: agent-sandbox-controller
+    app.kubernetes.io/name: agent-sandbox-controller
+    app.kubernetes.io/part-of: agent-sandbox
+    app.kubernetes.io/version: v0.1.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-sandbox-controller
+  template:
+    metadata:
+      labels:
+        app: agent-sandbox-controller
+        app.kubernetes.io/name: agent-sandbox-controller
+        app.kubernetes.io/part-of: agent-sandbox
+        app.kubernetes.io/version: v0.1.0
+    spec:
+      serviceAccountName: agent-sandbox-controller
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: controller
+          image: registry.k8s.io/agent-sandbox/agent-sandbox-controller:v0.1.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --extensions
+            - --leader-elect
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 8081
+              name: healthz
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      terminationGracePeriodSeconds: 10
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux

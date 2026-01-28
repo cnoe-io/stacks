@@ -5,5 +5,4 @@ metadata:
   namespace: planner-agent
 data:
   WORKSPACE_DIR: "/app/workspace"
-  PLANS_DIR: "/app/plans"
   LOG_LEVEL: "INFO"

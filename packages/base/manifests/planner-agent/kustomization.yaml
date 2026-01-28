@@ -6,6 +6,10 @@ resources:
   - ConfigMap-planner-agent.yaml
   - ExternalSecret-planner-agent.yaml
   - PersistentVolumeClaim-workspace.yaml
-  - PersistentVolumeClaim-plans.yaml
+  - Component-statestore.yaml
+  - Component-pubsub.yaml
+  - Component-agentregistrystore.yaml
   - Deployment-planner-agent.yaml
+  - Deployment-planner-agent-plan.yaml
+  - Deployment-planner-agent-exec.yaml
   - Service-planner-agent.yaml

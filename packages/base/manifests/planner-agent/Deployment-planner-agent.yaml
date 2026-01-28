@@ -1,41 +1,44 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: planner-agent
+  name: planner-orchestrator
   namespace: planner-agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: planner-agent
+      app: planner-orchestrator
   template:
     metadata:
       labels:
-        app: planner-agent
+        app: planner-orchestrator
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "planner-agent"
+        dapr.io/app-id: "planner-orchestrator"
         dapr.io/app-port: "8080"
         dapr.io/app-protocol: "http"
         dapr.io/enable-api-logging: "true"
     spec:
       containers:
-        - name: planner-agent
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-agent:latest
+        - name: planner-orchestrator
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-orchestrator:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
             - name: APP_PORT
               value: "8080"
-            - name: APP_ID
-              value: "planner-agent"
-            - name: DEBUG
-              value: "false"
-            - name: WORKSPACE_DIR
-              value: /app/workspace
-            - name: PLANS_DIR
-              value: /app/plans
+            - name: PLAN_SERVICE_APP_ID
+              value: "planner-agent-plan"
+            - name: EXEC_SERVICE_APP_ID
+              value: "planner-agent-exec"
+            # OpenTelemetry observability
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: planner-orchestrator
           envFrom:
             - secretRef:
                 name: planner-agent-secrets
@@ -43,16 +46,11 @@ spec:
                 name: planner-agent-config
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "200m"
+              memory: "256Mi"
+              cpu: "100m"
             limits:
-              memory: "4Gi"
-              cpu: "2000m"
-          volumeMounts:
-            - name: workspace
-              mountPath: /app/workspace
-            - name: plans
-              mountPath: /app/plans
+              memory: "1Gi"
+              cpu: "500m"
           livenessProbe:
             httpGet:
               path: /health
@@ -65,10 +63,3 @@ spec:
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 15
-      volumes:
-        - name: workspace
-          persistentVolumeClaim:
-            claimName: planner-workspace-pvc
-        - name: plans
-          persistentVolumeClaim:
-            claimName: planner-plans-pvc

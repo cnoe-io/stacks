@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planner-agent-plan
+  namespace: planner-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: planner-agent-plan
+  template:
+    metadata:
+      labels:
+        app: planner-agent-plan
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "planner-agent-plan"
+        dapr.io/app-port: "3000"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: planner-agent-plan
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-sdk-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: CLAUDE_CODE_ENABLE_TASKS
+              value: "true"
+            # OpenTelemetry observability
+            - name: CLAUDE_CODE_ENABLE_TELEMETRY
+              value: "1"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: planner-agent-plan
+          envFrom:
+            - secretRef:
+                name: planner-agent-secrets
+            - configMapRef:
+                name: planner-agent-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: workspace
+              mountPath: /app/workspace
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: planner-workspace-pvc
