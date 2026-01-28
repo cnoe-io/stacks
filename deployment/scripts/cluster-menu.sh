@@ -686,16 +686,19 @@ cluster-deploy() {
   fi
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Background CA injection: Runs in parallel with idpbuilder
-  # This patches ArgoCD CA trust as soon as ArgoCD is ready, rather than waiting
-  # for idpbuilder to complete. Required because idpbuilder overwrites
-  # argocd-tls-certs-cm with its auto-generated cert.
+  # Background CA + TLS injection: Runs in parallel with idpbuilder
+  # This patches ArgoCD CA trust and server TLS as soon as ArgoCD is ready,
+  # rather than waiting for idpbuilder to complete. Required because:
+  # - idpbuilder overwrites argocd-tls-certs-cm with its auto-generated cert
+  # - ArgoCD uses ssl-passthrough, so it terminates TLS itself; the
+  #   argocd-server-tls Secret ensures it presents the persistent CA cert
+  #   instead of its auto-generated self-signed cert
   # ─────────────────────────────────────────────────────────────────────────────
   local ARGOCD_CA_PID=""
   if [ -n "$ARGOCD_OVERRIDE_FILE" ] && [ -f "$ARGOCD_OVERRIDE_FILE" ]; then
     (
       exec > /tmp/argocd-ca-injection.log 2>&1
-      echo "$(date): Starting background ArgoCD CA injection..."
+      echo "$(date): Starting background ArgoCD CA + TLS injection..."
 
       # Wait for ArgoCD ConfigMap to exist
       waited=0
@@ -709,18 +712,20 @@ cluster-deploy() {
         fi
       done
 
-      echo "$(date): ConfigMap exists, applying custom CA trust..."
+      echo "$(date): ConfigMap exists, applying custom CA trust and server TLS..."
       kubectl apply -f "$ARGOCD_OVERRIDE_FILE"
 
       echo "$(date): Restarting ArgoCD components..."
+      kubectl rollout restart deployment argocd-server -n argocd
       kubectl rollout restart deployment argocd-repo-server -n argocd
       kubectl rollout restart statefulset argocd-application-controller -n argocd
+      kubectl rollout status deployment argocd-server -n argocd --timeout=120s
       kubectl rollout status deployment argocd-repo-server -n argocd --timeout=120s
 
-      echo "$(date): SUCCESS - ArgoCD CA trust configured"
+      echo "$(date): SUCCESS - ArgoCD CA trust and server TLS configured"
     ) &
     ARGOCD_CA_PID=$!
-    echo "   Started background CA injection (PID: $ARGOCD_CA_PID, log: /tmp/argocd-ca-injection.log)"
+    echo "   Started background CA + TLS injection (PID: $ARGOCD_CA_PID, log: /tmp/argocd-ca-injection.log)"
   fi
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -762,7 +767,7 @@ cluster-deploy() {
 
   # Wait for background CA injection to complete before ArgoCD auth init
   if [ -n "$ARGOCD_CA_PID" ]; then
-    echo "   Waiting for background CA injection to complete..."
+    echo "   Waiting for background CA + TLS injection to complete..."
     wait "$ARGOCD_CA_PID" 2>/dev/null || true
   fi
 

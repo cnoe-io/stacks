@@ -9,6 +9,7 @@ resources:
   - apps/ai-chatbot-secrets.yaml
   - apps/ai-chatbot.yaml  # Needed to push manifests to Gitea for Kargo inner-loop
   - apps/argocd-secretstore.yaml
+  - apps/argocd-server-tls.yaml
   - apps/argocd-webhook-setup.yaml
   - apps/argo-workflows.yaml
   - apps/ingress-nginx-cert.yaml
