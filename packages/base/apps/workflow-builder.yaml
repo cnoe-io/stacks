@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: workflow-builder
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://workflow-builder/manifests
+  syncPolicy: {}

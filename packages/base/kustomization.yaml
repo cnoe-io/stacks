@@ -66,3 +66,4 @@ resources:
   - apps/redis.yaml
   - apps/selfsigned-issuer.yaml
   - apps/speckit-agents-rbac.yaml
+  - apps/workflow-builder.yaml

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  name: workflow-builder
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: workflow-builder.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: workflow-builder
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - workflow-builder.cnoe.localtest.me
+      secretName: nginx-tls

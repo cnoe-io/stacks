@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: workflow-builder
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-builder
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: workflow-builder
+        app.kubernetes.io/name: workflow-builder
+    spec:
+      serviceAccountName: workflow-builder
+      containers:
+        - name: workflow-builder
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://workflow-builder.cnoe.localtest.me:8443"
+            - name: AUTH_TRUST_HOST
+              value: "true"
+            - name: AUTH_URL
+              value: "https://workflow-builder.cnoe.localtest.me:8443"
+            - name: DAPR_ORCHESTRATOR_URL
+              value: "http://planner-orchestrator.planner-agent.svc.cluster.local:8080"
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+      securityContext:
+        fsGroup: 1001
