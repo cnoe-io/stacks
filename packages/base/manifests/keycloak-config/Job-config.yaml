@@ -278,6 +278,12 @@ spec:
                     -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                     -X POST --data @/var/config/github-idp-mapper-email.json \
                     ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github/mappers 2>/dev/null || true
+
+                  # Add admin group mapper - assigns all GitHub users to admin group
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/github-idp-mapper-admin-group.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github/mappers 2>/dev/null || true
                 else
                   echo "GitHub IdP already exists, updating configuration..."
                   # Update the IdP configuration to ensure it has the latest settings
@@ -290,6 +296,12 @@ spec:
                     -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                     -X PUT --data "$github_idp_payload" \
                     ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github 2>/dev/null || true
+
+                  # Ensure admin group mapper exists (idempotent - will fail silently if already exists)
+                  curl -sS -H "Content-Type: application/json" \
+                    -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                    -X POST --data @/var/config/github-idp-mapper-admin-group.json \
+                    ${KEYCLOAK_URL}/admin/realms/cnoe/identity-provider/instances/github/mappers 2>/dev/null || true
                 fi
 
                 echo "GitHub IdP configured successfully"

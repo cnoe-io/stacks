@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activity-executor
+  namespace: activity-executor
+  labels:
+    app: activity-executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: activity-executor
+  template:
+    metadata:
+      labels:
+        app: activity-executor
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "activity-executor"
+        dapr.io/app-port: "8080"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: activity-executor
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            # OpenTelemetry observability
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: activity-executor
+          envFrom:
+            - secretRef:
+                name: activity-executor-secrets
+            - configMapRef:
+                name: activity-executor-config
+                optional: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10

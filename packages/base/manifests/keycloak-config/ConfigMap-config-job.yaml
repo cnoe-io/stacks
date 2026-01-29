@@ -14,6 +14,7 @@ data:
   github-idp-payload.json: '{"alias":"github","displayName":"GitHub","providerId":"github","enabled":true,"trustEmail":true,"storeToken":true,"addReadTokenRoleOnCreate":false,"authenticateByDefault":false,"linkOnly":false,"firstBrokerLoginFlowAlias":"first broker login","config":{"syncMode":"IMPORT","clientId":"${GITHUB_IDP_CLIENT_ID}","clientSecret":"${GITHUB_IDP_CLIENT_SECRET}","defaultScope":"user:email read:org"}}'
   github-idp-mapper-username.json: '{"name":"github-username-mapper","identityProviderAlias":"github","identityProviderMapper":"github-user-attribute-mapper","config":{"jsonField":"login","userAttribute":"username","syncMode":"INHERIT"}}'
   github-idp-mapper-email.json: '{"name":"github-email-mapper","identityProviderAlias":"github","identityProviderMapper":"github-user-attribute-mapper","config":{"jsonField":"email","userAttribute":"email","syncMode":"INHERIT"}}'
+  github-idp-mapper-admin-group.json: '{"name":"github-admin-group-mapper","identityProviderAlias":"github","identityProviderMapper":"hardcoded-group-idp-mapper","config":{"syncMode":"INHERIT","group":"admin"}}'
 kind: ConfigMap
 metadata:
   name: config-job
