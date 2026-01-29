@@ -33,7 +33,7 @@ spec:
       serviceAccountName: vibe-coding-platform
       containers:
         - name: vibe-coding-platform
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform:v0.1.1
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform:v0.1.2
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
