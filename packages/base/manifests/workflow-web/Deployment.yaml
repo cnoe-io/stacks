@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: workflow-web
+  namespace: workflow-web
+  labels:
+    app.kubernetes.io/name: workflow-web
+    app.kubernetes.io/component: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: workflow-web
+        app.kubernetes.io/name: workflow-web
+      annotations:
+        # Dapr sidecar injection for accessing workflow state store
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflow-web"
+        dapr.io/app-port: "3456"
+        dapr.io/app-protocol: "http"
+        dapr.io/config: "workflow-web-dapr-config"
+        dapr.io/enable-api-logging: "true"
+        # Health check
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/api/health"
+    spec:
+      serviceAccountName: workflow-web
+      containers:
+        - name: workflow-web
+          # Use our custom workflow-web image that includes the Dapr adapter
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web:v0.1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3456
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            # Allow self-signed certificates for local K8s
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+            - name: PORT
+              value: "3456"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            # Dapr configuration
+            - name: DAPR_ENABLED
+              value: "true"
+            - name: DAPR_STATE_STORE
+              value: "workflow-statestore"
+            - name: DAPR_PUBSUB
+              value: "workflow-pubsub"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_SIDECAR_WAIT_ATTEMPTS
+              value: "180"
+            # Workflow Web configuration
+            - name: WORKFLOW_TARGET_WORLD
+              value: "@workflow-worlds/dapr"
+            - name: WORKFLOW_WEB_TITLE
+              value: "Workflow Observability"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3456
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3456
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+      securityContext:
+        fsGroup: 1001

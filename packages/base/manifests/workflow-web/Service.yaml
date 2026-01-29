@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflow-web
+  namespace: workflow-web
+  labels:
+    app.kubernetes.io/name: workflow-web
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3456
+      protocol: TCP
+      name: http
+  selector:
+    app: workflow-web

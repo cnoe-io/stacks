@@ -69,4 +69,5 @@ resources:
   - apps/workflow-builder.yaml
   - apps/nats.yaml
   - apps/workflow-dapr-components.yaml
+  - apps/workflow-web.yaml
   - apps/vibe-coding-platform.yaml
