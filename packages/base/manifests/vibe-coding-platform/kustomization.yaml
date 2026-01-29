@@ -7,3 +7,8 @@ resources:
   - ClusterRole-sandbox-manager.yaml
   - ClusterRoleBinding-sandbox-manager.yaml
   - ExternalSecret-vibe-coding-secrets.yaml
+  - Component-workflow-pubsub.yaml
+  - Component-workflow-statestore.yaml
+  - Service-vibe-coding-platform.yaml
+  - Deployment-vibe-coding-platform.yaml
+  - Ingress-vibe-coding-platform.yaml

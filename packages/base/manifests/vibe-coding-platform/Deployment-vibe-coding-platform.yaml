@@ -51,6 +51,26 @@ spec:
               value: "0.0.0.0"
             - name: NEXT_PUBLIC_APP_URL
               value: "https://vibe-coding-platform.cnoe.localtest.me:8443"
+            # AI Provider API Keys
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibe-coding-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibe-coding-secrets
+                  key: OPENAI_API_KEY
+            # Sandbox configuration
+            - name: SANDBOX_MODE
+              value: "k8s"
+            - name: SANDBOX_NAMESPACE
+              value: "agent-sandbox"
+            - name: SANDBOX_TEMPLATE
+              value: "vibe-coding-sandbox"
+            - name: SANDBOX_INGRESS_DOMAIN
+              value: "sandbox.cnoe.localtest.me"
             # Dapr Workflow configuration
             - name: DAPR_ENABLED
               value: "true"
