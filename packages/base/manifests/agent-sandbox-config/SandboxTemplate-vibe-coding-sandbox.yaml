@@ -10,7 +10,9 @@ spec:
   podTemplate:
     metadata:
       annotations:
-        dapr.io/enabled: "true"
+        # Dapr disabled for now - sandbox pods are isolated execution environments
+        # Re-enable when sandbox-to-platform communication via Dapr is needed
+        dapr.io/enabled: "false"
         dapr.io/app-id: "sandbox-${SANDBOX_ID}"
         dapr.io/app-port: "8080"
         dapr.io/app-protocol: "http"
@@ -60,18 +62,14 @@ spec:
             capabilities:
               drop:
                 - ALL
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: health
-            initialDelaySeconds: 10
-            periodSeconds: 30
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: health
-            initialDelaySeconds: 5
-            periodSeconds: 10
+          # Health probes removed - generic sandbox container doesn't expose /health
+          # The AI agent writes and runs code in this container dynamically
+          startupProbe:
+            exec:
+              command: ["true"]
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: workspace
           emptyDir:
