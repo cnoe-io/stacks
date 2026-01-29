@@ -1,0 +1,23 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: workflow-tracing
+  namespace: dapr-agents
+  labels:
+    app.kubernetes.io/name: workflow-tracing
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: workflow-infrastructure
+spec:
+  tracing:
+    samplingRate: "1"
+    otel:
+      endpointAddress: otel-collector.observability.svc.cluster.local:4317
+      isSecure: false
+      protocol: grpc
+  metrics:
+    enabled: true
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false
+      omitHealthChecks: true

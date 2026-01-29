@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-headless
+  namespace: nats
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: nats
+  ports:
+    - name: client
+      port: 4222
+      targetPort: client
+      protocol: TCP
+    - name: cluster
+      port: 6222
+      targetPort: cluster
+      protocol: TCP

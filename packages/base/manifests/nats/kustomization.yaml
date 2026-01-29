@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - Namespace-nats.yaml
+  - ConfigMap-nats-config.yaml
+  - StatefulSet-nats.yaml
+  - Service-nats.yaml
+  - Service-nats-headless.yaml
