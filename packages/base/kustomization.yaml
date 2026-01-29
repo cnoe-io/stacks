@@ -67,3 +67,6 @@ resources:
   - apps/selfsigned-issuer.yaml
   - apps/speckit-agents-rbac.yaml
   - apps/workflow-builder.yaml
+  - apps/nats.yaml
+  - apps/workflow-dapr-components.yaml
+  - apps/vibe-coding-platform.yaml
