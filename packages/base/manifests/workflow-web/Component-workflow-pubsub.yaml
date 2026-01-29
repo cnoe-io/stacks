@@ -10,9 +10,9 @@ spec:
   type: pubsub.jetstream
   version: v1
   metadata:
-    # NATS connection (shared with dapr-agents namespace)
+    # NATS connection (using NATS in the nats namespace)
     - name: natsURL
-      value: nats://nats.dapr-agents.svc.cluster.local:4222
+      value: nats://nats.nats.svc.cluster.local:4222
     - name: durableSubscriptionName
       value: workflow-web-durable
     - name: streamName
