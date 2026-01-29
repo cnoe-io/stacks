@@ -19,3 +19,6 @@ subjects:
   - kind: ServiceAccount
     name: argo-workflow
     namespace: argo
+  - kind: ServiceAccount
+    name: default
+    namespace: argo

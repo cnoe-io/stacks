@@ -25,6 +25,8 @@ spec:
       containers:
         - name: sandbox
           image: node:22-alpine
+          # Keep container alive - AI agent executes commands via kubectl exec
+          command: ["sleep", "infinity"]
           ports:
             - name: health
               containerPort: 8080

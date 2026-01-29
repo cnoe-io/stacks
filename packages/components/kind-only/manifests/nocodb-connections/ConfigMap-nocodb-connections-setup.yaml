@@ -196,6 +196,21 @@ data:
           echo "⚠ Skipping AI Chatbot - no password provided"
         fi
 
+        # Create Workflow Builder connection
+        if [ -n "$WORKFLOW_BUILDER_POSTGRES_PASSWORD" ]; then
+          create_external_db \
+            "workflow_builder" \
+            "Workflow Builder" \
+            "AI Workflow Builder - workflows, executions, integrations" \
+            "postgresql.workflow-builder.svc.cluster.local" \
+            "5432" \
+            "workflow_builder" \
+            "postgres" \
+            "$WORKFLOW_BUILDER_POSTGRES_PASSWORD"
+        else
+          echo "⚠ Skipping Workflow Builder - no password provided"
+        fi
+
         echo ""
         echo "=== Setup Complete ==="
         echo ""

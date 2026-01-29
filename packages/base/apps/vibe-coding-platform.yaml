@@ -17,9 +17,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: vibe-coding-platform
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync disabled for development with DevSpace
+    # Uncomment to re-enable:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

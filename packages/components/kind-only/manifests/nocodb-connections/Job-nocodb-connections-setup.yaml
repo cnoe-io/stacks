@@ -40,6 +40,11 @@ spec:
                 secretKeyRef:
                   key: AI_CHATBOT_POSTGRES_PASSWORD
                   name: nocodb-external-db-credentials
+            - name: WORKFLOW_BUILDER_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: WORKFLOW_BUILDER_POSTGRES_PASSWORD
+                  name: nocodb-external-db-credentials
           image: postgres:15-alpine
           name: setup
           volumeMounts:
