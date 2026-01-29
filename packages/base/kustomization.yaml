@@ -57,6 +57,7 @@ resources:
   - apps/keycloak.yaml
   - apps/kgateway-crds.yaml
   - apps/kgateway.yaml
+  - apps/kgateway-ai.yaml
   - apps/kmcp.yaml
   - apps/metrics-server.yaml
   - apps/neo4j.yaml

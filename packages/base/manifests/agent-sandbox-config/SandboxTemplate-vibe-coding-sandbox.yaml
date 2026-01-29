@@ -1,0 +1,79 @@
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: vibe-coding-sandbox
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: vibe-coding-sandbox
+    app.kubernetes.io/part-of: vibe-coding-platform
+spec:
+  podTemplate:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "sandbox-${SANDBOX_ID}"
+        dapr.io/app-port: "8080"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+      labels:
+        sandbox: "true"
+        app.kubernetes.io/managed-by: vibe-coding-platform
+    spec:
+      serviceAccountName: sandbox-runner
+      containers:
+        - name: sandbox
+          image: node:22-alpine
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+            - name: app-port-1
+              containerPort: 3000
+              protocol: TCP
+            - name: app-port-2
+              containerPort: 5000
+              protocol: TCP
+          env:
+            - name: SANDBOX_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOME
+              value: /workspace
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          workingDir: /workspace
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          emptyDir:
+            sizeLimit: 5Gi
+      terminationGracePeriodSeconds: 30

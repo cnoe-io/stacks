@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - Namespace-vibe-coding-platform.yaml
+  - ServiceAccount-vibe-coding-platform.yaml
+  - ClusterRole-sandbox-manager.yaml
+  - ClusterRoleBinding-sandbox-manager.yaml
+  - ExternalSecret-vibe-coding-secrets.yaml

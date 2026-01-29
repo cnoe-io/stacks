@@ -1,0 +1,17 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: anthropic-llm
+  namespace: kgateway-system
+  labels:
+    app.kubernetes.io/name: anthropic-llm
+    app.kubernetes.io/part-of: kgateway-ai
+spec:
+  type: ai
+  ai:
+    anthropic:
+      authToken:
+        secretRef:
+          name: llm-api-keys
+          key: ANTHROPIC_API_KEY
+      model: claude-sonnet-4-5-20250514
