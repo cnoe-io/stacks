@@ -16,9 +16,10 @@ spec:
     path: .
     repoURL: cnoe://workflow-web/manifests
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto sync disabled for DevSpace development
+    # automated:
+    #   prune: true
+    #   selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

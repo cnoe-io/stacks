@@ -28,7 +28,11 @@ spec:
         dapr.io/app-id: "vibe-coding-platform"
         dapr.io/app-port: "3000"
         dapr.io/app-protocol: "http"
+        dapr.io/config: "vibe-coding-platform-dapr-config"
         dapr.io/enable-api-logging: "true"
+        # Health check - Dapr waits for app to be healthy before starting
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/api/health"
     spec:
       serviceAccountName: vibe-coding-platform
       containers:
@@ -80,6 +84,8 @@ spec:
               value: "workflow-pubsub"
             - name: DAPR_HTTP_PORT
               value: "3500"
+            - name: DAPR_SIDECAR_WAIT_ATTEMPTS
+              value: "180"
             # OpenTelemetry observability
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://otel-collector.observability.svc.cluster.local:4317
@@ -91,7 +97,7 @@ spec:
               value: "deployment.environment=production,service.namespace=vibe-coding-platform,service.version=0.1.0"
           livenessProbe:
             httpGet:
-              path: /
+              path: /api/health
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 30
@@ -99,7 +105,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /
+              path: /api/health
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10

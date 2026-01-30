@@ -9,6 +9,7 @@ resources:
   - ExternalSecret-vibe-coding-secrets.yaml
   - Component-workflow-pubsub.yaml
   - Component-workflow-statestore.yaml
+  - Configuration-dapr.yaml
   - Service-vibe-coding-platform.yaml
   - Deployment-vibe-coding-platform.yaml
   - Ingress-vibe-coding-platform.yaml
