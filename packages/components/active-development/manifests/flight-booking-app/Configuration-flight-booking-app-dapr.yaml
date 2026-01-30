@@ -1,0 +1,26 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+  name: flight-booking-app-dapr-config
+  namespace: flight-booking-app
+  labels:
+    app.kubernetes.io/name: flight-booking-app
+    app.kubernetes.io/component: dapr-config
+spec:
+  tracing:
+    samplingRate: "1"
+    otel:
+      endpointAddress: otel-collector.observability.svc.cluster.local:4317
+      isSecure: false
+      protocol: grpc
+  mtls:
+    enabled: true
+  metrics:
+    enabled: true
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false
+      omitHealthChecks: true

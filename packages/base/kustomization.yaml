@@ -7,7 +7,7 @@ resources:
   - apps/agent-sandbox.yaml
   - apps/agent-sandbox-config.yaml
   - apps/ai-chatbot-secrets.yaml
-  - apps/ai-chatbot.yaml  # Needed to push manifests to Gitea for Kargo inner-loop
+  # NOTE: ai-chatbot app moved to components/active-development
   - apps/argocd-secretstore.yaml
   - apps/argocd-server-tls.yaml
   - apps/argocd-webhook-setup.yaml
@@ -34,7 +34,7 @@ resources:
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
   - apps/dapr-agents-demo.yaml
-  - apps/planner-agent.yaml
+  # NOTE: planner-agent app moved to components/active-development
   - apps/default-secretstore.yaml
   - apps/example-namespace.yaml
   - apps/external-secrets.yaml
@@ -66,8 +66,7 @@ resources:
   - apps/redis.yaml
   - apps/selfsigned-issuer.yaml
   - apps/speckit-agents-rbac.yaml
-  - apps/workflow-builder.yaml
+  # NOTE: workflow-builder app moved to components/active-development
   - apps/nats.yaml
   - apps/workflow-dapr-components.yaml
-  - apps/workflow-web.yaml
-  - apps/vibe-coding-platform.yaml
+  # NOTE: workflow-web and vibe-coding-platform apps moved to components/active-development

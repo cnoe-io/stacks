@@ -13,4 +13,9 @@ spec:
   source:
     path: .
     repoURL: cnoe://activity-executor/manifests
-  syncPolicy: {}
+  syncPolicy:
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync activity-executor --insecure
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -57,7 +57,7 @@ done
 # From components (based on environment)
 case "$ENV" in
     kind|kind-*)
-        for comp in kind-only tailscale-serve observability; do
+        for comp in active-development kind-only tailscale-serve observability; do
             for f in "${PACKAGES_DIR}/components/${comp}/apps/"*.yaml; do
                 [ -f "$f" ] || continue
                 app=$(basename "$f")
@@ -124,7 +124,7 @@ done
 # From components (based on environment)
 case "$ENV" in
     kind|kind-*)
-        for comp in kind-only tailscale-serve observability; do
+        for comp in active-development kind-only tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue
                 copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"

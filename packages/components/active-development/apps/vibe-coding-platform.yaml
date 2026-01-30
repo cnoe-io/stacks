@@ -17,11 +17,8 @@ spec:
     server: https://kubernetes.default.svc
     namespace: vibe-coding-platform
   syncPolicy:
-    # Auto-sync disabled for development with DevSpace
-    # Uncomment to re-enable:
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync vibe-coding-platform --insecure
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

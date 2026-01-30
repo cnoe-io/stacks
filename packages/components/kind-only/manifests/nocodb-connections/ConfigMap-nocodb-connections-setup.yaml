@@ -61,6 +61,7 @@ data:
           local database="$6"
           local db_user="$7"
           local password="$8"
+          local schema="${9:-public}"  # Optional 9th param, defaults to "public"
 
           # Generate deterministic IDs for idempotency
           local int_id="int_$(echo -n "$name" | md5sum | cut -c1-14)"
@@ -73,12 +74,13 @@ data:
           echo "  Integration ID: $int_id"
           echo "  Base ID: $base_id"
           echo "  Source ID: $source_id"
+          echo "  Schema: $schema"
 
           # Build config JSON for integration (full connection details)
-          local int_config='{"client":"pg","connection":{"host":"'"$host"'","port":"'"$port"'","user":"'"$db_user"'","password":"'"$password"'","database":"'"$database"'"},"searchPath":["public"]}'
+          local int_config='{"client":"pg","connection":{"host":"'"$host"'","port":"'"$port"'","user":"'"$db_user"'","password":"'"$password"'","database":"'"$database"'"},"searchPath":["'"$schema"'"]}'
 
           # Build minimal config JSON for source (just database name - credentials come from integration)
-          local source_config='{"client":"pg","connection":{"database":"'"$database"'"},"searchPath":["public"]}'
+          local source_config='{"client":"pg","connection":{"database":"'"$database"'"},"searchPath":["'"$schema"'"]}'
 
           PGPASSWORD="$NOCODB_POSTGRES_PASSWORD" psql -h nocodb-postgres -U nocodb -d nocodb <<EOSQL
             -- 1. Create/update integration (stores FULL connection credentials)
@@ -209,6 +211,22 @@ data:
             "$WORKFLOW_BUILDER_POSTGRES_PASSWORD"
         else
           echo "⚠ Skipping Workflow Builder - no password provided"
+        fi
+
+        # Create Flight Booking App connection
+        if [ -n "$FLIGHT_BOOKING_POSTGRES_PASSWORD" ]; then
+          create_external_db \
+            "flight_booking" \
+            "Flight Booking App" \
+            "Flight booking application - workflow runs, steps, events" \
+            "postgresql.flight-booking-app.svc.cluster.local" \
+            "5432" \
+            "flight_booking" \
+            "postgres" \
+            "$FLIGHT_BOOKING_POSTGRES_PASSWORD" \
+            "workflow"
+        else
+          echo "⚠ Skipping Flight Booking App - no password provided"
         fi
 
         echo ""

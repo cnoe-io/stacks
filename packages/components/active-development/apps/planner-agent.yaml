@@ -13,4 +13,9 @@ spec:
   source:
     path: .
     repoURL: cnoe://planner-agent/manifests
-  syncPolicy: {}
+  syncPolicy:
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync planner-agent --insecure
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

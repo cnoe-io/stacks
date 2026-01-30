@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planner-dapr-agent
+  namespace: planner-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: planner-dapr-agent
+  template:
+    metadata:
+      labels:
+        app: planner-dapr-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "planner-dapr-agent"
+        dapr.io/app-port: "8000"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: planner-dapr-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PLANNER_CWD
+              value: /app/workspace
+            - name: ANTHROPIC_MODEL
+              value: claude-sonnet-4-20250514
+            # OpenTelemetry observability
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: planner-dapr-agent
+          envFrom:
+            - secretRef:
+                name: planner-agent-secrets
+            - configMapRef:
+                name: planner-agent-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: workspace
+              mountPath: /app/workspace
+          # Use Dapr sidecar health check (headless agent doesn't expose /health)
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - -f
+                - http://localhost:3500/v1.0/healthz
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - -f
+                - http://localhost:3500/v1.0/healthz
+            initialDelaySeconds: 15
+            periodSeconds: 15
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: planner-workspace-pvc

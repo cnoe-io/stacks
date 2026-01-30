@@ -6,10 +6,19 @@ resources:
   - ConfigMap-planner-agent.yaml
   - ExternalSecret-planner-agent.yaml
   - PersistentVolumeClaim-workspace.yaml
+  # Dapr Components
   - Component-statestore.yaml
   - Component-pubsub.yaml
   - Component-agentregistrystore.yaml
+  - Component-memorystate.yaml
+  - Component-messagepubsub.yaml
+  - Component-registrystate.yaml
+  # Orchestrator (FastAPI/Dapr Workflow)
   - Deployment-planner-agent.yaml
+  - Service-planner-agent.yaml
+  # Claude SDK Agents (Node.js)
   - Deployment-planner-agent-plan.yaml
   - Deployment-planner-agent-exec.yaml
-  - Service-planner-agent.yaml
+  # Dapr Agents (Python/Chainlit)
+  - Deployment-planner-dapr-agent.yaml
+  - Service-planner-dapr-agent.yaml

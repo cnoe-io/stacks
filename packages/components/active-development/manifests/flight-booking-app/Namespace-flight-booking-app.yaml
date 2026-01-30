@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flight-booking-app
+  labels:
+    app.kubernetes.io/name: flight-booking-app
+    app.kubernetes.io/part-of: flight-booking-app

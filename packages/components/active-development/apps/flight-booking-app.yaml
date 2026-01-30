@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: flight-booking-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: flight-booking-app
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://flight-booking-app/manifests
+  syncPolicy:
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync flight-booking-app --insecure
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

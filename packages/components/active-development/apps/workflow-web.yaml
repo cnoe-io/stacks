@@ -16,10 +16,8 @@ spec:
     path: .
     repoURL: cnoe://workflow-web/manifests
   syncPolicy:
-    # Auto sync disabled for DevSpace development
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync workflow-web --insecure
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

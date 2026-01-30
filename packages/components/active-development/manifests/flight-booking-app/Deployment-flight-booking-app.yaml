@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  name: flight-booking-app
+  namespace: flight-booking-app
+  labels:
+    app.kubernetes.io/name: flight-booking-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flight-booking-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: flight-booking-app
+        app.kubernetes.io/name: flight-booking-app
+      annotations:
+        # Dapr sidecar injection for distributed tracing
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "flight-booking-app"
+        dapr.io/app-port: "3000"
+        dapr.io/config: "flight-booking-app-dapr-config"
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/api/health"
+    spec:
+      serviceAccountName: flight-booking-app
+      containers:
+        - name: flight-booking-app
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            # Allow self-signed certificates for local K8s ingress
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://flight-booking-app.cnoe.localtest.me:8443"
+            # PostgreSQL World configuration
+            - name: WORKFLOW_TARGET_WORLD
+              value: "@workflow/world-postgres"
+            - name: WORKFLOW_POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flight-booking-app-secrets
+                  key: WORKFLOW_POSTGRES_URL
+            # AI Gateway configuration
+            - name: AI_GATEWAY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flight-booking-app-secrets
+                  key: AI_GATEWAY_API_KEY
+            # Dapr configuration
+            - name: DAPR_STATE_STORE
+              value: "statestore"
+            - name: PUBSUB_NAME
+              value: "pubsub"
+            # OpenTelemetry - environment-specific override
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=production,service.namespace=flight-booking-app,service.version=1.0.0"
+          envFrom:
+            - secretRef:
+                name: flight-booking-app-secrets
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+      securityContext:
+        fsGroup: 1001

@@ -13,4 +13,9 @@ spec:
   source:
     path: .
     repoURL: cnoe://workflow-builder/manifests
-  syncPolicy: {}
+  syncPolicy:
+    # Auto-sync DISABLED for active development
+    # Sync manually: argocd app sync workflow-builder --insecure
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

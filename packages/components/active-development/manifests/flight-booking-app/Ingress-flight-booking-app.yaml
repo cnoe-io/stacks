@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    # SSE (Server-Sent Events) support for workflow streaming
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+  name: flight-booking-app
+  namespace: flight-booking-app
+  labels:
+    app.kubernetes.io/name: flight-booking-app
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: flight-booking-app.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flight-booking-app
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - flight-booking-app.cnoe.localtest.me
+      secretName: nginx-tls
