@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "40"
+    # Kargo Stage authorized to update this app's image tag
     kargo.akuity.io/authorized-stage: kargo-pipelines:backstage-local-dev
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -17,7 +18,18 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: backstage
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  # Note: image is NOT ignored - Kargo manages image updates via inner-loop pipeline
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
   syncPolicy:
-    # Auto-sync disabled - Kargo manages Backstage deployments via backstage-local-dev
+    automated:
+      selfHeal: true
+      prune: true
     syncOptions:
-      - ServerSideApply=true
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

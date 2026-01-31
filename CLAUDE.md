@@ -120,7 +120,7 @@ packages/
 | kind-only | ~43 | KIND-specific (CAIPE, idpbuilder-gitea, azure-workload-identity) |
 | tailscale-serve | ~20 | Tailscale proxies (*-tailscale-serve apps) |
 | observability | ~18 | LGTM stack (grafana, loki, tempo, langfuse) |
-| active-development | 7 | Apps with auto-sync disabled for devspace compatibility |
+| active-development | 7 | Apps with Kargo inner-loop pipelines (local Gitea registry images) |
 
 ## Architecture
 
@@ -129,6 +129,11 @@ packages/
 **Helm-based**: ArgoCD manages Helm chart with `source.repoURL` pointing to chart repository, `helm.valuesObject` for configuration.
 
 **Manifest-based**: Local manifests via `cnoe://<package>` URL. idpBuilder creates Gitea repo, pushes manifests, rewrites URL for ArgoCD.
+
+**Kargo-managed (Inner Loop)**: Apps with local development pipelines. Key requirements:
+- Deployment image must reference **local Gitea registry**: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
+- ArgoCD app should NOT use `ServerSideApply=true` (causes comparison errors)
+- `ignoreDifferences` should include `resources` and `replicas` but NOT `image` (Kargo manages images)
 
 See `docs/gitops-architecture-overview.md` for detailed patterns.
 
@@ -148,6 +153,7 @@ See `docs/AZURE_WORKLOAD_IDENTITY.md` for configuration.
 | `cluster-menu.sh` | Orchestration - lifecycle commands (cld, clu, clr, clst) |
 | `argocd-auth.sh` | Token management with 1Password/Azure Key Vault |
 | `preload-images.sh` | Image caching (parallel with idpbuilder) |
+| `push-devcontainers.sh` | Build/push shared devcontainers (parallel with idpbuilder) |
 | `cluster-health-check.sh` | Timing, benchmarks, health summary |
 | `devenv-watch-handler.sh` | Automatic rebuild handler for devenv up |
 | `tailscale/tailscale-kubeconfig.sh` | Remote kubectl access via Tailscale |
@@ -170,6 +176,7 @@ argocd-status                                       # Helper function
 
 ## Adding New Applications
 
+### Standard Applications
 1. Create ArgoCD Application YAML in `packages/base/apps/` or appropriate component
 2. For manifest-based apps, add manifests to `packages/base/manifests/<app>/`
 3. Add to `kustomization.yaml` in the appropriate layer
@@ -177,6 +184,29 @@ argocd-status                                       # Helper function
 ```bash
 make build-kind && clu  # Or let devenv up auto-apply
 ```
+
+### Kargo Inner-Loop Applications
+For apps with local development pipelines (built images pushed to local Gitea registry):
+
+1. **Deployment**: Set image to `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
+2. **ArgoCD App**: Add to `packages/components/active-development/apps/`:
+   ```yaml
+   ignoreDifferences:
+     - group: apps
+       kind: Deployment
+       jsonPointers:
+         - /spec/template/spec/containers/0/resources
+         - /spec/replicas
+   syncPolicy:
+     automated:
+       selfHeal: true
+       prune: true
+     syncOptions:
+       - CreateNamespace=true
+       - RespectIgnoreDifferences=true
+   ```
+3. **Kargo Pipeline**: Add entry to `packages/base/manifests/kargo-inner-loop/images.yaml`
+4. Build: `make build-kind` (generates Warehouse + Stage from template)
 
 ## Troubleshooting
 
@@ -199,6 +229,67 @@ argocd app sync argocd/<app> --prune --insecure
 kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
 ```
 
+## DevSpace Development
+
+### Shared Configuration
+
+DevSpace configurations are standardized via shared templates in `devspace-templates/`:
+
+```yaml
+# Example app devspace.yaml
+imports:
+  - path: ../../stacks/main/devspace-templates/base.yaml
+  - path: ../../stacks/main/devspace-templates/snippets/nextjs.yaml  # or fastapi.yaml
+
+vars:
+  APP_NAME: my-app
+  LOCAL_PORT: "3000"
+  CONTAINER_PORT: "3000"
+```
+
+### Shared Devcontainers
+
+Centralized devcontainer images in `devcontainers/`:
+
+| Image | Base | Use Case |
+|-------|------|----------|
+| `nodejs-22-devspace` | node:22-bookworm | Next.js/Node.js apps |
+| `python-312-devspace` | python:3.12-bookworm | Python/FastAPI apps |
+| `nodejs-python-devspace` | node:22 + python3.12 | Agent apps needing both |
+
+Build and push:
+```bash
+# Manual push (after cluster is running)
+push-devcontainers all     # All images (alias from cluster-menu.sh)
+push-devcontainers hybrid  # Node.js + Python only
+
+# Or use the script directly
+cd devcontainers
+bash build-push.sh all
+```
+
+**Note:** Devcontainers are automatically pushed during `cluster-deploy` and `cluster-recreate` in parallel with image preloading. Set `SKIP_DEVCONTAINER_PUSH=true` to disable.
+
+### Port Allocation
+
+| App | Local Port | SSH Port | Container Port |
+|-----|------------|----------|----------------|
+| ai-chatbot | 3000 | 2222 | 3000 |
+| workflow-builder | 3002 | 2223 | 3000 |
+| planner-agent | 8080 | 2224 | 8080 |
+
+### Kargo Integration
+
+DevSpace queries the cluster to show which Kargo-promoted image is being replaced:
+```bash
+$ devspace dev
+=== DevSpace Development Container ===
+Replacing production image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:v1.2.3
+Using shared devcontainer: nodejs-22-devspace
+```
+
+See `docs/devspace-kargo-workflow.md` for complete workflow documentation.
+
 ## Advanced Topics
 
 ### Talos Linux Bootstrap
@@ -213,10 +304,31 @@ Multi-cluster GitOps: Hub cluster manages spoke clusters via Tailscale.
 - See `specs/108-hub-and-spoke/quickstart.md` and `docs/hub-recovery-runbook.md`
 
 ### Kargo Pipelines
+
 ```bash
 kubectl get warehouses,stages,freights -n kargo-pipelines
 ```
-Inner Loop (Gitea → local-dev, auto, <60s) | Outer Loop (GHCR → dev → staging → prod)
+
+**Single-Branch Model (Inner Loop):**
+All inner-loop apps use a **single-branch model** where Kargo updates the image tag in `kustomization.yaml` on the `main` branch. idpBuilder manages the source manifests, and Kargo modifies only the image tag.
+
+**Key patterns:**
+- Deployments reference local Gitea registry: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
+- Kargo `kustomize-set-image` updates the tag, ArgoCD syncs the change
+- ArgoCD apps have `ignoreDifferences` for `resources` and `replicas` (NOT image) to allow DevSpace compatibility while Kargo manages images
+
+**Kargo Expression Syntax (v1.8+):**
+```yaml
+# Correct syntax for accessing freight in promotion templates
+Freight: ${{ ctx.targetFreight.name }}  # NOT ctx.freight.alias
+```
+
+**Pipeline Types:**
+| Loop | Source | Stages | Auto-promote |
+|------|--------|--------|--------------|
+| Inner | Gitea registry | local-dev | Yes |
+| Outer | GHCR | dev → staging → prod | Manual |
+
 See `specs/105-setup-kargo-pipelines/quickstart.md`.
 
 ### Tailscale Remote Access
@@ -242,7 +354,10 @@ kubectl get agents,modelconfigs,mcpservers -n kagent
 **Related Docs:**
 - `docs/cnoe-overview.md` - CNOE framework
 - `docs/gitops-architecture-overview.md` - GitOps patterns
-- `docs/development-workflow.md` - Development patterns
+- `docs/devspace-kargo-workflow.md` - DevSpace + Kargo development workflow
+- `devspace-templates/README.md` - Shared DevSpace configuration templates
+- `devcontainers/README.md` - Shared devcontainer images
+- `docs/development-workflow.md` - Development patterns (legacy CDK8s)
 - `docs/AZURE_WORKLOAD_IDENTITY.md` - Azure identity configuration
 - `docs/gitea-webhooks.md` - System webhooks architecture
 - `docs/tailscale-naming.md` - Tailscale service naming

@@ -26,9 +26,9 @@ spec:
         - name: imageRepoURL
           value: __REGISTRY__/__ORG__/__IMAGE_NAME__
         - name: argoAppName
-          value: __IMAGE_NAME__-local-dev
+          value: __ARGOCD_APP__
       steps:
-        # Step 1: Clone the manifest repo
+        # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo
           uses: git-clone
           config:
@@ -37,17 +37,9 @@ spec:
             checkout:
               - branch: main
                 path: ./src
-              - branch: stage/local-dev
-                create: true
-                path: ./out
 
-        # Step 2: Clear previous output
-        - as: clear-output
-          uses: git-clear
-          config:
-            path: ./out
-
-        # Step 3: Update image in kustomization
+        # Step 2: Update image tag in kustomization.yaml
+        # This modifies the images: section, ArgoCD will render via kustomize
         - as: update-image
           uses: kustomize-set-image
           config:
@@ -56,31 +48,25 @@ spec:
               - image: ${{ vars.imageRepoURL }}
                 tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
 
-        # Step 4: Render manifests
-        - as: render-manifests
-          uses: kustomize-build
-          config:
-            path: ./src
-            outPath: ./out/manifests/
-
-        # Step 5: Commit changes
+        # Step 3: Commit the image tag change
         - as: commit-changes
           uses: git-commit
           config:
-            path: ./out
+            path: ./src
             message: |
-              chore(local-dev): update __IMAGE_NAME__ to ${{ imageFrom(vars.imageRepoURL).Tag }}
+              chore: update __IMAGE_NAME__ to ${{ imageFrom(vars.imageRepoURL).Tag }}
 
               Image: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
+              Freight: ${{ ctx.targetFreight.name }}
 
-        # Step 6: Push to stage branch
+        # Step 4: Push to main branch
         - as: push-changes
           uses: git-push
           config:
-            path: ./out
-            targetBranch: stage/local-dev
+            path: ./src
+            targetBranch: main
 
-        # Step 7: Sync ArgoCD
+        # Step 5: Sync ArgoCD (the base app, not a separate -local-dev app)
         - as: sync-argocd
           uses: argocd-update
           config:

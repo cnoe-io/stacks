@@ -87,7 +87,7 @@ sync-manual-apps() {
   # Wait for keycloak to be healthy (backstage depends on keycloak-clients secret)
   # This secret is created by keycloak-config job after keycloak is ready
   local timeout=180
-  local interval=10
+  local interval=5  # Reduced from 10s for faster startup
   local elapsed=0
 
   echo "   Waiting for keycloak dependencies (up to ${timeout}s)..."
@@ -454,10 +454,9 @@ ensure-kargo-repos() {
   local GITEA_URL="https://gitea.cnoe.localtest.me:8443"
   local GITEA_USER="giteaAdmin"
 
-  # Repositories needed by Kargo pipelines (from kargo-backstage-pipeline-chart.ts)
+  # Repositories needed by Kargo pipelines (backstage outer-loop only, inner-loop uses main branch)
   local KARGO_REPOS=(
     "idpbuilder-${CLUSTER_NAME}-backstage-manifests"
-    "idpbuilder-${CLUSTER_NAME}-backstage-local-dev-manifests"
   )
 
   for repo in "${KARGO_REPOS[@]}"; do
@@ -635,6 +634,24 @@ cluster-apply-manifests() {
     echo ""
   fi
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Background DevContainer Push (runs in PARALLEL with idpbuilder and image preload)
+  # Builds and pushes shared devcontainer images for DevSpace development
+  # ─────────────────────────────────────────────────────────────────────────────
+  local DEVCONTAINER_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
+  local DEVCONTAINER_LOG="/tmp/devcontainer-push.log"
+  if [ "${SKIP_DEVCONTAINER_PUSH:-}" != "true" ] && [ -f "$DEVCONTAINER_SCRIPT" ]; then
+    echo "🐳 Starting background devcontainer push (parallel with idpbuilder)..."
+    (
+      # DevContainer script waits for Gitea, builds and pushes shared devcontainers
+      "$DEVCONTAINER_SCRIPT" all
+    ) > "$DEVCONTAINER_LOG" 2>&1 &
+    local DEVCONTAINER_PID=$!
+    echo "   Started background devcontainer push (PID: $DEVCONTAINER_PID)"
+    echo "   Log: $DEVCONTAINER_LOG"
+    echo ""
+  fi
+
   # Apply using idpbuilder (idempotent operation)
   # Any extra args ($@) are passed through to idpbuilder
   idpbuilder create "${IDPBUILDER_ARGS[@]}" "$@"
@@ -718,12 +735,14 @@ cluster-deploy() {
       exec > /tmp/argocd-ca-injection.log 2>&1
       echo "$(date): Starting background ArgoCD CA + TLS injection..."
 
-      # Wait for ArgoCD ConfigMap to exist
+      # Wait for ArgoCD ConfigMap to exist (polling every 2s for faster startup)
       waited=0
       while ! kubectl get configmap argocd-tls-certs-cm -n argocd 2>/dev/null; do
-        sleep 5
-        waited=$((waited + 5))
-        echo "$(date): Waiting for argocd-tls-certs-cm (${waited}s)..."
+        sleep 2
+        waited=$((waited + 2))
+        if [ $((waited % 10)) -eq 0 ]; then
+          echo "$(date): Waiting for argocd-tls-certs-cm (${waited}s)..."
+        fi
         if [ $waited -ge 300 ]; then
           echo "$(date): TIMEOUT waiting for argocd-tls-certs-cm"
           exit 1
@@ -786,8 +805,8 @@ cluster-deploy() {
     echo ""
     echo "🔐 Initializing ArgoCD authentication and saving token..."
 
-    # Wait a moment for ArgoCD to be fully ready
-    sleep 5
+    # Brief wait for ArgoCD API to be ready (argocd-auth-init has retry logic)
+    sleep 2
 
     # Initialize and save token
     if command -v argocd &>/dev/null && [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
@@ -835,7 +854,7 @@ while [ \$ELAPSED -lt \$TIMEOUT ]; do
 done
 
 if [ "\$READY" = true ]; then
-  sleep 5
+  sleep 2  # Brief wait for deployment stabilization
   if "$TAILSCALE_KUBECONFIG_SCRIPT" generate; then
     echo "\$(date): SUCCESS - Tailscale token generated and stored in Azure Key Vault"
   else
@@ -1426,6 +1445,13 @@ fi
 IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
 if [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
   alias preload-images="$IMAGE_PRELOAD_SCRIPT"
+fi
+
+# DevContainer push (builds and pushes shared devcontainers to Gitea)
+DEVCONTAINER_PUSH_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
+if [ -f "$DEVCONTAINER_PUSH_SCRIPT" ]; then
+  alias push-devcontainers="$DEVCONTAINER_PUSH_SCRIPT"
+  alias devcontainer-push="$DEVCONTAINER_PUSH_SCRIPT"  # Alternative alias
 fi
 
 # If script is being run directly (not sourced), show help

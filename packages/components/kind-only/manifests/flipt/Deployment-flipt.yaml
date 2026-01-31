@@ -21,6 +21,31 @@ spec:
         app.kubernetes.io/name: flipt
         app.kubernetes.io/part-of: feature-flags
     spec:
+      initContainers:
+        - name: setup-ca-bundle
+          image: ghcr.io/flipt-io/flipt:v2.4.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "=== Setting up combined CA bundle ==="
+              # Concatenate system CAs with our custom CA
+              cat /etc/ssl/certs/ca-certificates.crt /custom-ca/ca.crt > /ca-bundle/ca-certificates.crt
+              echo "Combined CA bundle created at /ca-bundle/ca-certificates.crt"
+              echo "Bundle size: $(wc -c < /ca-bundle/ca-certificates.crt) bytes"
+              echo "CA entries: $(grep -c 'BEGIN CERTIFICATE' /ca-bundle/ca-certificates.crt)"
+          volumeMounts:
+            - name: idpbuilder-ca
+              mountPath: /custom-ca
+              readOnly: true
+            - name: ca-bundle
+              mountPath: /ca-bundle
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
       containers:
         - args:
             - server
@@ -32,9 +57,11 @@ spec:
             - name: FLIPT_LOG_LEVEL
               value: debug
             - name: GIT_SSL_CAINFO
-              value: /etc/ssl/certs/idpbuilder-ca.crt
+              value: /ca-bundle/ca-certificates.crt
             - name: SSL_CERT_FILE
-              value: /etc/ssl/certs/idpbuilder-ca.crt
+              value: /ca-bundle/ca-certificates.crt
+            - name: SSL_CERT_DIR
+              value: /ca-bundle
           envFrom:
             - secretRef:
                 name: flipt-oidc
@@ -71,6 +98,9 @@ spec:
               cpu: 100m
               memory: 128Mi
           securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop:
@@ -85,11 +115,10 @@ spec:
               name: idpbuilder-ca
               readOnly: true
               subPath: ca.crt
+            - mountPath: /ca-bundle
+              name: ca-bundle
       securityContext:
         fsGroup: 1000
-        runAsGroup: 1000
-        runAsNonRoot: true
-        runAsUser: 1000
       volumes:
         - configMap:
             name: flipt-config
@@ -100,3 +129,5 @@ spec:
         - name: idpbuilder-ca
           secret:
             secretName: idpbuilder-cert
+        - name: ca-bundle
+          emptyDir: {}

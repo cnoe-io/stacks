@@ -1,0 +1,72 @@
+# Shared Python 3.12 DevSpace Container
+# Full-featured development environment with all build tools
+#
+# Used by: planner-agent and other Python/FastAPI apps
+#
+# Build & Push:
+#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/python-312-devspace:latest -f Dockerfile.python-312 .
+#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/python-312-devspace:latest
+
+FROM python:3.12-bookworm
+
+# Install system dependencies for development and Claude Code tools
+RUN apt-get update && apt-get install -y \
+    # Version control
+    git \
+    openssh-client \
+    gnupg \
+    # Claude Code tools (Grep, file search, web fetch)
+    ripgrep \
+    fd-find \
+    curl \
+    wget \
+    jq \
+    # Shell utilities
+    bash-completion \
+    less \
+    tree \
+    vim-tiny \
+    # Process management
+    screen \
+    procps \
+    # Certificates for HTTPS
+    ca-certificates \
+    # Node.js for Claude CLI (required)
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/* \
+    # Create symlinks for common tool names
+    && ln -sf /usr/bin/fdfind /usr/bin/fd
+
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create non-root user for Claude CLI security requirements
+# Claude CLI requires non-root user
+RUN useradd -m -s /bin/bash -u 1000 devuser && \
+    mkdir -p /app && \
+    chown -R devuser:devuser /app && \
+    mkdir -p /.devspace && \
+    chown -R devuser:devuser /.devspace
+
+# Install common Python dev tools
+RUN pip install --no-cache-dir \
+    uvicorn[standard] \
+    httpx \
+    pytest \
+    ruff \
+    mypy
+
+WORKDIR /app
+
+# NOTE: Container runs as non-root (UID 1000) by default for Python apps
+# This is required for Claude CLI security requirements
+USER devuser
+
+# Set environment for development
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# The actual source code is mounted via devspace sync
+# CMD is overridden by devspace.yaml command
+CMD ["tail", "-f", "/dev/null"]

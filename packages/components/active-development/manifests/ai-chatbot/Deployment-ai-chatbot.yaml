@@ -176,6 +176,8 @@ spec:
                 name: ai-chatbot-otel-config
             - configMapRef:
                 name: ai-chatbot-dapr-config
+            - configMapRef:
+                name: ai-chatbot-flipt-config
             - secretRef:
                 name: ai-chatbot-secrets
           volumeMounts:

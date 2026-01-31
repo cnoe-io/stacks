@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - Namespace.yaml
   - ServiceAccount.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ConfigMap-flipt-config.yaml
   - Configuration-dapr.yaml
   - Component-workflow-statestore.yaml
   - Component-workflow-pubsub.yaml

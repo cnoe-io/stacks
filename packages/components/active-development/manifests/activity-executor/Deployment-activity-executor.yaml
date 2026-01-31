@@ -27,28 +27,17 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
-          env:
-            - name: PORT
-              value: "8080"
-            - name: HOST
-              value: "0.0.0.0"
-            - name: NODE_ENV
-              value: "production"
-            - name: LOG_LEVEL
-              value: "info"
-            # OpenTelemetry observability
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://otel-collector.observability.svc.cluster.local:4317
-            - name: OTEL_EXPORTER_OTLP_PROTOCOL
-              value: grpc
-            - name: OTEL_SERVICE_NAME
-              value: activity-executor
           envFrom:
-            - secretRef:
-                name: activity-executor-secrets
             - configMapRef:
                 name: activity-executor-config
-                optional: true
+            - configMapRef:
+                name: activity-executor-otel-config
+            - configMapRef:
+                name: activity-executor-dapr-config
+            - configMapRef:
+                name: activity-executor-flipt-config
+            - secretRef:
+                name: activity-executor-secrets
           resources:
             requests:
               memory: "256Mi"

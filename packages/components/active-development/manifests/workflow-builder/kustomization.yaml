@@ -4,6 +4,8 @@ kind: Kustomization
 resources:
   - Namespace-workflow-builder.yaml
   - ServiceAccount-workflow-builder.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-flipt-config.yaml
   - Secret-workflow-builder.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml

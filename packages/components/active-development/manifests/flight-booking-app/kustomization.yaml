@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - Namespace-flight-booking-app.yaml
   - ServiceAccount-flight-booking-app.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ConfigMap-flipt-config.yaml
   - Secret-flight-booking-app.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml

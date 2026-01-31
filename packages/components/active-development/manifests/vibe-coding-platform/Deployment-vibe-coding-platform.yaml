@@ -75,26 +75,13 @@ spec:
               value: "vibe-coding-sandbox"
             - name: SANDBOX_INGRESS_DOMAIN
               value: "sandbox.cnoe.localtest.me"
-            # Dapr Workflow configuration
-            - name: DAPR_ENABLED
-              value: "true"
-            - name: DAPR_STATE_STORE
-              value: "workflow-statestore"
-            - name: DAPR_PUBSUB
-              value: "workflow-pubsub"
-            - name: DAPR_HTTP_PORT
-              value: "3500"
-            - name: DAPR_SIDECAR_WAIT_ATTEMPTS
-              value: "180"
-            # OpenTelemetry observability
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://otel-collector.observability.svc.cluster.local:4317
-            - name: OTEL_EXPORTER_OTLP_PROTOCOL
-              value: grpc
-            - name: OTEL_SERVICE_NAME
-              value: vibe-coding-platform
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "deployment.environment=production,service.namespace=vibe-coding-platform,service.version=0.1.0"
+          envFrom:
+            - configMapRef:
+                name: vibe-coding-platform-otel-config
+            - configMapRef:
+                name: vibe-coding-platform-dapr-config
+            - configMapRef:
+                name: vibe-coding-platform-flipt-config
           livenessProbe:
             httpGet:
               path: /api/health

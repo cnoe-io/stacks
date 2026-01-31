@@ -1,0 +1,137 @@
+# DevSpace FastAPI Framework Variables
+# Provides Python/FastAPI-specific variable defaults
+#
+# Import after base.yaml:
+#   imports:
+#     - path: .../base.yaml
+#     - path: .../snippets/fastapi.yaml
+
+version: v2beta1
+
+# ============================================================================
+# FastAPI Variables
+# ============================================================================
+vars:
+  # Uvicorn configuration
+  UVICORN_HOST:
+    default: "0.0.0.0"
+  UVICORN_PORT:
+    default: "8080"
+  UVICORN_APP:
+    default: "main:app"
+
+  # Python user configuration (for non-root execution)
+  PYTHON_UID:
+    default: "1000"
+  PYTHON_GID:
+    default: "1000"
+
+# ============================================================================
+# FastAPI Dev Configuration Reference
+# ============================================================================
+# Copy this template to your devspace.yaml and customize:
+#
+# dev:
+#   app:  # or use a custom name like 'planner'
+#     namespace: ${APP_NAME}
+#     labelSelector:
+#       app: ${APP_NAME}
+#     container: ${APP_NAME}
+#
+#     # Use production image (has all dependencies)
+#     devImage: ${GITEA_HOST}/${GITEA_USER}/${APP_NAME}:latest
+#     workingDir: /app
+#
+#     resources:
+#       requests:
+#         cpu: "200m"
+#         memory: "512Mi"
+#       limits:
+#         cpu: "2"
+#         memory: "4Gi"
+#
+#     # Disable restart helper (permission issues with non-root)
+#     restartHelper:
+#       inject: false
+#
+#     command:
+#       - /bin/sh
+#       - -c
+#       - |
+#         echo "=== DevSpace Development Container (FastAPI) ==="
+#         echo "Running as user: $(id)"
+#         exec uvicorn ${UVICORN_APP} --host ${UVICORN_HOST} --port ${UVICORN_PORT} --reload
+#
+#     sync:
+#       - path: ./:/app
+#         initialSync: mirrorLocal
+#         startContainer: false
+#         waitInitialSync: false
+#         onUpload:
+#           restartContainer: false
+#         excludePaths:
+#           # Python artifacts
+#           - __pycache__/
+#           - "*.pyc"
+#           - "*.pyo"
+#           - .pytest_cache/
+#           - .mypy_cache/
+#           - .ruff_cache/
+#           - "*.egg-info/"
+#           - dist/
+#           - build/
+#           - .venv/
+#           - venv/
+#           # Dev tooling
+#           - .devenv/
+#           - .devspace/
+#           - .direnv/
+#           - .git
+#           - .git/
+#           - .github/
+#           - .idea/
+#           - .vscode/
+#           - .cursor/
+#           # K8s manifests
+#           - k8s/
+#           # Env files
+#           - .env
+#           - .env.*
+#           # Docs & config
+#           - docs/
+#           - "*.md"
+#           - "*.log"
+#           - LICENSE
+#           - Dockerfile
+#           - .dockerignore
+#           - .gitignore
+#
+#     patches:
+#       - op: remove
+#         path: spec.containers.name=${APP_NAME}.livenessProbe
+#       - op: remove
+#         path: spec.containers.name=${APP_NAME}.readinessProbe
+#       - op: remove
+#         path: spec.initContainers
+#       # Run as non-root user (required for Claude CLI security)
+#       - op: replace
+#         path: spec.containers.name=${APP_NAME}.securityContext
+#         value:
+#           runAsUser: ${PYTHON_UID}
+#           runAsGroup: ${PYTHON_GID}
+#           runAsNonRoot: true
+#           allowPrivilegeEscalation: false
+#       - op: replace
+#         path: spec.securityContext
+#         value:
+#           fsGroup: ${PYTHON_GID}
+#           runAsNonRoot: true
+#
+#     ports:
+#       - port: "${LOCAL_PORT}:${CONTAINER_PORT}"
+#
+#     env:
+#       - name: PYTHONUNBUFFERED
+#         value: "1"
+#       - name: PYTHONDONTWRITEBYTECODE
+#         value: "1"

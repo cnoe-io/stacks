@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: planner-agent-otel-config
+  namespace: planner-agent
+  labels:
+    app.kubernetes.io/name: planner-agent
+    app.kubernetes.io/component: observability
+data:
+  # OTEL Collector endpoint (gRPC)
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+
+  # Service identification (each deployment overrides OTEL_SERVICE_NAME)
+  # This provides base configuration
+
+  # Resource attributes for trace correlation
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=planner-agent,service.version=1.0.0"
+
+  # Enable trace propagation headers
+  OTEL_PROPAGATORS: "tracecontext,baggage"
+
+  # Batch configuration for efficient export
+  OTEL_BSP_SCHEDULE_DELAY: "5000"
+  OTEL_BSP_MAX_EXPORT_BATCH_SIZE: "512"

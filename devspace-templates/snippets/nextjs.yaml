@@ -1,0 +1,169 @@
+# DevSpace Next.js Framework Variables
+# Provides Next.js-specific variable defaults
+#
+# Import after base.yaml:
+#   imports:
+#     - path: .../base.yaml
+#     - path: .../snippets/nextjs.yaml
+
+version: v2beta1
+
+# ============================================================================
+# Next.js Variables
+# ============================================================================
+vars:
+  # pnpm version
+  PNPM_VERSION:
+    default: "9.12.3"
+
+  # Migration configuration
+  RUN_MIGRATIONS:
+    default: "false"
+  MIGRATION_COMMAND:
+    default: ""
+
+  # Whether to install Claude CLI (for AI-powered apps)
+  INSTALL_CLAUDE_CLI:
+    default: "false"
+
+# ============================================================================
+# Next.js Dev Configuration Reference
+# ============================================================================
+# Copy this template to your devspace.yaml and customize:
+#
+# dev:
+#   app:
+#     namespace: ${APP_NAME}
+#     imageSelector: ${GITEA_HOST}/${GITEA_USER}/${APP_NAME}
+#     container: ${APP_NAME}
+#     devImage: ${GITEA_HOST}/${GITEA_USER}/${APP_NAME}-devspace:latest
+#     workingDir: /app
+#
+#     resources:
+#       requests:
+#         cpu: ${CPU_REQUEST}
+#         memory: ${MEMORY_REQUEST}
+#       limits:
+#         cpu: ${CPU_LIMIT}
+#         memory: ${MEMORY_LIMIT}
+#
+#     command:
+#       - /bin/sh
+#       - -c
+#       - |
+#         set -e
+#         echo "=== DevSpace Development Container (Next.js) ==="
+#
+#         # Optional: Install Claude Code CLI
+#         if [ "${INSTALL_CLAUDE_CLI}" = "true" ]; then
+#           echo "Installing Claude Code CLI..."
+#           npm install -g @anthropic-ai/claude-code --prefix /usr/local 2>/dev/null || true
+#         fi
+#
+#         # Enable corepack and pnpm
+#         corepack enable
+#         corepack prepare pnpm@${PNPM_VERSION} --activate
+#
+#         # Install dependencies if needed (hash-based caching)
+#         if [ ! -d "node_modules" ] || [ ! -f "node_modules/.pnpm-lock-hash" ] || \
+#            [ "$(cat node_modules/.pnpm-lock-hash 2>/dev/null)" != "$(md5sum pnpm-lock.yaml | cut -d' ' -f1)" ]; then
+#           pnpm install --frozen-lockfile
+#           md5sum pnpm-lock.yaml | cut -d' ' -f1 > node_modules/.pnpm-lock-hash
+#         fi
+#
+#         # Optional migrations
+#         if [ "${RUN_MIGRATIONS}" = "true" ] && [ -n "${MIGRATION_COMMAND}" ]; then
+#           ${MIGRATION_COMMAND} || echo "Migrations skipped"
+#         fi
+#
+#         exec pnpm dev
+#
+#     sync:
+#       - path: ./:/app
+#         initialSync: mirrorLocal
+#         startContainer: true
+#         waitInitialSync: true
+#         onUpload:
+#           restartContainer: false
+#         excludePaths:
+#           # Node.js / Next.js artifacts
+#           - node_modules/
+#           - .pnpm-store/
+#           - .next/
+#           - dist/
+#           - out/
+#           - coverage/
+#           - next-env.d.ts
+#           # Dev tooling
+#           - .devenv/
+#           - .devspace/
+#           - .direnv/
+#           - .git
+#           - .git/
+#           - .github/
+#           - .idea/
+#           - .vscode/
+#           - .cursor/
+#           # Test files
+#           - tests/
+#           - playwright-report/
+#           - test-results/
+#           - playwright.config.ts
+#           - vitest.config.ts
+#           # Docs & config
+#           - docs/
+#           - scripts/
+#           - "*.md"
+#           - "*.log"
+#           - LICENSE
+#           - Dockerfile
+#           - Dockerfile.devspace
+#           - devenv.*
+#           - devenv.lock
+#           - .devenv*
+#           - .devenv.flake.nix
+#           - biome.jsonc
+#           - .dockerignore
+#           - .gitignore
+#           - .env.local
+#           - .env.example
+#
+#     persistPaths:
+#       - path: /tmp
+#         skipPopulate: true
+#       - path: /app/node_modules
+#
+#     patches:
+#       - op: remove
+#         path: spec.containers.name=${APP_NAME}.livenessProbe
+#       - op: remove
+#         path: spec.containers.name=${APP_NAME}.readinessProbe
+#       - op: replace
+#         path: spec.containers.name=${APP_NAME}.securityContext
+#         value:
+#           runAsUser: 0
+#           runAsGroup: 0
+#           runAsNonRoot: false
+#           allowPrivilegeEscalation: false
+#       - op: replace
+#         path: spec.securityContext
+#         value:
+#           fsGroup: 1001
+#           runAsNonRoot: false
+#
+#     ports:
+#       - port: "${LOCAL_PORT}:${CONTAINER_PORT}"
+#
+#     ssh:
+#       enabled: true
+#       localPort: ${SSH_PORT}
+#
+#     env:
+#       - name: NODE_ENV
+#         value: development
+#       - name: NEXT_TELEMETRY_DISABLED
+#         value: "1"
+#       - name: OTEL_SERVICE_NAME
+#         value: ${OTEL_SERVICE_NAME}
+#       - name: OTEL_RESOURCE_ATTRIBUTES
+#         value: "deployment.environment=${OTEL_ENVIRONMENT},service.namespace=${APP_NAME}-dev,service.version=dev"

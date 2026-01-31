@@ -5,6 +5,7 @@
 # - Increased parallelism for faster sync of 128+ applications
 # - Reduced reconciliation timeout for faster retries
 # - Server-side diff enabled for accuracy
+# - Faster app resync for quicker convergence
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -34,3 +35,21 @@ data:
   # Repo server parallelism: concurrent manifest generation
   # Default: 0 (unlimited), set explicit limit for memory management
   reposerver.parallelism.limit: "50"
+
+  # === NEW: Additional performance optimizations ===
+
+  # Repo server timeout: max time for manifest generation (default: 60s)
+  # Reduced to fail fast on problematic repos
+  controller.repo.server.timeout.seconds: "90"
+
+  # Self-heal timeout: max time for self-heal sync (default: 5s)
+  # Increased slightly for complex apps
+  controller.self.heal.timeout.seconds: "10"
+
+  # App hard resync: force full comparison periodically (default: disabled)
+  # Enable for faster detection of external changes
+  controller.app.hard.resync: "60"
+
+  # Sharding algorithm: use round-robin for better distribution
+  # Options: legacy, round-robin
+  controller.sharding.algorithm: "round-robin"

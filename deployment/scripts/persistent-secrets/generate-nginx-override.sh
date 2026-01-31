@@ -187,6 +187,14 @@ data:
   controller.diff.server.side: "true"
   # Repo server parallelism: concurrent manifest generation
   reposerver.parallelism.limit: "50"
+  # Repo server timeout (default: 60s)
+  controller.repo.server.timeout.seconds: "90"
+  # Self-heal timeout (default: 5s)
+  controller.self.heal.timeout.seconds: "10"
+  # Hard resync interval in seconds (default: disabled)
+  controller.app.hard.resync: "60"
+  # Sharding algorithm for better app distribution
+  controller.sharding.algorithm: "round-robin"
 ---
 # CA trust for Gitea HTTPS connections
 apiVersion: v1

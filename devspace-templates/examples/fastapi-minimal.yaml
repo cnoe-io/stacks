@@ -1,0 +1,119 @@
+# Minimal FastAPI DevSpace Configuration Example
+# Copy this file to your project and adjust the import paths and variables.
+
+version: v2beta1
+name: my-fastapi-app
+
+# Import shared variable definitions from templates
+# Adjust paths based on your project location relative to stacks/main
+imports:
+  - path: ../../stacks/main/devspace-templates/base.yaml
+  - path: ../../stacks/main/devspace-templates/snippets/fastapi.yaml
+
+# App-specific variable values
+vars:
+  APP_NAME: my-fastapi-app
+  LOCAL_PORT: "8080"
+  CONTAINER_PORT: "8080"
+  UVICORN_APP: "main:app"
+  # Override resource defaults for Python apps
+  CPU_REQUEST: "200m"
+  MEMORY_REQUEST: "512Mi"
+  MEMORY_LIMIT: "4Gi"
+
+# Development configuration
+dev:
+  app:
+    namespace: ${APP_NAME}
+    labelSelector:
+      app: ${APP_NAME}
+    container: ${APP_NAME}
+    devImage: ${GITEA_HOST}/${GITEA_USER}/${APP_NAME}:latest
+    workingDir: /app
+
+    resources:
+      requests:
+        cpu: ${CPU_REQUEST}
+        memory: ${MEMORY_REQUEST}
+      limits:
+        cpu: ${CPU_LIMIT}
+        memory: ${MEMORY_LIMIT}
+
+    restartHelper:
+      inject: false
+
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "=== DevSpace Development Container (FastAPI) ==="
+        echo "Running as user: $(id)"
+        exec uvicorn ${UVICORN_APP} --host ${UVICORN_HOST} --port ${UVICORN_PORT} --reload
+
+    sync:
+      - path: ./:/app
+        initialSync: mirrorLocal
+        startContainer: false
+        waitInitialSync: false
+        onUpload:
+          restartContainer: false
+        excludePaths:
+          - __pycache__/
+          - "*.pyc"
+          - "*.pyo"
+          - .pytest_cache/
+          - .mypy_cache/
+          - .ruff_cache/
+          - "*.egg-info/"
+          - dist/
+          - build/
+          - .venv/
+          - venv/
+          - .devenv/
+          - .devspace/
+          - .direnv/
+          - .git
+          - .git/
+          - .github/
+          - .idea/
+          - .vscode/
+          - .cursor/
+          - k8s/
+          - .env
+          - .env.*
+          - docs/
+          - "*.md"
+          - "*.log"
+          - LICENSE
+          - Dockerfile
+          - .dockerignore
+          - .gitignore
+
+    patches:
+      - op: remove
+        path: spec.containers.name=${APP_NAME}.livenessProbe
+      - op: remove
+        path: spec.containers.name=${APP_NAME}.readinessProbe
+      - op: remove
+        path: spec.initContainers
+      - op: replace
+        path: spec.containers.name=${APP_NAME}.securityContext
+        value:
+          runAsUser: ${PYTHON_UID}
+          runAsGroup: ${PYTHON_GID}
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+      - op: replace
+        path: spec.securityContext
+        value:
+          fsGroup: ${PYTHON_GID}
+          runAsNonRoot: true
+
+    ports:
+      - port: "${LOCAL_PORT}:${CONTAINER_PORT}"
+
+    env:
+      - name: PYTHONUNBUFFERED
+        value: "1"
+      - name: PYTHONDONTWRITEBYTECODE
+        value: "1"

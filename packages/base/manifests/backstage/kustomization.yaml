@@ -14,5 +14,5 @@ resources:
   - ClusterRoleBinding-backstage-argo-worfklows.yaml
 
 images:
-  - name: ghcr.io/pittampalliorg/backstage
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
     newTag: latest  # Will be overwritten by Kargo kustomize-set-image step

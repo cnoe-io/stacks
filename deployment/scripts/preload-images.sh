@@ -30,7 +30,9 @@ LOG_PREFIX="[preload-images]"
 GITEA_REGISTRY="gitea.cnoe.localtest.me:8443"
 GITEA_ORG="giteaadmin"
 PRELOADED_FILE="/tmp/preloaded-images-$$.txt"
-PARALLEL_JOBS="${PARALLEL_JOBS:-3}"
+# Increased from 3 to 4 for faster parallel image pushes
+# Modern systems can handle 4-6 parallel pushes safely
+PARALLEL_JOBS="${PARALLEL_JOBS:-4}"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $LOG_PREFIX $1"; }
 
@@ -146,17 +148,17 @@ cleanup() {
 trap cleanup EXIT
 
 wait_for_gitea() {
-  local timeout=300 elapsed=0
+  local timeout=300 elapsed=0 poll_interval=3
   log "Waiting for Gitea registry to be available..."
 
   # Phase 1: Wait for Gitea API to respond
   while [ $elapsed -lt $timeout ]; do
     if curl -sk "https://${GITEA_REGISTRY}/api/v1/version" &>/dev/null; then
-      log "Gitea API is ready"
+      log "Gitea API is ready (${elapsed}s)"
       break
     fi
-    sleep 5
-    elapsed=$((elapsed + 5))
+    sleep $poll_interval
+    elapsed=$((elapsed + poll_interval))
     if [ $((elapsed % 30)) -eq 0 ]; then
       log "Still waiting for Gitea API (${elapsed}s/${timeout}s)..."
     fi
@@ -176,11 +178,11 @@ wait_for_gitea() {
     local status_code
     status_code=$(curl -sk -o /dev/null -w "%{http_code}" "https://${GITEA_REGISTRY}/v2/")
     if [ "$status_code" = "401" ] || [ "$status_code" = "200" ]; then
-      log "Container registry endpoint is ready (HTTP $status_code)"
+      log "Container registry endpoint is ready (HTTP $status_code, ${registry_elapsed}s)"
       return 0
     fi
-    sleep 5
-    registry_elapsed=$((registry_elapsed + 5))
+    sleep $poll_interval
+    registry_elapsed=$((registry_elapsed + poll_interval))
     if [ $((registry_elapsed % 30)) -eq 0 ]; then
       log "Still waiting for registry endpoint (${registry_elapsed}s/${registry_timeout}s, last status: $status_code)..."
     fi
@@ -376,23 +378,45 @@ trigger_kargo_refresh() {
 
   log "Triggering Kargo warehouse refresh..."
 
-  # Map images to warehouses
-  # Note: ai-chatbot doesn't have a warehouse yet (not in Kargo pipeline)
+  # Build WAREHOUSES mapping dynamically from images.yaml (single source of truth)
+  # plus special cases for images managed outside kargo-inner-loop
+  local stacks_dir="${STACKS_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+  local images_yaml="${stacks_dir}/packages/base/manifests/kargo-inner-loop/images.yaml"
+
   declare -A WAREHOUSES=(
+    # Special cases: images managed by other Kargo pipelines or with different warehouse names
     ["open-swe-web"]="open-swe-web"
     ["open-swe-agent"]="open-swe-agent"
-    ["backstage"]="backstage-local"
+    ["backstage"]="backstage-local"  # Managed by kargo-backstage-pipeline
   )
 
+  # Dynamically add warehouses from images.yaml (kargo-inner-loop apps)
+  if [ -f "$images_yaml" ] && command -v yq &>/dev/null; then
+    local image_count
+    image_count=$(yq '.images | length' "$images_yaml" 2>/dev/null || echo 0)
+    for i in $(seq 0 $((image_count - 1))); do
+      local name warehouse
+      name=$(yq -r ".images[$i].name" "$images_yaml")
+      # Use warehouseName if specified, otherwise default to name
+      warehouse=$(yq -r ".images[$i].warehouseName // .images[$i].name" "$images_yaml")
+      if [ -n "$name" ] && [ "$name" != "null" ]; then
+        WAREHOUSES["$name"]="$warehouse"
+      fi
+    done
+    log "Loaded ${image_count} warehouse mappings from images.yaml"
+  else
+    log "WARNING: images.yaml not found or yq not available, using hardcoded mappings only"
+  fi
+
   # Wait for kargo-pipelines namespace to exist (warehouses created by ArgoCD)
-  local ns_timeout=120 ns_elapsed=0
+  local ns_timeout=120 ns_elapsed=0 poll_interval=3
   while ! kubectl get namespace kargo-pipelines &>/dev/null; do
     if [ $ns_elapsed -ge $ns_timeout ]; then
       log "WARNING: kargo-pipelines namespace not found after ${ns_timeout}s, skipping refresh"
       return 0
     fi
-    sleep 5
-    ns_elapsed=$((ns_elapsed + 5))
+    sleep $poll_interval
+    ns_elapsed=$((ns_elapsed + poll_interval))
   done
 
   local refreshed=0
@@ -410,8 +434,8 @@ trigger_kargo_refresh() {
           log "WARNING: Warehouse '$warehouse' not found after ${warehouse_timeout}s (ArgoCD may still be syncing)"
           break
         fi
-        sleep 5
-        wh_elapsed=$((wh_elapsed + 5))
+        sleep $poll_interval
+        wh_elapsed=$((wh_elapsed + poll_interval))
         if [ $((wh_elapsed % 15)) -eq 0 ]; then
           log "  Waiting for warehouse '$warehouse' (${wh_elapsed}s/${warehouse_timeout}s)..."
         fi

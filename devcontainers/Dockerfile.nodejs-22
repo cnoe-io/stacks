@@ -1,0 +1,68 @@
+# Shared Node.js 22 DevSpace Container
+# Full-featured development environment with all build tools
+#
+# Used by: ai-chatbot, workflow-builder, and other Next.js/Node.js apps
+#
+# Build & Push:
+#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-22-devspace:latest -f Dockerfile.nodejs-22 .
+#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-22-devspace:latest
+
+FROM node:22-bookworm
+
+# Install system dependencies for development and Claude Code tools
+RUN apt-get update && apt-get install -y \
+    # Version control
+    git \
+    openssh-client \
+    gnupg \
+    # Claude Code tools (Grep, file search, web fetch)
+    ripgrep \
+    fd-find \
+    curl \
+    wget \
+    jq \
+    # Shell utilities
+    bash-completion \
+    less \
+    tree \
+    vim-tiny \
+    # Process management
+    screen \
+    procps \
+    # Certificates for HTTPS
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    # Create symlinks for common tool names
+    && ln -sf /usr/bin/fdfind /usr/bin/fd
+
+# The node:22 image already has user 'node' with UID 1000
+# Create and configure /app directory with proper ownership
+# Also create /.devspace for devspace restart helper signal file
+RUN mkdir -p /app && \
+    chown -R node:node /app && \
+    mkdir -p /.devspace && \
+    chown -R node:node /.devspace
+
+# Enable corepack for pnpm (runs as root for system-wide setup)
+# Support multiple pnpm versions - apps can override with corepack prepare
+RUN corepack enable && \
+    corepack prepare pnpm@9.12.3 --activate
+
+# Ensure npm/node directories are accessible
+RUN mkdir -p /home/node/.npm && \
+    chown -R node:node /home/node/.npm
+
+WORKDIR /app
+
+# NOTE: Container runs as root by default for DevSpace
+# DevSpace patches securityContext at runtime based on app needs:
+#   - Next.js apps: root (UID 0) for npm permissions
+#   - Apps with Claude CLI: may need non-root (UID 1000)
+
+# Set environment for development
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# The actual source code is mounted via devspace sync
+# CMD is overridden by devspace.yaml command
+CMD ["tail", "-f", "/dev/null"]

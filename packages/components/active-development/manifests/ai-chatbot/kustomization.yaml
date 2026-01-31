@@ -8,7 +8,9 @@ resources:
   - ClusterRoleBinding-ai-chatbot-sandbox-manager.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-dapr-config.yaml
+  - ConfigMap-flipt-config.yaml
   - Configuration-ai-chatbot-dapr.yaml
+  - Component-azureappconfig.yaml
   - Component-sandboxregistry.yaml
   - Component-taskpubsub.yaml
   - Component-pubsub.yaml

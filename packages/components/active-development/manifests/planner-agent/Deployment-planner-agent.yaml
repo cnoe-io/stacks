@@ -40,10 +40,16 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: planner-orchestrator
           envFrom:
-            - secretRef:
-                name: planner-agent-secrets
             - configMapRef:
                 name: planner-agent-config
+            - configMapRef:
+                name: planner-agent-otel-config
+            - configMapRef:
+                name: planner-agent-dapr-config
+            - configMapRef:
+                name: planner-agent-flipt-config
+            - secretRef:
+                name: planner-agent-secrets
           resources:
             requests:
               memory: "256Mi"

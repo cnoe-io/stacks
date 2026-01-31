@@ -48,6 +48,10 @@ spec:
             - name: DAPR_ORCHESTRATOR_URL
               value: "http://planner-orchestrator.planner-agent.svc.cluster.local:8080"
           envFrom:
+            - configMapRef:
+                name: workflow-builder-otel-config
+            - configMapRef:
+                name: workflow-builder-flipt-config
             - secretRef:
                 name: workflow-builder-secrets
           resources:

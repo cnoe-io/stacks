@@ -4,7 +4,13 @@ metadata:
   name: cluster
 spec:
   webhookReceivers:
+    # Gitea webhook receiver for inner-loop (local Gitea registry)
     - gitea:
         secretRef:
           name: kargo-gitea-cluster-webhook-secret
       name: gitea-cluster-webhook
+    # GitHub webhook receiver for outer-loop (GHCR images)
+    - github:
+        secretRef:
+          name: kargo-github-webhook-secret
+      name: github-cluster-webhook

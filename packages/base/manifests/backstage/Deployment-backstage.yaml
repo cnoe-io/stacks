@@ -58,7 +58,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: ghcr.io/pittampalliorg/backstage:v1.1.2
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/backstage:latest
           livenessProbe:
             failureThreshold: 3
             httpGet:

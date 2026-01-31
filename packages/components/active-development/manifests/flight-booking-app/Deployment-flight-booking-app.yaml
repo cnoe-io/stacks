@@ -66,15 +66,13 @@ spec:
                 secretKeyRef:
                   name: flight-booking-app-secrets
                   key: AI_GATEWAY_API_KEY
-            # Dapr configuration
-            - name: DAPR_STATE_STORE
-              value: "statestore"
-            - name: PUBSUB_NAME
-              value: "pubsub"
-            # OpenTelemetry - environment-specific override
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "deployment.environment=production,service.namespace=flight-booking-app,service.version=1.0.0"
           envFrom:
+            - configMapRef:
+                name: flight-booking-app-otel-config
+            - configMapRef:
+                name: flight-booking-app-dapr-config
+            - configMapRef:
+                name: flight-booking-app-flipt-config
             - secretRef:
                 name: flight-booking-app-secrets
           livenessProbe:

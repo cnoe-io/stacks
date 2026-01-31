@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - Namespace-planner-agent.yaml
   - ConfigMap-planner-agent.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ConfigMap-flipt-config.yaml
   - ExternalSecret-planner-agent.yaml
   - PersistentVolumeClaim-workspace.yaml
   # Dapr Components

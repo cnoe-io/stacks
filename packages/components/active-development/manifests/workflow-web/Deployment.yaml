@@ -55,22 +55,18 @@ spec:
               value: "3456"
             - name: HOSTNAME
               value: "0.0.0.0"
-            # Dapr configuration
-            - name: DAPR_ENABLED
-              value: "true"
-            - name: DAPR_STATE_STORE
-              value: "workflow-statestore"
-            - name: DAPR_PUBSUB
-              value: "workflow-pubsub"
-            - name: DAPR_HTTP_PORT
-              value: "3500"
-            - name: DAPR_SIDECAR_WAIT_ATTEMPTS
-              value: "180"
             # Workflow Web configuration
             - name: WORKFLOW_TARGET_WORLD
               value: "@workflow-worlds/dapr"
             - name: WORKFLOW_WEB_TITLE
               value: "Workflow Observability"
+          envFrom:
+            - configMapRef:
+                name: workflow-web-otel-config
+            - configMapRef:
+                name: workflow-web-dapr-config
+            - configMapRef:
+                name: workflow-web-flipt-config
           livenessProbe:
             httpGet:
               path: /api/health

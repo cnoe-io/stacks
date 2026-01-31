@@ -1,0 +1,100 @@
+# Hybrid Node.js 22 + Python 3.12 DevSpace Container
+# For agent-based apps that need both Node.js runtime and Python execution
+#
+# Use case: Next.js apps with Claude Code that need to run Python code
+#
+# Build & Push:
+#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-python-devspace:latest -f Dockerfile.nodejs-python .
+#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-python-devspace:latest
+
+FROM node:22-bookworm
+
+# Install Python 3.12 and pip
+RUN apt-get update && apt-get install -y \
+    python3-full \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    # Create symlinks for 'python' and 'pip' commands
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip
+
+# Install system dependencies for development and Claude Code tools
+RUN apt-get update && apt-get install -y \
+    # Version control
+    git \
+    openssh-client \
+    gnupg \
+    # Claude Code tools (Grep, file search, web fetch)
+    ripgrep \
+    fd-find \
+    curl \
+    wget \
+    jq \
+    # Shell utilities
+    bash-completion \
+    less \
+    tree \
+    vim-tiny \
+    # Process management
+    screen \
+    procps \
+    # Certificates for HTTPS
+    ca-certificates \
+    # Build tools (for native Python packages)
+    build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    # Create symlinks for common tool names
+    && ln -sf /usr/bin/fdfind /usr/bin/fd
+
+# Install Claude CLI globally (for AI-powered development)
+RUN npm install -g @anthropic-ai/claude-code
+
+# Install common Python packages globally (for agent code execution)
+# Using --break-system-packages since this is a container environment
+RUN pip install --no-cache-dir --break-system-packages \
+    # Common data/AI packages agents might use
+    numpy \
+    pandas \
+    requests \
+    httpx \
+    pydantic \
+    # Code execution helpers
+    ipython \
+    # Testing
+    pytest
+
+# The node:22 image already has user 'node' with UID 1000
+# Create and configure directories with proper ownership
+RUN mkdir -p /app && \
+    chown -R node:node /app && \
+    mkdir -p /.devspace && \
+    chown -R node:node /.devspace
+
+# Enable corepack for pnpm
+RUN corepack enable && \
+    corepack prepare pnpm@9.12.3 --activate
+
+# Ensure npm/node directories are accessible
+RUN mkdir -p /home/node/.npm && \
+    chown -R node:node /home/node/.npm
+
+WORKDIR /app
+
+# Set environment for development
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Verify installations
+RUN echo "=== Environment Versions ===" && \
+    node --version && \
+    npm --version && \
+    python --version && \
+    pip --version && \
+    claude --version || true
+
+# The actual source code is mounted via devspace sync
+# CMD is overridden by devspace.yaml command
+CMD ["tail", "-f", "/dev/null"]

@@ -6,6 +6,9 @@ resources:
   - ServiceAccount-vibe-coding-platform.yaml
   - ClusterRole-sandbox-manager.yaml
   - ClusterRoleBinding-sandbox-manager.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ConfigMap-flipt-config.yaml
   - ExternalSecret-vibe-coding-secrets.yaml
   - Component-workflow-pubsub.yaml
   - Component-workflow-statestore.yaml

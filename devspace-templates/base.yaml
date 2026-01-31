@@ -1,0 +1,120 @@
+# DevSpace Base Configuration
+# Provides common variables for all frameworks
+#
+# Import this file first, then import a framework-specific snippet.
+# Note: This file provides variables. The actual dev configuration
+# must be defined in the importing devspace.yaml file.
+
+version: v2beta1
+
+# ============================================================================
+# Common Variables
+# ============================================================================
+vars:
+  # Required variables (must be set by importing config)
+  APP_NAME:
+    question: Application name
+    default: ""
+  LOCAL_PORT:
+    question: Local port for forwarding
+    default: "3000"
+  CONTAINER_PORT:
+    question: Container port
+    default: "3000"
+
+  # Registry configuration
+  GITEA_HOST:
+    default: "gitea.cnoe.localtest.me:8443"
+  GITEA_USER:
+    default: "giteaadmin"
+
+  # SSH configuration
+  SSH_PORT:
+    default: "2222"
+
+  # Resource configuration
+  CPU_REQUEST:
+    default: "500m"
+  CPU_LIMIT:
+    default: "4"
+  MEMORY_REQUEST:
+    default: "2Gi"
+  MEMORY_LIMIT:
+    default: "8Gi"
+
+  # Observability
+  OTEL_SERVICE_NAME:
+    default: "${APP_NAME}-dev"
+  OTEL_ENVIRONMENT:
+    default: "development"
+
+  # ==========================================================================
+  # Kargo Integration - Query the currently deployed image tag
+  # ==========================================================================
+  # This variable dynamically queries the current image tag from Kubernetes
+  # so DevSpace knows exactly which production image it's replacing.
+  #
+  # Usage in logs/debugging:
+  #   echo "Replacing production image: ${CURRENT_IMAGE_TAG}"
+  #
+  CURRENT_IMAGE_TAG:
+    command: |
+      kubectl get deployment ${APP_NAME} -n ${APP_NAME} -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null |
+      sed 's/.*://' || echo "latest"
+    default: "latest"
+
+  # Full production image reference (for comparison/logging)
+  CURRENT_PRODUCTION_IMAGE:
+    command: |
+      kubectl get deployment ${APP_NAME} -n ${APP_NAME} -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null ||
+      echo "${GITEA_HOST}/${GITEA_USER}/${APP_NAME}:latest"
+    default: "${GITEA_HOST}/${GITEA_USER}/${APP_NAME}:latest"
+
+  # ==========================================================================
+  # Shared Devcontainer Image
+  # ==========================================================================
+  # Use shared devcontainers instead of per-app images.
+  # Options:
+  #   - nodejs-22-devspace:latest  (for Next.js/Node.js apps)
+  #   - python-312-devspace:latest (for Python/FastAPI apps)
+  #
+  SHARED_DEVCONTAINER:
+    default: "nodejs-22-devspace"
+
+# ============================================================================
+# Common Exclusion Paths Reference
+# ============================================================================
+# DevSpace doesn't support variable interpolation in excludePaths arrays,
+# so these are documented here for reference.
+#
+# Copy the appropriate exclusions to your sync config:
+#
+# Common exclusions for all frameworks:
+#   # Dev tooling
+#   - .devenv/
+#   - .devspace/
+#   - .direnv/
+#   - .git
+#   - .git/
+#   - .github/
+#   - .idea/
+#   - .vscode/
+#   - .cursor/
+#   # Documentation (not needed at runtime)
+#   - docs/
+#   - "*.md"
+#   - "*.log"
+#   - LICENSE
+#   # Docker/container files
+#   - Dockerfile
+#   - Dockerfile.devspace
+#   - .dockerignore
+#   # Devenv files
+#   - devenv.*
+#   - devenv.lock
+#   - .devenv*
+#   - .devenv.flake.nix
+#   # Git/env
+#   - .gitignore
+#   - .env.local
+#   - .env.example

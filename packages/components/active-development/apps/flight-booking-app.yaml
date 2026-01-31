@@ -1,27 +1,35 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "60"
   name: flight-booking-app
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:flight-booking-app-local-dev
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  destination:
-    namespace: flight-booking-app
-    server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
     repoURL: cnoe://flight-booking-app/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flight-booking-app
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
   syncPolicy:
-    # Active development: auto-sync enabled but selfHeal disabled
-    # ArgoCD detects drift (OutOfSync) but won't auto-revert manual changes
-    # Manual sync: argocd app sync flight-booking-app --insecure
     automated:
-      selfHeal: false
-      prune: false
+      selfHeal: true
+      prune: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

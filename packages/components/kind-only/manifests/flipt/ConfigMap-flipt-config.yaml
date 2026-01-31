@@ -30,8 +30,11 @@ data:
           type: git
 
     # Authentication configuration
+    # NOTE: OIDC disabled due to Flipt not supporting custom CA certificates for OIDC providers
+    # See: https://github.com/flipt-io/flipt/issues/5296
+    # Using token authentication as workaround for local development
     authentication:
-      required: true
+      required: false
       exclude:
         metadata: true
         evaluation: true
@@ -40,24 +43,12 @@ data:
         secure: true
       methods:
         token:
-          enabled: false
-        oidc:
           enabled: true
-          cleanup:
-            interval: "10m"
-            grace_period: "30m"
-          providers:
-            keycloak:
-              # Domain-based routing for Keycloak
-              issuer_url: "https://keycloak.cnoe.localtest.me:8443/realms/cnoe"
-              client_id: "flipt"
-              # client_secret provided via FLIPT_AUTHENTICATION_METHODS_OIDC_PROVIDERS_KEYCLOAK_CLIENT_SECRET env var
-              redirect_address: "https://flipt.cnoe.localtest.me:8443"
-              scopes:
-                - openid
-                - profile
-                - email
-                - groups
+          bootstrap:
+            token: "developer"
+            expiration: "8760h"
+        oidc:
+          enabled: false
 
     # Audit logging
     audit:

@@ -2,18 +2,23 @@
 # Each entry generates a Warehouse + Stage for local development
 # Generated pipelines are output to ./manifests/ directory
 #
+# This file is the SINGLE SOURCE OF TRUTH for:
+#   - Kargo pipeline generation (generate-kargo-pipelines.sh)
+#   - Warehouse refresh mappings in preload-images.sh
+#
 # Global config:
 #   clusterHost  - Hostname used by idpbuilder (detected from CLUSTER_HOST env or hostname -s)
 #   giteaOrg     - Gitea organization for manifests (default: giteaAdmin)
 #
 # Image fields:
-#   name         - Image name (used for Warehouse/Stage naming)
-#   argocdApp    - ArgoCD Application name to update
-#   registry     - Container registry URL
-#   org          - Registry organization/namespace
-#   tagStrategy  - Kargo image selection: SemVer or Lexical
-#   tagPattern   - Regex pattern for allowed tags
+#   name          - Image name (used for Warehouse/Stage naming)
+#   argocdApp     - ArgoCD Application name to update
+#   registry      - Container registry URL
+#   org           - Registry organization/namespace
+#   tagStrategy   - Kargo image selection: SemVer or Lexical
+#   tagPattern    - Regex pattern for allowed tags
 #   promotionType - kustomize or helm
+#   warehouseName - (optional) Override warehouse name if different from 'name'
 #
 # For helm apps, you must also specify:
 #   helmRepoURL  - Helm chart repository URL (to match ArgoCD source)
@@ -24,6 +29,65 @@ config:
   giteaOrg: giteaAdmin
   giteaRegistry: gitea.cnoe.localtest.me:8443
 
-images: []
+images:
   # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
   # to avoid conflicts with the existing pipeline
+
+  # Active-development apps with custom images built from local Gitea registry
+  # These apps use :latest tags by default; Kargo manages versioned promotions
+
+  - name: ai-chatbot
+    argocdApp: ai-chatbot
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: vibe-coding-platform
+    argocdApp: vibe-coding-platform
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: workflow-web
+    argocdApp: workflow-web
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: workflow-builder
+    argocdApp: workflow-builder
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: activity-executor
+    argocdApp: activity-executor
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: flight-booking-app
+    argocdApp: flight-booking-app
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: planner-agent
+    argocdApp: planner-agent
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize

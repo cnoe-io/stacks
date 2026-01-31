@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibe-coding-platform-dapr-config
+  namespace: vibe-coding-platform
+  labels:
+    app.kubernetes.io/name: vibe-coding-platform
+    app.kubernetes.io/component: dapr
+data:
+  # Dapr Service Configuration
+  # Vibe Coding Platform uses Dapr for workflow orchestration and sandbox communication
+
+  # Enable Dapr integration
+  DAPR_ENABLED: "true"
+
+  # Dapr sidecar HTTP port (default: 3500)
+  DAPR_HTTP_PORT: "3500"
+
+  # State store and pubsub component names
+  DAPR_STATE_STORE: "workflow-statestore"
+  DAPR_PUBSUB: "workflow-pubsub"
+
+  # Number of attempts to wait for Dapr sidecar
+  DAPR_SIDECAR_WAIT_ATTEMPTS: "180"

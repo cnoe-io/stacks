@@ -1,25 +1,33 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "50"
   name: activity-executor
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:activity-executor-local-dev
 spec:
-  destination:
-    namespace: activity-executor
-    server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
     repoURL: cnoe://activity-executor/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: activity-executor
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
   syncPolicy:
-    # Active development: auto-sync enabled but selfHeal disabled
-    # ArgoCD detects drift (OutOfSync) but won't auto-revert manual changes
-    # Manual sync: argocd app sync activity-executor --insecure
     automated:
-      selfHeal: false
-      prune: false
+      selfHeal: true
+      prune: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -71,6 +71,7 @@ for i in $(seq 0 $((image_count - 1))); do
     WAREHOUSE_FILE="$OUTPUT_DIR/Warehouse-${IMAGE_NAME}.yaml"
     sed \
         -e "s|__IMAGE_NAME__|${IMAGE_NAME}|g" \
+        -e "s|__ARGOCD_APP__|${ARGOCD_APP}|g" \
         -e "s|__REGISTRY__|${REGISTRY}|g" \
         -e "s|__ORG__|${ORG}|g" \
         -e "s|__TAG_STRATEGY__|${TAG_STRATEGY}|g" \
@@ -106,12 +107,9 @@ for i in $(seq 0 $((image_count - 1))); do
             -e "s|__ORG__|${ORG}|g" \
             "$TEMPLATE_FILE" > "$STAGE_FILE"
 
-        # Generate ArgoCD Application for local-dev (tracks stage/local-dev branch)
-        APP_FILE="$OUTPUT_DIR/Application-${IMAGE_NAME}-local-dev.yaml"
-        sed \
-            -e "s|__IMAGE_NAME__|${IMAGE_NAME}|g" \
-            -e "s|__ARGOCD_APP__|${ARGOCD_APP}|g" \
-            "$TEMPLATES_DIR/Application-local-dev.yaml.tpl" > "$APP_FILE"
+        # NOTE: No separate Application file generated.
+        # The base ArgoCD app (from active-development component) is the sole deployer.
+        # Kargo Stage updates the main branch, and the base app syncs from main.
     fi
 done
 
