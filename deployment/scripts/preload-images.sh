@@ -37,6 +37,7 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $LOG_PREFIX $1"; }
 # Dynamically discover images from built manifests
 # Scans packages/dist/<env>/ for image references matching gitea.cnoe.localtest.me
 # Returns unique image:tag pairs that need to be pushed to Gitea
+# Output format: full image reference with tag (e.g., gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:latest)
 discover_gitea_images() {
   local stacks_dir="${STACKS_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
   local build_env="kind-${CLUSTER_NAME}"
@@ -59,6 +60,7 @@ discover_gitea_images() {
   # Extract unique image references from manifests
   # Search in */manifests/ subdirectories for Deployment YAML files
   # Pattern: gitea.cnoe.localtest.me:8443/giteaadmin/<name>:<tag>
+  # Note: Preserves the requested tag from manifests (e.g., :latest)
   find "$dist_dir" -path "*/manifests/*.yaml" -exec grep -h "image:.*${GITEA_REGISTRY}" {} \; 2>/dev/null | \
     sed -E 's/.*image:\s*//; s/["\x27]//g; s/\s*$//' | \
     grep -E "^${GITEA_REGISTRY}/" | \
@@ -72,8 +74,10 @@ get_image_size_bytes() {
 }
 
 # Build prioritized image list dynamically
-# Returns array of "image_name:size_bytes" entries sorted by size (to stdout)
+# Returns array of "image_name:requested_tag:found_tag:size_bytes" entries sorted by size (to stdout)
 # Logs progress to stderr
+# The requested_tag is preserved from manifests (e.g., :latest) for proper tag aliasing
+# The found_tag is the actual tag in Docker cache (e.g., :v1.7.4)
 build_image_list() {
   local images=()
 
@@ -90,20 +94,45 @@ build_image_list() {
     # Extract just the name:tag part (without registry/org prefix)
     local name_tag="${full_image#${GITEA_REGISTRY}/${GITEA_ORG}/}"
     local name="${name_tag%%:*}"
+    local requested_tag="${name_tag##*:}"
 
-    # Check if image exists in Docker
+    # Find matching image in Docker (may have different tag than requested)
+    # Check exact match first, then search for any version tag
+    local local_image=""
+    local found_tag=""
+
     if docker image inspect "$full_image" &>/dev/null; then
+      # Exact match exists
+      local_image="$full_image"
+      found_tag="$requested_tag"
+    else
+      # Search for image with any tag matching this name
+      local_image=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | \
+        grep -E "(/${name}:|^${name}:)" | \
+        grep -v '<none>' | \
+        head -1 || true)
+      if [ -n "$local_image" ]; then
+        found_tag=$(echo "$local_image" | rev | cut -d: -f1 | rev)
+      fi
+    fi
+
+    if [ -n "$local_image" ]; then
       local size
-      size=$(get_image_size_bytes "$full_image")
-      images+=("$name:$size")
-      echo "  Found: $name ($(echo "$size" | awk '{printf "%.0fMB", $1/1024/1024}'))" >&2
+      size=$(get_image_size_bytes "$local_image")
+      # Format: name:requested_tag:found_tag:size
+      images+=("${name}:${requested_tag}:${found_tag}:${size}")
+      if [ "$requested_tag" != "$found_tag" ]; then
+        echo "  Found: $name ($(echo "$size" | awk '{printf "%.0fMB", $1/1024/1024}')) [manifest: :${requested_tag}, docker: :${found_tag}]" >&2
+      else
+        echo "  Found: $name ($(echo "$size" | awk '{printf "%.0fMB", $1/1024/1024}'))" >&2
+      fi
     else
       echo "  Skip: $name - not in Docker cache" >&2
     fi
   done < <(discover_gitea_images)
 
-  # Sort by size (smaller first) and return name:size pairs
-  printf '%s\n' "${images[@]}" | sort -t: -k2 -n
+  # Sort by size (smaller first, size is 4th field) and return entries
+  printf '%s\n' "${images[@]}" | sort -t: -k4 -n
 }
 
 # IMAGES_ORDERED will be populated dynamically in main()
@@ -219,6 +248,8 @@ is_gitea_tagged() {
 
 preload_image() {
   local name="$1"
+  local requested_tag="${2:-latest}"  # Tag from manifest (e.g., :latest)
+  local found_tag="${3:-}"            # Tag found in Docker (e.g., :v1.7.4)
   local gitea_image="${GITEA_REGISTRY}/${GITEA_ORG}/${name}"
 
   # Find image in Docker daemon (check multiple patterns)
@@ -237,8 +268,10 @@ preload_image() {
     return 0
   fi
 
-  local tag
-  tag=$(echo "$local_image" | rev | cut -d: -f1 | rev)
+  # Use found_tag from caller if provided, otherwise extract from image
+  if [ -z "$found_tag" ]; then
+    found_tag=$(echo "$local_image" | rev | cut -d: -f1 | rev)
+  fi
   local size_mb
   size_mb=$(get_image_size_mb "$local_image")
   log "FOUND: $local_image (${size_mb}MB)"
@@ -276,15 +309,31 @@ preload_image() {
       fi
     fi
 
-    log "Pushing to Gitea registry..."
+    log "Pushing to Gitea registry as :${found_tag}..."
     local push_output
     push_output=$(skopeo copy --dest-tls-verify=false \
       --dest-creds "${GITEA_USER}:${GITEA_PASSWORD}" \
       "docker-daemon:${local_image}" \
-      "docker://${gitea_image}:${tag}" 2>&1) && push_success=true
+      "docker://${gitea_image}:${found_tag}" 2>&1) && push_success=true
 
     if [ "$push_success" = "true" ]; then
-      log "Pushed to Gitea: ${gitea_image}:${tag}"
+      log "Pushed to Gitea: ${gitea_image}:${found_tag}"
+
+      # Push with requested tag as alias if different from found tag
+      # This ensures pods requesting :latest can pull the image
+      if [ "$requested_tag" != "$found_tag" ]; then
+        log "Also tagging as :${requested_tag} (manifest requested this tag)..."
+        local alias_output
+        if alias_output=$(skopeo copy --dest-tls-verify=false \
+          --dest-creds "${GITEA_USER}:${GITEA_PASSWORD}" \
+          "docker-daemon:${local_image}" \
+          "docker://${gitea_image}:${requested_tag}" 2>&1); then
+          log "Pushed alias: ${gitea_image}:${requested_tag}"
+        else
+          log "WARNING: Failed to push alias tag :${requested_tag}: $(echo "$alias_output" | tail -1)"
+        fi
+      fi
+
       echo "$name" >> "$PRELOADED_FILE"
       return 0
     fi
@@ -434,22 +483,38 @@ main() {
   fi
 
   # Separate images into small (<500MB) and large (>=500MB) for processing strategy
+  # Entry format: name:requested_tag:found_tag:size
   local small_images=()
   local large_images=()
   local LARGE_IMAGE_THRESHOLD=$((500 * 1024 * 1024))  # 500MB in bytes
 
   log "Discovered ${#IMAGES_ORDERED[@]} images to preload:"
   for entry in "${IMAGES_ORDERED[@]}"; do
-    local name="${entry%%:*}"
-    local size="${entry##*:}"
+    # Parse entry: name:requested_tag:found_tag:size
+    local name requested_tag found_tag size
+    name=$(echo "$entry" | cut -d: -f1)
+    requested_tag=$(echo "$entry" | cut -d: -f2)
+    found_tag=$(echo "$entry" | cut -d: -f3)
+    size=$(echo "$entry" | cut -d: -f4)
     local size_mb=$((size / 1024 / 1024))
 
+    # Store as "name:requested_tag:found_tag" for processing
+    local image_info="${name}:${requested_tag}:${found_tag}"
+
     if [ "$size" -lt "$LARGE_IMAGE_THRESHOLD" ]; then
-      small_images+=("$name")
-      log "  - $name (${size_mb}MB) [parallel]"
+      small_images+=("$image_info")
+      if [ "$requested_tag" != "$found_tag" ]; then
+        log "  - $name (${size_mb}MB) [parallel] [:${requested_tag} alias for :${found_tag}]"
+      else
+        log "  - $name (${size_mb}MB) [parallel]"
+      fi
     else
-      large_images+=("$name")
-      log "  - $name (${size_mb}MB) [sequential - large]"
+      large_images+=("$image_info")
+      if [ "$requested_tag" != "$found_tag" ]; then
+        log "  - $name (${size_mb}MB) [sequential - large] [:${requested_tag} alias for :${found_tag}]"
+      else
+        log "  - $name (${size_mb}MB) [sequential - large]"
+      fi
     fi
   done
   log ""
@@ -462,11 +527,17 @@ main() {
   local pids=()
   local parallel_count=0
 
-  for name in "${small_images[@]}"; do
+  for image_info in "${small_images[@]}"; do
+    # Parse image_info: name:requested_tag:found_tag
+    local name requested_tag found_tag
+    name=$(echo "$image_info" | cut -d: -f1)
+    requested_tag=$(echo "$image_info" | cut -d: -f2)
+    found_tag=$(echo "$image_info" | cut -d: -f3)
+
     # Start background job
     (
       log ""
-      preload_image "$name"
+      preload_image "$name" "$requested_tag" "$found_tag"
     ) &
     pids+=($!)
     parallel_count=$((parallel_count + 1))
@@ -489,9 +560,15 @@ main() {
   log "Processing ${#large_images[@]} large images sequentially..."
 
   # Process large images sequentially to avoid auth/connection issues
-  for name in "${large_images[@]}"; do
+  for image_info in "${large_images[@]}"; do
+    # Parse image_info: name:requested_tag:found_tag
+    local name requested_tag found_tag
+    name=$(echo "$image_info" | cut -d: -f1)
+    requested_tag=$(echo "$image_info" | cut -d: -f2)
+    found_tag=$(echo "$image_info" | cut -d: -f3)
+
     log ""
-    preload_image "$name"
+    preload_image "$name" "$requested_tag" "$found_tag"
   done
 
   log ""
