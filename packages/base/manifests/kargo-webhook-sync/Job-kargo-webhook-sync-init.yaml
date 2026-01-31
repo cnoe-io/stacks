@@ -12,11 +12,12 @@ spec:
   backoffLimit: 3
   template:
     spec:
+      serviceAccountName: kargo-webhook-sync
       containers:
         - command:
             - /bin/sh
             - /scripts/sync-webhooks.sh
-          image: dwdraju/alpine-curl-jq:latest
+          image: alpine/k8s:1.30.3
           name: webhook-setup
           resources:
             limits:

@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook-automation
+    app.kubernetes.io/name: kargo-webhook-sync
+  name: kargo-webhook-sync
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-webhook-sync
+subjects:
+  - kind: ServiceAccount
+    name: kargo-webhook-sync
+    namespace: kargo

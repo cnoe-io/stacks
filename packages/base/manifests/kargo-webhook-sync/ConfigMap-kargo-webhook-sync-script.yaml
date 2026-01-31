@@ -44,6 +44,7 @@ data:
     fi
 
     # Create system webhook (applies to ALL repositories)
+    # Match ArgoCD approach: is_system_webhook inside config
     echo "Creating system webhook..."
     RESULT=$(curl -k -s -w "%{http_code}" -o /tmp/response.json -X POST \
       -u "$GITEA_USER:$GITEA_PASS" \
@@ -52,7 +53,7 @@ data:
       -d "{
         \"type\": \"gitea\",
         \"active\": true,
-        \"events\": [\"push\"],
+        \"events\": [\"push\", \"package\"],
         \"config\": {
           \"url\": \"$KARGO_WEBHOOK_URL\",
           \"content_type\": \"json\",
