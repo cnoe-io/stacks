@@ -22,6 +22,7 @@ spec:
       labels:
         app: ai-chatbot
         app.kubernetes.io/name: ai-chatbot
+        azure.workload.identity/use: "true"
       annotations:
         # Dapr sidecar injection for distributed tracing
         dapr.io/enabled: "true"
