@@ -16,8 +16,12 @@ spec:
     path: .
     repoURL: cnoe://workflow-web/manifests
   syncPolicy:
-    # Auto-sync DISABLED for active development
-    # Sync manually: argocd app sync workflow-web --insecure
+    # Active development: auto-sync enabled but selfHeal disabled
+    # ArgoCD detects drift (OutOfSync) but won't auto-revert manual changes
+    # Manual sync: argocd app sync workflow-web --insecure
+    automated:
+      selfHeal: false
+      prune: false
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -1,11 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
-# Actively-developed applications with auto-sync DISABLED
+# Actively-developed applications with selfHeal DISABLED
 # These apps have custom images built from local Gitea registry (gitea.cnoe.localtest.me:8443)
 # Development workflow: DevSpace / manual sync / Kargo pipelines
 #
-# To sync manually: argocd app sync argocd/<app-name> --insecure
+# Sync behavior:
+#   - automated: true (ArgoCD will auto-sync on git changes)
+#   - selfHeal: false (ArgoCD won't auto-revert manual kubectl changes)
+#   - prune: false (ArgoCD won't auto-delete orphaned resources)
+#
+# This allows ArgoCD to detect drift (OutOfSync status) while preserving
+# manual changes made during development (e.g., DevSpace deployments).
+#
+# To force sync: argocd app sync argocd/<app-name> --insecure
 
 resources:
   - apps/activity-executor.yaml
@@ -15,3 +23,27 @@ resources:
   - apps/vibe-coding-platform.yaml
   - apps/workflow-builder.yaml
   - apps/workflow-web.yaml
+
+# Image tag reference (documentation)
+# All active-development images use :latest for local development
+# NOTE: Since manifests are copied directly (not via kustomize), tags are
+# hardcoded in Deployment files. This block documents which images are used.
+images:
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-orchestrator
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-sdk-agent
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
+    newTag: latest

@@ -39,7 +39,7 @@ spec:
       containers:
         - name: workflow-web
           # Use our custom workflow-web image that includes the Dapr adapter
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web:v0.1.0
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3456

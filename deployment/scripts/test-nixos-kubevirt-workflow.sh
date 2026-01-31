@@ -242,10 +242,10 @@ test_deployment() {
     cluster-update || true
   else
     log_warn "cluster-update not available, using kubectl apply"
-    cd "$STACKS_DIR/cdk8s" && npm run synth && cd ..
-    kubectl apply -f cdk8s/dist/nixos-image-server/manifests/
-    kubectl apply -f cdk8s/dist/nixos-sway-datavolume/manifests/
-    kubectl apply -f cdk8s/dist/nixos-sway-vm/manifests/
+    cd "$STACKS_DIR/packages" && make build-kind && cd ..
+    kubectl apply -f packages/dist/kind/nixos-image-server/manifests/
+    kubectl apply -f packages/dist/kind/nixos-sway-datavolume/manifests/
+    kubectl apply -f packages/dist/kind/nixos-sway-vm/manifests/
   fi
 
   # Wait for image server

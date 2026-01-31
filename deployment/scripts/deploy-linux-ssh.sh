@@ -391,7 +391,7 @@ else
     echo -e "${YELLOW}Warning: sync-cluster-certificates.sh not found${NC}"
 fi
 
-# Step 9: SSH services are now deployed via ArgoCD from nixidy manifests
+# Step 9: SSH services are now deployed via ArgoCD from kustomize manifests
 # No manual deployment needed here
 
 # Step 10: Sync JWKS to Azure (CRITICAL for External Secrets)

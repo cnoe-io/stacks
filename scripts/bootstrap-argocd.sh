@@ -24,7 +24,7 @@
 # Prerequisites:
 #   - Talos cluster with kubectl access
 #   - Azure infrastructure set up (storage account, AD app, Key Vault)
-#   - CDK8s manifests synthesized and pushed to Git
+#   - Kustomize manifests built and pushed to Git
 #
 
 set -euo pipefail
@@ -48,12 +48,12 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 # Configuration
 ARGOCD_NAMESPACE="argocd"
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.3.0}"
-ARGOCD_VALUES_FILE="${SCRIPT_DIR}/../cdk8s/values/argocd-values.yaml"
+ARGOCD_VALUES_FILE="${SCRIPT_DIR}/../deployment/config/argocd-values.yaml"
 
 # Git configuration (from environment)
 GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/PittampalliOrg/stacks.git}"
-GIT_BRANCH="${GIT_BRANCH:-106-consolidate-bootstrap-between}"
-GIT_PATH="${GIT_PATH:-cdk8s/dist}"
+GIT_BRANCH="${GIT_BRANCH:-main}"
+GIT_PATH="${GIT_PATH:-packages/dist/talos}"
 
 # Parse arguments
 SKIP_JWKS=false

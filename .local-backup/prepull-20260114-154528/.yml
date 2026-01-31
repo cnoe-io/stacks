@@ -1,5 +1,0 @@
-- uses: kustomize-build
-  as: render-manifests
-  config:
-    outPath: ./out/manifests/
-    path: ./src/overlays/dev

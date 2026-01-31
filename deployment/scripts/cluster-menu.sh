@@ -360,9 +360,8 @@ kustomize-build() {
   fi
 }
 
-# Legacy: Ensure CDK8s dependencies are installed (deprecated - use kustomize)
+# Legacy: Stub for backwards compatibility
 ensure-cdk8s-dependencies() {
-  echo "⚠️  CDK8s is deprecated. Using kustomize instead."
   ensure-kustomize-ready
 }
 
@@ -617,6 +616,25 @@ cluster-apply-manifests() {
     IDPBUILDER_ARGS+=(--package-custom-file "gitea:${GITEA_OVERRIDE_FILE}")
   fi
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Background Image Preloading (runs in PARALLEL with idpbuilder)
+  # Started AFTER kustomize-build so dist/ folder has the manifest files
+  # The preload script has its own wait_for_gitea logic
+  # ─────────────────────────────────────────────────────────────────────────────
+  local IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
+  local IMAGE_PRELOAD_LOG="/tmp/image-preload.log"
+  if [ "${SKIP_IMAGE_PRELOAD:-}" != "true" ] && [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
+    echo "🖼️  Starting background image preload (parallel with idpbuilder)..."
+    (
+      # Preload script waits for Gitea, discovers images from dist/, pushes to registry
+      "$IMAGE_PRELOAD_SCRIPT" "$CLUSTER_NAME"
+    ) > "$IMAGE_PRELOAD_LOG" 2>&1 &
+    local IMAGE_PRELOAD_PID=$!
+    echo "   Started background image preload (PID: $IMAGE_PRELOAD_PID)"
+    echo "   Log: $IMAGE_PRELOAD_LOG"
+    echo ""
+  fi
+
   # Apply using idpbuilder (idempotent operation)
   # Any extra args ($@) are passed through to idpbuilder
   idpbuilder create "${IDPBUILDER_ARGS[@]}" "$@"
@@ -729,24 +747,8 @@ cluster-deploy() {
   fi
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Background Image Preloading (runs in PARALLEL with idpbuilder)
-  # Starts early so images are in Gitea before apps try to pull them
-  # ─────────────────────────────────────────────────────────────────────────────
-  local IMAGE_PRELOAD_PID=""
-  local IMAGE_PRELOAD_LOG="/tmp/image-preload.log"
-  local IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
-
-  if [ "${SKIP_IMAGE_PRELOAD:-}" != "true" ] && [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
-    echo "🖼️  Starting background image preload (parallel with idpbuilder)..."
-    (
-      # Preload script has its own wait_for_gitea, so it's safe to start now
-      "$IMAGE_PRELOAD_SCRIPT" "$CLUSTER_HOST"
-    ) > "$IMAGE_PRELOAD_LOG" 2>&1 &
-    IMAGE_PRELOAD_PID=$!
-    echo "   Started background image preload (PID: $IMAGE_PRELOAD_PID)"
-    echo "   Log: $IMAGE_PRELOAD_LOG"
-  fi
-
+  # NOTE: Image preloading is now handled inside cluster-apply-manifests()
+  # It starts AFTER kustomize-build so the dist/ folder has manifest files
   # ─────────────────────────────────────────────────────────────────────────────
   # Apply manifests using portable core (cluster-apply-manifests)
   # ─────────────────────────────────────────────────────────────────────────────
@@ -1039,7 +1041,7 @@ cluster-update-gum() {
     return 1
   fi
 
-  local NIXIDY_DIR="$STACKS_DIR/nixidy"
+  local PACKAGES_DIR="$STACKS_DIR/packages"
   local HOST_CONTEXT="$(detect_host_context)"
   local ORIG_DIR="$(pwd)"
   local DEPLOY_DIR="$STACKS_DIR/deployment"
@@ -1449,14 +1451,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  ts-kubeconfig-get        - Get kubeconfig from Azure Key Vault"
   echo "  ts-kubeconfig-test       - Test remote kubectl access"
   echo ""
-  echo "Nixidy Watch Mode (Auto-rebuild):"
+  echo "Kustomize Watch Mode (Auto-rebuild):"
   echo "  clwatch                  - Start file watcher (requires devenv shell)"
   echo "  clrebuild                - One-shot rebuild without watching"
   echo ""
   echo "  Or via devenv:"
   echo "    devenv up              - Start watcher as background process"
-  echo "    nixidy-watch           - Start watcher in foreground"
-  echo "    nixidy-rebuild         - One-shot rebuild"
+  echo "    watch-kustomize        - Start watcher in foreground"
+  echo "    kustomize-build        - One-shot rebuild"
   echo ""
 
   # If gum is available, run the menu directly

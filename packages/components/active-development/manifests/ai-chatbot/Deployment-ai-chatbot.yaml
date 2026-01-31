@@ -34,7 +34,7 @@ spec:
       serviceAccountName: ai-chatbot
       initContainers:
         - name: db-migrate
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:latest
           imagePullPolicy: Always
           command:
             - /bin/sh
@@ -64,7 +64,7 @@ spec:
             runAsUser: 1001
       containers:
         - name: ai-chatbot
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

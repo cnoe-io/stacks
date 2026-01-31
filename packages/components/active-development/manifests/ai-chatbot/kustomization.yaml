@@ -23,7 +23,7 @@ resources:
   - Service-ai-chatbot.yaml
   - Ingress-ai-chatbot.yaml
 
-# Image tag - using latest available version
+# Image tag - using latest for active development
 images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
-    newTag: v1.7.0
+    newTag: latest

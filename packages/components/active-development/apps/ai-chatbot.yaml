@@ -17,8 +17,12 @@ spec:
     server: https://kubernetes.default.svc
     namespace: ai-chatbot
   syncPolicy:
-    # Auto-sync DISABLED for active development
-    # Sync manually: argocd app sync ai-chatbot --insecure
+    # Active development: auto-sync enabled but selfHeal disabled
+    # ArgoCD detects drift (OutOfSync) but won't auto-revert manual changes
+    # Manual sync: argocd app sync ai-chatbot --insecure
+    automated:
+      selfHeal: false
+      prune: false
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -138,7 +138,7 @@ done
 # Note: This mirrors what kustomize does via components in overlays
 case "$ENV" in
     kind|kind-*)
-        for comp in kind-only tailscale-serve observability; do
+        for comp in active-development kind-only tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue
                 copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"

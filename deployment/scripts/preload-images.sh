@@ -32,19 +32,82 @@ GITEA_ORG="giteaadmin"
 PRELOADED_FILE="/tmp/preloaded-images-$$.txt"
 PARALLEL_JOBS="${PARALLEL_JOBS:-3}"
 
-# Target images to preload with priority (lower = higher priority, processed first)
-# Priority based on: 1) Pod startup criticality, 2) Image size (smaller = faster)
-# Format: "name:priority"
-IMAGES_ORDERED=(
-  "ai-chatbot:1"           # ~285MB - critical for demo, small
-  "open-swe-web:2"         # ~270MB - UI, small
-  "backstage:3"            # ~1.2GB - developer portal
-  "backstage-devspace:4"   # devcontainer image
-  "open-swe-devspace:5"    # ~3.3GB - devcontainer image
-  "open-swe-agent:6"       # ~4.5GB - largest, process last
-)
-
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $LOG_PREFIX $1"; }
+
+# Dynamically discover images from built manifests
+# Scans packages/dist/<env>/ for image references matching gitea.cnoe.localtest.me
+# Returns unique image:tag pairs that need to be pushed to Gitea
+discover_gitea_images() {
+  local stacks_dir="${STACKS_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+  local build_env="kind-${CLUSTER_NAME}"
+  local dist_dir="${stacks_dir}/packages/dist/${build_env}"
+
+  # Fallback to kind if host-specific build doesn't exist
+  if [ ! -d "$dist_dir" ]; then
+    dist_dir="${stacks_dir}/packages/dist/kind"
+  fi
+
+  if [ ! -d "$dist_dir" ]; then
+    # Log to stderr since stdout is captured
+    echo "WARNING: No dist directory found at $dist_dir" >&2
+    return 1
+  fi
+
+  # Log to stderr since stdout is captured for image list
+  echo "Scanning $dist_dir for Gitea image references..." >&2
+
+  # Extract unique image references from manifests
+  # Search in */manifests/ subdirectories for Deployment YAML files
+  # Pattern: gitea.cnoe.localtest.me:8443/giteaadmin/<name>:<tag>
+  find "$dist_dir" -path "*/manifests/*.yaml" -exec grep -h "image:.*${GITEA_REGISTRY}" {} \; 2>/dev/null | \
+    sed -E 's/.*image:\s*//; s/["\x27]//g; s/\s*$//' | \
+    grep -E "^${GITEA_REGISTRY}/" | \
+    sort -u
+}
+
+# Get image size for priority sorting (smaller images first for faster startup)
+get_image_size_bytes() {
+  local image="$1"
+  docker inspect "$image" --format='{{.Size}}' 2>/dev/null || echo "999999999999"
+}
+
+# Build prioritized image list dynamically
+# Returns array of "image_name:size_bytes" entries sorted by size (to stdout)
+# Logs progress to stderr
+build_image_list() {
+  local images=()
+
+  # Get all Gitea images from manifests
+  while IFS= read -r full_image; do
+    [ -z "$full_image" ] && continue
+
+    # Add :latest tag if no tag specified
+    case "$full_image" in
+      *:*) ;;
+      *) full_image="${full_image}:latest" ;;
+    esac
+
+    # Extract just the name:tag part (without registry/org prefix)
+    local name_tag="${full_image#${GITEA_REGISTRY}/${GITEA_ORG}/}"
+    local name="${name_tag%%:*}"
+
+    # Check if image exists in Docker
+    if docker image inspect "$full_image" &>/dev/null; then
+      local size
+      size=$(get_image_size_bytes "$full_image")
+      images+=("$name:$size")
+      echo "  Found: $name ($(echo "$size" | awk '{printf "%.0fMB", $1/1024/1024}'))" >&2
+    else
+      echo "  Skip: $name - not in Docker cache" >&2
+    fi
+  done < <(discover_gitea_images)
+
+  # Sort by size (smaller first) and return name:size pairs
+  printf '%s\n' "${images[@]}" | sort -t: -k2 -n
+}
+
+# IMAGES_ORDERED will be populated dynamically in main()
+IMAGES_ORDERED=()
 
 cleanup() {
   # Kill any background jobs
@@ -99,21 +162,44 @@ wait_for_gitea() {
 }
 
 get_gitea_credentials() {
-  # Try to get credentials from Kubernetes secret first
+  # Get and verify Gitea credentials with retry logic
+  # Auth may fail initially during cluster creation as Gitea restarts
+  local max_attempts=10
+  local attempt=1
   local password=""
-  password=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
 
-  if [ -n "$password" ]; then
+  while [ $attempt -le $max_attempts ]; do
+    # Try to get credentials from Kubernetes secret first
+    password=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+
+    if [ -z "$password" ]; then
+      # Fallback to idpbuilder dev password
+      password="developer"
+    fi
+
     export GITEA_USER="giteaAdmin"
     export GITEA_PASSWORD="$password"
-    log "Got Gitea credentials from Kubernetes secret"
-    return 0
-  fi
 
-  # Fallback to idpbuilder dev password
-  export GITEA_USER="giteaAdmin"
-  export GITEA_PASSWORD="developer"
-  log "Using default idpbuilder dev credentials"
+    # Verify credentials work by testing API auth
+    local auth_status
+    auth_status=$(curl -sk -o /dev/null -w "%{http_code}" -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+      "https://${GITEA_REGISTRY}/api/v1/user")
+
+    if [ "$auth_status" = "200" ]; then
+      log "Got Gitea credentials from Kubernetes secret (verified)"
+      return 0
+    fi
+
+    # Auth failed - Gitea might be restarting, wait and retry
+    if [ $attempt -lt $max_attempts ]; then
+      log "Auth verification failed (HTTP $auth_status), waiting 10s... (attempt $attempt/$max_attempts)"
+      sleep 10
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  log "WARNING: Could not verify Gitea credentials after $max_attempts attempts"
+  log "Using credentials anyway - pushes may fail"
   return 0
 }
 
@@ -171,19 +257,51 @@ preload_image() {
     log "Skipping KIND load (image already tagged for Gitea registry)"
   fi
 
-  # Push to Gitea registry via skopeo
-  log "Pushing to Gitea registry..."
-  if skopeo copy --dest-tls-verify=false \
-    --dest-creds "${GITEA_USER}:${GITEA_PASSWORD}" \
-    "docker-daemon:${local_image}" \
-    "docker://${gitea_image}:${tag}" 2>&1; then
-    log "Pushed to Gitea: ${gitea_image}:${tag}"
-    echo "$name" >> "$PRELOADED_FILE"
-    return 0
-  else
-    log "WARNING: Failed to push to Gitea (skopeo error)"
-    return 1
-  fi
+  # Push to Gitea registry via skopeo with retry logic
+  # Auth can fail mid-push during parallel operations; retry with fresh credentials
+  local max_retries=3
+  local retry=0
+  local push_success=false
+
+  while [ $retry -lt $max_retries ] && [ "$push_success" = "false" ]; do
+    if [ $retry -gt 0 ]; then
+      log "Retry $retry/$max_retries: Refreshing credentials and retrying push..."
+      sleep $((retry * 5))  # Exponential backoff: 5s, 10s, 15s
+
+      # Refresh credentials - they may have changed or token expired
+      local new_password
+      new_password=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+      if [ -n "$new_password" ]; then
+        export GITEA_PASSWORD="$new_password"
+      fi
+    fi
+
+    log "Pushing to Gitea registry..."
+    local push_output
+    push_output=$(skopeo copy --dest-tls-verify=false \
+      --dest-creds "${GITEA_USER}:${GITEA_PASSWORD}" \
+      "docker-daemon:${local_image}" \
+      "docker://${gitea_image}:${tag}" 2>&1) && push_success=true
+
+    if [ "$push_success" = "true" ]; then
+      log "Pushed to Gitea: ${gitea_image}:${tag}"
+      echo "$name" >> "$PRELOADED_FILE"
+      return 0
+    fi
+
+    # Check if it's an auth error (worth retrying) vs other error
+    if echo "$push_output" | grep -qE "authentication required|unauthorized|invalid username"; then
+      log "Auth error detected, will retry with fresh credentials"
+      retry=$((retry + 1))
+    else
+      # Non-auth error (EOF, network, etc.) - also retry but log differently
+      log "Push error: $(echo "$push_output" | tail -1)"
+      retry=$((retry + 1))
+    fi
+  done
+
+  log "WARNING: Failed to push to Gitea after $max_retries attempts"
+  return 1
 }
 
 # Process a single image (for parallel execution)
@@ -280,7 +398,6 @@ show_summary() {
 
 main() {
   log "Starting image preload for cluster: $CLUSTER_NAME"
-  log "Processing order (priority): ${IMAGES_ORDERED[*]}"
   log "Parallel jobs: $PARALLEL_JOBS"
   log ""
 
@@ -304,32 +421,48 @@ main() {
   # Get Gitea credentials for registry push
   get_gitea_credentials
 
-  # Extract image names in priority order
-  local images_by_priority=()
+  # Dynamically discover and build image list from manifests
+  log "Discovering images from Kubernetes manifests..."
+  while IFS= read -r entry; do
+    [ -n "$entry" ] && IMAGES_ORDERED+=("$entry")
+  done < <(build_image_list)
+
+  if [ ${#IMAGES_ORDERED[@]} -eq 0 ]; then
+    log "No Gitea images found in manifests or Docker cache"
+    log "Manifests scanned, but no matching images in local Docker"
+    return 0
+  fi
+
+  # Separate images into small (<500MB) and large (>=500MB) for processing strategy
+  local small_images=()
+  local large_images=()
+  local LARGE_IMAGE_THRESHOLD=$((500 * 1024 * 1024))  # 500MB in bytes
+
+  log "Discovered ${#IMAGES_ORDERED[@]} images to preload:"
   for entry in "${IMAGES_ORDERED[@]}"; do
     local name="${entry%%:*}"
-    images_by_priority+=("$name")
+    local size="${entry##*:}"
+    local size_mb=$((size / 1024 / 1024))
+
+    if [ "$size" -lt "$LARGE_IMAGE_THRESHOLD" ]; then
+      small_images+=("$name")
+      log "  - $name (${size_mb}MB) [parallel]"
+    else
+      large_images+=("$name")
+      log "  - $name (${size_mb}MB) [sequential - large]"
+    fi
   done
+  log ""
 
   log ""
-  log "=== Phase 1: High-priority images (sequential for fast pod startup) ==="
-  # Process first 2 images sequentially to ensure they're available ASAP
-  local high_priority_count=2
-  for ((i=0; i<high_priority_count && i<${#images_by_priority[@]}; i++)); do
-    local name="${images_by_priority[$i]}"
-    log ""
-    preload_image "$name"
-  done
+  log "=== Phase 1: Small images (parallel for speed) ==="
+  log "Processing ${#small_images[@]} small images with $PARALLEL_JOBS parallel jobs..."
 
-  log ""
-  log "=== Phase 2: Remaining images (parallel for throughput) ==="
-  # Process remaining images in parallel
+  # Process small images in parallel
   local pids=()
   local parallel_count=0
 
-  for ((i=high_priority_count; i<${#images_by_priority[@]}; i++)); do
-    local name="${images_by_priority[$i]}"
-
+  for name in "${small_images[@]}"; do
     # Start background job
     (
       log ""
@@ -342,14 +475,23 @@ main() {
     if [ $parallel_count -ge $PARALLEL_JOBS ]; then
       # Wait for at least one job to complete
       wait -n 2>/dev/null || wait "${pids[0]}"
-      # Remove completed PIDs (simplified - just reset and track active)
       parallel_count=$((parallel_count - 1))
     fi
   done
 
-  # Wait for all remaining background jobs
+  # Wait for all small image jobs to complete before starting large images
   for pid in "${pids[@]}"; do
     wait "$pid" 2>/dev/null || true
+  done
+
+  log ""
+  log "=== Phase 2: Large images (sequential for reliability) ==="
+  log "Processing ${#large_images[@]} large images sequentially..."
+
+  # Process large images sequentially to avoid auth/connection issues
+  for name in "${large_images[@]}"; do
+    log ""
+    preload_image "$name"
   done
 
   log ""

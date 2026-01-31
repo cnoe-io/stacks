@@ -422,12 +422,12 @@ main() {
     log_info "  AZURE_KEYVAULT_NAME: ${AZURE_KEYVAULT_NAME:-(not set)}"
     log_info "  GIT_REPO_URL: ${GIT_REPO_URL:-(not set)}"
     log_info "  GIT_BRANCH: ${GIT_BRANCH:-main}"
-    log_info "  GIT_PATH: ${GIT_PATH:-cdk8s/dist}"
+    log_info "  GIT_PATH: ${GIT_PATH:-packages/dist/talos}"
 
     # Validate GIT_PATH doesn't have branch prefix (common mistake)
     if [[ "${GIT_PATH:-}" == *"consolidate-bootstrap"* ]] || [[ "${GIT_PATH:-}" == *"bootstrap-talos"* ]]; then
         log_warn "GIT_PATH appears to contain branch name prefix: ${GIT_PATH}"
-        log_warn "This is likely incorrect. Path should be relative to repo root (e.g., 'cdk8s/dist')"
+        log_warn "This is likely incorrect. Path should be relative to repo root (e.g., 'packages/dist/talos')"
         log_warn "The branch is specified via GIT_BRANCH, not in the path."
     fi
 

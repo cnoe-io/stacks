@@ -1,7 +1,0 @@
-apiVersion: v1
-data:
-  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"kagent-thinkpad.tail286401.ts.net:443":{"Handlers":{"/":{"Proxy":"http://kagent-ui.kagent.svc.cluster.local:8080"}}}}}'
-kind: ConfigMap
-metadata:
-  name: kagent-tailscale-serve-config
-  namespace: tailscale

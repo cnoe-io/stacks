@@ -48,7 +48,7 @@ OP_VAULT="${OP_VAULT:-CLI}"
 OP_TITLE="${OP_TITLE:-K8s Remote Access}"
 OP_ITEM_ID="${OP_ITEM_ID:-}"  # Will be set after first creation
 
-# ServiceAccount details (must match cdk8s chart)
+# ServiceAccount details (must match kustomize manifests)
 SA_NAME="k8s-remote-access"
 SA_NAMESPACE="tailscale"
 TOKEN_DURATION="8760h"  # 1 year

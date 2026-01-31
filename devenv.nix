@@ -24,24 +24,6 @@
 
   # Custom scripts for development workflows
   scripts = {
-    # CDK8s synthesis for KIND clusters
-    "synth-kind".exec = ''
-      cd cdk8s
-      CLUSTER_TYPE=kind npm run synth
-    '';
-
-    # CDK8s synthesis for Talos clusters (hub)
-    "synth-talos".exec = ''
-      cd cdk8s
-      CLUSTER_TYPE=talos npm run synth
-    '';
-
-    # TypeScript compilation check
-    "compile".exec = ''
-      cd cdk8s
-      npm run compile
-    '';
-
     # Refresh hub Kargo warehouse (triggers freight detection)
     "refresh-hub-kargo-warehouse".exec = ''
       WAREHOUSE_NAME=''${1:-hub-backstage-gitea}

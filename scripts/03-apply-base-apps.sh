@@ -36,12 +36,12 @@ SYNC_CHECK_INTERVAL="${SYNC_CHECK_INTERVAL:-10}"
 # Git configuration
 GIT_REPO_URL="${GIT_REPO_URL:-}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
-# Note: GIT_PATH should point to cdk8s/dist/ which contains the ArgoCD Application YAMLs
+# Note: GIT_PATH should point to packages/dist/talos/ which contains the ArgoCD Application YAMLs
 # These Application YAMLs then point to their respective manifest subdirectories
 # IMPORTANT: The path is relative to repo root, NOT prefixed with branch name
-# Wrong: 106-consolidate-bootstrap-between/cdk8s/dist (branch prefix doesn't exist in repo)
-# Right: cdk8s/dist (relative to repo root)
-GIT_PATH="${GIT_PATH:-cdk8s/dist}"
+# Wrong: 106-consolidate-bootstrap-between/packages/dist/talos (branch prefix doesn't exist in repo)
+# Right: packages/dist/talos (relative to repo root)
+GIT_PATH="${GIT_PATH:-packages/dist/talos}"
 
 # Parse arguments
 SYNC_ONLY=false

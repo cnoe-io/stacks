@@ -1,7 +1,0 @@
-apiVersion: v1
-data:
-  serve.json: '{"TCP":{"4317":{},"4318":{}}}'
-kind: ConfigMap
-metadata:
-  name: otel-tailscale-serve-config
-  namespace: tailscale

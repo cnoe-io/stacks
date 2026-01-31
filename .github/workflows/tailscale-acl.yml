@@ -20,9 +20,6 @@ on:
   pull_request:
     paths:
       - 'policy.hujson'
-      - 'cdk8s/config/applications.ts'
-      - '.envrc'
-      - 'scripts/verify-tailscale-acl-policy.sh'
       - '.github/workflows/tailscale-acl.yml'
   push:
     branches:
@@ -38,9 +35,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Verify policy covers cluster services
-        run: ./scripts/verify-tailscale-acl-policy.sh
 
       - name: Validate ACL policy
         uses: tailscale/gitops-acl-action@v1
