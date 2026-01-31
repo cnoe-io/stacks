@@ -23,6 +23,6 @@ spec:
     # Poll interval for configuration changes (supports dynamic updates)
     - name: subscribePollingInterval
       value: "30s"
-  # Scope to ai-chatbot app only
-  scopes:
-    - ai-chatbot
+# Scope to ai-chatbot app only (must be at root level, not inside spec)
+scopes:
+  - ai-chatbot
