@@ -4,163 +4,104 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-GitOps infrastructure repository using **Kustomize** to define Kubernetes manifests, deployed via idpBuilder and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
+GitOps infrastructure repository using **Kustomize** to define Kubernetes manifests, deployed via [idpBuilder](https://cnoe.io/docs/idpbuilder) and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
+
+**Quick Start:**
+```bash
+source ~/stacks/deployment/scripts/cluster-menu.sh
+cld  # cluster-deploy: full cluster creation
+```
 
 **CNOE** (Cloud Native Operational Excellence): Open-source-first, Kubernetes-powered platform framework. See `docs/cnoe-overview.md`.
 
-**idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages.
+**idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages. [Documentation](https://cnoe.io/docs/idpbuilder) | [GitHub](https://github.com/cnoe-io/idpbuilder)
 
-## Common Commands
+## Cluster Lifecycle Commands
 
-### Package Development
+**CRITICAL:** Never use `idpbuilder` commands directly - they require the exact same flags as when the cluster was created. Always use cluster-menu.sh commands which embed the correct flags.
+
+```bash
+source ~/stacks/deployment/scripts/cluster-menu.sh
+```
+
+| Command | Alias | Purpose |
+|---------|-------|---------|
+| `cluster-deploy` | `cld` | Full cluster creation (Azure auth → kustomize build → idpbuilder → post-setup) |
+| `cluster-recreate` | `clr` | Delete + recreate with Tailscale cleanup and health monitoring |
+| `cluster-update` | `clu` | Idempotent manifest updates (fastest path for existing clusters) |
+| `cluster-build` | `clb` | Kustomize package synthesis only (no apply) |
+| `cluster-status` | `clst` | Show cluster and ArgoCD status |
+| `cluster-menu` | `clm` | Interactive management menu (requires gum) |
+
+### cluster-deploy Workflow
+1. Azure authentication (Key Vault access)
+2. Hostname detection (thinkpad, ryzen, hetzner)
+3. Kustomize build → `packages/dist/<env>/`
+4. idpbuilder create with correct flags
+5. Parallel: image preload, CA inject, Tailscale setup
+6. ArgoCD token initialization
+7. Sync apps without auto-sync
+
+### cluster-recreate Workflow
+1. Tailscale operator cleanup (kubeconfig regeneration)
+2. idpbuilder delete
+3. cluster-deploy
+4. Health wait with timing summary
+
+## Development Workflow with devenv
+
+**Typical workflow - automatic sync on file changes:**
+```bash
+devenv up               # Start watch + rebuild + apply (unified, always-on)
+# Edit files in packages/base/, components/, overlays/
+# Changes auto-sync within 2-3 seconds (watchexec + idpbuilder)
+```
+
+The `devenv up` process monitors `packages/` directories and automatically:
+1. Rebuilds kustomize via `make build-kustomize-kind-$CLUSTER_NAME`
+2. Applies via `idpbuilder create` with correct flags
+
+**Before running `cluster-update` manually:** Check if `devenv up` is already running - if so, changes are automatically synced.
+
+**Alternative commands:**
+| Command | Purpose |
+|---------|---------|
+| `devenv up` | Watch + rebuild + apply (unified) |
+| `watch-kustomize` | Watch + rebuild only (no apply) |
+| `kustomize-build` | One-shot build |
+| `apply-manifests` | One-shot apply |
+
+## Package Development
+
 ```bash
 cd packages
 make build-kind           # Build KIND local dev environment
 make build-kind-ryzen     # Build KIND for Ryzen host
 make build-kind-thinkpad  # Build KIND for Thinkpad host
 make build-talos          # Build Talos production environment
-make build-hub            # Build Hub multi-cluster environment
 make build-all            # Build all environments
 make validate-kind        # Validate KIND build output
 make clean                # Remove generated files
 ```
-
-### IdpBuilder Deployment
-```bash
-cd packages
-make deploy-kind                                   # Build and deploy KIND
-idpbuilder create --package dist/kind/             # Deploy KIND build
-idpbuilder create --package dist/kind/<app>        # Deploy specific app
-idpbuilder create --use-path-routing --package ... # Path-based routing
-idpbuilder get secrets -p gitea                    # Get secrets
-idpbuilder delete --name localdev                  # Delete cluster
-```
-
-### Talos Linux Cluster Bootstrap
-```bash
-cd scripts
-cp .env.template .env  # Set AZURE_SUBSCRIPTION_ID and AZURE_TENANT_ID
-./bootstrap-cluster.sh --setup-azure  # Fresh setup with Azure resources
-./bootstrap-cluster.sh                # Existing Azure infrastructure
-./bootstrap-cluster.sh --force        # Force re-bootstrap
-```
-
-**Bootstrap phases**: Azure Infrastructure → Validate Prerequisites → Install ArgoCD → Sync JWKS → Apply GitOps
-
-**Key scripts**: `bootstrap-cluster.sh` (orchestrator), `00-bootstrap-azure-infra.sh`, `01-install-argocd.sh`, `02-sync-jwks.sh`, `03-apply-base-apps.sh`
-
-**Azure Workload Identity**: ServiceAccount with azure.workload.identity labels → JWT validated against JWKS in Azure Storage → Azure AD App issues token → Key Vault access. See `docs/AZURE_WORKLOAD_IDENTITY.md`.
-
-### ArgoCD CLI
-```bash
-source ~/stacks/deployment/scripts/cluster-menu.sh  # Sets ARGOCD_AUTH_TOKEN
-argocd app list --insecure                          # Always use --insecure for local dev
-argocd app sync argocd/my-app --prune --insecure
-argocd-status                                       # Helper function
-```
-
-### Kargo Pipelines
-```bash
-kubectl get warehouses,stages,freights -n kargo-pipelines
-kargo promote --project kargo-pipelines --stage backstage-staging --freight <name>
-```
-
-**Architecture**: Inner Loop (Gitea → local-dev, auto, <60s) | Outer Loop (GHCR → dev → staging → prod)
-
-See `specs/105-setup-kargo-pipelines/quickstart.md`.
-
-### Gitea System Webhooks
-
-System webhooks automatically notify ArgoCD and Kargo on **every push** to any Gitea repository, enabling instant syncs without polling delays.
-
-```bash
-# Verify system webhooks are configured
-kubectl run -i --rm curl --image=curlimages/curl:8.5.0 -n gitea -- \
-  curl -s -u giteaAdmin:developer \
-  "http://my-gitea-http.gitea.svc.cluster.local:3000/api/v1/admin/hooks"
-```
-
-**Webhooks created automatically via PostSync hooks:**
-
-| Service | Webhook URL | App |
-|---------|-------------|-----|
-| ArgoCD | `http://argocd-server.argocd.svc.cluster.local/api/webhook` | `argocd-webhook-setup` |
-| Kargo | `http://kargo-external-webhooks-server.kargo.svc.cluster.local:80/webhooks/gitea/<hash>` | `kargo-webhook-sync` |
-
-**How it works:**
-1. `ingress-nginx-cert` (sync-wave: -99) copies TLS cert for external access
-2. ExternalSecrets fetch Gitea admin credentials from Azure Key Vault
-3. PostSync Jobs create system webhooks using Gitea admin API
-4. Any push to Gitea triggers instant sync in ArgoCD/Kargo (vs 3-5 min polling)
-
-See `docs/gitea-webhooks.md` for detailed architecture.
-
-### kagent/kmcp (AI Agent Platform)
-```bash
-kubectl get pods -n kagent
-kubectl get agents,modelconfigs,mcpservers -n kagent
-# Dashboard: https://kagent.cnoe.localtest.me:8443
-```
-
-**Note**: kagent-controller v0.6.3 has upstream bugs causing CrashLoopBackOff. Dashboard works independently.
-
-### Tailscale (Remote Access & Services)
-
-**Operator** (kubectl access):
-```bash
-./deployment/scripts/tailscale/generate-kubeconfig.sh
-kubectl --kubeconfig=~/remote-kubeconfig.yaml get nodes
-```
-
-**Service URLs** (cluster-scoped pattern: `https://<service>-<cluster>.<tailnet>.ts.net`):
-| Service | Purpose |
-|---------|---------|
-| argocd-\<cluster\> | GitOps Dashboard |
-| langfuse-\<cluster\> | LLM Observability |
-| gitea-\<cluster\> | Git Server |
-| kagent-\<cluster\> | AI Agent Dashboard |
-| kargo-\<cluster\> | Progressive Delivery |
-| headlamp-\<cluster\> | Kubernetes Dashboard |
-| keycloak-\<cluster\> | Identity Provider |
-
-See `docs/tailscale-cluster-access.md` and `specs/103-tailscale-services/quickstart.md`.
-
-### Hub-and-Spoke Architecture (Feature 108)
-
-Multi-cluster GitOps: Hub cluster (Hetzner) manages spoke clusters (thinkpad, ryzen, talos) via Tailscale.
-
-```bash
-# Hub provisioning (in talos-cluster repo)
-./scripts/provision-hub.sh && ./scripts/gen-hub-config.sh && ./scripts/bootstrap-hub.sh $IP
-
-# Spoke registration
-source scripts/lib/spoke-helpers.sh
-./scripts/bootstrap-spoke.sh thinkpad
-```
-
-**targetCluster values**: `'hub'`, `'hetzner'`, `'thinkpad'`, `'ryzen'`, `'talos'`
-
-See `specs/108-hub-and-spoke/` and `docs/hub-recovery-runbook.md`.
-
-## Architecture
 
 ### Package Structure
 
 ```
 packages/
 ├── Makefile                    # Build commands
-├── scripts/build.sh            # idpbuilder-compatible build script
-├── base/                       # Shared infrastructure (all environments)
-│   ├── kustomization.yaml      # Lists ~51 shared apps
+├── scripts/build-kustomize.sh  # Native kustomize + yq YAML splitting
+├── base/                       # Shared infrastructure (~51 apps)
+│   ├── kustomization.yaml
 │   ├── apps/                   # ArgoCD Application YAMLs
 │   └── manifests/              # Raw K8s manifests (non-Helm)
 ├── components/                 # Environment-specific app groups
-│   ├── kind-only/              # KIND-specific apps (~31)
+│   ├── kind-only/              # KIND-specific apps (~43)
 │   ├── talos-only/             # Talos production apps
 │   ├── tailscale-serve/        # Tailscale proxy apps (~20)
-│   └── observability/          # LGTM monitoring stack (~18)
+│   ├── observability/          # LGTM monitoring stack (~18)
+│   └── active-development/     # Apps with auto-sync disabled (7)
 ├── overlays/                   # Environment configurations
-│   ├── kind/                   # KIND local dev (base + kind-only + tailscale + observability)
+│   ├── kind/                   # KIND local dev
 │   ├── kind-ryzen/             # Per-host KIND variant
 │   ├── kind-thinkpad/          # Per-host KIND variant
 │   ├── talos/                  # Talos production
@@ -171,131 +112,53 @@ packages/
         └── <app>/manifests/    # K8s manifests for cnoe://
 ```
 
-### Application Types
-
-**Helm-based** (ArgoCD manages Helm):
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cert-manager
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-95"
-spec:
-  source:
-    repoURL: https://charts.jetstack.io
-    targetRevision: v1.14.4
-    chart: cert-manager
-    helm:
-      valuesObject:
-        installCRDs: true
-```
-
-**Manifest-based** (local manifests via cnoe://):
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: backstage-secrets
-  namespace: argocd
-spec:
-  source:
-    repoURL: cnoe://backstage-secrets
-    targetRevision: HEAD
-    path: "."
-```
-
 ### Kustomize Components
-
-Environment-specific apps are organized into Kustomize components:
 
 | Component | Apps | Purpose |
 |-----------|------|---------|
-| base | ~51 | Shared infrastructure (cert-manager, external-secrets, keycloak, backstage, etc.) |
-| kind-only | ~31 | KIND-specific (CAIPE, idpbuilder-gitea, azure-workload-identity, etc.) |
+| base | ~51 | Shared infrastructure (cert-manager, external-secrets, keycloak, backstage) |
+| kind-only | ~43 | KIND-specific (CAIPE, idpbuilder-gitea, azure-workload-identity) |
 | tailscale-serve | ~20 | Tailscale proxies (*-tailscale-serve apps) |
-| observability | ~18 | LGTM stack (grafana, loki, tempo, langfuse, etc.) |
-| talos-only | - | Talos production (placeholder) |
+| observability | ~18 | LGTM stack (grafana, loki, tempo, langfuse) |
+| active-development | 7 | Apps with auto-sync disabled for devspace compatibility |
 
-### IdpBuilder & cnoe:// URLs
+## Architecture
 
-1. `cnoe://<package>/manifests` in ArgoCD Application source
-2. IdpBuilder creates Gitea repo, pushes manifests
-3. Rewrites URL to Gitea, ArgoCD syncs
+### Application Types
+
+**Helm-based**: ArgoCD manages Helm chart with `source.repoURL` pointing to chart repository, `helm.valuesObject` for configuration.
+
+**Manifest-based**: Local manifests via `cnoe://<package>` URL. idpBuilder creates Gitea repo, pushes manifests, rewrites URL for ArgoCD.
+
+See `docs/gitops-architecture-overview.md` for detailed patterns.
 
 ### Secrets Management
 
-ESO with Azure Key Vault via Workload Identity:
+External Secrets Operator with Azure Key Vault via Workload Identity:
 - ClusterSecretStore → Key Vault
 - ExternalSecret per namespace
 - Patterns: env secrets, dockerconfigjson, TLS
 
-## Adding New Applications
+See `docs/AZURE_WORKLOAD_IDENTITY.md` for configuration.
 
-### Helm-based App
-```yaml
-# packages/base/apps/my-app.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: my-app
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  project: default
-  source:
-    repoURL: https://charts.example.com
-    targetRevision: 1.0.0
-    chart: my-app
-    helm:
-      valuesObject:
-        key: value
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: my-app
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-```
+## Key Scripts Reference
 
-### Manifest-based App
-```yaml
-# packages/base/apps/my-app.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: my-app
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: cnoe://my-app
-    targetRevision: HEAD
-    path: "."
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: my-app
-  syncPolicy:
-    automated: {}
-```
+| Script | Purpose |
+|--------|---------|
+| `cluster-menu.sh` | Orchestration - lifecycle commands (cld, clu, clr, clst) |
+| `argocd-auth.sh` | Token management with 1Password/Azure Key Vault |
+| `preload-images.sh` | Image caching (parallel with idpbuilder) |
+| `cluster-health-check.sh` | Timing, benchmarks, health summary |
+| `devenv-watch-handler.sh` | Automatic rebuild handler for devenv up |
+| `tailscale/tailscale-kubeconfig.sh` | Remote kubectl access via Tailscale |
 
-```yaml
-# packages/base/manifests/my-app/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-# ...
-```
+## ArgoCD CLI
 
 ```bash
-# Update kustomization.yaml and deploy
-echo "  - apps/my-app.yaml" >> packages/base/kustomization.yaml
-cd packages && make build-kind
-idpbuilder create --package dist/kind/my-app
+source ~/stacks/deployment/scripts/cluster-menu.sh  # Sets ARGOCD_AUTH_TOKEN
+argocd app list --insecure                          # Always use --insecure for local dev
+argocd app sync argocd/my-app --prune --insecure
+argocd-status                                       # Helper function
 ```
 
 ## Best Practices
@@ -305,9 +168,22 @@ idpbuilder create --package dist/kind/my-app
 3. **Security**: External Secrets for sensitive data, SecurityContext, resource limits
 4. **Components**: Use Kustomize components for environment-specific apps
 
+## Adding New Applications
+
+1. Create ArgoCD Application YAML in `packages/base/apps/` or appropriate component
+2. For manifest-based apps, add manifests to `packages/base/manifests/<app>/`
+3. Add to `kustomization.yaml` in the appropriate layer
+4. Build and deploy:
+```bash
+make build-kind && clu  # Or let devenv up auto-apply
+```
+
 ## Troubleshooting
 
 ```bash
+# Cluster health summary
+$STACKS_DIR/deployment/scripts/cluster-health-check.sh summary
+
 # Validate kustomize build
 kubectl kustomize packages/overlays/kind | head -100
 
@@ -323,34 +199,63 @@ argocd app sync argocd/<app> --prune --insecure
 kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
 ```
 
-## CNOE Technology Stack
+## Advanced Topics
 
-| Category | Tool | Implementation |
-|----------|------|----------------|
-| Code Repository | Git | Gitea (local), GitHub |
-| Artifact Registry | OCI | Gitea registry, GHCR |
-| Secrets | External Secrets | Azure Key Vault |
-| CD | ArgoCD | GitOps |
-| Identity | Keycloak | SSO |
-| Portal | Backstage | Catalog, templates |
-| Packaging | Kustomize | YAML manifests |
-| Deployment | Kargo | Progressive delivery |
-
-## Documentation
-
-See `docs/` for detailed guides:
-- `cnoe-overview.md`, `gitops-architecture-overview.md`
-- `development-workflow.md`, `secrets-management.md`
-- `AZURE_WORKLOAD_IDENTITY.md`, `tailscale-cluster-access.md`
-- `gitea-webhooks.md` - System webhooks for instant ArgoCD/Kargo syncs
-
-## Reference Implementation
-
+### Talos Linux Bootstrap
 ```bash
-idpbuilder create --use-path-routing \
-  --kind-config ref-implementation/kind-config.yaml \
-  --package https://github.com/cnoe-io/stacks//ref-implementation
+cd scripts && ./bootstrap-cluster.sh --setup-azure
+```
+See `specs/102-bootstrap-talos-argocd/quickstart.md`.
+
+### Hub-and-Spoke Architecture
+Multi-cluster GitOps: Hub cluster manages spoke clusters via Tailscale.
+- **targetCluster values**: `'hub'`, `'hetzner'`, `'thinkpad'`, `'ryzen'`, `'talos'`
+- See `specs/108-hub-and-spoke/quickstart.md` and `docs/hub-recovery-runbook.md`
+
+### Kargo Pipelines
+```bash
+kubectl get warehouses,stages,freights -n kargo-pipelines
+```
+Inner Loop (Gitea → local-dev, auto, <60s) | Outer Loop (GHCR → dev → staging → prod)
+See `specs/105-setup-kargo-pipelines/quickstart.md`.
+
+### Tailscale Remote Access
+Service URLs pattern: `https://<service>-<cluster>.<tailnet>.ts.net`
+See `specs/103-tailscale-services/quickstart.md` and `docs/tailscale-naming.md`.
+
+### Gitea System Webhooks
+Automatic ArgoCD/Kargo notifications on push, enabling instant syncs.
+See `docs/gitea-webhooks.md`.
+
+### kagent/kmcp (AI Agent Platform)
+```bash
+kubectl get pods -n kagent
+kubectl get agents,modelconfigs,mcpservers -n kagent
 ```
 
-**URLs** (domain-based): `https://{argocd,argo-workflows,gitea,keycloak}.cnoe.localtest.me:8443`
-**Credentials**: `idpbuilder get secrets` (user1/user2 for Backstage, cnoe-admin for Keycloak)
+## External References
+
+**idpBuilder:**
+- Documentation: https://cnoe.io/docs/idpbuilder
+- GitHub: https://github.com/cnoe-io/idpbuilder
+
+**Related Docs:**
+- `docs/cnoe-overview.md` - CNOE framework
+- `docs/gitops-architecture-overview.md` - GitOps patterns
+- `docs/development-workflow.md` - Development patterns
+- `docs/AZURE_WORKLOAD_IDENTITY.md` - Azure identity configuration
+- `docs/gitea-webhooks.md` - System webhooks architecture
+- `docs/tailscale-naming.md` - Tailscale service naming
+
+## CNOE Technology Stack
+
+| Category | Tool |
+|----------|------|
+| Code Repository | Gitea (local), GitHub |
+| Artifact Registry | Gitea registry, GHCR |
+| Secrets | External Secrets + Azure Key Vault |
+| CD | ArgoCD |
+| Identity | Keycloak |
+| Portal | Backstage |
+| Packaging | Kustomize |
+| Deployment | Kargo |
