@@ -16,6 +16,10 @@ resources:
   - Component-memorystate.yaml
   - Component-messagepubsub.yaml
   - Component-registrystate.yaml
+  - Component-azureappconfig.yaml
+  - Component-ai-chatbot-statestore.yaml
+  # ServiceAccounts
+  - ServiceAccount-planner-dapr-agent.yaml
   # Orchestrator (FastAPI/Dapr Workflow)
   - Deployment-planner-agent.yaml
   - Service-planner-agent.yaml
