@@ -6,7 +6,8 @@ metadata:
   name: langfuse-postgres
   namespace: observability
 spec:
-  replicas: 1
+  # Scaled to 0 by default - set to 1 when needed
+  replicas: 0
   selector:
     matchLabels:
       app: langfuse-postgres

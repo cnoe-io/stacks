@@ -14,9 +14,10 @@ spec:
     chart: kagent
     helm:
       valuesObject:
+        # Scaled to 0 by default - set replicas to 1 when needed
         controller:
           logLevel: info
-          replicas: 1
+          replicas: 0
           resources:
             limits:
               memory: 1Gi
@@ -33,10 +34,11 @@ spec:
                   pathType: Prefix
         kmcp:
           enabled: true
+          replicas: 0
         namespace: kagent
         ui:
           enabled: true
-          replicas: 1
+          replicas: 0
           resources:
             limits:
               memory: 512Mi
