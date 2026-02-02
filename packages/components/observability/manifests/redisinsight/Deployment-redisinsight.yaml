@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: redisinsight
+  name: redisinsight
+  namespace: observability
+spec:
+  # Scaled to 0 by default - set to 1 when needed
+  replicas: 0
+  strategy:
+    type: Recreate  # Required for persistent volumes
+  selector:
+    matchLabels:
+      app: redisinsight
+  template:
+    metadata:
+      labels:
+        app: redisinsight
+    spec:
+      containers:
+        - name: redisinsight
+          image: redis/redisinsight:latest
+          ports:
+            - containerPort: 5540
+              name: http
+          env:
+            # Pre-configured database connections for all Dapr Redis stores
+            # Connection 0: AI Chatbot Redis (state store, pubsub, agent registry)
+            - name: RI_REDIS_HOST0
+              value: "redis.ai-chatbot.svc.cluster.local"
+            - name: RI_REDIS_PORT0
+              value: "6379"
+            - name: RI_REDIS_ALIAS0
+              value: "ai-chatbot"
+
+            # Connection 1: Dapr Agents Redis (planner-agent, workflow state)
+            - name: RI_REDIS_HOST1
+              value: "redis-service.dapr-agents.svc.cluster.local"
+            - name: RI_REDIS_PORT1
+              value: "6379"
+            - name: RI_REDIS_ALIAS1
+              value: "dapr-agents"
+
+            # Connection 2: Langfuse Redis (observability cache)
+            - name: RI_REDIS_HOST2
+              value: "langfuse-redis.observability.svc.cluster.local"
+            - name: RI_REDIS_PORT2
+              value: "6379"
+            - name: RI_REDIS_ALIAS2
+              value: "langfuse"
+
+            # Connection 3: ArgoCD Redis (session cache)
+            - name: RI_REDIS_HOST3
+              value: "argocd-redis.argocd.svc.cluster.local"
+            - name: RI_REDIS_PORT3
+              value: "6379"
+            - name: RI_REDIS_ALIAS3
+              value: "argocd"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5540
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5540
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      volumes:
+        - name: data
+          emptyDir: {}

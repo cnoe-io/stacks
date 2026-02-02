@@ -33,3 +33,6 @@ resources:
   - apps/langfuse-minio.yaml
   - apps/langfuse-postgres.yaml
   - apps/langfuse-redis.yaml
+
+  # Redis management UI
+  - apps/redisinsight.yaml

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redisinsight
+  name: redisinsight
+  namespace: observability
+spec:
+  selector:
+    app: redisinsight
+  ports:
+    - port: 5540
+      targetPort: 5540
+      name: http
