@@ -636,14 +636,18 @@ cluster-apply-manifests() {
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Background DevContainer Push (runs in PARALLEL with idpbuilder and image preload)
-  # Builds and pushes shared devcontainer images for DevSpace development
+  # Pushes existing devcontainer images to Gitea for DevSpace development.
+  # SMART MODE: Only pushes images that already exist locally (no rebuild).
+  # This is fast for cluster-recreate where images were previously built.
+  # To force rebuild: FORCE_BUILD=true or use 'push-devcontainers --build all'
   # ─────────────────────────────────────────────────────────────────────────────
   local DEVCONTAINER_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
   local DEVCONTAINER_LOG="/tmp/devcontainer-push.log"
   if [ "${SKIP_DEVCONTAINER_PUSH:-}" != "true" ] && [ -f "$DEVCONTAINER_SCRIPT" ]; then
     echo "🐳 Starting background devcontainer push (parallel with idpbuilder)..."
+    echo "   Mode: push existing images only (use --build for rebuild)"
     (
-      # DevContainer script waits for Gitea, builds and pushes shared devcontainers
+      # DevContainer script waits for Gitea, pushes existing local images
       "$DEVCONTAINER_SCRIPT" all
     ) > "$DEVCONTAINER_LOG" 2>&1 &
     local DEVCONTAINER_PID=$!

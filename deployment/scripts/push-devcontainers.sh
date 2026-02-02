@@ -1,22 +1,27 @@
 #!/usr/bin/env bash
 # Push shared devcontainer images to Gitea registry
 #
-# This script builds and pushes the shared devcontainer images used by DevSpace.
+# This script pushes shared devcontainer images used by DevSpace.
 # It waits for Gitea registry to be ready before pushing.
 #
+# SMART MODE (default): Only pushes images that already exist locally.
+# This is ideal for cluster-recreate where images were previously built.
+#
 # Usage:
-#   ./push-devcontainers.sh              # Build and push all (default)
-#   ./push-devcontainers.sh all          # Build and push all
-#   ./push-devcontainers.sh nodejs       # Build and push Node.js only
-#   ./push-devcontainers.sh python       # Build and push Python only
-#   ./push-devcontainers.sh hybrid       # Build and push hybrid only
-#   ./push-devcontainers.sh --skip-build # Push only (assumes images already built)
+#   ./push-devcontainers.sh              # Push existing images only (smart mode)
+#   ./push-devcontainers.sh all          # Push all existing images
+#   ./push-devcontainers.sh nodejs       # Push Node.js only (if exists)
+#   ./push-devcontainers.sh python       # Push Python only (if exists)
+#   ./push-devcontainers.sh hybrid       # Push hybrid only (if exists)
+#   ./push-devcontainers.sh --build      # Force build before push
+#   ./push-devcontainers.sh --build all  # Build and push all
 #
 # Environment variables:
 #   GITEA_REGISTRY  Registry host (default: gitea.cnoe.localtest.me:8443)
 #   GITEA_USER      Registry user (default: giteaadmin)
 #   GITEA_PASSWORD  Registry password (default: giteaAdmin)
-#   SKIP_BUILD      Skip docker build, only push (default: false)
+#   FORCE_BUILD     Force docker build (default: false)
+#   SKIP_BUILD      Legacy: same as not using --build (default: true)
 
 set -euo pipefail
 
@@ -30,8 +35,12 @@ GITEA_USER="${GITEA_USER:-giteaadmin}"
 # Default password matches idpbuilder's --dev-password default
 GITEA_PASSWORD="${GITEA_PASSWORD:-developer}"
 
-# Build control
-SKIP_BUILD="${SKIP_BUILD:-false}"
+# Build control - default to NOT building (smart push mode)
+FORCE_BUILD="${FORCE_BUILD:-false}"
+# Legacy support: SKIP_BUILD=false means force build
+if [ "${SKIP_BUILD:-true}" = "false" ]; then
+  FORCE_BUILD="true"
+fi
 
 # Logging
 log() {
@@ -94,15 +103,30 @@ docker_login() {
   fi
 }
 
+# Check if image exists locally
+image_exists() {
+  local name="$1"
+  local tag="${GITEA_REGISTRY}/${GITEA_USER}/${name}:latest"
+  docker image inspect "$tag" &>/dev/null
+}
+
 # Build a devcontainer image
 build_image() {
   local name="$1"
   local dockerfile="$2"
   local tag="${GITEA_REGISTRY}/${GITEA_USER}/${name}:latest"
 
-  if [ "$SKIP_BUILD" = "true" ]; then
-    log "Skipping build for $name (SKIP_BUILD=true)"
-    return 0
+  # Check if image already exists locally
+  if image_exists "$name"; then
+    if [ "$FORCE_BUILD" = "true" ]; then
+      log "Image $name exists locally, rebuilding (FORCE_BUILD=true)..."
+    else
+      log "Image $name exists locally, skipping build"
+      return 0
+    fi
+  elif [ "$FORCE_BUILD" != "true" ]; then
+    log "Image $name not found locally (use --build to create)"
+    return 1
   fi
 
   log "Building $name..."
@@ -139,12 +163,20 @@ push_image() {
 }
 
 # Build and push a single image
+# Returns: 0=success, 1=failed, 2=skipped (image not found locally)
 build_and_push() {
   local name="$1"
   local dockerfile="$2"
 
+  # In smart mode, check if image exists before attempting anything
+  if [ "$FORCE_BUILD" != "true" ] && ! image_exists "$name"; then
+    log "Skipping $name (not found locally, use --build to create)"
+    return 2  # Skipped, not an error
+  fi
+
   build_image "$name" "$dockerfile" || return 1
   push_image "$name" || return 1
+  return 0
 }
 
 # Main execution
@@ -153,31 +185,46 @@ main() {
 
   # Handle help flags
   if [ "$target" = "--help" ] || [ "$target" = "-h" ]; then
-    echo "Usage: $0 [all|nodejs|python|hybrid] [--skip-build]"
+    echo "Usage: $0 [--build] [all|nodejs|python|hybrid]"
     echo ""
-    echo "Build and push shared devcontainer images to Gitea registry."
+    echo "Push shared devcontainer images to Gitea registry."
+    echo ""
+    echo "SMART MODE (default): Only pushes images that already exist locally."
+    echo "This is ideal for cluster-recreate where images were previously built."
     echo ""
     echo "Images:"
     echo "  nodejs  - Node.js 22 only (for Next.js apps)"
     echo "  python  - Python 3.12 only (for FastAPI apps)"
     echo "  hybrid  - Node.js 22 + Python 3.12 (for agent apps)"
-    echo "  all     - All images (default)"
+    echo "  all     - All existing images (default)"
     echo ""
     echo "Options:"
-    echo "  --skip-build  Push only (assumes images already built)"
+    echo "  --build       Force build images before push (slower)"
+    echo "  --skip-build  Legacy: same as default (push existing only)"
     echo ""
     echo "Environment variables:"
     echo "  GITEA_REGISTRY   Registry host (default: gitea.cnoe.localtest.me:8443)"
     echo "  GITEA_USER       Registry user (default: giteaadmin)"
-    echo "  GITEA_PASSWORD   Registry password (default: giteaAdmin)"
-    echo "  SKIP_BUILD       Skip docker build (default: false)"
+    echo "  GITEA_PASSWORD   Registry password (default: developer)"
+    echo "  FORCE_BUILD      Force docker build (default: false)"
     echo "  SKIP_DEVCONTAINER_PUSH  Skip entirely in cluster-menu.sh"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Push all existing images to Gitea"
+    echo "  $0 --build all        # Build and push all images"
+    echo "  $0 nodejs             # Push nodejs only (if exists locally)"
     exit 0
   fi
 
-  # Handle --skip-build flag
+  # Handle --build flag (force build)
+  if [ "$target" = "--build" ]; then
+    FORCE_BUILD=true
+    target="${2:-all}"
+  fi
+
+  # Handle legacy --skip-build flag (now the default behavior)
   if [ "$target" = "--skip-build" ]; then
-    SKIP_BUILD=true
+    FORCE_BUILD=false
     target="${2:-all}"
   fi
 
@@ -185,7 +232,7 @@ main() {
   log "Registry: ${GITEA_REGISTRY}"
   log "User: ${GITEA_USER}"
   log "Target: ${target}"
-  log "Skip build: ${SKIP_BUILD}"
+  log "Mode: $([ "$FORCE_BUILD" = "true" ] && echo "build + push" || echo "push existing only")"
 
   # Check if devcontainers directory exists
   if [ ! -d "$DEVCONTAINERS_DIR" ]; then
@@ -198,24 +245,39 @@ main() {
   docker_login || exit 1
 
   # Build and push based on target
-  local failed=0
+  # Track results: pushed, skipped, failed
+  local pushed=0 skipped=0 failed=0
+  local result
+
+  process_image() {
+    local name="$1"
+    local dockerfile="$2"
+    build_and_push "$name" "$dockerfile"
+    result=$?
+    case $result in
+      0) pushed=$((pushed + 1)) ;;
+      2) skipped=$((skipped + 1)) ;;
+      *) failed=$((failed + 1)) ;;
+    esac
+  }
+
   case "$target" in
     nodejs|node)
-      build_and_push "nodejs-22-devspace" "Dockerfile.nodejs-22" || failed=1
+      process_image "nodejs-22-devspace" "Dockerfile.nodejs-22"
       ;;
     python|py)
-      build_and_push "python-312-devspace" "Dockerfile.python-312" || failed=1
+      process_image "python-312-devspace" "Dockerfile.python-312"
       ;;
     hybrid|both)
-      build_and_push "nodejs-python-devspace" "Dockerfile.nodejs-python" || failed=1
+      process_image "nodejs-python-devspace" "Dockerfile.nodejs-python"
       ;;
     all)
-      build_and_push "nodejs-22-devspace" "Dockerfile.nodejs-22" || failed=1
-      build_and_push "python-312-devspace" "Dockerfile.python-312" || failed=1
-      build_and_push "nodejs-python-devspace" "Dockerfile.nodejs-python" || failed=1
+      process_image "nodejs-22-devspace" "Dockerfile.nodejs-22"
+      process_image "python-312-devspace" "Dockerfile.python-312"
+      process_image "nodejs-python-devspace" "Dockerfile.nodejs-python"
       ;;
     *)
-      log "Usage: $0 [all|nodejs|python|hybrid] [--skip-build]"
+      log "Usage: $0 [--build] [all|nodejs|python|hybrid]"
       log ""
       log "Images:"
       log "  nodejs  - Node.js 22 only (for Next.js apps)"
@@ -226,16 +288,29 @@ main() {
       ;;
   esac
 
-  if [ $failed -eq 0 ]; then
+  log ""
+  log "=== DevContainer Push Summary ==="
+  log "  Pushed:  $pushed"
+  log "  Skipped: $skipped (not found locally)"
+  log "  Failed:  $failed"
+
+  if [ $pushed -gt 0 ]; then
     log ""
-    log "=== DevContainers pushed successfully ==="
-    log "Available images:"
-    log "  ${GITEA_REGISTRY}/${GITEA_USER}/nodejs-22-devspace:latest"
-    log "  ${GITEA_REGISTRY}/${GITEA_USER}/python-312-devspace:latest"
-    log "  ${GITEA_REGISTRY}/${GITEA_USER}/nodejs-python-devspace:latest"
-  else
+    log "Images available in Gitea registry:"
+    image_exists "nodejs-22-devspace" && log "  ${GITEA_REGISTRY}/${GITEA_USER}/nodejs-22-devspace:latest"
+    image_exists "python-312-devspace" && log "  ${GITEA_REGISTRY}/${GITEA_USER}/python-312-devspace:latest"
+    image_exists "nodejs-python-devspace" && log "  ${GITEA_REGISTRY}/${GITEA_USER}/nodejs-python-devspace:latest"
+  fi
+
+  if [ $skipped -gt 0 ] && [ $pushed -eq 0 ]; then
     log ""
-    log "=== Some devcontainers failed to push ==="
+    log "No images were pushed. To build images first, run:"
+    log "  $0 --build all"
+    log "Or build manually:"
+    log "  cd ${DEVCONTAINERS_DIR} && bash build-push.sh all"
+  fi
+
+  if [ $failed -gt 0 ]; then
     exit 1
   fi
 }

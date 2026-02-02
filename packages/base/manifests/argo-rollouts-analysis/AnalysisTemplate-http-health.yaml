@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: http-health-check
+  namespace: argo-rollouts
+spec:
+  args:
+    - name: service-name
+    - name: namespace
+    - name: health-path
+      value: "/api/health"
+    - name: port
+      value: "3000"
+  metrics:
+    - name: http-health
+      interval: 30s
+      count: 5
+      successCondition: result == "ok"
+      failureLimit: 2
+      provider:
+        web:
+          url: "http://{{args.service-name}}.{{args.namespace}}.svc.cluster.local:{{args.port}}{{args.health-path}}"
+          timeoutSeconds: 10
+          jsonPath: "{$.status}"

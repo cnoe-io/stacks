@@ -107,6 +107,23 @@ for i in $(seq 0 $((image_count - 1))); do
             -e "s|__ORG__|${ORG}|g" \
             "$TEMPLATE_FILE" > "$STAGE_FILE"
 
+        # Check for optional verification configuration
+        VERIFICATION_ENABLED=$(yq -r ".images[$i].verification.enabled // false" "$CONFIG_FILE")
+        if [ "$VERIFICATION_ENABLED" = "true" ]; then
+            ANALYSIS_TEMPLATE=$(yq -r ".images[$i].verification.analysisTemplate" "$CONFIG_FILE")
+            # Append verification block to the Stage file
+            cat >> "$STAGE_FILE" << EOF
+
+  verification:
+    analysisTemplates:
+      - name: ${ANALYSIS_TEMPLATE}
+    analysisRunMetadata:
+      labels:
+        app: ${IMAGE_NAME}
+        kargo.akuity.io/loop: inner
+EOF
+        fi
+
         # NOTE: No separate Application file generated.
         # The base ArgoCD app (from active-development component) is the sole deployer.
         # Kargo Stage updates the main branch, and the base app syncs from main.

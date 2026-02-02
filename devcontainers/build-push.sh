@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Build and push shared devcontainer images to Gitea registry
 #
+# This script ALWAYS builds images before pushing.
+# For smart push (existing images only), use: deployment/scripts/push-devcontainers.sh
+#
 # Usage:
 #   ./build-push.sh              # Build and push all
 #   ./build-push.sh nodejs       # Build and push Node.js only
 #   ./build-push.sh python       # Build and push Python only
 #   ./build-push.sh hybrid       # Build and push Node.js+Python hybrid
 #   ./build-push.sh all          # Build and push all images
+#
+# When to use this script vs push-devcontainers.sh:
+#   - build-push.sh: First time setup, Dockerfile changes, or manual rebuilds
+#   - push-devcontainers.sh: cluster-recreate (pushes existing images quickly)
 
 set -euo pipefail
 

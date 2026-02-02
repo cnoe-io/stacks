@@ -12,6 +12,8 @@ resources:
   - apps/argocd-server-tls.yaml
   - apps/argocd-webhook-setup.yaml
   - apps/argo-workflows.yaml
+  - apps/argo-rollouts.yaml
+  - apps/argo-rollouts-analysis.yaml
   - apps/ingress-nginx-cert.yaml
   - apps/backstage-api-token-sync.yaml
   - apps/backstage-dapr-components.yaml
