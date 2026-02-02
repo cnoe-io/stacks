@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Redis State Store Sub-Component
+#
+# Adds Dapr state store component backed by Redis.
+# Requires patching:
+#   - /spec/metadata/0/value (redisHost - e.g., "redis.ai-chatbot.svc.cluster.local:6379")
+
+resources:
+  - Component-statestore.yaml

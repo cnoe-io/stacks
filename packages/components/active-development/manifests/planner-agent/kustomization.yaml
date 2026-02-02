@@ -18,6 +18,8 @@ resources:
   - Component-registrystate.yaml
   - Component-azureappconfig.yaml
   - Component-ai-chatbot-statestore.yaml
+  - Component-secretstore-azure-keyvault.yaml
+  - Component-llm-provider.yaml
   # ServiceAccounts
   - ServiceAccount-planner-dapr-agent.yaml
   # Orchestrator (FastAPI/Dapr Workflow)

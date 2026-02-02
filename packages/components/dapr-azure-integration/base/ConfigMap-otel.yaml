@@ -1,0 +1,29 @@
+# OTEL Configuration Settings
+#
+# Base configuration for OpenTelemetry observability.
+# OTEL_SERVICE_NAME should be patched per app.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-config
+data:
+  # OTEL Collector endpoint (HTTP/protobuf)
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+
+  # Service identification - PATCH THIS per app
+  OTEL_SERVICE_NAME: "REPLACE_ME"
+
+  # Resource attributes for trace correlation
+  OTEL_RESOURCE_ATTRIBUTES: "service.version=1.0.0"
+
+  # Enable trace propagation headers
+  OTEL_PROPAGATORS: "tracecontext,baggage"
+
+  # Batch configuration for efficient export
+  OTEL_BSP_SCHEDULE_DELAY: "5000"
+  OTEL_BSP_MAX_EXPORT_BATCH_SIZE: "512"
+
+  # Client-side OTEL configuration (for browser SDK)
+  NEXT_PUBLIC_OTEL_ENABLED: "true"
+  NEXT_PUBLIC_OTEL_SERVICE_NAME: "REPLACE_ME-browser"

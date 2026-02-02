@@ -1,0 +1,25 @@
+# Redis State Store Component
+#
+# Provides state management backed by Redis.
+# Supports actor state store for Dapr workflows.
+#
+# Required Patches:
+#   - /spec/metadata/0/value: Set redisHost (e.g., "redis.ai-chatbot.svc.cluster.local:6379")
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    # Redis host - PATCH THIS per app
+    - name: redisHost
+      value: "REPLACE_ME"
+    - name: redisPassword
+      value: ""
+    # Enable actor state store for Dapr workflows
+    - name: actorStateStore
+      value: "true"

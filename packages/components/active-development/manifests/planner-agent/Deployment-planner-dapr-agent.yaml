@@ -12,6 +12,7 @@ spec:
     metadata:
       labels:
         app: planner-dapr-agent
+        azure.workload.identity/use: "true"
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "planner-dapr-agent"
@@ -19,6 +20,7 @@ spec:
         dapr.io/app-protocol: "http"
         dapr.io/enable-api-logging: "true"
     spec:
+      serviceAccountName: planner-dapr-agent
       containers:
         - name: planner-dapr-agent
           image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent:latest

@@ -1,0 +1,19 @@
+# Dapr Configuration Settings
+#
+# Base configuration for Dapr service invocation and workflows.
+# App-specific values can be patched.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dapr-config
+data:
+  # Dapr Service Invocation Configuration
+  # When enabled, apps use Dapr sidecar for service-to-service communication
+  USE_DAPR_SERVICE_INVOCATION: "true"
+
+  # Dapr sidecar HTTP port (default: 3500)
+  DAPR_HTTP_PORT: "3500"
+
+  # Enable Workflow Patterns feature
+  # When enabled, the workflow patterns runtime is initialized for Dapr workflows
+  WORKFLOW_PATTERNS_ENABLED: "true"

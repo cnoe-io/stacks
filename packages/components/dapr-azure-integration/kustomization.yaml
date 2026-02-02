@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Reusable Dapr + Azure Integration Component
+#
+# Provides shared Dapr configuration with Azure App Configuration
+# and Azure Key Vault integration via Workload Identity.
+#
+# Usage:
+#   components:
+#     - ../../../../dapr-azure-integration
+#     - ../../../../dapr-azure-integration/azure-app-config  # opt-in
+#     - ../../../../dapr-azure-integration/statestore-redis  # opt-in
+#     - ../../../../dapr-azure-integration/pubsub-redis      # opt-in
+#     - ../../../../dapr-azure-integration/secrets           # opt-in
+
+resources:
+  # Note: ServiceAccount is opt-in via service-account sub-component
+  # to avoid conflicts with apps that have their own ServiceAccount
+  - base/Configuration-dapr.yaml
+  - base/ConfigMap-dapr.yaml
+  - base/ConfigMap-otel.yaml
+  - base/ConfigMap-flipt.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: dapr-azure-integration
+    includeSelectors: false

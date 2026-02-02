@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# ServiceAccount Sub-Component
+#
+# Provides a ServiceAccount with Azure Workload Identity annotations.
+# Use this if your app doesn't have its own ServiceAccount.
+# Apps with custom ServiceAccounts should not include this component.
+
+resources:
+  - ../base/ServiceAccount.yaml

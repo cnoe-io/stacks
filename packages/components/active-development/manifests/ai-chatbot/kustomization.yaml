@@ -1,26 +1,32 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Use the reusable Dapr + Azure integration component
+components:
+  - ../../../dapr-azure-integration
+  - ../../../dapr-azure-integration/azure-app-config
+  - ../../../dapr-azure-integration/statestore-redis
+  - ../../../dapr-azure-integration/pubsub-redis
+
+# App-specific resources (not provided by component)
 resources:
   - Namespace-ai-chatbot.yaml
   - ServiceAccount-ai-chatbot.yaml
   - ClusterRole-ai-chatbot-sandbox-manager.yaml
   - ClusterRoleBinding-ai-chatbot-sandbox-manager.yaml
-  - ConfigMap-otel-config.yaml
-  - ConfigMap-dapr-config.yaml
-  - ConfigMap-flipt-config.yaml
-  - Configuration-ai-chatbot-dapr.yaml
-  - Component-azureappconfig.yaml
+  # App-specific Dapr components
+  - Component-agentregistrystore.yaml
   - Component-sandboxregistry.yaml
   - Component-taskpubsub.yaml
-  - Component-pubsub.yaml
-  - Component-statestore.yaml
   - Subscription-taskevents.yaml
   - Subscription-workflow.yaml
+  # Infrastructure
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - StatefulSet-redis.yaml
   - Service-redis.yaml
+  # Note: PVC removed - deployment uses EmptyDir for uploads (ephemeral storage)
+  # Application
   - Deployment-ai-chatbot.yaml
   - Service-ai-chatbot.yaml
   - Ingress-ai-chatbot.yaml
@@ -29,3 +35,104 @@ resources:
 images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
     newTag: latest
+
+# App-specific customizations to component resources
+patches:
+  # Azure App Config label and scope
+  - target:
+      kind: Component
+      name: azureappconfig
+    patch: |
+      - op: replace
+        path: /spec/metadata/2/value
+        value: "ai-chatbot"
+      - op: replace
+        path: /scopes/0
+        value: "ai-chatbot"
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+
+  # Redis statestore host
+  - target:
+      kind: Component
+      name: statestore
+    patch: |
+      - op: replace
+        path: /spec/metadata/0/value
+        value: "redis.ai-chatbot.svc.cluster.local:6379"
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+
+  # Redis pubsub host
+  - target:
+      kind: Component
+      name: pubsub
+    patch: |
+      - op: replace
+        path: /spec/metadata/0/value
+        value: "redis.ai-chatbot.svc.cluster.local:6379"
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+
+  # OTEL service name
+  - target:
+      kind: ConfigMap
+      name: otel-config
+    patch: |
+      - op: replace
+        path: /data/OTEL_SERVICE_NAME
+        value: "ai-chatbot"
+      - op: replace
+        path: /data/NEXT_PUBLIC_OTEL_SERVICE_NAME
+        value: "ai-chatbot-browser"
+      - op: replace
+        path: /data/OTEL_RESOURCE_ATTRIBUTES
+        value: "service.namespace=ai-chatbot,service.version=1.0.0"
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+      - op: add
+        path: /metadata/name
+        value: "ai-chatbot-otel-config"
+
+  # Dapr config ConfigMap
+  - target:
+      kind: ConfigMap
+      name: dapr-config
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+      - op: add
+        path: /metadata/name
+        value: "ai-chatbot-dapr-config"
+
+  # Flipt config
+  - target:
+      kind: ConfigMap
+      name: flipt-config
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+      - op: add
+        path: /metadata/name
+        value: "ai-chatbot-flipt-config"
+
+  # Dapr Configuration
+  - target:
+      kind: Configuration
+      name: dapr-config
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: "ai-chatbot"
+      - op: add
+        path: /metadata/name
+        value: "ai-chatbot-dapr-config"
+
+  # ServiceAccount from component (we have our own so skip this)
+  # We keep using the app-specific ServiceAccount-ai-chatbot.yaml instead

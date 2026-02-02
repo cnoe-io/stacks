@@ -1,0 +1,12 @@
+# Flipt Feature Flags Configuration
+#
+# Base configuration for Flipt feature flag service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flipt-config
+data:
+  # Flipt feature flag service configuration
+  FLIPT_URL: "http://flipt.feature-flags.svc.cluster.local:8080"
+  FLIPT_NAMESPACE: "default"
+  FLIPT_ENABLED: "true"

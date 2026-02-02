@@ -1,0 +1,21 @@
+# Redis Pub/Sub Component
+#
+# Provides pub/sub messaging backed by Redis.
+#
+# Required Patches:
+#   - /spec/metadata/0/value: Set redisHost (e.g., "redis.ai-chatbot.svc.cluster.local:6379")
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    # Redis host - PATCH THIS per app
+    - name: redisHost
+      value: "REPLACE_ME"
+    - name: redisPassword
+      value: ""

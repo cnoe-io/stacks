@@ -30,9 +30,10 @@ spec:
         dapr.io/app-protocol: "http"
         dapr.io/config: "vibe-coding-platform-dapr-config"
         dapr.io/enable-api-logging: "true"
-        # Health check - Dapr waits for app to be healthy before starting
-        dapr.io/enable-app-health-check: "true"
-        dapr.io/app-health-check-path: "/api/health"
+        # Note: App health check disabled to avoid startup race condition
+        # The app tries to connect to Dapr on startup, but Dapr waits for app health
+        # Kubernetes probes handle liveness/readiness instead
+        dapr.io/enable-app-health-check: "false"
     spec:
       serviceAccountName: vibe-coding-platform
       containers:

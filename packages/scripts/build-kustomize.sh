@@ -104,6 +104,7 @@ cd "${PACKAGES_DIR}"
 echo "Step 2: Copying manifests..."
 
 # Helper function to copy manifest directory
+# If the directory uses kustomize components, render them to self-contained manifests
 copy_manifest_dir() {
     local dir="$1"
     local dest_base="$2"
@@ -122,10 +123,75 @@ copy_manifest_dir() {
         mkdir -p "${dest_base}/${app}/manifests"
         cp -r "$dir/manifests/"* "${dest_base}/${app}/manifests/" 2>/dev/null || true
     else
-        # Copy YAML files directly to manifests/
-        mkdir -p "${dest_base}/${app}/manifests"
-        cp "$dir"/*.yaml "${dest_base}/${app}/manifests/" 2>/dev/null || true
+        # Check if kustomization uses components (need to render instead of copy)
+        if [ -f "$dir/kustomization.yaml" ] && grep -q "^components:" "$dir/kustomization.yaml" 2>/dev/null; then
+            # Render kustomization with components and split into individual files
+            render_kustomize_dir "$dir" "${dest_base}/${app}/manifests"
+        else
+            # Copy YAML files directly to manifests/
+            mkdir -p "${dest_base}/${app}/manifests"
+            cp "$dir"/*.yaml "${dest_base}/${app}/manifests/" 2>/dev/null || true
+        fi
     fi
+}
+
+# Helper function to render a kustomization with components into self-contained manifests
+render_kustomize_dir() {
+    local src_dir="$1"
+    local dest_dir="$2"
+    local app=$(basename "$(dirname "$dest_dir")")
+
+    echo "   Rendering kustomize components for: $app"
+    mkdir -p "$dest_dir"
+
+    # Render kustomization and split by Kind-Name
+    local render_temp=$(mktemp -d)
+    cd "$render_temp"
+
+    if kubectl kustomize "$src_dir" 2>/dev/null | yq -s '.kind + "-" + .metadata.name' -o yaml --no-doc; then
+        # Rename .yml to .yaml and move to destination
+        for f in *.yml; do
+            [ -f "$f" ] || continue
+            mv "$f" "${dest_dir}/${f%.yml}.yaml"
+        done
+
+        # Generate self-contained kustomization.yaml
+        generate_kustomization "$dest_dir"
+    else
+        echo "   Warning: Failed to render $app, falling back to copy"
+        cd "${PACKAGES_DIR}"
+        rm -rf "$render_temp"
+        mkdir -p "$dest_dir"
+        cp "$src_dir"/*.yaml "$dest_dir/" 2>/dev/null || true
+        return
+    fi
+
+    cd "${PACKAGES_DIR}"
+    rm -rf "$render_temp"
+}
+
+# Generate a self-contained kustomization.yaml from rendered files
+generate_kustomization() {
+    local dir="$1"
+    local kustomization_file="$dir/kustomization.yaml"
+
+    # Get list of YAML files (excluding kustomization.yaml itself)
+    local resources=""
+    for f in "$dir"/*.yaml; do
+        [ -f "$f" ] || continue
+        local basename=$(basename "$f")
+        [ "$basename" = "kustomization.yaml" ] && continue
+        resources="${resources}  - ${basename}\n"
+    done
+
+    # Write kustomization.yaml
+    cat > "$kustomization_file" << EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+$(echo -e "$resources")
+EOF
 }
 
 # From base/manifests/

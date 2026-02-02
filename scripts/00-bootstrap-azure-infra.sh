@@ -302,6 +302,27 @@ check_infrastructure() {
         fi
     fi
 
+    # Check App Configuration access
+    if [[ -n "${AZURE_APPCONFIG_NAME:-}" ]] && [[ -n "${AZURE_CLIENT_ID:-}" ]]; then
+        local appconfig_id
+        appconfig_id=$(az appconfig show --name "$AZURE_APPCONFIG_NAME" --resource-group "$RESOURCE_GROUP" --query id -o tsv 2>/dev/null || echo "")
+        if [[ -n "$appconfig_id" ]]; then
+            local sp_object_id
+            sp_object_id=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv 2>/dev/null || echo "")
+            if [[ -n "$sp_object_id" ]]; then
+                local role_exists
+                role_exists=$(az role assignment list --assignee "$sp_object_id" --role "App Configuration Data Reader" \
+                    --scope "$appconfig_id" --query "[0].id" -o tsv 2>/dev/null || echo "")
+                if [[ -n "$role_exists" ]]; then
+                    log_success "App Configuration Access: App Configuration Data Reader role assigned"
+                else
+                    log_error "App Configuration Access: Role NOT assigned"
+                    all_ok=false
+                fi
+            fi
+        fi
+    fi
+
     echo ""
     if [[ "$all_ok" == "true" ]]; then
         log_success "All Azure infrastructure checks passed!"
@@ -372,6 +393,8 @@ setup_federated_credentials() {
         "external-secrets:external-secrets"    # ESO service account
         "mcp-tools:acr-sa"                     # MCP tools ACR access
         "kargo:acr-sa"                         # Kargo ACR access
+        "ai-chatbot:ai-chatbot"                # AI chatbot Dapr secrets/config access
+        "planner-agent:planner-dapr-agent"     # Planner agent Dapr secrets/config access
     )
 
     # Remove trailing slash from issuer if present
@@ -509,6 +532,60 @@ setup_keyvault() {
 }
 
 #
+# Configure App Configuration access
+#
+setup_appconfig() {
+    print_header "Configuring App Configuration Access"
+
+    # Discover App Configuration if not set
+    local appconfig_name="${AZURE_APPCONFIG_NAME:-}"
+    if [[ -z "$appconfig_name" ]]; then
+        log_info "Discovering App Configuration in resource group: $RESOURCE_GROUP"
+        appconfig_name=$(az appconfig list --resource-group "$RESOURCE_GROUP" \
+            --query "[0].name" -o tsv 2>/dev/null || echo "")
+    fi
+
+    if [[ -z "$appconfig_name" ]]; then
+        log_warn "No App Configuration found in resource group: $RESOURCE_GROUP"
+        log_info "App Configuration access configuration skipped"
+        return 0
+    fi
+
+    log_info "Using App Configuration: $appconfig_name"
+
+    # Get App Configuration resource ID
+    local appconfig_id
+    appconfig_id=$(az appconfig show --name "$appconfig_name" --resource-group "$RESOURCE_GROUP" --query id -o tsv)
+
+    # Get service principal object ID
+    local sp_object_id
+    sp_object_id=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+
+    # Check if role assignment exists
+    local existing_role
+    existing_role=$(az role assignment list \
+        --assignee "$sp_object_id" \
+        --role "App Configuration Data Reader" \
+        --scope "$appconfig_id" \
+        --query "[0].id" -o tsv 2>/dev/null || echo "")
+
+    if [[ -n "$existing_role" ]]; then
+        log_success "App Configuration Data Reader role already assigned"
+    else
+        log_info "Assigning App Configuration Data Reader role..."
+        az role assignment create \
+            --assignee "$sp_object_id" \
+            --role "App Configuration Data Reader" \
+            --scope "$appconfig_id" \
+            --output none
+        log_success "App Configuration access configured"
+    fi
+
+    # Export for .env file
+    AZURE_APPCONFIG_NAME="$appconfig_name"
+}
+
+#
 # Save configuration to .env file
 #
 save_configuration() {
@@ -538,6 +615,9 @@ AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
 
 # Azure Key Vault (secrets storage)
 AZURE_KEYVAULT_NAME="${AZURE_KEYVAULT_NAME:-}"
+
+# Azure App Configuration (for centralized config)
+AZURE_APPCONFIG_NAME="${AZURE_APPCONFIG_NAME:-}"
 
 # Azure Storage Account (for OIDC JWKS hosting)
 AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT}"
@@ -582,6 +662,9 @@ print_summary() {
     echo "Azure AD Client ID:    $AZURE_CLIENT_ID"
     if [[ -n "${AZURE_KEYVAULT_NAME:-}" ]]; then
     echo "Key Vault:             $AZURE_KEYVAULT_NAME"
+    fi
+    if [[ -n "${AZURE_APPCONFIG_NAME:-}" ]]; then
+    echo "App Configuration:     $AZURE_APPCONFIG_NAME"
     fi
     echo ""
     echo "────────────────────────────────────────────────────────────────"
@@ -646,6 +729,7 @@ main() {
         APP_OBJECT_ID=$(az ad app show --id "$AZURE_CLIENT_ID" --query id -o tsv)
         setup_federated_credentials
         setup_keyvault
+        setup_appconfig
         log_success "Issuer update complete!"
         return 0
     fi
@@ -657,6 +741,7 @@ main() {
     setup_azure_ad_app
     setup_federated_credentials
     setup_keyvault
+    setup_appconfig
     save_configuration
 
     print_summary

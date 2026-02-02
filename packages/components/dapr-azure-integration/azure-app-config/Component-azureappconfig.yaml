@@ -1,0 +1,37 @@
+# Azure App Configuration Component
+#
+# Provides dynamic configuration from Azure App Configuration.
+# Uses Azure Workload Identity for authentication.
+#
+# Required Patches:
+#   - /spec/metadata/2/value: Set the label filter (e.g., "ai-chatbot")
+#   - /scopes/0: Set the Dapr app-id (e.g., "ai-chatbot")
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: azureappconfig
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: configuration.azure.appconfig
+  version: v1
+  metadata:
+    # Azure App Configuration endpoint
+    - name: host
+      value: "https://rg3-app-config.azconfig.io"
+    # Use Azure Workload Identity for authentication
+    # The ServiceAccount must have azure.workload.identity/client-id annotation
+    # Leave empty to use Workload Identity (recommended for AKS)
+    - name: azureClientId
+      value: ""
+    # Filter by label to get only app-specific configurations
+    # PATCH THIS: e.g., "ai-chatbot", "planner-agent"
+    - name: label
+      value: "REPLACE_ME"
+    # Poll interval for configuration changes (supports dynamic updates)
+    - name: subscribePollingInterval
+      value: "30s"
+# Scope to specific app only (must be at root level, not inside spec)
+# PATCH THIS: e.g., "ai-chatbot"
+scopes:
+  - REPLACE_ME
