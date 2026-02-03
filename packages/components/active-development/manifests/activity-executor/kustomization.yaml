@@ -3,10 +3,15 @@ kind: Kustomization
 
 resources:
   - Namespace-activity-executor.yaml
+  - ServiceAccount-activity-executor.yaml
   - ConfigMap-activity-executor-config.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-dapr-config.yaml
   - ConfigMap-flipt-config.yaml
   - ExternalSecret-activity-executor.yaml
+  # Dapr Components for Azure integration
+  - Component-secretstore-azure-keyvault.yaml
+  - Component-azureappconfig.yaml
+  # Deployment and Service
   - Deployment-activity-executor.yaml
   - Service-activity-executor.yaml
