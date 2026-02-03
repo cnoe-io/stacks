@@ -1,0 +1,52 @@
+# Knative Serving Installation
+#
+# Provides serverless capabilities with scale-to-zero for Kubernetes workloads.
+# Used by workflow-builder's activity-executor for on-demand activity execution.
+#
+# Components installed:
+# - Knative Serving CRDs
+# - Knative Serving Core
+# - Kourier networking layer (lightweight, no Istio dependency)
+#
+# Prerequisites:
+# - Kubernetes cluster with cert-manager (optional, for TLS)
+#
+# Note: The remote URLs reference Knative v1.12.0 releases.
+# Update versions as needed.
+#
+# IMPORTANT: Do NOT set a global namespace here. The upstream YAMLs define
+# their own namespaces (knative-serving, kourier-system) and setting a global
+# namespace causes Kustomize to produce ID conflicts when transforming Namespace resources.
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Knative Serving Core (includes CRDs and config-domain ConfigMap)
+  # Note: serving-crds.yaml is NOT needed since serving-core.yaml includes all CRDs
+  - https://github.com/knative/serving/releases/download/knative-v1.12.0/serving-core.yaml
+  # Kourier networking layer
+  - https://github.com/knative/net-kourier/releases/download/knative-v1.12.0/kourier.yaml
+  # Note: config-domain.yaml is NOT needed as serving-core includes it, we patch it below
+
+patches:
+  # Configure Kourier as the default ingress class
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: config-network
+        namespace: knative-serving
+      data:
+        ingress.class: "kourier.ingress.networking.knative.dev"
+
+  # Configure domain for local development
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: config-domain
+        namespace: knative-serving
+      data:
+        # Use sslip.io for automatic DNS resolution in Kind
+        sslip.io: ""
