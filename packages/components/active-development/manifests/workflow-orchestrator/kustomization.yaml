@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - Namespace-workflow-orchestrator.yaml
+  - ServiceAccount-workflow-orchestrator.yaml
+  - ConfigMap-workflow-orchestrator-config.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ExternalSecret-workflow-orchestrator.yaml
+  - Component-statestore.yaml
+  - Component-pubsub.yaml
+  - Component-azureappconfig.yaml
+  - Deployment-workflow-orchestrator.yaml
+  - Service-workflow-orchestrator.yaml

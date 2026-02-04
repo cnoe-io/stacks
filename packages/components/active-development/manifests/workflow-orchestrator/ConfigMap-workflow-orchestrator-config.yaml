@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-orchestrator-config
+  namespace: workflow-orchestrator
+data:
+  NODE_ENV: "production"
+  PORT: "8080"
+  LOG_LEVEL: "info"
+  # Activity executor service for Dapr service invocation
+  ACTIVITY_EXECUTOR_APP_ID: "activity-executor"
