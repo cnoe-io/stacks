@@ -9,7 +9,9 @@ metadata:
 spec:
   image: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor:latest
   serving:
-    runtime: knative
+    triggers:
+      http:
+        port: 8080
     annotations:
       dapr.io/enabled: "true"
       dapr.io/app-id: "activity-executor"
