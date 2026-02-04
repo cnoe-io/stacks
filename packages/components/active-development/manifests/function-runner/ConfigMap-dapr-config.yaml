@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: function-runner-dapr-config
-  namespace: function-runner
+  namespace: workflow-builder
   labels:
     app.kubernetes.io/name: function-runner
     app.kubernetes.io/component: dapr

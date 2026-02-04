@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: function-runner-job-manager
-  namespace: function-runner
+  namespace: workflow-builder
 rules:
   # Jobs - create, read, delete
   - apiGroups: ["batch"]
@@ -19,11 +19,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: function-runner-job-manager
-  namespace: function-runner
+  namespace: workflow-builder
 subjects:
   - kind: ServiceAccount
     name: function-runner
-    namespace: function-runner
+    namespace: workflow-builder
 roleRef:
   kind: Role
   name: function-runner-job-manager

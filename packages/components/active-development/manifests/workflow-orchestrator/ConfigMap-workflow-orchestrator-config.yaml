@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-orchestrator-config
+  namespace: workflow-builder
+data:
+  NODE_ENV: "production"
+  PORT: "8080"
+  LOG_LEVEL: "info"
+  # Activity executor service for Dapr cross-namespace service invocation
+  # Format: app-id.namespace for cross-namespace invocation
+  ACTIVITY_EXECUTOR_APP_ID: "activity-executor.activity-executor"

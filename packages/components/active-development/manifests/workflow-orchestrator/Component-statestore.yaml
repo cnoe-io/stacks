@@ -1,0 +1,35 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: statestore
+    app.kubernetes.io/component: statestore
+    app.kubernetes.io/part-of: workflow-orchestrator
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    # Redis host (using existing dapr-agents-redis instance)
+    - name: redisHost
+      value: redis-service.dapr-agents.svc.cluster.local:6379
+    # No password for internal Redis
+    - name: redisPassword
+      value: ""
+    # Enable transactions for atomic operations
+    - name: enableTLS
+      value: "false"
+    # Key prefix to isolate orchestrator state
+    - name: keyPrefix
+      value: orchestrator
+    # Enable actor state store for workflow actors
+    - name: actorStateStore
+      value: "true"
+    # Connection pool settings
+    - name: redisMaxRetries
+      value: "3"
+    - name: redisMinRetryInterval
+      value: 8ms
+    - name: redisMaxRetryInterval
+      value: 512ms

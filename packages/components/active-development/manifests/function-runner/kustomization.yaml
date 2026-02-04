@@ -1,8 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: workflow-builder
+
 resources:
-  - Namespace-function-runner.yaml
   - ServiceAccount-function-runner.yaml
   - RBAC-function-runner.yaml
   - ConfigMap-function-runner-config.yaml

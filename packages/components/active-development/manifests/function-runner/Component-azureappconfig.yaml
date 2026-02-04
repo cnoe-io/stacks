@@ -13,7 +13,7 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: azureappconfig
-  namespace: function-runner
+  namespace: workflow-builder
   annotations:
     argocd.argoproj.io/sync-wave: "-80"
 spec:

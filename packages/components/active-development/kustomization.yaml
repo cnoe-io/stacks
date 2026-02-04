@@ -24,11 +24,13 @@ kind: Component
 #   - prune: true (ArgoCD deletes orphaned resources)
 
 resources:
+  - apps/activity-executor.yaml
   - apps/ai-chatbot.yaml
   - apps/flight-booking-app.yaml
   - apps/function-runner.yaml
   - apps/vibe-coding-platform.yaml
   - apps/workflow-builder.yaml
+  - apps/workflow-orchestrator.yaml
   - apps/workflow-web.yaml
 
 # Image tag reference (documentation)
@@ -36,6 +38,8 @@ resources:
 # NOTE: Since manifests are copied directly (not via kustomize), tags are
 # hardcoded in Deployment files. This block documents which images are used.
 images:
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor
+    newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app
@@ -45,6 +49,8 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
     newTag: latest

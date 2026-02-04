@@ -15,7 +15,7 @@ spec:
     path: "."
   destination:
     server: https://kubernetes.default.svc
-    namespace: function-runner
+    namespace: workflow-builder
   # Ignore DevSpace-managed fields to allow local development without drift detection
   ignoreDifferences:
     - group: apps
