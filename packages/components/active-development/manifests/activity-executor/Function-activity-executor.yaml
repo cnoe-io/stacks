@@ -13,6 +13,9 @@ spec:
       http:
         port: 8080
     annotations:
+      # OpenFunction Dapr integration
+      openfunction.io/enable-dapr: "true"
+      # Dapr sidecar configuration
       dapr.io/enabled: "true"
       dapr.io/app-id: "activity-executor"
       dapr.io/app-port: "8080"
