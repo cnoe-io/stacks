@@ -8,7 +8,9 @@ resources:
   - ConfigMap-function-runner-config.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-dapr-config.yaml
-  - ExternalSecret-function-runner.yaml
+  # Use plain Secret for local dev (ExternalSecret requires Key Vault entries)
+  - Secret-function-runner.yaml
+  # - ExternalSecret-function-runner.yaml  # Enable for prod with Azure Key Vault
   # Dapr Components for Azure integration
   - Component-secretstore-azure-keyvault.yaml
   - Component-azureappconfig.yaml
