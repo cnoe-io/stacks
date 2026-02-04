@@ -23,14 +23,14 @@ data:
     ON CONFLICT (id) DO NOTHING;
 
     -- Insert credential account with password hash
-    -- The hash is scrypt format (salt:hash) for password 'developer'
+    -- Generated with: node -e "require('better-auth/crypto').hashPassword('developer').then(console.log)"
     INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
     VALUES (
       'dev-admin-account',
       'admin@example.com',
       'credential',
       'dev-admin-user',
-      '20f7cb0dbeeaa69191fd84b4c82ac2cf:556369ebf666fc6a0d66e72a31b8585e6ce67fd21e4d0e953c8c54aa3bc03dce57359c3339a7947f74dde8b552df195325c602a76b6ea17380fb11b47de89945',
+      '80623ef74a3d79778ca5bf3c591dfe85:7c5f248409c46b6b7af67da92884d5004f85dcf234dadbf5b209ccc612dfdc649cb0ffdec85d97f89ebc178e6a97751e4efd35e89768ab52e0779478671637eb',
       NOW(),
       NOW()
     )
