@@ -13,10 +13,10 @@ spec:
       http:
         port: 8080
     annotations:
-      # OpenFunction Dapr integration
+      # OpenFunction Dapr integration with standalone mode (proxy handles Dapr, scales with function)
       openfunction.io/enable-dapr: "true"
-      # Dapr sidecar configuration
-      dapr.io/enabled: "true"
+      openfunction.io/dapr-service-mode: "standalone"
+      # Dapr sidecar configuration (for the proxy)
       dapr.io/app-id: "activity-executor"
       dapr.io/app-port: "8080"
       dapr.io/app-protocol: "http"
