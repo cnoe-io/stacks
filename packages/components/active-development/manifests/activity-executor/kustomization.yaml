@@ -13,8 +13,8 @@ resources:
   # Dapr Components for Azure integration
   - Component-secretstore-azure-keyvault.yaml
   - Component-azureappconfig.yaml
-  # OpenFunction (replaces Deployment + Service)
-  - Function-activity-executor.yaml
-  # Legacy Deployment and Service (replaced by OpenFunction)
-  # - Deployment-activity-executor.yaml
-  # - Service-activity-executor.yaml
+  # Standard Kubernetes Deployment with Dapr sidecar
+  - Deployment-activity-executor.yaml
+  - Service-activity-executor.yaml
+  # OpenFunction (disabled - dapr-proxy doesn't work with standard HTTP servers)
+  # - Function-activity-executor.yaml
