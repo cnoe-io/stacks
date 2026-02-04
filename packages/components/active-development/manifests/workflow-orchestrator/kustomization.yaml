@@ -7,7 +7,9 @@ resources:
   - ConfigMap-workflow-orchestrator-config.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-dapr-config.yaml
-  - ExternalSecret-workflow-orchestrator.yaml
+  # ExternalSecret removed - workflow-orchestrator uses Dapr statestore (Redis)
+  # and doesn't need direct database access. If secrets are needed later, re-enable:
+  # - ExternalSecret-workflow-orchestrator.yaml
   - Component-statestore.yaml
   - Component-pubsub.yaml
   - Component-azureappconfig.yaml
