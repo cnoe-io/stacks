@@ -27,6 +27,7 @@ resources:
   - apps/activity-executor.yaml
   - apps/ai-chatbot.yaml
   - apps/flight-booking-app.yaml
+  - apps/function-runner.yaml
   - apps/vibe-coding-platform.yaml
   - apps/workflow-builder.yaml
   - apps/workflow-orchestrator.yaml
@@ -43,6 +44,8 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app
     newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-runner
+    newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform
@@ -52,4 +55,6 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-runner
     newTag: latest

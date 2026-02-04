@@ -99,3 +99,11 @@ images:
     tagStrategy: Lexical
     tagPattern: ".*"
     promotionType: kustomize
+
+  - name: function-runner
+    argocdApp: function-runner
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize

@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: function-runner
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:function-runner-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://function-runner/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: function-runner
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true

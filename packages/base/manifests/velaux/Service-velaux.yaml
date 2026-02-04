@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: velaux
+  namespace: vela-system
+  labels:
+    app: velaux
+spec:
+  selector:
+    app: velaux
+  ports:
+    - port: 80
+      targetPort: 8000
+      name: http
+  type: ClusterIP

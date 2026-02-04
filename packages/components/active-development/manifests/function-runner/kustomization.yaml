@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - Namespace-function-runner.yaml
+  - ServiceAccount-function-runner.yaml
+  - RBAC-function-runner.yaml
+  - ConfigMap-function-runner-config.yaml
+  - ConfigMap-otel-config.yaml
+  - ConfigMap-dapr-config.yaml
+  - ExternalSecret-function-runner.yaml
+  # Dapr Components for Azure integration
+  - Component-secretstore-azure-keyvault.yaml
+  - Component-azureappconfig.yaml
+  # Standard Kubernetes Deployment with Dapr sidecar
+  - Deployment-function-runner.yaml
+  - Service-function-runner.yaml

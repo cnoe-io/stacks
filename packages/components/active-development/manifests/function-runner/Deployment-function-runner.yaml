@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: function-runner
+  namespace: function-runner
+  labels:
+    app: function-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: function-runner
+  template:
+    metadata:
+      labels:
+        app: function-runner
+        azure.workload.identity/use: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "function-runner"
+        dapr.io/app-port: "8080"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      serviceAccountName: function-runner
+      containers:
+        - name: function-runner
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/function-runner:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: function-runner-config
+            - configMapRef:
+                name: function-runner-otel-config
+            - configMapRef:
+                name: function-runner-dapr-config
+            - secretRef:
+                name: function-runner-secrets
+                optional: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10

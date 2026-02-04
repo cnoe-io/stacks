@@ -60,6 +60,7 @@ resources:
   - apps/keycloak-secrets.yaml
   - apps/keycloak.yaml
   - apps/kubevela.yaml
+  - apps/velaux.yaml
   - apps/kgateway-crds.yaml
   - apps/kgateway.yaml
   - apps/kmcp.yaml

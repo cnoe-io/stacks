@@ -1,0 +1,30 @@
+# Role for creating and managing Jobs (for OCI function execution)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: function-runner-job-manager
+  namespace: function-runner
+rules:
+  # Jobs - create, read, delete
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  # Pods - read logs
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+# RoleBinding for function-runner
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: function-runner-job-manager
+  namespace: function-runner
+subjects:
+  - kind: ServiceAccount
+    name: function-runner
+    namespace: function-runner
+roleRef:
+  kind: Role
+  name: function-runner-job-manager
+  apiGroup: rbac.authorization.k8s.io
