@@ -27,9 +27,9 @@ resources:
   - apps/activity-executor.yaml
   - apps/ai-chatbot.yaml
   - apps/flight-booking-app.yaml
-  - apps/planner-agent.yaml
   - apps/vibe-coding-platform.yaml
   - apps/workflow-builder.yaml
+  - apps/workflow-orchestrator.yaml
   - apps/workflow-web.yaml
 
 # Image tag reference (documentation)
@@ -45,13 +45,11 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-orchestrator
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-sdk-agent
-    newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/vibe-coding-platform
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
     newTag: latest
