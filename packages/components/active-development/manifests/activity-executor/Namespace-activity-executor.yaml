@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: activity-executor
-  labels:
-    app.kubernetes.io/name: activity-executor
-    app.kubernetes.io/component: workflow-execution

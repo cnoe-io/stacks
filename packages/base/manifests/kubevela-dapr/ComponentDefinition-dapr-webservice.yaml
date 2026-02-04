@@ -1,0 +1,159 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: dapr-webservice
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "OAM component for Dapr-enabled web service deployments"
+  labels:
+    app.kubernetes.io/name: kubevela-dapr
+    app.kubernetes.io/component: definition
+spec:
+  workload:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          // Container image
+          image: string
+          // Image pull policy
+          imagePullPolicy: *"IfNotPresent" | "Always" | "Never"
+          // Container port
+          port: *80 | int
+          // Dapr application ID
+          appId: string
+          // Dapr protocol
+          appProtocol: *"http" | "grpc"
+          // Dapr configuration name
+          daprConfig: *"daprsystem" | string
+          // Dapr log level
+          daprLogLevel: *"info" | "debug" | "warn" | "error"
+          // Environment variables
+          env?: [...{
+            name:   string
+            value?: string
+            valueFrom?: {
+              secretKeyRef?: {
+                name: string
+                key:  string
+              }
+              configMapKeyRef?: {
+                name: string
+                key:  string
+              }
+            }
+          }]
+          // CPU resource request
+          cpu: *"100m" | string
+          // Memory resource request
+          memory: *"128Mi" | string
+          // Number of replicas
+          replicas: *1 | int
+          // Command override
+          cmd?: [...string]
+          // Args override
+          args?: [...string]
+          // Volume mounts
+          volumeMounts?: [...{
+            name:      string
+            mountPath: string
+            readOnly?: bool
+          }]
+          // Volumes
+          volumes?: [...{
+            name: string
+            configMap?: {
+              name: string
+            }
+            secret?: {
+              secretName: string
+            }
+            emptyDir?: {}
+          }]
+        }
+        output: {
+          apiVersion: "apps/v1"
+          kind:       "Deployment"
+          metadata: {
+            name: context.name
+            labels: {
+              "app.kubernetes.io/name":      context.name
+              "app.kubernetes.io/component": "webservice"
+            }
+          }
+          spec: {
+            replicas: parameter.replicas
+            selector: matchLabels: app: context.name
+            template: {
+              metadata: {
+                labels: app: context.name
+                annotations: {
+                  "dapr.io/enabled":      "true"
+                  "dapr.io/app-id":       parameter.appId
+                  "dapr.io/app-port":     "\(parameter.port)"
+                  "dapr.io/app-protocol": parameter.appProtocol
+                  "dapr.io/config":       parameter.daprConfig
+                  "dapr.io/log-level":    parameter.daprLogLevel
+                }
+              }
+              spec: {
+                containers: [{
+                  name:            context.name
+                  image:           parameter.image
+                  imagePullPolicy: parameter.imagePullPolicy
+                  ports: [{
+                    containerPort: parameter.port
+                    protocol:      "TCP"
+                  }]
+                  if parameter.cmd != _|_ {
+                    command: parameter.cmd
+                  }
+                  if parameter.args != _|_ {
+                    args: parameter.args
+                  }
+                  if parameter.env != _|_ {
+                    env: parameter.env
+                  }
+                  if parameter.volumeMounts != _|_ {
+                    volumeMounts: parameter.volumeMounts
+                  }
+                  resources: {
+                    requests: {
+                      cpu:    parameter.cpu
+                      memory: parameter.memory
+                    }
+                    limits: {
+                      cpu:    parameter.cpu
+                      memory: parameter.memory
+                    }
+                  }
+                }]
+                if parameter.volumes != _|_ {
+                  volumes: parameter.volumes
+                }
+              }
+            }
+          }
+        }
+        // Output a Service for the component
+        outputs: service: {
+          apiVersion: "v1"
+          kind:       "Service"
+          metadata: {
+            name: context.name
+            labels: {
+              "app.kubernetes.io/name": context.name
+            }
+          }
+          spec: {
+            selector: app: context.name
+            ports: [{
+              port:       parameter.port
+              targetPort: parameter.port
+              protocol:   "TCP"
+            }]
+          }
+        }

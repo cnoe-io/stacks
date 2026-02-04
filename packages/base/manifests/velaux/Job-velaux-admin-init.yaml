@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: velaux-admin-init
+  namespace: vela-system
+  labels:
+    app: velaux
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: admin-init
+          image: curlimages/curl:8.5.0
+          env:
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: velaux-admin-credentials
+                  key: ADMIN_USERNAME
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: velaux-admin-credentials
+                  key: ADMIN_PASSWORD
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: velaux-admin-credentials
+                  key: ADMIN_EMAIL
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for VelaUX to be ready..."
+              until curl -sf http://velaux.vela-system.svc.cluster.local/api/v1/auth/login_type; do
+                echo "VelaUX not ready, waiting..."
+                sleep 5
+              done
+
+              echo "VelaUX is ready, initializing admin account..."
+
+              # Try to initialize admin - may fail if already configured
+              RESPONSE=$(curl -s -X PUT \
+                http://velaux.vela-system.svc.cluster.local/api/v1/auth/init_admin \
+                -H "Content-Type: application/json" \
+                -d "{\"name\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\",\"email\":\"${ADMIN_EMAIL}\"}")
+
+              echo "Response: $RESPONSE"
+
+              # Check if successful or already configured
+              if echo "$RESPONSE" | grep -q '"name"'; then
+                echo "Admin account initialized successfully"
+                exit 0
+              elif echo "$RESPONSE" | grep -q "already configured"; then
+                echo "Admin account already configured"
+                exit 0
+              else
+                echo "Admin initialization response: $RESPONSE"
+                # Don't fail - admin might already exist with different creds
+                exit 0
+              fi

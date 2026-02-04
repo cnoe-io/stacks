@@ -36,6 +36,7 @@ resources:
   - apps/idpbuilder-gitea.yaml
   - apps/knative-serving.yaml
   - apps/nocodb-connections.yaml
+  - apps/nocodb-dev-credentials.yaml
   - apps/nocodb-external-secrets.yaml
   - apps/nocodb-postgres.yaml
   - apps/nocodb-secrets.yaml

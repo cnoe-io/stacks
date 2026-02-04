@@ -1,0 +1,103 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: activepieces
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # Official Activepieces Helm chart from GitHub
+    repoURL: https://github.com/activepieces/activepieces.git
+    targetRevision: main
+    path: deploy/activepieces-helm
+    helm:
+      releaseName: activepieces
+      valuesObject:
+        # Core configuration
+        activepieces:
+          edition: ce
+          frontendUrl: https://activepieces.cnoe.localtest.me:8443
+          executionMode: UNSANDBOXED
+          workerConcurrency: 10
+          telemetry: false
+
+        # Image configuration
+        image:
+          repository: activepieces/activepieces
+          tag: "0.77.6"
+          pullPolicy: IfNotPresent
+
+        # Service configuration
+        service:
+          type: ClusterIP
+          port: 80
+
+        # Ingress configuration
+        ingress:
+          enabled: true
+          className: nginx
+          hosts:
+            - host: activepieces.cnoe.localtest.me
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - secretName: activepieces-tls
+              hosts:
+                - activepieces.cnoe.localtest.me
+
+        # PostgreSQL configuration (using Bitnami subchart)
+        postgresql:
+          enabled: true
+          image:
+            registry: docker.io
+            repository: bitnami/postgresql
+            tag: latest
+          auth:
+            database: activepieces
+            username: activepieces
+            password: activepieces
+          primary:
+            persistence:
+              enabled: true
+              size: 5Gi
+
+        # Redis configuration (using Bitnami subchart)
+        redis:
+          enabled: true
+          image:
+            registry: docker.io
+            repository: bitnami/redis
+            tag: latest
+          architecture: standalone
+          auth:
+            enabled: true
+            password: activepieces
+          master:
+            persistence:
+              enabled: true
+              size: 2Gi
+
+        # Resource limits (Activepieces needs significant memory)
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: activepieces
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

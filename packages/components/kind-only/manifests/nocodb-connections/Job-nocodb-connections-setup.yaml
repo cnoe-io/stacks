@@ -50,6 +50,11 @@ spec:
                 secretKeyRef:
                   key: FLIGHT_BOOKING_POSTGRES_PASSWORD
                   name: nocodb-external-db-credentials
+            - name: ACTIVEPIECES_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ACTIVEPIECES_POSTGRES_PASSWORD
+                  name: nocodb-external-db-credentials
           image: postgres:15-alpine
           name: setup
           volumeMounts:

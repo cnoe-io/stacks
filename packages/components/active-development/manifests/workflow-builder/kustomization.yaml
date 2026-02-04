@@ -6,9 +6,11 @@ resources:
   - ServiceAccount-workflow-builder.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-flipt-config.yaml
+  - ConfigMap-db-seed.yaml
   - Secret-workflow-builder.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - Deployment-workflow-builder.yaml
   - Service-workflow-builder.yaml
   - Ingress-workflow-builder.yaml
+  - Job-db-seed.yaml

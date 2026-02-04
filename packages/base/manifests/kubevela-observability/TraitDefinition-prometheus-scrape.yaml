@@ -1,0 +1,36 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: prometheus-scrape
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Add Prometheus scrape annotations to pods for metrics collection"
+  labels:
+    app.kubernetes.io/name: kubevela-observability
+    app.kubernetes.io/component: trait
+spec:
+  appliesToWorkloads:
+    - deployments.apps
+    - statefulsets.apps
+    - daemonsets.apps
+  podDisruptive: false
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          // Port to scrape metrics from
+          port: *"8080" | string
+          // Path to scrape metrics from
+          path: *"/metrics" | string
+          // Scrape interval (optional, uses Prometheus default if not set)
+          interval?: string
+        }
+        // Patch the workload with prometheus annotations
+        patch: spec: template: metadata: annotations: {
+          "prometheus.io/scrape": "true"
+          "prometheus.io/port":   parameter.port
+          "prometheus.io/path":   parameter.path
+          if parameter.interval != _|_ {
+            "prometheus.io/interval": parameter.interval
+          }
+        }

@@ -3,6 +3,8 @@ kind: Kustomization
 
 # Shared applications - deployed to all environments
 resources:
+  - apps/activepieces.yaml
+  # activepieces-seed is applied manually (one-time admin user setup)
   - apps/agent-sandbox-crds.yaml
   - apps/agent-sandbox.yaml
   - apps/agent-sandbox-config.yaml
@@ -61,6 +63,8 @@ resources:
   - apps/keycloak.yaml
   - apps/kubevela.yaml
   - apps/velaux.yaml
+  - apps/kubevela-observability.yaml
+  - apps/kubevela-dapr.yaml
   - apps/kgateway-crds.yaml
   - apps/kgateway.yaml
   - apps/kmcp.yaml

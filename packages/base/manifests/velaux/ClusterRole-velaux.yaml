@@ -76,3 +76,18 @@ rules:
     resources:
       - leases
     verbs: ["*"]
+  # Dapr resources
+  - apiGroups: ["dapr.io"]
+    resources:
+      - components
+      - configurations
+      - subscriptions
+      - resiliencies
+    verbs: ["*"]
+  # Prometheus/monitoring resources
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - servicemonitors
+      - podmonitors
+      - prometheusrules
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-seed
+  namespace: workflow-builder
+data:
+  seed-admin-user.sql: |
+    -- Seed admin user for development
+    -- Email: admin@example.com
+    -- Password: developer
+
+    -- Insert user (skip if exists)
+    INSERT INTO users (id, name, email, email_verified, created_at, updated_at, is_anonymous)
+    VALUES (
+      'dev-admin-user',
+      'admin',
+      'admin@example.com',
+      true,
+      NOW(),
+      NOW(),
+      false
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Insert credential account with password hash
+    -- The hash 'oa8OfMo1wXf3CH5l0b8urxbVFGAGpYcp' is for password 'developer'
+    INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
+    VALUES (
+      'dev-admin-account',
+      'admin@example.com',
+      'credential',
+      'dev-admin-user',
+      'oa8OfMo1wXf3CH5l0b8urxbVFGAGpYcp',
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (id) DO NOTHING;

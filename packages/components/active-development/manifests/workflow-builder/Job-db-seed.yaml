@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  name: db-seed
+  namespace: workflow-builder
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: docker.io/library/postgres:15.3-alpine3.18
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql -p 5432 -U postgres; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+      containers:
+        - name: seed
+          image: docker.io/library/postgres:15.3-alpine3.18
+          command:
+            - sh
+            - -c
+            - |
+              echo "Running database seed..."
+              PGPASSWORD=password psql -h postgresql -U postgres -d workflow_builder -f /seed/seed-admin-user.sql
+              echo "Database seed complete"
+          volumeMounts:
+            - name: seed-scripts
+              mountPath: /seed
+      volumes:
+        - name: seed-scripts
+          configMap:
+            name: db-seed

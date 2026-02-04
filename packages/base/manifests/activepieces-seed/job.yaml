@@ -1,0 +1,79 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: activepieces-admin-seed
+  namespace: activepieces
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed-admin
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Activepieces to be ready..."
+              sleep 10
+
+              # Check if activepieces is healthy
+              for i in $(seq 1 30); do
+                if curl -sf http://activepieces:80/api/v1/flags > /dev/null 2>&1; then
+                  echo "Activepieces is ready!"
+                  break
+                fi
+                echo "Waiting for Activepieces... attempt $i/30"
+                sleep 5
+              done
+
+              # Create admin user via sign-up endpoint
+              # Note: Activepieces requires valid email format, so using admin@local.dev
+              echo "Creating admin user (admin@local.dev / developer)..."
+              RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+                http://activepieces:80/api/v1/authentication/sign-up \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "email": "admin@local.dev",
+                  "password": "developer",
+                  "firstName": "Admin",
+                  "lastName": "User",
+                  "trackEvents": false,
+                  "newsLetter": false
+                }')
+
+              HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+              BODY=$(echo "$RESPONSE" | sed '$d')
+
+              echo "Response code: $HTTP_CODE"
+              echo "Response body: $BODY"
+
+              if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+                echo ""
+                echo "============================================"
+                echo "Admin user created successfully!"
+                echo ""
+                echo "Login credentials:"
+                echo "  Email: admin@local.dev"
+                echo "  Password: developer"
+                echo "============================================"
+                exit 0
+              elif echo "$BODY" | grep -q "EMAIL_ALREADY_EXISTS\|already exists\|User already"; then
+                echo ""
+                echo "============================================"
+                echo "Admin user already exists!"
+                echo ""
+                echo "Login credentials:"
+                echo "  Email: admin@local.dev"
+                echo "  Password: developer"
+                echo "============================================"
+                exit 0
+              else
+                echo "Failed to create admin user"
+                exit 1
+              fi

@@ -34,8 +34,11 @@ spec:
             - name: NC_DISABLE_TELE
               value: "true"
             # Initial admin credentials for automated setup
+            # Username is derived from email prefix: admin
             - name: NC_ADMIN_EMAIL
               value: "admin@cnoe.localtest.me"
+            # Note: Password comes from nocodb-credentials secret
+            # Dev default: "developer", Azure Key Vault may override
             - name: NC_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:

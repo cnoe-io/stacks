@@ -229,6 +229,21 @@ data:
           echo "⚠ Skipping Flight Booking App - no password provided"
         fi
 
+        # Create Activepieces connection
+        if [ -n "$ACTIVEPIECES_POSTGRES_PASSWORD" ]; then
+          create_external_db \
+            "activepieces" \
+            "Activepieces" \
+            "Activepieces automation platform - workflows, pieces, executions" \
+            "activepieces-postgresql.activepieces.svc.cluster.local" \
+            "5432" \
+            "activepieces" \
+            "activepieces" \
+            "$ACTIVEPIECES_POSTGRES_PASSWORD"
+        else
+          echo "⚠ Skipping Activepieces - no password provided"
+        fi
+
         echo ""
         echo "=== Setup Complete ==="
         echo ""

@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubevela-dapr
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://kubevela-dapr/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vela-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

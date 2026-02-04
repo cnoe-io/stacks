@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dapr-defaults
+  namespace: vela-system
+  labels:
+    app.kubernetes.io/name: kubevela-dapr
+    app.kubernetes.io/component: config
+data:
+  # Default Dapr component names used across the cluster
+  DAPR_PUBSUB_NAME: pubsub
+  DAPR_STATESTORE_NAME: statestore
+  DAPR_SECRETSTORE_NAME: secretstore
+  DAPR_CONFIG_NAME: daprsystem
+  # Default sidecar settings
+  DAPR_HTTP_PORT: "3500"
+  DAPR_GRPC_PORT: "50001"
+  DAPR_METRICS_PORT: "9090"

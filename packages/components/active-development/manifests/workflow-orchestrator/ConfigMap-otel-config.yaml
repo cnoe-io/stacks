@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: workflow-orchestrator-otel-config
-  namespace: workflow-orchestrator
-data:
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"
-  OTEL_SERVICE_NAME: "workflow-orchestrator"
-  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-orchestrator,service.version=1.0.0"

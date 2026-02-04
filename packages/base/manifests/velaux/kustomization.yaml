@@ -5,6 +5,8 @@ resources:
   - ServiceAccount-velaux.yaml
   - ClusterRole-velaux.yaml
   - ClusterRoleBinding-velaux.yaml
+  - Secret-velaux-admin.yaml
   - Deployment-velaux.yaml
   - Service-velaux.yaml
   - Ingress-velaux.yaml
+  - Job-velaux-admin-init.yaml

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-endpoints
+  namespace: vela-system
+  labels:
+    app.kubernetes.io/name: kubevela-observability
+    app.kubernetes.io/component: config
+data:
+  PROMETHEUS_URL: http://mimir.observability.svc.cluster.local:9009/prometheus
+  GRAFANA_URL: http://grafana.observability.svc.cluster.local:80
+  LOKI_URL: http://loki.observability.svc.cluster.local:3100
+  TEMPO_URL: http://tempo.observability.svc.cluster.local:3200
+  OTEL_COLLECTOR_URL: http://otel-collector.observability.svc.cluster.local:4317

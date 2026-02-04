@@ -1,0 +1,63 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: dapr-sidecar
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Inject Dapr sidecar into pods with configurable settings"
+  labels:
+    app.kubernetes.io/name: kubevela-dapr
+    app.kubernetes.io/component: trait
+spec:
+  appliesToWorkloads:
+    - deployments.apps
+    - statefulsets.apps
+  podDisruptive: false
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          // Dapr application identifier (required)
+          appId: string
+          // Port the application listens on
+          appPort: *"8080" | string
+          // Protocol for Dapr to use (http or grpc)
+          protocol: *"http" | "grpc"
+          // Dapr configuration name
+          config: *"daprsystem" | string
+          // Log level for Dapr sidecar
+          logLevel: *"info" | "debug" | "warn" | "error"
+          // Enable Prometheus metrics
+          enableMetrics: *true | bool
+          // Enable API logging
+          enableApiLogging: *false | bool
+          // Enable debug mode
+          enableDebug: *false | bool
+          // Max request body size in MB
+          httpMaxRequestSize?: int
+          // Read buffer size in KB
+          httpReadBufferSize?: int
+          // Graceful shutdown seconds
+          gracefulShutdownSeconds?: int
+        }
+        // Patch the workload with Dapr annotations
+        patch: spec: template: metadata: annotations: {
+          "dapr.io/enabled":        "true"
+          "dapr.io/app-id":         parameter.appId
+          "dapr.io/app-port":       parameter.appPort
+          "dapr.io/app-protocol":   parameter.protocol
+          "dapr.io/config":         parameter.config
+          "dapr.io/log-level":      parameter.logLevel
+          "dapr.io/enable-metrics": "\(parameter.enableMetrics)"
+          "dapr.io/enable-api-logging": "\(parameter.enableApiLogging)"
+          "dapr.io/enable-debug":   "\(parameter.enableDebug)"
+          if parameter.httpMaxRequestSize != _|_ {
+            "dapr.io/http-max-request-size": "\(parameter.httpMaxRequestSize)"
+          }
+          if parameter.httpReadBufferSize != _|_ {
+            "dapr.io/http-read-buffer-size": "\(parameter.httpReadBufferSize)"
+          }
+          if parameter.gracefulShutdownSeconds != _|_ {
+            "dapr.io/graceful-shutdown-seconds": "\(parameter.gracefulShutdownSeconds)"
+          }
+        }

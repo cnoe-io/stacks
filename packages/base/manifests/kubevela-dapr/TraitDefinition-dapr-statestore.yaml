@@ -1,0 +1,47 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: dapr-statestore
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Configure state store environment variables for Dapr state management"
+  labels:
+    app.kubernetes.io/name: kubevela-dapr
+    app.kubernetes.io/component: trait
+spec:
+  appliesToWorkloads:
+    - deployments.apps
+    - statefulsets.apps
+  podDisruptive: false
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          // Dapr state store component name
+          storeName: *"statestore" | string
+          // Key prefix for state operations (optional)
+          keyPrefix?: string
+          // Actor state store name (for actor support)
+          actorStoreName?: string
+        }
+        // Patch the workload with state store environment variables
+        patch: spec: template: spec: containers: [{
+          env: [
+            {
+              name:  "DAPR_STATESTORE_NAME"
+              value: parameter.storeName
+            },
+            if parameter.keyPrefix != _|_ {
+              {
+                name:  "DAPR_STATE_KEY_PREFIX"
+                value: parameter.keyPrefix
+              }
+            },
+            if parameter.actorStoreName != _|_ {
+              {
+                name:  "DAPR_ACTOR_STATESTORE_NAME"
+                value: parameter.actorStoreName
+              }
+            },
+          ]
+        }]

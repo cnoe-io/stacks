@@ -1,0 +1,60 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: otel-tracing
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Configure OpenTelemetry tracing environment variables for Tempo integration"
+  labels:
+    app.kubernetes.io/name: kubevela-observability
+    app.kubernetes.io/component: trait
+spec:
+  appliesToWorkloads:
+    - deployments.apps
+    - statefulsets.apps
+    - daemonsets.apps
+  podDisruptive: false
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          // OTLP gRPC endpoint for traces
+          endpoint: *"http://tempo.observability.svc.cluster.local:4317" | string
+          // Service name override (defaults to component name)
+          serviceName?: string
+          // Sampling ratio (0.0 to 1.0)
+          samplingRatio: *"1.0" | string
+          // Enable trace propagation
+          propagators: *"tracecontext,baggage" | string
+        }
+        // Patch the workload with OTEL environment variables
+        patch: spec: template: spec: containers: [{
+          env: [
+            {
+              name:  "OTEL_EXPORTER_OTLP_ENDPOINT"
+              value: parameter.endpoint
+            },
+            {
+              name:  "OTEL_EXPORTER_OTLP_PROTOCOL"
+              value: "grpc"
+            },
+            {
+              name:  "OTEL_TRACES_SAMPLER"
+              value: "parentbased_traceidratio"
+            },
+            {
+              name:  "OTEL_TRACES_SAMPLER_ARG"
+              value: parameter.samplingRatio
+            },
+            {
+              name:  "OTEL_PROPAGATORS"
+              value: parameter.propagators
+            },
+            if parameter.serviceName != _|_ {
+              {
+                name:  "OTEL_SERVICE_NAME"
+                value: parameter.serviceName
+              }
+            },
+          ]
+        }]
