@@ -50,3 +50,13 @@ patches:
       data:
         # Use sslip.io for automatic DNS resolution in Kind
         sslip.io: ""
+
+  # Skip tag-to-digest resolution for local registries with self-signed certs
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: config-deployment
+        namespace: knative-serving
+      data:
+        registries-skipping-tag-resolving: "kind.local,ko.local,dev.local,gitea.cnoe.localtest.me:8443"

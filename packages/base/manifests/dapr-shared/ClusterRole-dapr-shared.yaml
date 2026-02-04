@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dapr-shared
+  labels:
+    app.kubernetes.io/name: dapr-shared
+    app.kubernetes.io/part-of: dapr-shared
+rules:
+  # Access to Dapr components, configurations, and subscriptions
+  - apiGroups: ["dapr.io"]
+    resources:
+      - components
+      - configurations
+      - subscriptions
+      - resiliencies
+    verbs: ["get", "list", "watch"]
+  # Access to secrets for component credentials
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs: ["get", "list", "watch"]
+  # Access to pods for service discovery
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - endpoints
+    verbs: ["get", "list", "watch"]
+  # Access to namespaces for multi-namespace operation
+  - apiGroups: [""]
+    resources:
+      - namespaces
+    verbs: ["get", "list", "watch"]

@@ -14,39 +14,34 @@ spec:
         app.kubernetes.io/part-of: agent-sandbox
         app.kubernetes.io/managed-by: agent-sandbox
       annotations:
-        # Dapr sidecar injection annotations
-        dapr.io/enabled: "true"
-        dapr.io/app-id: "sandbox-agent"
-        dapr.io/app-port: "8080"
-        dapr.io/config: "sandbox-dapr-config"
-        dapr.io/enable-app-health-check: "true"
-        dapr.io/app-health-check-path: "/health"
-        dapr.io/app-health-probe-interval: "5"
-        dapr.io/app-health-probe-timeout: "3000"
-        dapr.io/app-health-threshold: "3"
-        # Enable metrics and tracing
-        dapr.io/enable-metrics: "true"
-        dapr.io/metrics-port: "9090"
-        # Logging
-        dapr.io/log-level: "info"
-        dapr.io/log-as-json: "true"
-        # Sidecar resource configuration
-        dapr.io/sidecar-cpu-limit: "500m"
-        dapr.io/sidecar-cpu-request: "100m"
-        dapr.io/sidecar-memory-limit: "256Mi"
-        dapr.io/sidecar-memory-request: "64Mi"
+        # Dapr sidecar injection DISABLED - using dapr-shared DaemonSet instead
+        # This reduces per-sandbox overhead by ~256Mi memory and ~100m CPU
+        # Sandboxes connect to shared Dapr via DAPR_HTTP_ENDPOINT env var
+        dapr.io/enabled: "false"
     spec:
       containers:
         - name: agent
-          # Base Python image - actual agent code will be injected or mounted
-          image: python:3.11-slim
+          # Agent Sandbox Python runtime - handles /execute requests on port 8888
+          image: registry.k8s.io/agent-sandbox/python-runtime-sandbox:v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - containerPort: 8888
               name: http
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 2
+            periodSeconds: 5
           env:
-            # Dapr HTTP/gRPC ports for service invocation
+            # Shared Dapr endpoints (dapr-shared DaemonSet in dapr-sandbox namespace)
+            # Sandboxes use these endpoints instead of localhost sidecar
+            - name: DAPR_HTTP_ENDPOINT
+              value: "http://sandbox-agent-dapr.dapr-sandbox.svc.cluster.local:3500"
+            - name: DAPR_GRPC_ENDPOINT
+              value: "dns:sandbox-agent-dapr.dapr-sandbox.svc.cluster.local:50001"
+            # Legacy port variables (for SDK compatibility)
             - name: DAPR_HTTP_PORT
               value: "3500"
             - name: DAPR_GRPC_PORT
@@ -76,31 +71,8 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: false
-          # Default command that keeps container running
-          # Actual agent workloads will override this via exec or image replacement
-          command:
-            - /bin/sh
-            - -c
-            - |
-              echo "Sandbox ready for agent workload"
-              # Simple HTTP server for health checks
-              python3 -c "
-              from http.server import HTTPServer, BaseHTTPRequestHandler
-              import json
-              class Handler(BaseHTTPRequestHandler):
-                  def do_GET(self):
-                      if self.path == '/health':
-                          self.send_response(200)
-                          self.send_header('Content-Type', 'application/json')
-                          self.end_headers()
-                          self.wfile.write(json.dumps({'status': 'healthy'}).encode())
-                      else:
-                          self.send_response(404)
-                          self.end_headers()
-                  def log_message(self, format, *args):
-                      pass
-              HTTPServer(('0.0.0.0', 8080), Handler).serve_forever()
-              "
+          # Python runtime sandbox handles /execute requests on port 8888
+          # No custom command needed - image has its own entrypoint
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       # Security context at pod level

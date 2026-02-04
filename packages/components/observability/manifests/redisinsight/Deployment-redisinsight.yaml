@@ -6,8 +6,7 @@ metadata:
   name: redisinsight
   namespace: observability
 spec:
-  # Scaled to 0 by default - set to 1 when needed
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate  # Required for persistent volumes
   selector:

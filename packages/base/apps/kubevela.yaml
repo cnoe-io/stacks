@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubevela
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-85"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubevela.github.io/charts
+    targetRevision: 1.10.6
+    chart: vela-core
+    helm:
+      releaseName: kubevela
+      valuesObject:
+        replicaCount: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        applicationRevisionLimit: 2
+        definitionRevisionLimit: 2
+        concurrentReconciles: 2
+        multicluster:
+          enabled: false
+        workflow:
+          enableSuspendOnFailure: false
+          step:
+            errorRetryTimes: 10
+        admissionWebhooks:
+          enabled: true
+          failurePolicy: Fail
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vela-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

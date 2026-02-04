@@ -12,3 +12,5 @@ data:
   HOST: "0.0.0.0"
   NODE_ENV: "production"
   LOG_LEVEL: "info"
+  # Database connection (shared with workflow-builder)
+  DATABASE_URL: "postgresql://postgres:password@postgresql.workflow-builder.svc.cluster.local:5432/workflow_builder"

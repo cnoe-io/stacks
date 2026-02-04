@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jupyterhub
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: cnoe://jupyterhub/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyterhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

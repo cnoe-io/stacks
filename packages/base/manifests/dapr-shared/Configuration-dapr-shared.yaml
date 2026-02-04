@@ -1,0 +1,28 @@
+# Dapr Configuration for shared instances
+#
+# Configures tracing, metrics, and features for dapr-shared DaemonSets.
+# This is referenced by the daprd --config flag.
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: dapr-shared-config
+  namespace: dapr-sandbox
+spec:
+  # Enable distributed tracing for observability
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: http://tempo.observability.svc.cluster.local:9411/api/v2/spans
+  # Metrics configuration
+  metrics:
+    enabled: true
+  # Feature flags
+  features:
+    - name: "AppHealthCheck"
+      enabled: true
+    - name: "Resiliency"
+      enabled: true
+  # Access control for service invocation
+  accessControl:
+    defaultAction: allow
+    trustDomain: "public"

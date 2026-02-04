@@ -33,6 +33,14 @@ spec:
               value: https://nocodb.cnoe.localtest.me:8443
             - name: NC_DISABLE_TELE
               value: "true"
+            # Initial admin credentials for automated setup
+            - name: NC_ADMIN_EMAIL
+              value: "admin@cnoe.localtest.me"
+            - name: NC_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: NC_ADMIN_PASSWORD
+                  name: nocodb-credentials
           image: nocodb/nocodb:latest
           livenessProbe:
             httpGet:

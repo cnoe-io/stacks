@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jupyterhub
+  namespace: jupyterhub
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: jupyterhub.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proxy-public
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - jupyterhub.cnoe.localtest.me
+      secretName: nginx-tls

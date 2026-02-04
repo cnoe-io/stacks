@@ -1,0 +1,132 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jupyterhub-helm
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://jupyterhub.github.io/helm-chart
+    chart: jupyterhub
+    targetRevision: 4.3.2
+    helm:
+      releaseName: jupyterhub
+      valuesObject:
+        hub:
+          baseUrl: /
+          config:
+            JupyterHub:
+              authenticator_class: generic-oauth
+            GenericOAuthenticator:
+              oauth_callback_url: https://jupyterhub.cnoe.localtest.me:8443/hub/oauth_callback
+              authorize_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/auth
+              token_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/token
+              userdata_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/userinfo
+              client_id: jupyterhub
+              username_claim: preferred_username
+              allow_all: true
+              tls_verify: false
+              scope:
+                - openid
+                - profile
+                - email
+          extraConfig:
+            oauth_config: |
+              import os
+              c.GenericOAuthenticator.client_secret = os.environ.get('JUPYTERHUB_OAUTH_CLIENT_SECRET', '')
+          extraEnv:
+            OAUTH_TLS_VERIFY: "0"
+            JUPYTERHUB_OAUTH_CLIENT_ID:
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterhub-oidc
+                  key: client-id
+            JUPYTERHUB_OAUTH_CLIENT_SECRET:
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterhub-oidc
+                  key: client-secret
+        proxy:
+          service:
+            type: ClusterIP
+        singleuser:
+          # Use custom ServiceAccount with RBAC for kubectl access
+          serviceAccountName: jupyter-notebook
+          image:
+            name: quay.io/jupyter/minimal-notebook
+            tag: "2025-01-27"
+          cloudMetadata:
+            blockWithIptables: false
+          storage:
+            capacity: 1Gi
+            dynamic:
+              storageClass: standard
+          # Dapr sidecar injection
+          extraAnnotations:
+            dapr.io/enabled: "true"
+            dapr.io/app-id: "jupyter-notebook"
+            dapr.io/enable-api-logging: "true"
+            dapr.io/log-level: "info"
+          extraEnv:
+            # Dapr HTTP/gRPC endpoints for notebook code
+            DAPR_HTTP_ENDPOINT: "http://localhost:3500"
+            DAPR_GRPC_ENDPOINT: "localhost:50001"
+          lifecycleHooks:
+            postStart:
+              exec:
+                command:
+                  - /bin/bash
+                  - -c
+                  - |
+                    set -e
+                    LOCAL_BIN="$HOME/.local/bin"
+                    mkdir -p "$LOCAL_BIN"
+
+                    # Install Claude Code CLI (if not already installed)
+                    if [ ! -f "$LOCAL_BIN/claude" ]; then
+                      curl -fsSL https://claude.ai/install.sh | bash
+                    fi
+
+                    # Install kubectl (if not already installed)
+                    if [ ! -f "$LOCAL_BIN/kubectl" ]; then
+                      KUBECTL_VERSION=$(curl -sL https://dl.k8s.io/release/stable.txt)
+                      curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+                      chmod +x kubectl && mv kubectl "$LOCAL_BIN/"
+                    fi
+
+                    # Install argocd CLI (if not already installed)
+                    if [ ! -f "$LOCAL_BIN/argocd" ]; then
+                      ARGOCD_VERSION=$(curl -sL https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep tag_name | cut -d '"' -f 4)
+                      curl -sLO "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+                      chmod +x argocd-linux-amd64 && mv argocd-linux-amd64 "$LOCAL_BIN/argocd"
+                    fi
+
+                    # Install dapr CLI (if not already installed)
+                    if [ ! -f "$LOCAL_BIN/dapr" ]; then
+                      curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | DAPR_INSTALL_DIR="$LOCAL_BIN" bash -s -- --no-sudo
+                    fi
+
+                    # Add to PATH in profile and bashrc for all shells
+                    grep -q 'HOME/.local/bin' ~/.profile 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
+                    grep -q 'HOME/.local/bin' ~/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+        scheduling:
+          userScheduler:
+            enabled: false
+        cull:
+          enabled: true
+          timeout: 3600
+          every: 300
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyterhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

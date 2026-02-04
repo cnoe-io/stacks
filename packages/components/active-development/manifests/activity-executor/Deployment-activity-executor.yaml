@@ -14,6 +14,7 @@ spec:
     metadata:
       labels:
         app: activity-executor
+        azure.workload.identity/use: "true"
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "activity-executor"
@@ -21,6 +22,7 @@ spec:
         dapr.io/app-protocol: "http"
         dapr.io/enable-api-logging: "true"
     spec:
+      serviceAccountName: activity-executor
       containers:
         - name: activity-executor
           image: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor:latest
@@ -38,6 +40,7 @@ spec:
                 name: activity-executor-flipt-config
             - secretRef:
                 name: activity-executor-secrets
+                optional: true
           resources:
             requests:
               memory: "256Mi"

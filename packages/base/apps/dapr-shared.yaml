@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    # After dapr-runtime (-120), before dapr-components (-90)
+    argocd.argoproj.io/sync-wave: "-110"
+  name: dapr-shared
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-sandbox
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://dapr-shared/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

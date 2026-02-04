@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vibe-sandbox-shared
+  namespace: dapr-sandbox
+  labels:
+    app.kubernetes.io/name: vibe-sandbox-shared
+    app.kubernetes.io/part-of: dapr-shared
+    app.kubernetes.io/version: 1.16.6
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibe-sandbox-shared
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibe-sandbox-shared
+        app.kubernetes.io/part-of: dapr-shared
+        app.kubernetes.io/version: 1.16.6
+        # Enable Azure Workload Identity token projection
+        azure.workload.identity/use: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: /metrics
+    spec:
+      serviceAccountName: dapr-shared
+      containers:
+        - name: daprd
+          image: ghcr.io/dapr/daprd:1.16.6
+          imagePullPolicy: IfNotPresent
+          args:
+            - --mode
+            - kubernetes
+            - --app-id
+            - vibe-sandbox
+            - --app-port
+            - "8080"
+            - --app-protocol
+            - http
+            - --dapr-http-port
+            - "3500"
+            - --dapr-grpc-port
+            - "50001"
+            - --dapr-internal-grpc-port
+            - "50002"
+            - --log-level
+            - info
+            - --log-as-json
+            - --enable-metrics
+            - --metrics-port
+            - "9090"
+            - --placement-host-address
+            - dapr-placement-server.dapr-system.svc.cluster.local:50005
+            - --sentry-address
+            - dapr-sentry.dapr-system.svc.cluster.local:443
+            - --control-plane-address
+            - dapr-api.dapr-system.svc.cluster.local:443
+            - --config
+            - dapr-shared-config
+          ports:
+            - name: http
+              containerPort: 3500
+              protocol: TCP
+            - name: grpc
+              containerPort: 50001
+              protocol: TCP
+            - name: internal-grpc
+              containerPort: 50002
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: DAPR_TRUST_ANCHORS_FILE
+              value: /var/run/secrets/dapr.io/tls/ca.crt
+            - name: DAPR_CONTROL_PLANE_TRUST_DOMAIN
+              value: cluster.local
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: dapr-trust-bundle
+              mountPath: /var/run/secrets/dapr.io/tls
+              readOnly: true
+            - name: dapr-identity-token
+              mountPath: /var/run/secrets/dapr.io/sentrytoken
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /v1.0/healthz
+              port: 3500
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /v1.0/healthz
+              port: 3500
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: dapr-trust-bundle
+          configMap:
+            name: dapr-trust-bundle
+        - name: dapr-identity-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: spiffe://cluster.local/ns/dapr-system/dapr-sentry
+                  expirationSeconds: 600
+                  path: token
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule

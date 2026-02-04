@@ -319,13 +319,10 @@ spec:
                 patch_client_config "argo-workflows" "/var/config/argo-client-payload.json"
                 patch_client_config "backstage" "/var/config/backstage-client-payload.json"
                 patch_client_config "flipt" "/var/config/flipt-client-payload.json"
+                patch_client_config "jupyterhub" "/var/config/jupyterhub-client-payload.json"
 
-                # Check if secret already exists
-                if ./kubectl -n keycloak get secret keycloak-clients &>/dev/null; then
-                  echo "Realm and secret already exist; all resources reconciled"
-                  exit 0
-                fi
-                echo "Realm exists but secret missing, recreating secret..."
+                # Always update the secret to ensure all clients are included
+                echo "Updating keycloak-clients secret with all client credentials..."
 
                 # Get existing client secrets from Keycloak
                 KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
@@ -359,6 +356,14 @@ spec:
                   -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                   -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
 
+                # Get JupyterHub client secret
+                CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "jupyterhub") | .id')
+                JUPYTERHUB_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
                 # Get ArgoCD session token
                 ARGOCD_PASSWORD=$(./kubectl -n argocd get secret argocd-initial-admin-secret -o go-template='{{.data.password | base64decode }}')
                 ARGOCD_SESSION_TOKEN=$(curl -k -sS http://argocd-server.argocd.svc.cluster.local:443/api/v1/session -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"${ARGOCD_PASSWORD}\"}" | jq -r .token)
@@ -379,6 +384,8 @@ spec:
                 BACKSTAGE_CLIENT_ID: backstage
                 FLIPT_CLIENT_SECRET: ${FLIPT_CLIENT_SECRET}
                 FLIPT_CLIENT_ID: flipt
+                JUPYTERHUB_CLIENT_SECRET: ${JUPYTERHUB_CLIENT_SECRET}
+                JUPYTERHUB_CLIENT_ID: jupyterhub
               " > /tmp/secret.yaml
 
                 ./kubectl apply -f /tmp/secret.yaml
@@ -500,6 +507,23 @@ spec:
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                 -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
 
+              echo "creating JupyterHub client"
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X POST --data @/var/config/jupyterhub-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/cnoe/clients
+
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients | jq -e -r  '.[] | select(.clientId == "jupyterhub") | .id')
+
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/cnoe/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+              curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              JUPYTERHUB_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/cnoe/clients/${CLIENT_ID} | jq -e -r '.secret')
+
               # Configure GitHub IdP (if credentials are available)
               ensure_github_idp
 
@@ -522,6 +546,8 @@ spec:
                 BACKSTAGE_CLIENT_ID: backstage
                 FLIPT_CLIENT_SECRET: ${FLIPT_CLIENT_SECRET}
                 FLIPT_CLIENT_ID: flipt
+                JUPYTERHUB_CLIENT_SECRET: ${JUPYTERHUB_CLIENT_SECRET}
+                JUPYTERHUB_CLIENT_ID: jupyterhub
               " > /tmp/secret.yaml
 
               ./kubectl apply -f /tmp/secret.yaml

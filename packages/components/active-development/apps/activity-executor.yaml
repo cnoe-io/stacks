@@ -30,4 +30,5 @@ spec:
       prune: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true

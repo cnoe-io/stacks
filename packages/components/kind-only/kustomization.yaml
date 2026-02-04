@@ -34,9 +34,11 @@ resources:
   - apps/flipt.yaml
   - apps/gitea-actions-runner.yaml
   - apps/idpbuilder-gitea.yaml
+  - apps/knative-serving.yaml
   - apps/nocodb-connections.yaml
   - apps/nocodb-external-secrets.yaml
   - apps/nocodb-postgres.yaml
   - apps/nocodb-secrets.yaml
   - apps/nocodb.yaml
+  - apps/openfunction.yaml
   - apps/spark-operator.yaml

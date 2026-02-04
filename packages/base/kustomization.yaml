@@ -35,6 +35,7 @@ resources:
   - apps/dapr-components.yaml
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
+  - apps/dapr-shared.yaml
   - apps/dapr-agents-demo.yaml
   # NOTE: planner-agent app moved to components/active-development
   - apps/default-secretstore.yaml
@@ -54,9 +55,11 @@ resources:
   - apps/kargo-webhook-sync.yaml
   - apps/kargo.yaml
   - apps/kargo-inner-loop.yaml
+  - apps/jupyterhub.yaml
   - apps/keycloak-config.yaml
   - apps/keycloak-secrets.yaml
   - apps/keycloak.yaml
+  - apps/kubevela.yaml
   - apps/kgateway-crds.yaml
   - apps/kgateway.yaml
   - apps/kmcp.yaml

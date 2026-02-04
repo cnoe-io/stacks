@@ -1,76 +1,82 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: planner-agent-exec
-  namespace: planner-agent
+  name: planner-dapr-agent
+  namespace: ai-chatbot
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: planner-agent-exec
+      app: planner-dapr-agent
   template:
     metadata:
       labels:
-        app: planner-agent-exec
+        app: planner-dapr-agent
+        azure.workload.identity/use: "true"
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "planner-agent-exec"
-        dapr.io/app-port: "3000"
+        dapr.io/app-id: "planner-dapr-agent"
+        dapr.io/app-port: "8000"
         dapr.io/app-protocol: "http"
         dapr.io/enable-api-logging: "true"
     spec:
+      serviceAccountName: planner-dapr-agent
       containers:
-        - name: planner-agent-exec
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-sdk-agent:latest
+        - name: planner-dapr-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 3000
+            - containerPort: 8000
           env:
-            - name: PORT
-              value: "3000"
-            - name: CLAUDE_CODE_ENABLE_TASKS
-              value: "true"
+            - name: PLANNER_CWD
+              value: /app/workspace
+            - name: ANTHROPIC_MODEL
+              value: claude-sonnet-4-20250514
             # OpenTelemetry observability
-            - name: CLAUDE_CODE_ENABLE_TELEMETRY
-              value: "1"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://otel-collector.observability.svc.cluster.local:4317
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: grpc
             - name: OTEL_SERVICE_NAME
-              value: planner-agent-exec
+              value: planner-dapr-agent
+            # Sandbox configuration
+            - name: SANDBOX_TEMPLATE
+              value: "dapr-agent"
+            - name: SANDBOX_NAMESPACE
+              value: "agent-sandbox"
+            - name: SANDBOX_WORKSPACE_DIR
+              value: "/app"
           envFrom:
             - configMapRef:
-                name: planner-agent-config
+                name: planner-dapr-agent-config
             - configMapRef:
-                name: planner-agent-otel-config
+                name: ai-chatbot-otel-config
+                optional: true
             - configMapRef:
-                name: planner-agent-dapr-config
-            - secretRef:
-                name: planner-agent-secrets
+                name: ai-chatbot-dapr-config
           resources:
             requests:
               memory: "512Mi"
               cpu: "200m"
             limits:
-              memory: "4Gi"
-              cpu: "2000m"
+              memory: "2Gi"
+              cpu: "1000m"
           volumeMounts:
             - name: workspace
               mountPath: /app/workspace
           livenessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 8000
             initialDelaySeconds: 15
             periodSeconds: 15
       volumes:
         - name: workspace
-          persistentVolumeClaim:
-            claimName: planner-workspace-pvc
+          emptyDir:
+            sizeLimit: 5Gi

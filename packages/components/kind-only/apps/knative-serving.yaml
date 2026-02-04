@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    # Install early as other services depend on it
+    argocd.argoproj.io/sync-wave: "10"
+  name: knative-serving
+  namespace: argocd
+spec:
+  destination:
+    namespace: knative-serving
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://knative-serving/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

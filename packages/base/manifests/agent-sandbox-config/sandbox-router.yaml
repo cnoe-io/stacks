@@ -1,0 +1,80 @@
+# Sandbox Router Service
+# Routes traffic to ephemeral agent sandboxes in Kubernetes
+# Required for the Python agentic-sandbox client's Dev Mode
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-router-svc
+  namespace: agent-sandbox
+  labels:
+    app: sandbox-router
+spec:
+  type: ClusterIP
+  selector:
+    app: sandbox-router
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-router
+  namespace: agent-sandbox
+  labels:
+    app: sandbox-router
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sandbox-router
+  template:
+    metadata:
+      labels:
+        app: sandbox-router
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: sandbox-router
+      containers:
+      - name: router
+        # Using the staging image from k8s-staging-images registry
+        image: us-central1-docker.pkg.dev/k8s-staging-images/agent-sandbox/sandbox-router:v20251124-v0.1.0-10-ge26ddb2
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SANDBOX_NAMESPACE
+          value: "agent-sandbox"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false

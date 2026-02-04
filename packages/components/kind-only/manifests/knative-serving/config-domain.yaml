@@ -1,0 +1,20 @@
+# Knative Domain Configuration
+#
+# Configures the default domain for Knative Services.
+# For local Kind clusters, we use sslip.io which provides
+# wildcard DNS resolution based on IP addresses.
+#
+# Example: activity-executor.workflow-builder.127.0.0.1.sslip.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-domain
+  namespace: knative-serving
+  labels:
+    app.kubernetes.io/name: knative-serving
+    app.kubernetes.io/component: config
+data:
+  # Use sslip.io for local development
+  # This enables DNS resolution without configuring /etc/hosts
+  sslip.io: ""

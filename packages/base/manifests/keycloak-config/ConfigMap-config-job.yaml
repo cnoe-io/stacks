@@ -15,6 +15,7 @@ data:
   github-idp-mapper-username.json: '{"name":"github-username-mapper","identityProviderAlias":"github","identityProviderMapper":"github-user-attribute-mapper","config":{"jsonField":"login","userAttribute":"username","syncMode":"INHERIT"}}'
   github-idp-mapper-email.json: '{"name":"github-email-mapper","identityProviderAlias":"github","identityProviderMapper":"github-user-attribute-mapper","config":{"jsonField":"email","userAttribute":"email","syncMode":"INHERIT"}}'
   github-idp-mapper-admin-group.json: '{"name":"github-admin-group-mapper","identityProviderAlias":"github","identityProviderMapper":"hardcoded-group-idp-mapper","config":{"syncMode":"INHERIT","group":"admin"}}'
+  jupyterhub-client-payload.json: '{"alwaysDisplayInConsole":false,"attributes":{"oauth2.device.authorization.grant.enabled":false,"oidc.ciba.grant.enabled":false,"saml_idp_initiated_sso_url_name":""},"authorizationServicesEnabled":false,"baseUrl":"","clientId":"jupyterhub","description":"Used for JupyterHub SSO","directAccessGrantsEnabled":true,"frontchannelLogout":true,"implicitFlowEnabled":false,"name":"JupyterHub Client","protocol":"openid-connect","publicClient":false,"redirectUris":["https://jupyterhub.cnoe.localtest.me:8443/hub/oauth_callback","https://jupyterhub.cnoe.localtest.me/hub/oauth_callback"],"rootUrl":"","serviceAccountsEnabled":false,"standardFlowEnabled":true,"webOrigins":["https://jupyterhub.cnoe.localtest.me:8443","https://jupyterhub.cnoe.localtest.me"]}'
 kind: ConfigMap
 metadata:
   name: config-job

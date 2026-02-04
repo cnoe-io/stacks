@@ -44,6 +44,12 @@ spec:
                   fieldPath: metadata.name
             - name: HOME
               value: /workspace
+            # Optional: Shared Dapr endpoints (dapr-shared DaemonSet in dapr-sandbox namespace)
+            # Sandboxes can use these endpoints to access Dapr APIs if needed
+            - name: DAPR_HTTP_ENDPOINT
+              value: "http://vibe-sandbox-dapr.dapr-sandbox.svc.cluster.local:3500"
+            - name: DAPR_GRPC_ENDPOINT
+              value: "dns:vibe-sandbox-dapr.dapr-sandbox.svc.cluster.local:50001"
           volumeMounts:
             - name: workspace
               mountPath: /workspace

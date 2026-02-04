@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: planner-agent
-  labels:
-    app.kubernetes.io/name: planner-agent
-    app.kubernetes.io/component: planning
-    app.kubernetes.io/version: "1.0.0"
-    app.kubernetes.io/managed-by: kustomize

@@ -395,6 +395,10 @@ setup_federated_credentials() {
         "kargo:acr-sa"                         # Kargo ACR access
         "ai-chatbot:ai-chatbot"                # AI chatbot Dapr secrets/config access
         "planner-agent:planner-dapr-agent"     # Planner agent Dapr secrets/config access
+        "workflow-orchestrator:workflow-orchestrator"  # Workflow orchestrator Dapr secrets/config access
+        "workflow-builder:workflow-orchestrator"       # Workflow orchestrator in workflow-builder namespace
+        "activity-executor:activity-executor"  # Activity executor Dapr secrets/config access
+        "dapr-sandbox:dapr-shared"             # Shared Dapr instances for agent sandboxes
     )
 
     # Remove trailing slash from issuer if present

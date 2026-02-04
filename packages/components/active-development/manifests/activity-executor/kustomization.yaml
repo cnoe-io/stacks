@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - Namespace-activity-executor.yaml
   - ServiceAccount-activity-executor.yaml
+  - ServiceAccount-default.yaml
   - ConfigMap-activity-executor-config.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-dapr-config.yaml
@@ -12,6 +13,8 @@ resources:
   # Dapr Components for Azure integration
   - Component-secretstore-azure-keyvault.yaml
   - Component-azureappconfig.yaml
-  # Deployment and Service
-  - Deployment-activity-executor.yaml
-  - Service-activity-executor.yaml
+  # OpenFunction (replaces Deployment + Service)
+  - Function-activity-executor.yaml
+  # Legacy Deployment and Service (replaced by OpenFunction)
+  # - Deployment-activity-executor.yaml
+  # - Service-activity-executor.yaml
