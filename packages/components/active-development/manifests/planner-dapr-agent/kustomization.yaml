@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: workflow-builder
+
+resources:
+- ServiceAccount-planner-dapr-agent.yaml
+- ConfigMap-planner-dapr-agent-config.yaml
+- Deployment-planner-dapr-agent.yaml
+- Service-planner-dapr-agent.yaml
+
+images:
+- name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
+  newTag: latest

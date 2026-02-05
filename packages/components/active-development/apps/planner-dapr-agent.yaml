@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: planner-dapr-agent
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
+    targetRevision: HEAD
+    path: packages/components/active-development/manifests/planner-dapr-agent
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

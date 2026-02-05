@@ -1,0 +1,69 @@
+# Planner Dapr Agent - OpenAI Agents SDK for AI planning and execution
+# Features: Clone repository, AI-powered planning, approval gates, automated execution
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planner-dapr-agent
+  namespace: workflow-builder
+  labels:
+    app: planner-dapr-agent
+    app.kubernetes.io/runtime: python
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: planner-dapr-agent
+  template:
+    metadata:
+      labels:
+        app: planner-dapr-agent
+        azure.workload.identity/use: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "planner-dapr-agent"
+        dapr.io/app-port: "8000"
+        dapr.io/app-protocol: "http"
+        dapr.io/config: "workflow-builder-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      serviceAccountName: planner-dapr-agent
+      containers:
+        - name: planner-dapr-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: planner-dapr-agent-config
+          env:
+            - name: PORT
+              value: "8000"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: workspace
+              mountPath: /app/workspace
+          # Probes check Dapr sidecar since app doesn't have dedicated health endpoint
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: workspace
+          emptyDir: {}

@@ -401,6 +401,8 @@ setup_federated_credentials() {
         "workflow-builder:function-runner"     # Function runner in workflow-builder namespace
         "workflow-builder:function-router"     # Function router in workflow-builder namespace
         "workflow-builder:workflow-functions"  # Shared SA for all OpenFunctions (fn-openai, fn-slack, etc.)
+        "workflow-builder:planner-sdk-agent"   # Planner SDK agent for Claude Code execution
+        "workflow-builder:planner-dapr-agent"  # Planner Dapr agent for OpenAI Agents SDK execution
         "activity-executor:activity-executor"  # Activity executor Dapr secrets/config access (legacy namespace)
         "dapr-sandbox:dapr-shared"             # Shared Dapr instances for agent sandboxes
     )

@@ -7,6 +7,13 @@ metadata:
     app.kubernetes.io/name: pubsub
     app.kubernetes.io/component: pubsub
     app.kubernetes.io/part-of: workflow-orchestrator
+# Scoping: Allow orchestrators, function-router, and planner agents for events
+scopes:
+  - workflow-orchestrator
+  - planner-orchestrator
+  - planner-sdk-agent
+  - planner-dapr-agent
+  - function-router
 spec:
   type: pubsub.jetstream
   version: v1
