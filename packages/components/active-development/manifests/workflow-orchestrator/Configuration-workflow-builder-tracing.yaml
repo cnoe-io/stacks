@@ -1,0 +1,25 @@
+# Dapr Configuration for workflow-builder namespace
+# Enables distributed tracing via OTEL collector to Tempo/Jaeger
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: workflow-builder-tracing
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder-tracing
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  tracing:
+    samplingRate: "1"
+    otel:
+      endpointAddress: otel-collector.observability.svc.cluster.local:4317
+      isSecure: false
+      protocol: grpc
+  metrics:
+    enabled: true
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false
+      omitHealthChecks: true

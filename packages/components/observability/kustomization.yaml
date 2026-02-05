@@ -36,3 +36,6 @@ resources:
 
   # Redis management UI
   - apps/redisinsight.yaml
+
+  # Arize Phoenix LLM observability
+  - apps/arize-phoenix.yaml

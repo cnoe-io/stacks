@@ -50,6 +50,10 @@ data:
         endpoint: http://langfuse.observability.svc.cluster.local:3000/api/public/otel
         headers:
           Authorization: "${env:LANGFUSE_AUTH}"
+      otlp/phoenix:
+        endpoint: arize-phoenix.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
 
     extensions:
       health_check:
@@ -73,7 +77,7 @@ data:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, batch, resource]
-          exporters: [otlp/tempo, otlphttp/langfuse]
+          exporters: [otlp/tempo, otlphttp/langfuse, otlp/phoenix]
       telemetry:
         logs:
           level: warn

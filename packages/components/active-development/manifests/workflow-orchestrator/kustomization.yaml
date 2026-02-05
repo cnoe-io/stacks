@@ -8,6 +8,7 @@ resources:
 - ConfigMap-workflow-orchestrator-config.yaml
 - ConfigMap-otel-config.yaml
 - ConfigMap-dapr-config.yaml
+- Configuration-workflow-builder-tracing.yaml
 - Component-statestore.yaml
 - Component-pubsub.yaml
 - Component-azureappconfig.yaml

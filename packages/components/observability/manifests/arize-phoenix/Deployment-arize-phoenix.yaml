@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: arize-phoenix
+  name: arize-phoenix
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arize-phoenix
+  template:
+    metadata:
+      labels:
+        app: arize-phoenix
+    spec:
+      containers:
+        - name: phoenix
+          image: arizephoenix/phoenix:latest
+          ports:
+            - containerPort: 6006
+              name: http
+              protocol: TCP
+            - containerPort: 4317
+              name: otlp-grpc
+              protocol: TCP
+            - containerPort: 4318
+              name: otlp-http
+              protocol: TCP
+          env:
+            - name: PHOENIX_WORKING_DIR
+              value: /data
+            - name: PHOENIX_ENABLE_PROMETHEUS
+              value: "true"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /data
+              name: phoenix-data
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 6006
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 6006
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: phoenix-data
+          persistentVolumeClaim:
+            claimName: arize-phoenix-data

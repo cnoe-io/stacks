@@ -20,6 +20,7 @@ spec:
         dapr.io/app-id: "function-router"
         dapr.io/app-port: "8080"
         dapr.io/app-protocol: "http"
+        dapr.io/config: "workflow-builder-tracing"
         dapr.io/enable-api-logging: "true"
     spec:
       serviceAccountName: function-router
