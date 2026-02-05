@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-deployment
+  namespace: knative-serving
+  labels:
+    app.kubernetes.io/component: knative-serving
+    app.kubernetes.io/part-of: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+data:
+  # Skip tag resolution for local registries (including Gitea)
+  # This prevents Knative from trying to resolve tags to digests for these registries,
+  # which would fail due to self-signed certificates
+  registries-skipping-tag-resolving: "kind.local,ko.local,dev.local,gitea.cnoe.localtest.me:8443"
