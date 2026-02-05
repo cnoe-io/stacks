@@ -15,3 +15,5 @@ resources:
   - Ingress-workflow-builder.yaml
   - Job-db-seed.yaml
   - Job-seed-functions.yaml
+  # Dapr components for workflow orchestration
+  - Component-workflowstatestore.yaml

@@ -23,9 +23,9 @@ spec:
     # Key prefix to isolate orchestrator state
     - name: keyPrefix
       value: orchestrator
-    # Enable actor state store for workflow actors
+    # Actor state store disabled - workflowstatestore is used for Dapr workflows
     - name: actorStateStore
-      value: "true"
+      value: "false"
     # Connection pool settings
     - name: redisMaxRetries
       value: "3"
