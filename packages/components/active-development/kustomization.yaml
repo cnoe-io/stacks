@@ -28,7 +28,6 @@ resources:
   - apps/activity-executor.yaml
   - apps/ai-chatbot.yaml
   - apps/flight-booking-app.yaml
-  - apps/function-runner.yaml
   - apps/function-router.yaml
   - apps/vibe-coding-platform.yaml
   - apps/workflow-builder.yaml
@@ -60,8 +59,6 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-runner
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-router
     newTag: latest
