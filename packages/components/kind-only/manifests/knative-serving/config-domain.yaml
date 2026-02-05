@@ -4,7 +4,7 @@
 # For local Kind clusters, we use sslip.io which provides
 # wildcard DNS resolution based on IP addresses.
 #
-# Example: activity-executor.workflow-builder.127.0.0.1.sslip.io
+# Example: fn-openai.workflow-builder.127.0.0.1.sslip.io
 ---
 apiVersion: v1
 kind: ConfigMap

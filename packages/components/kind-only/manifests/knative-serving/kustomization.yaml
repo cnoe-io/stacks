@@ -1,7 +1,7 @@
 # Knative Serving Installation
 #
 # Provides serverless capabilities with scale-to-zero for Kubernetes workloads.
-# Used by workflow-builder's activity-executor for on-demand activity execution.
+# Used by workflow-builder's OpenFunctions for serverless function execution.
 #
 # Components installed:
 # - Knative Serving CRDs

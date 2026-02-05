@@ -68,14 +68,6 @@ images:
     tagPattern: ".*"
     promotionType: kustomize
 
-  - name: activity-executor
-    argocdApp: activity-executor
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: Lexical
-    tagPattern: ".*"
-    promotionType: kustomize
-
   - name: flight-booking-app
     argocdApp: flight-booking-app
     registry: gitea.cnoe.localtest.me:8443
@@ -100,8 +92,8 @@ images:
     tagPattern: ".*"
     promotionType: kustomize
 
-  - name: function-runner
-    argocdApp: function-runner
+  - name: function-router
+    argocdApp: function-router
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: Lexical

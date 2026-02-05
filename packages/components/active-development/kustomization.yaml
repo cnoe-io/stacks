@@ -25,7 +25,6 @@ kind: Component
 
 resources:
   # Core workflow applications
-  - apps/activity-executor.yaml
   - apps/ai-chatbot.yaml
   - apps/flight-booking-app.yaml
   - apps/function-router.yaml
@@ -54,8 +53,6 @@ resources:
 # NOTE: Since manifests are copied directly (not via kustomize), tags are
 # hardcoded in Deployment files. This block documents which images are used.
 images:
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/activity-executor
-    newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/flight-booking-app
