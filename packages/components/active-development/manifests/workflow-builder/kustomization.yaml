@@ -14,3 +14,4 @@ resources:
   - Service-workflow-builder.yaml
   - Ingress-workflow-builder.yaml
   - Job-db-seed.yaml
+  - Job-seed-functions.yaml

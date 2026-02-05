@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  name: seed-functions
+  namespace: workflow-builder
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: docker.io/library/postgres:15.3-alpine3.18
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql -p 5432 -U postgres; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+              # Wait a bit more to ensure schema is ready (after migrations)
+              sleep 5
+      containers:
+        - name: seed-functions
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding functions table..."
+              cd /app
+              # Run the TypeScript seed script
+              node --loader ts-node/esm scripts/seed-functions.ts || \
+              pnpm tsx scripts/seed-functions.ts || \
+              node scripts/seed-functions.js
+              echo "Functions seeded successfully"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
