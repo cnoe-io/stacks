@@ -1,0 +1,62 @@
+apiVersion: core.openfunction.io/v1beta2
+kind: Function
+metadata:
+  name: fn-linear
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: fn-linear
+    app.kubernetes.io/component: openfunction
+    app.kubernetes.io/part-of: workflow-builder
+    workflow-builder.io/plugin: linear
+spec:
+  image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-linear:latest
+  imageCredentials:
+    name: gitea-registry-creds
+  serving:
+    triggers:
+      http:
+        port: 8080
+    annotations:
+      openfunction.io/enable-dapr: "true"
+      openfunction.io/dapr-service-mode: "standalone"
+      dapr.io/app-id: "fn-linear"
+      dapr.io/app-port: "8080"
+      dapr.io/app-protocol: "http"
+      dapr.io/enable-api-logging: "true"
+    labels:
+      azure.workload.identity/use: "true"
+    scaleOptions:
+      minReplicas: 0
+      maxReplicas: 10
+      keda:
+        scaledObject:
+          cooldownPeriod: 60
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      serviceAccountName: workflow-functions

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: function-registry
+  namespace: workflow-builder
+data:
+  # Function slug → target service mapping
+  # type: "openfunction" = scale-to-zero OpenFunction (URL resolved dynamically via K8s API)
+  # type: "builtin" = always-on function-runner service (Dapr service invocation)
+  functions.json: |
+    {
+      "openai/generate-text": { "appId": "fn-openai", "type": "openfunction" },
+      "openai/generate-image": { "appId": "fn-openai", "type": "openfunction" },
+      "slack/send-message": { "appId": "fn-slack", "type": "openfunction" },
+      "github/create-issue": { "appId": "fn-github", "type": "openfunction" },
+      "github/list-issues": { "appId": "fn-github", "type": "openfunction" },
+      "github/get-issue": { "appId": "fn-github", "type": "openfunction" },
+      "resend/send-email": { "appId": "fn-resend", "type": "openfunction" },
+      "stripe/create-customer": { "appId": "fn-stripe", "type": "openfunction" },
+      "stripe/get-customer": { "appId": "fn-stripe", "type": "openfunction" },
+      "linear/create-ticket": { "appId": "fn-linear", "type": "openfunction" },
+      "linear/find-issues": { "appId": "fn-linear", "type": "openfunction" },
+      "perplexity/search": { "appId": "fn-perplexity", "type": "openfunction" },
+      "perplexity/ask": { "appId": "fn-perplexity", "type": "openfunction" },
+      "firecrawl/scrape": { "appId": "fn-firecrawl", "type": "openfunction" },
+      "firecrawl/search": { "appId": "fn-firecrawl", "type": "openfunction" },
+      "_default": { "appId": "function-runner", "type": "builtin" }
+    }

@@ -1,0 +1,37 @@
+# Job to patch Gateway API CRDs to add v1alpha2 version
+# Required for OpenFunction v1.2.0 compatibility
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-api-v1alpha2-patch
+  namespace: projectcontour
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      serviceAccountName: gateway-api-crd-patcher
+      restartPolicy: OnFailure
+      containers:
+        - name: patch
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Patching Gateway API CRDs to add v1alpha2 version for OpenFunction compatibility..."
+
+              # Patch gateways CRD
+              kubectl patch crd gateways.gateway.networking.k8s.io --type=json \
+                -p='[{"op": "add", "path": "/spec/versions/-", "value": {"name": "v1alpha2", "served": true, "storage": false, "deprecated": true, "schema": {"openAPIV3Schema": {"type": "object", "x-kubernetes-preserve-unknown-fields": true}}}}]' \
+                2>/dev/null || echo "gateways CRD already has v1alpha2 or patch failed"
+
+              # Patch httproutes CRD
+              kubectl patch crd httproutes.gateway.networking.k8s.io --type=json \
+                -p='[{"op": "add", "path": "/spec/versions/-", "value": {"name": "v1alpha2", "served": true, "storage": false, "deprecated": true, "schema": {"openAPIV3Schema": {"type": "object", "x-kubernetes-preserve-unknown-fields": true}}}}]' \
+                2>/dev/null || echo "httproutes CRD already has v1alpha2 or patch failed"
+
+              echo "Gateway API CRD patching complete"

@@ -1,0 +1,8 @@
+# Contour Gateway Provisioner
+# Provides Kubernetes Gateway API implementation for OpenFunction
+# Note: This includes Gateway API CRDs - may conflict with existing installations
+resources:
+  - contour-gateway-provisioner.yaml
+  - GatewayClass-contour.yaml
+  - RBAC-crd-patcher.yaml
+  - Job-gateway-api-patch.yaml

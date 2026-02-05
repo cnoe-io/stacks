@@ -1,0 +1,8 @@
+# Contour GatewayClass for Kubernetes Gateway API
+# This is OpenFunction's recommended Gateway implementation
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: contour
+spec:
+  controllerName: projectcontour.io/gateway-controller

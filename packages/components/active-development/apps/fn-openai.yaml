@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fn-openai
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "56"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:fn-openai-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://fn-openai/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  # Ignore OpenFunction-managed fields
+  ignoreDifferences:
+    - group: core.openfunction.io
+      kind: Function
+      jsonPointers:
+        - /spec/image
+        - /status
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true

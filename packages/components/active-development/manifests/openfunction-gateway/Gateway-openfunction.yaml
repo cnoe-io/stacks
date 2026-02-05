@@ -1,0 +1,43 @@
+# OpenFunction Gateway
+# Creates internal and external listeners for sync function access
+# This enables the internal service address: {{.Name}}.{{.Namespace}}.svc.cluster.local
+apiVersion: networking.openfunction.io/v1alpha1
+kind: Gateway
+metadata:
+  name: openfunction
+  namespace: openfunction
+spec:
+  # Domain for external access
+  domain: ofn.io
+  # Internal cluster domain
+  clusterDomain: cluster.local
+  # Template for generating external hostnames
+  hostTemplate: "{{.Name}}.{{.Namespace}}.{{.Domain}}"
+  # Template for path-based routing
+  pathTemplate: "{{.Namespace}}/{{.Name}}"
+  # Label key for managing HTTPRoutes
+  httpRouteLabelKey: "app.kubernetes.io/managed-by"
+  # Create the underlying Kubernetes Gateway automatically
+  # Using Contour - OpenFunction's recommended Gateway implementation
+  gatewayDef:
+    namespace: openfunction
+    gatewayClassName: contour
+  # Gateway listeners for internal and external access
+  gatewaySpec:
+    listeners:
+      # Internal listener for cluster-local access (required for internal service address)
+      - name: ofn-http-internal
+        hostname: "*.cluster.local"
+        protocol: HTTP
+        port: 80
+        allowedRoutes:
+          namespaces:
+            from: All
+      # External listener for domain-based access
+      - name: ofn-http-external
+        hostname: "*.ofn.io"
+        protocol: HTTP
+        port: 80
+        allowedRoutes:
+          namespaces:
+            from: All

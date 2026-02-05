@@ -1,0 +1,4 @@
+# OpenFunction Gateway configuration
+# Deploys to the openfunction namespace (namespace set in manifest)
+resources:
+  - Gateway-openfunction.yaml

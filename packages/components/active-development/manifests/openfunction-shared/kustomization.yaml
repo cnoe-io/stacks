@@ -1,0 +1,5 @@
+namespace: workflow-builder
+
+resources:
+  - ServiceAccount-workflow-functions.yaml
+  - Secret-gitea-registry-creds.yaml

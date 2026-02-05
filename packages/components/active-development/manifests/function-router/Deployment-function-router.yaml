@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: function-router
+  namespace: workflow-builder
+  labels:
+    app: function-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: function-router
+  template:
+    metadata:
+      labels:
+        app: function-router
+        azure.workload.identity/use: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "function-router"
+        dapr.io/app-port: "8080"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      serviceAccountName: function-router
+      containers:
+        - name: function-router
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/function-router:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: function-router-config
+            - configMapRef:
+                name: function-router-dapr-config
+            - secretRef:
+                name: function-router-secrets
+                optional: true
+          volumeMounts:
+            - name: function-registry
+              mountPath: /config
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: function-registry
+          configMap:
+            name: function-registry

@@ -1,0 +1,4 @@
+namespace: workflow-builder
+
+resources:
+  - Function-fn-resend.yaml

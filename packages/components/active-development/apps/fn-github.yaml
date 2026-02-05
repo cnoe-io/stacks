@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fn-github
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "56"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:fn-github-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://fn-github/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  ignoreDifferences:
+    - group: core.openfunction.io
+      kind: Function
+      jsonPointers:
+        - /spec/image
+        - /status
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
