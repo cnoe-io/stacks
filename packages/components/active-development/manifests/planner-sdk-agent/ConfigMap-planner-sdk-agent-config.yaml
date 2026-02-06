@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: planner-sdk-agent-config
+  namespace: workflow-builder
+  labels:
+    app: planner-sdk-agent
+data:
+  # Server configuration
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  # Dapr configuration
+  DAPR_HTTP_PORT: "3500"
+  # Pub/Sub configuration for event streaming
+  PUBSUB_NAME: "pubsub"
+  PUBSUB_TOPIC: "workflow.stream"
+  # Claude Code configuration
+  CLAUDE_CODE_ENABLE_TASKS: "true"
+  CLAUDE_CODE_SKIP_ONBOARDING: "true"

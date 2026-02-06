@@ -30,6 +30,14 @@ spec:
     automated:
       selfHeal: true
       prune: true
+    # Retry failed syncs to handle transient failures during cluster creation
+    # Without this, a failed sync leaves the app in OutOfSync state permanently
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true

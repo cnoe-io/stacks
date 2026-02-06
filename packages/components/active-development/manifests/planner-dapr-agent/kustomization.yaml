@@ -5,7 +5,7 @@ namespace: workflow-builder
 
 resources:
 - ServiceAccount-planner-dapr-agent.yaml
-- ConfigMap-planner-dapr-agent-config.yaml
+- Configuration-planner-dapr-agent-config.yaml
 - Deployment-planner-dapr-agent.yaml
 - Service-planner-dapr-agent.yaml
 

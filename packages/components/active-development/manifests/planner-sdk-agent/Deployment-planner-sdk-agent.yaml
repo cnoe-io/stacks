@@ -1,0 +1,77 @@
+# Planner SDK Agent - Claude Code SDK for AI planning and execution
+# Invoked by planner-orchestrator for plan/execute operations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planner-sdk-agent
+  namespace: workflow-builder
+  labels:
+    app: planner-sdk-agent
+    app.kubernetes.io/runtime: nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: planner-sdk-agent
+  template:
+    metadata:
+      labels:
+        app: planner-sdk-agent
+        azure.workload.identity/use: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "planner-sdk-agent"
+        dapr.io/app-port: "3000"
+        dapr.io/app-protocol: "http"
+        dapr.io/config: "workflow-builder-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      serviceAccountName: planner-sdk-agent
+      containers:
+        - name: planner-sdk-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-sdk-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: planner-sdk-agent-config
+            - secretRef:
+                name: planner-sdk-agent-secrets
+                optional: true
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: HOME
+              value: "/home/node"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: claude-tasks
+              mountPath: /home/node/.claude/tasks
+            - name: workspace
+              mountPath: /workspace
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: claude-tasks
+          emptyDir: {}
+        - name: workspace
+          emptyDir: {}

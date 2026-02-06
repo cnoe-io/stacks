@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: workflow-builder
+
+resources:
+- ServiceAccount-planner-orchestrator.yaml
+- ConfigMap-planner-orchestrator-config.yaml
+- Deployment-planner-orchestrator.yaml
+- Service-planner-orchestrator.yaml
+
+images:
+- name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-orchestrator
+  newTag: latest

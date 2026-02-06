@@ -1,0 +1,50 @@
+# Job to copy dapr-trust-bundle ConfigMap from dapr-system to dapr-sandbox
+# The DaemonSets in dapr-sandbox need this ConfigMap for mTLS trust.
+# Dapr creates it in dapr-system during install; we copy it here.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: copy-dapr-trust-bundle
+  namespace: dapr-sandbox
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: dapr-shared
+      restartPolicy: OnFailure
+      containers:
+        - name: copy-trust-bundle
+          image: bitnami/kubectl:1.31
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for dapr-trust-bundle ConfigMap in dapr-system..."
+              for i in $(seq 1 30); do
+                if kubectl get configmap dapr-trust-bundle -n dapr-system -o jsonpath='{.data.ca\.crt}' 2>/dev/null | grep -q "BEGIN CERTIFICATE"; then
+                  echo "Found dapr-trust-bundle in dapr-system"
+                  break
+                fi
+                echo "Attempt $i/30: waiting..."
+                sleep 5
+              done
+
+              # Extract the CA cert
+              CA_CRT=$(kubectl get configmap dapr-trust-bundle -n dapr-system -o jsonpath='{.data.ca\.crt}')
+              if [ -z "$CA_CRT" ]; then
+                echo "ERROR: Could not read dapr-trust-bundle from dapr-system"
+                exit 1
+              fi
+
+              # Create or update in dapr-sandbox
+              kubectl create configmap dapr-trust-bundle \
+                --namespace=dapr-sandbox \
+                --from-literal=ca.crt="$CA_CRT" \
+                --dry-run=client -o yaml | kubectl apply -f -
+
+              echo "Successfully copied dapr-trust-bundle to dapr-sandbox"

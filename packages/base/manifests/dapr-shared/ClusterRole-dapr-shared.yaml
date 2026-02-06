@@ -19,6 +19,11 @@ rules:
     resources:
       - secrets
     verbs: ["get", "list", "watch"]
+  # Access to configmaps (needed for copying dapr-trust-bundle across namespaces)
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # Access to pods for service discovery
   - apiGroups: [""]
     resources:

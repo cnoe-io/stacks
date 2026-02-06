@@ -5,13 +5,13 @@ metadata:
   name: planner-dapr-agent
   namespace: workflow-builder
   labels:
-    app: planner-dapr-agent
+    app.kubernetes.io/name: planner-dapr-agent
 spec:
-  type: ClusterIP
   selector:
-    app: planner-dapr-agent
+    app.kubernetes.io/name: planner-dapr-agent
   ports:
     - name: http
       port: 8000
       targetPort: 8000
       protocol: TCP
+  type: ClusterIP

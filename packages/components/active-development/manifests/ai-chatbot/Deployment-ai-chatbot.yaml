@@ -106,9 +106,9 @@ spec:
             - name: WORKING_DIRECTORY
               value: "/workspace"
             # Planner Agent workflow service configuration
-            # Note: planner-dapr-agent is now in ai-chatbot namespace (same namespace)
+            # planner-dapr-agent is in workflow-builder namespace (cross-namespace via Dapr)
             - name: WORKFLOW_SERVICE_URL
-              value: "http://planner-dapr-agent.ai-chatbot.svc.cluster.local:8000"
+              value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
             - name: WORKFLOW_PATTERNS_ENABLED
               value: "true"
             - name: CLAUDE_MODEL

@@ -30,17 +30,12 @@ resources:
   - Deployment-ai-chatbot.yaml
   - Service-ai-chatbot.yaml
   - Ingress-ai-chatbot.yaml
-  # Planner Dapr Agent (co-located for Dapr service invocation)
-  - ServiceAccount-planner-dapr-agent.yaml
-  - ConfigMap-planner-dapr-agent.yaml
-  - Deployment-planner-dapr-agent.yaml
-  - Service-planner-dapr-agent.yaml
+  # Note: planner-dapr-agent now lives in workflow-builder namespace
+  # ai-chatbot invokes it via Dapr cross-namespace service invocation
 
 # Image tag - using latest for active development
 images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
     newTag: latest
 
 # App-specific customizations to component resources
@@ -60,7 +55,7 @@ patches:
         path: /metadata/namespace
         value: "ai-chatbot"
 
-  # Redis statestore host and scope (shared with planner-dapr-agent)
+  # Redis statestore host and scope
   - target:
       kind: Component
       name: statestore
@@ -75,9 +70,8 @@ patches:
         path: /scopes
         value:
           - ai-chatbot
-          - planner-dapr-agent
 
-  # Redis pubsub host and scope (shared with planner-dapr-agent)
+  # Redis pubsub host and scope
   - target:
       kind: Component
       name: pubsub
@@ -92,7 +86,6 @@ patches:
         path: /scopes
         value:
           - ai-chatbot
-          - planner-dapr-agent
 
   # OTEL service name
   - target:

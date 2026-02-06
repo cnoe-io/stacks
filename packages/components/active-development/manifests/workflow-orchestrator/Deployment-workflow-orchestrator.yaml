@@ -1,3 +1,5 @@
+# Python-based Workflow Orchestrator with native child workflow support
+# KEY FEATURE: Multi-app child workflows for planner/* actions
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,6 +7,7 @@ metadata:
   namespace: workflow-builder
   labels:
     app: workflow-orchestrator
+    app.kubernetes.io/runtime: python
 spec:
   replicas: 1
   selector:
@@ -22,10 +25,14 @@ spec:
         dapr.io/app-protocol: "http"
         dapr.io/config: "workflow-builder-tracing"
         dapr.io/enable-api-logging: "true"
+        dapr.io/enable-workflow: "true"
+        dapr.io/graceful-shutdown-seconds: "60"
+        dapr.io/placement-host-address: "dapr-placement-server.dapr-system.svc.cluster.local:50005"
     spec:
       serviceAccountName: workflow-orchestrator
       containers:
         - name: workflow-orchestrator
+          # Python orchestrator with native Dapr child workflow support
           image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator:latest
           imagePullPolicy: Always
           ports:
@@ -40,6 +47,11 @@ spec:
             - secretRef:
                 name: workflow-orchestrator-secrets
                 optional: true
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           resources:
             requests:
               memory: "256Mi"

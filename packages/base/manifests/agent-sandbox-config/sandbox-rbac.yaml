@@ -39,6 +39,9 @@ subjects:
 - kind: ServiceAccount
   name: planner-dapr-agent
   namespace: ai-chatbot
+- kind: ServiceAccount
+  name: planner-dapr-agent
+  namespace: workflow-builder
 roleRef:
   kind: ClusterRole
   name: sandbox-claim-creator

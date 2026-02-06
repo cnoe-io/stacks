@@ -6,64 +6,119 @@ metadata:
   name: planner-dapr-agent
   namespace: workflow-builder
   labels:
-    app: planner-dapr-agent
+    app.kubernetes.io/name: planner-dapr-agent
+    app.kubernetes.io/component: planner
+    app.kubernetes.io/part-of: workflow-builder
     app.kubernetes.io/runtime: python
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: planner-dapr-agent
+      app.kubernetes.io/name: planner-dapr-agent
   template:
     metadata:
       labels:
-        app: planner-dapr-agent
+        app.kubernetes.io/name: planner-dapr-agent
         azure.workload.identity/use: "true"
       annotations:
+        # Enable Dapr sidecar injection
         dapr.io/enabled: "true"
         dapr.io/app-id: "planner-dapr-agent"
         dapr.io/app-port: "8000"
         dapr.io/app-protocol: "http"
-        dapr.io/config: "workflow-builder-tracing"
+        dapr.io/log-level: "info"
+        dapr.io/enable-metrics: "true"
         dapr.io/enable-api-logging: "true"
+        # Enable Dapr workflow feature
+        dapr.io/enable-workflow: "true"
+        # Dapr sidecar resource settings
+        dapr.io/sidecar-cpu-request: "100m"
+        dapr.io/sidecar-cpu-limit: "300m"
+        dapr.io/sidecar-memory-request: "250Mi"
+        dapr.io/sidecar-memory-limit: "1000Mi"
+        # Enable graceful shutdown for workflow continuity
+        dapr.io/graceful-shutdown-seconds: "60"
+        # Component scoping
+        dapr.io/config: "planner-dapr-agent-config"
+        # Placement service - needed for workflow actors
+        dapr.io/placement-host-address: "dapr-placement-server.dapr-system.svc.cluster.local:50005"
     spec:
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: planner-dapr-agent
+      automountServiceAccountToken: true
       containers:
         - name: planner-dapr-agent
           image: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8000
-          envFrom:
-            - configMapRef:
-                name: planner-dapr-agent-config
+            - name: http
+              containerPort: 8000
+              protocol: TCP
           env:
             - name: PORT
               value: "8000"
+            - name: LOG_LEVEL
+              value: "INFO"
+            # Dapr configuration
+            - name: DAPR_HOST
+              value: "localhost"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: DAPR_GRPC_PORT
+              value: "50001"
+            - name: DAPR_SECRET_STORE
+              value: "azure-keyvault"
+            # Workspace directory
+            - name: PLANNER_CWD
+              value: "/app/workspace"
+            # Agent Sandbox configuration
+            - name: SANDBOX_TEMPLATE
+              value: "dapr-agent"
+            - name: SANDBOX_NAMESPACE
+              value: "agent-sandbox"
+            - name: SANDBOX_ROUTER_URL
+              value: "http://sandbox-router-svc.agent-sandbox.svc.cluster.local:8080"
+            # Python settings
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           resources:
             requests:
-              memory: "512Mi"
               cpu: "200m"
+              memory: "512Mi"
             limits:
-              memory: "2Gi"
               cpu: "2000m"
-          volumeMounts:
-            - name: workspace
-              mountPath: /app/workspace
-          # Probes check Dapr sidecar since app doesn't have dedicated health endpoint
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 10
+              memory: "2Gi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 5
-      volumes:
-        - name: workspace
-          emptyDir: {}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30

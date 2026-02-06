@@ -1045,6 +1045,7 @@ cluster-recreate() {
 
     # Wait up to 5 minutes for cluster to be ready
     "$HEALTH_CHECK" wait 300 || true
+
     "$HEALTH_CHECK" end "stabilization"
     "$HEALTH_CHECK" end "total"
 

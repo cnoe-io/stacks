@@ -12,6 +12,10 @@ resources:
 - Component-statestore.yaml
 - Component-pubsub.yaml
 - Component-azureappconfig.yaml
+- Component-secretstore-azure-keyvault.yaml
+- Component-secretstore-kubernetes.yaml
+- Role-secret-reader.yaml
+- Subscription-planner-events.yaml
 - Deployment-workflow-orchestrator.yaml
 - Service-workflow-orchestrator.yaml
 

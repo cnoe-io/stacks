@@ -17,6 +17,9 @@ spec:
     helm:
       releaseName: activepieces
       valuesObject:
+        # Scale to 0 by default to save resources
+        replicaCount: 0
+
         # Core configuration
         activepieces:
           edition: ce
@@ -52,7 +55,7 @@ spec:
 
         # PostgreSQL configuration (using Bitnami subchart)
         postgresql:
-          enabled: true
+          enabled: false
           image:
             registry: docker.io
             repository: bitnami/postgresql
@@ -68,7 +71,7 @@ spec:
 
         # Redis configuration (using Bitnami subchart)
         redis:
-          enabled: true
+          enabled: false
           image:
             registry: docker.io
             repository: bitnami/redis
@@ -97,6 +100,12 @@ spec:
   syncPolicy:
     automated:
       prune: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
       selfHeal: true
     syncOptions:
       - CreateNamespace=true

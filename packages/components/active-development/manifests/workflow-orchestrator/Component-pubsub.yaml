@@ -42,6 +42,6 @@ spec:
     # Maximum delivery attempts
     - name: maxDeliver
       value: "3"
-    # Flow control for backpressure handling
+    # Flow control disabled (simplifies setup, not needed for low-volume orchestration events)
     - name: flowControl
-      value: "true"
+      value: "false"

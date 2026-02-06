@@ -1,0 +1,31 @@
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: planner-events-subscription
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: planner-events-subscription
+    app.kubernetes.io/component: subscription
+    app.kubernetes.io/part-of: workflow-orchestrator
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  # Pub/sub component name (must match Component name)
+  pubsubname: pubsub
+  # Topic for inter-orchestrator completion events
+  # Must match PUBSUB_TOPIC in planner-dapr-agent (default: workflow.stream)
+  topic: workflow.stream
+  # Route planner completion events to workflow-orchestrator handler
+  routes:
+    rules:
+      # Planning phase completion
+      - match: event.type == "planner_planning_completed"
+        path: /subscriptions/planner-events
+      # Execution phase completion
+      - match: event.type == "planner_execution_completed"
+        path: /subscriptions/planner-events
+    # Default route for any other workflow.events (future expansion)
+    default: /subscriptions/planner-events
+  # Scope to workflow-orchestrator only (it handles the events)
+  scopes:
+    - workflow-orchestrator

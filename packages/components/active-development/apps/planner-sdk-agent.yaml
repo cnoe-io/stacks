@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: planner-sdk-agent
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:planner-sdk-agent-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://planner-sdk-agent/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    # Retry failed syncs to handle transient failures during cluster creation
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

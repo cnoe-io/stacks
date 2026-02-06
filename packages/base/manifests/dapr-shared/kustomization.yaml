@@ -7,6 +7,8 @@ resources:
   - ServiceAccount-dapr-shared.yaml
   - ClusterRole-dapr-shared.yaml
   - ClusterRoleBinding-dapr-shared.yaml
+  # Copy dapr-trust-bundle from dapr-system (needed by DaemonSets for mTLS)
+  - Job-copy-trust-bundle.yaml
   # Dapr Configuration for shared instances
   - Configuration-dapr-shared.yaml
   # Azure integration (secrets and configuration)
