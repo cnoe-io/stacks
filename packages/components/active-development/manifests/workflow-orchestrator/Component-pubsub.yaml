@@ -10,8 +10,6 @@ metadata:
 # Scoping: Allow orchestrators, function-router, and planner agents for events
 scopes:
   - workflow-orchestrator
-  - planner-orchestrator
-  - planner-sdk-agent
   - planner-dapr-agent
   - function-router
 spec:

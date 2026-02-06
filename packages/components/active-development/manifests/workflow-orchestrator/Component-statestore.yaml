@@ -7,10 +7,9 @@ metadata:
     app.kubernetes.io/name: statestore
     app.kubernetes.io/component: statestore
     app.kubernetes.io/part-of: workflow-orchestrator
-# Scoping: Allow workflow-orchestrator and planner services for child workflows
+# Scoping: Allow workflow-orchestrator and planner services
 scopes:
   - workflow-orchestrator
-  - planner-orchestrator
   - planner-dapr-agent
 spec:
   type: state.redis
