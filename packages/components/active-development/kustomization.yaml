@@ -40,6 +40,8 @@ resources:
   - apps/openfunction-gateway.yaml
   # OpenFunction shared infrastructure (must deploy before fn-* apps)
   - apps/openfunction-shared.yaml
+  # Standalone function executors (always-on)
+  - apps/fn-activepieces.yaml
   # OpenFunction functions (scale-to-zero)
   - apps/fn-openai.yaml
   - apps/fn-slack.yaml
@@ -71,6 +73,9 @@ images:
     newTag: latest
   # Planner services
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
+    newTag: latest
+  # Standalone function executor images
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
     newTag: latest
   # OpenFunction images
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-openai

@@ -1,0 +1,139 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: azureoauthapp.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    platform.pittampalli.io/provider: azuread
+    platform.pittampalli.io/resource: oauth
+spec:
+  compositeTypeRef:
+    apiVersion: platform.pittampalli.io/v1alpha1
+    kind: AzureOAuthApp
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: azuread-application
+            base:
+              apiVersion: applications.azuread.m.upbound.io/v1beta1
+              kind: Application
+              metadata:
+                name: placeholder
+                namespace: default
+              spec:
+                forProvider:
+                  displayName: Workflow Builder
+                  signInAudience: AzureADandPersonalMicrosoftAccount
+                  api:
+                    requestedAccessTokenVersion: 2
+                  requiredResourceAccess:
+                    - resourceAppId: 00000003-0000-0000-c000-000000000000
+                      resourceAccess:
+                        - id: e1fe6dd8-ba31-4d61-89e7-88639da4683d
+                          type: Scope
+                  web:
+                    redirectUris:
+                      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: azuread-default
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-azuread-app"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.displayName
+                toFieldPath: spec.forProvider.displayName
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.signInAudience
+                toFieldPath: spec.forProvider.signInAudience
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.redirectUris
+                toFieldPath: spec.forProvider.web.redirectUris
+                policy:
+                  fromFieldPath: Optional
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.clientId
+                toFieldPath: status.clientId
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.objectId
+                toFieldPath: status.objectId
+            connectionDetails:
+              - name: clientId
+                type: FromFieldPath
+                fromFieldPath: status.atProvider.clientId
+              - name: objectId
+                type: FromFieldPath
+                fromFieldPath: status.atProvider.objectId
+
+          - name: azuread-password
+            base:
+              apiVersion: applications.azuread.m.upbound.io/v1beta1
+              kind: Password
+              metadata:
+                name: placeholder
+                namespace: default
+              spec:
+                forProvider:
+                  applicationIdSelector:
+                    matchControllerRef: true
+                  displayName: workflow-builder
+                  endDateRelative: 17520h
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: azuread-default
+                writeConnectionSecretToRef:
+                  name: placeholder
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-azuread-password"
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.writeConnectionSecretToRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-azuread-password"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.secretDisplayName
+                toFieldPath: spec.forProvider.displayName
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.secretValidityDuration
+                toFieldPath: spec.forProvider.endDateRelative
+                policy:
+                  fromFieldPath: Optional
+            connectionDetails:
+              - name: clientSecret
+                type: FromConnectionSecretKey
+                fromConnectionSecretKey: value

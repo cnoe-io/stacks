@@ -1,0 +1,104 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: googleoauthapp.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    platform.pittampalli.io/provider: gcp
+    platform.pittampalli.io/resource: oauth
+spec:
+  compositeTypeRef:
+    apiVersion: platform.pittampalli.io/v1alpha1
+    kind: GoogleOAuthApp
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: calendar-api
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                name: placeholder
+                namespace: default
+              spec:
+                forProvider:
+                  disableOnDestroy: false
+                  service: calendar-json.googleapis.com
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: gcp-default
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-calendar-api"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.projectId
+                toFieldPath: spec.forProvider.project
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.calendarApiService
+                toFieldPath: spec.forProvider.service
+                policy:
+                  fromFieldPath: Optional
+
+          - name: oauth-json-secret
+            base:
+              apiVersion: external-secrets.io/v1beta1
+              kind: ExternalSecret
+              metadata:
+                name: placeholder
+                namespace: default
+              spec:
+                refreshInterval: 1h
+                secretStoreRef:
+                  kind: ClusterSecretStore
+                  name: azure-keyvault-store
+                data:
+                  - secretKey: oauth_json
+                    remoteRef:
+                      key: placeholder
+                target:
+                  name: placeholder
+                  creationPolicy: Owner
+                  template:
+                    type: Opaque
+                    engineVersion: v2
+                    data:
+                      client_secret.json: "{{ .oauth_json }}"
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-google-oauth"
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.target.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-google-oauth"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.oauthJSONRemoteKey
+                toFieldPath: spec.data[0].remoteRef.key

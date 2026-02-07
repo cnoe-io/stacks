@@ -1,0 +1,51 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: objectstorages.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  group: platform.pittampalli.io
+  names:
+    kind: ObjectStorage
+    plural: objectstorages
+  scope: Namespaced
+  defaultCompositionRef:
+    name: objectstorage.platform.pittampalli.io
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    class:
+                      type: string
+                      enum:
+                        - standard
+                        - cold
+                        - archive
+                      default: standard
+                    size:
+                      type: string
+                      enum:
+                        - small
+                        - medium
+                        - large
+                      default: medium
+                    data:
+                      type: object
+                      additionalProperties:
+                        type: string
+            status:
+              type: object
+              properties:
+                configMapName:
+                  type: string

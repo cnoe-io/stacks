@@ -9,6 +9,7 @@ resources:
 
 components:
   - ../../components/talos-only
+  - ../../components/crossplane
   - ../../components/tailscale-serve
   - ../../components/observability
 

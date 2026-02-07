@@ -1,0 +1,8 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-family-gcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  package: xpkg.upbound.io/upbound/provider-family-gcp:v2.4.0

@@ -1,0 +1,15 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: workflow-builder-microsoft-graph
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    displayName: Workflow Builder
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+    secretDisplayName: workflow-builder
+    secretValidityDuration: 17520h

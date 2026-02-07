@@ -1,0 +1,39 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: googleoauthapps.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  group: platform.pittampalli.io
+  names:
+    kind: GoogleOAuthApp
+    plural: googleoauthapps
+  scope: Namespaced
+  defaultCompositionRef:
+    name: googleoauthapp.platform.pittampalli.io
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    projectId:
+                      type: string
+                    calendarApiService:
+                      type: string
+                      default: calendar-json.googleapis.com
+                    oauthJSONRemoteKey:
+                      type: string
+                      description: Azure Key Vault secret name containing the raw Google OAuth client JSON document.
+                  required:
+                    - projectId
+                    - oauthJSONRemoteKey

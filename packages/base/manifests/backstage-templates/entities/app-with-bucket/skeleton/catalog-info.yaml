@@ -1,12 +1,12 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ${{values.name}}-bucket
-  description: Stores things
+  name: ${{values.name}}-object-storage
+  description: Platform-managed object storage metadata
   annotations:
     argocd/app-name: ${{values.name | dump}}
 spec:
-  type: s3-bucket
+  type: object-storage
   owner: guests
 ---
 apiVersion: backstage.io/v1alpha1
@@ -29,7 +29,7 @@ spec:
   type: service
   system: ${{values.name | dump}}
   dependsOn:
-    - resource:default/${{values.name}}-bucket
+    - resource:default/${{values.name}}-object-storage
 ---
 apiVersion: backstage.io/v1alpha1
 kind: System

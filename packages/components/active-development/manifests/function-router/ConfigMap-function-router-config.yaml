@@ -9,3 +9,5 @@ data:
   PORT: "8080"
   HOST: "0.0.0.0"
   REGISTRY_FILE_PATH: "/config/functions.json"
+  WORKFLOW_BUILDER_URL: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
+  AP_API_URL: "http://activepieces.activepieces.svc.cluster.local:80"

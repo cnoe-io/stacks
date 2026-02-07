@@ -14992,6 +14992,19 @@ spec:
     storage: true
     subresources:
       status: {}
+  # Keep v1alpha2 during CRD migration from older gateway-api bundles.
+  # Without this, API server rejects apply when status.storedVersions still
+  # contains v1alpha2 from previous installs.
+  - deprecated: true
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: false
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

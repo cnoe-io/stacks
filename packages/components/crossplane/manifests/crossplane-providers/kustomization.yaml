@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - DeploymentRuntimeConfig-provider-azuread-workload-identity.yaml
+  - ExternalSecret-aws-crossplane-creds.yaml
+  - ExternalSecret-gcp-crossplane-creds.yaml
+  - Function-function-patch-and-transform.yaml
+  - Provider-provider-family-aws.yaml
+  - Provider-provider-aws-s3.yaml
+  - Provider-provider-family-azure.yaml
+  - Provider-provider-azuread.yaml
+  - Provider-provider-family-gcp.yaml
+  - Provider-provider-gcp-cloudplatform.yaml
+  - ClusterProviderConfig-aws-default.yaml
+  - ClusterProviderConfig-azuread-default.yaml
+  - ClusterProviderConfig-gcp-default.yaml

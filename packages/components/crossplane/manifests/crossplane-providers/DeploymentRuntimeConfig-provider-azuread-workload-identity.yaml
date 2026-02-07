@@ -1,0 +1,22 @@
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: provider-azuread-workload-identity
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: provider-azuread-wi
+      annotations:
+        azure.workload.identity/client-id: "61cc905a-2792-459e-a87a-baeb87ba6df6"
+        azure.workload.identity/tenant-id: "0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38"
+      labels:
+        azure.workload.identity/use: "true"
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        metadata:
+          labels:
+            azure.workload.identity/use: "true"

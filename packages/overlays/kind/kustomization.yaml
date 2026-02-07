@@ -10,6 +10,7 @@ resources:
 components:
   - ../../components/active-development
   - ../../components/kind-only
+  - ../../components/crossplane
   - ../../components/tailscale-serve
   - ../../components/observability
 

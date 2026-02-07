@@ -28,6 +28,10 @@ spec:
         defaultAction: allow
         trustDomain: "public"
         namespace: "workflow-builder"
+      - appId: planner-orchestrator
+        defaultAction: allow
+        trustDomain: "public"
+        namespace: "workflow-builder"
       - appId: ai-chatbot
         defaultAction: allow
         trustDomain: "public"

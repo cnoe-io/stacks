@@ -75,3 +75,8 @@ result
 
 # Kustomize packages build output
 packages/dist/
+
+# Local credential exports (never commit)
+client_secret_*.apps.googleusercontent.com.json
+sodium-daylight-*.json
+Workflow Builder(Microsoft Graph format).json

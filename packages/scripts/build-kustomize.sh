@@ -204,14 +204,22 @@ done
 # Note: This mirrors what kustomize does via components in overlays
 case "$ENV" in
     kind|kind-*)
-        for comp in active-development kind-only tailscale-serve observability; do
+        for comp in active-development kind-only crossplane tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue
                 copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
             done
         done
         ;;
-    talos|hub)
+    talos)
+        for comp in talos-only crossplane tailscale-serve observability; do
+            for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
+                [ -d "$dir" ] || continue
+                copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
+            done
+        done
+        ;;
+    hub)
         for comp in talos-only tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue

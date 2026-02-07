@@ -1,0 +1,61 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: objectstorage.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    platform.pittampalli.io/provider: native
+    platform.pittampalli.io/resource: objectstorage
+spec:
+  compositeTypeRef:
+    apiVersion: platform.pittampalli.io/v1alpha1
+    kind: ObjectStorage
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: object-storage-record
+            base:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: placeholder
+              data:
+                class: standard
+                size: medium
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-storage"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.class
+                toFieldPath: data.class
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.size
+                toFieldPath: data.size
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.data
+                toFieldPath: data
+                policy:
+                  fromFieldPath: Optional
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: status.configMapName

@@ -1,0 +1,59 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: azureoauthapps.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  group: platform.pittampalli.io
+  names:
+    kind: AzureOAuthApp
+    plural: azureoauthapps
+  scope: Namespaced
+  defaultCompositionRef:
+    name: azureoauthapp.platform.pittampalli.io
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    displayName:
+                      type: string
+                      default: Workflow Builder
+                    redirectUris:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: string
+                    signInAudience:
+                      type: string
+                      default: AzureADandPersonalMicrosoftAccount
+                      enum:
+                        - AzureADMyOrg
+                        - AzureADMultipleOrgs
+                        - AzureADandPersonalMicrosoftAccount
+                        - PersonalMicrosoftAccount
+                    secretDisplayName:
+                      type: string
+                      default: workflow-builder
+                    secretValidityDuration:
+                      type: string
+                      default: 17520h
+                  required:
+                    - redirectUris
+            status:
+              type: object
+              properties:
+                clientId:
+                  type: string
+                objectId:
+                  type: string

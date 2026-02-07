@@ -1,0 +1,5 @@
+namespace: workflow-builder
+
+resources:
+  - Deployment-fn-activepieces.yaml
+  - Service-fn-activepieces.yaml

@@ -17,3 +17,6 @@ resources:
   - Job-seed-functions.yaml
   # Dapr components for workflow orchestration
   - Component-workflowstatestore.yaml
+  # OAuth apps managed by Crossplane
+  - AzureOAuthApp-workflow-builder.yaml
+  - GoogleOAuthApp-workflow-builder.yaml
