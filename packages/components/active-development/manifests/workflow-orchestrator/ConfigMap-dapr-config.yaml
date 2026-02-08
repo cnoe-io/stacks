@@ -6,6 +6,6 @@ metadata:
 data:
   DAPR_HTTP_PORT: "3500"
   DAPR_GRPC_PORT: "50001"
-  # State store and pub/sub component names
-  DAPR_STATESTORE: "workflow-statestore"
-  DAPR_PUBSUB: "workflow-pubsub"
+  # State store and pub/sub component names (must match Python config.py field_map keys)
+  STATE_STORE_NAME: "workflowstatestore"
+  PUBSUB_NAME: "pubsub"

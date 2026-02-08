@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: function-router
   namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
   labels:
     app: function-router
 spec:

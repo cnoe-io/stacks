@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "26"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  name: sync-pieces
+  namespace: workflow-builder
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: docker.io/library/postgres:15.3-alpine3.18
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql -p 5432 -U postgres; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+              # Wait for schema to be ready (after migrations and seed-functions)
+              sleep 10
+      containers:
+        - name: sync-pieces
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Syncing Activepieces piece metadata from cloud API..."
+              cd /app
+              node scripts/sync-activepieces-pieces.bundle.js
+              echo "Piece metadata sync complete"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

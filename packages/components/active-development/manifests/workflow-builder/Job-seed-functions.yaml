@@ -35,10 +35,7 @@ spec:
             - |
               echo "Seeding functions table..."
               cd /app
-              # Run the TypeScript seed script
-              node --loader ts-node/esm scripts/seed-functions.ts || \
-              pnpm tsx scripts/seed-functions.ts || \
-              node scripts/seed-functions.js
+              node scripts/seed-functions.bundle.js
               echo "Functions seeded successfully"
           env:
             - name: DATABASE_URL

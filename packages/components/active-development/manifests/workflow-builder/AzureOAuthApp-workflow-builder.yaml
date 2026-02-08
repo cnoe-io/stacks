@@ -7,6 +7,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "80"
 spec:
   parameters:
+    existingAppObjectId: "32d189eb-9256-43a5-9738-a56958072f9c"
     displayName: Workflow Builder
     signInAudience: AzureADandPersonalMicrosoftAccount
     redirectUris:

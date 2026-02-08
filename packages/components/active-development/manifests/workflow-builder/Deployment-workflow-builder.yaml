@@ -47,12 +47,12 @@ spec:
               value: "https://workflow-builder.cnoe.localtest.me:8443"
             # Dapr orchestrator (legacy planner workflows)
             - name: DAPR_ORCHESTRATOR_URL
-              value: "http://workflow-orchestrator.workflow-orchestrator.svc.cluster.local:8080"
+              value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
             # Generic TypeScript workflow orchestrator for visual workflow builder
             - name: GENERIC_ORCHESTRATOR_URL
-              value: "http://workflow-orchestrator.workflow-orchestrator.svc.cluster.local:8080"
+              value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
             - name: WORKFLOW_ORCHESTRATOR_URL
-              value: "http://workflow-orchestrator.workflow-orchestrator.svc.cluster.local:8080"
+              value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
           envFrom:
             - configMapRef:
                 name: workflow-builder-otel-config

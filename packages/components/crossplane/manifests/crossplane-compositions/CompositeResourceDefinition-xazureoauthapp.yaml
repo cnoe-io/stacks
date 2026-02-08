@@ -48,6 +48,9 @@ spec:
                     secretValidityDuration:
                       type: string
                       default: 17520h
+                    existingAppObjectId:
+                      type: string
+                      description: Object ID of an existing Azure AD App Registration to adopt instead of creating a new one.
                   required:
                     - redirectUris
             status:

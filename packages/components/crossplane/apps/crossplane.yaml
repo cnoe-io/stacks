@@ -15,6 +15,10 @@ spec:
     chart: crossplane
     helm:
       releaseName: crossplane
+      valuesObject:
+        replicas: 1
+        rbacManager:
+          replicas: 1
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system

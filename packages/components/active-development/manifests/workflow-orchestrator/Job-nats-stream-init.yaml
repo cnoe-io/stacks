@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nats-stream-init
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app.kubernetes.io/name: nats-stream-init
+    app.kubernetes.io/component: init
+    app.kubernetes.io/part-of: workflow-orchestrator
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: nats-stream-init
+          image: natsio/nats-box:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Creating NATS JetStream stream ORCHESTRATOR..."
+              nats -s nats://nats.nats.svc.cluster.local:4222 stream add ORCHESTRATOR \
+                --defaults \
+                --subjects="workflow.>" \
+                --retention=limits \
+                --max-msgs=-1 \
+                --max-bytes=-1 \
+                --max-age=72h \
+                --storage=file \
+                --replicas=1 \
+                --discard=old \
+                --max-msg-size=-1 \
+                --dupe-window=2m \
+                --no-allow-rollup \
+                --deny-delete \
+                --deny-purge \
+                2>&1 || echo "Stream may already exist, continuing..."
+              echo "Verifying stream..."
+              nats -s nats://nats.nats.svc.cluster.local:4222 stream info ORCHESTRATOR
+              echo "Done."

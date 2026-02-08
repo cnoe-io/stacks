@@ -5,6 +5,8 @@ kind: Deployment
 metadata:
   name: workflow-orchestrator
   namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
   labels:
     app: workflow-orchestrator
     app.kubernetes.io/runtime: python

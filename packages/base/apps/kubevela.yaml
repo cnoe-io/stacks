@@ -16,7 +16,7 @@ spec:
     helm:
       releaseName: kubevela
       valuesObject:
-        replicaCount: 1
+        replicaCount: 0
         resources:
           limits:
             cpu: 500m

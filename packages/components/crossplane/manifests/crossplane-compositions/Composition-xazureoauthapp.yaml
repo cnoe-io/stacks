@@ -46,6 +46,11 @@ spec:
                   name: azuread-default
             patches:
               - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.existingAppObjectId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                policy:
+                  fromFieldPath: Optional
+              - type: FromCompositeFieldPath
                 fromFieldPath: metadata.namespace
                 toFieldPath: metadata.namespace
               - type: FromCompositeFieldPath

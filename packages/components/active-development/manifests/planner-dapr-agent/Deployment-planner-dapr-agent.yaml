@@ -5,6 +5,8 @@ kind: Deployment
 metadata:
   name: planner-dapr-agent
   namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
   labels:
     app.kubernetes.io/name: planner-dapr-agent
     app.kubernetes.io/component: planner

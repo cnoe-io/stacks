@@ -16,6 +16,7 @@ resources:
 - Component-secretstore-kubernetes.yaml
 - Role-secret-reader.yaml
 - Subscription-planner-events.yaml
+- Job-nats-stream-init.yaml
 - Deployment-workflow-orchestrator.yaml
 - Service-workflow-orchestrator.yaml
 

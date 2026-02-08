@@ -15,8 +15,10 @@ resources:
   - Ingress-workflow-builder.yaml
   - Job-db-seed.yaml
   - Job-seed-functions.yaml
+  - Job-sync-pieces.yaml
   # Dapr components for workflow orchestration
   - Component-workflowstatestore.yaml
   # OAuth apps managed by Crossplane
   - AzureOAuthApp-workflow-builder.yaml
+  - AzureOAuthApp-workflow-builder-todo.yaml
   - GoogleOAuthApp-workflow-builder.yaml

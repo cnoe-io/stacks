@@ -3,6 +3,8 @@ kind: Component
 metadata:
   name: statestore
   namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "12"
   labels:
     app.kubernetes.io/name: statestore
     app.kubernetes.io/component: statestore
