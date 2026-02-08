@@ -12,16 +12,31 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
+    repoURL: cnoe://planner-dapr-agent/manifests
     targetRevision: HEAD
-    path: packages/components/active-development/manifests/planner-dapr-agent
+    path: "."
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    # Retry failed syncs to handle transient failures during cluster creation
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
