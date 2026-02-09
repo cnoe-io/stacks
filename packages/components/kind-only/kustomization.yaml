@@ -4,6 +4,7 @@ kind: Component
 # KIND-only applications - local development
 resources:
   - apps/azure-workload-identity.yaml
+  - apps/atlas-operator.yaml
   - apps/caipe-agent-argocd.yaml
   - apps/caipe-agent-backstage.yaml
   - apps/caipe-agent-github.yaml

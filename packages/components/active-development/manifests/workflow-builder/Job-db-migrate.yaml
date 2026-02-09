@@ -1,0 +1,102 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: workflow-builder
+  annotations:
+    # Runs during Sync after DB/Secret resources exist (Postgres is wave 10).
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "15"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: work
+          emptyDir: {}
+      initContainers:
+        - name: detect-db-state
+          image: docker.io/library/postgres:15.3-alpine3.18
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets
+          volumeMounts:
+            - name: work
+              mountPath: /work
+          command:
+            - sh
+            - -c
+            - |
+              set -euo pipefail
+              : "${DATABASE_URL:?DATABASE_URL is required}"
+
+              echo "Waiting for DB..."
+              until pg_isready -d "$DATABASE_URL"; do
+                sleep 2
+              done
+              echo "DB is ready"
+
+              HAS_REVISIONS="$(psql "$DATABASE_URL" -tAc "select to_regclass('public.atlas_schema_revisions')")"
+              TABLE_COUNT="$(psql "$DATABASE_URL" -tAc "select count(*) from information_schema.tables where table_schema='public'")"
+
+              # Normalize whitespace
+              HAS_REVISIONS="$(echo "$HAS_REVISIONS" | tr -d '[:space:]')"
+              TABLE_COUNT="$(echo "$TABLE_COUNT" | tr -d '[:space:]')"
+
+              NEEDS_BASELINE="false"
+              if [ -z "$HAS_REVISIONS" ] || [ "$HAS_REVISIONS" = "null" ]; then
+                if [ "${TABLE_COUNT:-0}" -gt 0 ]; then
+                  NEEDS_BASELINE="true"
+                fi
+              fi
+
+              echo "NEEDS_BASELINE=$NEEDS_BASELINE" > /work/mode.env
+              echo "TABLE_COUNT=${TABLE_COUNT:-0}" >> /work/mode.env
+              echo "HAS_REVISIONS=${HAS_REVISIONS:-}" >> /work/mode.env
+              echo "DB state: revisions=${HAS_REVISIONS:-<none>} tables=${TABLE_COUNT:-0} baseline=$NEEDS_BASELINE"
+      containers:
+        - name: migrate
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets
+          volumeMounts:
+            - name: work
+              mountPath: /work
+          command:
+            - sh
+            - -c
+            - |
+              set -euo pipefail
+              : "${DATABASE_URL:?DATABASE_URL is required}"
+              . /work/mode.env
+
+              # Atlas uses the Go pq driver, which defaults to `sslmode=require` when
+              # sslmode is not explicitly set. Our in-cluster Postgres (KIND) does
+              # not use TLS, so force-disable SSL unless sslmode is already provided.
+              if ! echo "${DATABASE_URL}" | grep -q 'sslmode='; then
+                if echo "${DATABASE_URL}" | grep -q '?'; then
+                  export DATABASE_URL="${DATABASE_URL}&sslmode=disable"
+                else
+                  export DATABASE_URL="${DATABASE_URL}?sslmode=disable"
+                fi
+              fi
+
+              # Compute baseline version from the first migration file (timestamp prefix).
+              BASELINE_VERSION="$(ls -1 atlas/migrations/*.sql 2>/dev/null | sort | head -n 1 | xargs -I{} basename {} | cut -d_ -f1)"
+              if [ -z "${BASELINE_VERSION:-}" ]; then
+                echo "No migration files found in atlas/migrations"
+                exit 1
+              fi
+
+              echo "Running Atlas migrations (needs_baseline=$NEEDS_BASELINE, baseline_version=$BASELINE_VERSION)..."
+              if [ "$NEEDS_BASELINE" = "true" ]; then
+                atlas migrate apply --env k8s --baseline "$BASELINE_VERSION"
+              else
+                atlas migrate apply --env k8s
+              fi
+              echo "Migrations complete"

@@ -22,6 +22,13 @@ spec:
       labels:
         app: workflow-builder
         app.kubernetes.io/name: workflow-builder
+        azure.workload.identity/use: "true"
+      annotations:
+        # Dapr sidecar injection for config/secrets building blocks and tracing
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflow-builder"
+        dapr.io/app-port: "3000"
+        dapr.io/config: "workflow-builder-tracing"
     spec:
       serviceAccountName: workflow-builder
       containers:
@@ -39,6 +46,20 @@ spec:
               value: "3000"
             - name: HOSTNAME
               value: "0.0.0.0"
+            # Dapr (sidecar runs on localhost)
+            - name: DAPR_HOST
+              value: "localhost"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            # Dapr component names used by lib/dapr/config-provider.ts
+            - name: DAPR_CONFIG_STORE
+              value: "azureappconfig-workflow-builder"
+            - name: CONFIG_LABEL
+              value: "workflow-builder"
+            - name: DAPR_SECRET_STORE
+              value: "kubernetes-secrets"
+            - name: DAPR_K8S_SECRET_NAME
+              value: "workflow-builder-secrets"
             - name: NEXT_PUBLIC_APP_URL
               value: "https://workflow-builder.cnoe.localtest.me:8443"
             # Auth providers (public, for client-side detection)

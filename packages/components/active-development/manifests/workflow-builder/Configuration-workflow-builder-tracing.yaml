@@ -23,3 +23,4 @@ spec:
       enabled: true
       obfuscateURLs: false
       omitHealthChecks: true
+

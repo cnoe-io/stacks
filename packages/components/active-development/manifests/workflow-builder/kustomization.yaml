@@ -6,9 +6,14 @@ resources:
   - ServiceAccount-workflow-builder.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-flipt-config.yaml
+  - Configuration-workflow-builder-tracing.yaml
+  - Component-secretstore-kubernetes.yaml
+  - Component-azureappconfig-workflow-builder.yaml
+  - Role-secret-reader.yaml
   - ExternalSecret-workflow-builder.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
+  - Job-db-migrate.yaml
   - Deployment-workflow-builder.yaml
   - Service-workflow-builder.yaml
   - Ingress-workflow-builder.yaml

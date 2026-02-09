@@ -15,11 +15,15 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: docker.io/library/postgres:15.3-alpine3.18
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets
           command:
             - sh
             - -c
             - |
-              until pg_isready -h postgresql -p 5432 -U postgres; do
+              : "${DATABASE_URL:?DATABASE_URL is required}"
+              until pg_isready -d "$DATABASE_URL"; do
                 echo "Waiting for PostgreSQL..."
                 sleep 2
               done
@@ -33,9 +37,6 @@ spec:
             - sh
             - -c
             - |
-              echo "Running migrations..."
-              cd /app
-              node lib/db/migrate.bundle.js
               echo "Syncing OAuth apps from env vars..."
               node scripts/sync-oauth-apps.bundle.js
               echo "OAuth apps synced successfully"

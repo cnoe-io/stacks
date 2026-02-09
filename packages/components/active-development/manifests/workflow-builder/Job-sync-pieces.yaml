@@ -15,11 +15,18 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: docker.io/library/postgres:15.3-alpine3.18
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: DATABASE_URL
           command:
             - sh
             - -c
             - |
-              until pg_isready -h postgresql -p 5432 -U postgres; do
+              : "${DATABASE_URL:?DATABASE_URL is required}"
+              until pg_isready -d "$DATABASE_URL"; do
                 echo "Waiting for PostgreSQL..."
                 sleep 2
               done

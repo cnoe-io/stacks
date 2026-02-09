@@ -1,0 +1,25 @@
+# Azure App Configuration Component (workflow-builder)
+#
+# Provides configuration values from Azure App Configuration for the workflow-builder app.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: azureappconfig-workflow-builder
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: configuration.azure.appconfig
+  version: v1
+  metadata:
+    - name: host
+      value: "https://rg3-app-config.azconfig.io"
+    - name: azureClientId
+      value: ""
+    - name: label
+      value: "workflow-builder"
+    - name: subscribePollingInterval
+      value: "30s"
+scopes:
+  - workflow-builder
+
