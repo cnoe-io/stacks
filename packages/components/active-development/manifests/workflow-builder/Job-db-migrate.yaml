@@ -39,7 +39,10 @@ spec:
               done
               echo "DB is ready"
 
-              HAS_REVISIONS="$(psql "$DATABASE_URL" -tAc "select to_regclass('public.atlas_schema_revisions')")"
+              # Atlas (Postgres) stores revisions in schema/table:
+              #   atlas_schema_revisions.atlas_schema_revisions
+              # Older/alternate setups may have used public.atlas_schema_revisions.
+              HAS_REVISIONS="$(psql "$DATABASE_URL" -tAc \"select coalesce(to_regclass('atlas_schema_revisions.atlas_schema_revisions')::text, to_regclass('public.atlas_schema_revisions')::text)\")"
               TABLE_COUNT="$(psql "$DATABASE_URL" -tAc "select count(*) from information_schema.tables where table_schema='public'")"
 
               # Normalize whitespace
