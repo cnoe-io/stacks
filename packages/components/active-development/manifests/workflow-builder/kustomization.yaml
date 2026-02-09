@@ -6,8 +6,7 @@ resources:
   - ServiceAccount-workflow-builder.yaml
   - ConfigMap-otel-config.yaml
   - ConfigMap-flipt-config.yaml
-  - ConfigMap-db-seed.yaml
-  - Secret-workflow-builder.yaml
+  - ExternalSecret-workflow-builder.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml
   - Deployment-workflow-builder.yaml
@@ -16,6 +15,7 @@ resources:
   - Job-db-seed.yaml
   - Job-seed-functions.yaml
   - Job-sync-pieces.yaml
+  - Job-sync-oauth-apps.yaml
   # Dapr components for workflow orchestration
   - Component-workflowstatestore.yaml
   # OAuth apps managed by Crossplane

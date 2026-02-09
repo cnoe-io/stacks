@@ -21,6 +21,23 @@ spec:
 
               apt -qq update && apt -qq install curl jq -y
 
+              # Wait for Keycloak to be ready before proceeding
+              KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080
+              echo "Waiting for Keycloak to be ready at ${KEYCLOAK_URL}/realms/master ..."
+              WAIT_TIMEOUT=300
+              WAIT_INTERVAL=5
+              WAITED=0
+              until curl -sS --fail --max-time 5 "${KEYCLOAK_URL}/realms/master" > /dev/null 2>&1; do
+                if [ $WAITED -ge $WAIT_TIMEOUT ]; then
+                  echo "ERROR: Keycloak not ready after ${WAIT_TIMEOUT}s"
+                  exit 1
+                fi
+                echo "  Keycloak not ready yet (${WAITED}s/${WAIT_TIMEOUT}s), retrying in ${WAIT_INTERVAL}s..."
+                sleep $WAIT_INTERVAL
+                WAITED=$((WAITED + WAIT_INTERVAL))
+              done
+              echo "Keycloak is ready (waited ${WAITED}s)"
+
               ADMIN_PASSWORD=$(cat /var/secrets/KEYCLOAK_ADMIN_PASSWORD)
               USER1_PASSWORD=$(cat /var/secrets/USER_PASSWORD)
 
@@ -33,9 +50,6 @@ spec:
               if [ -f /var/github-idp/GITHUB_IDP_CLIENT_SECRET ]; then
                 GITHUB_IDP_CLIENT_SECRET=$(cat /var/github-idp/GITHUB_IDP_CLIENT_SECRET)
               fi
-
-              # Domain-based routing: no path prefix needed
-              KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local:8080
 
               KEYCLOAK_TOKEN=$(curl -sS  --fail-with-body -X POST -H "Content-Type: application/x-www-form-urlencoded" \
                 --data-urlencode "username=cnoe-admin" \

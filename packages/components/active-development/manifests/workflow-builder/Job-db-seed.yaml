@@ -26,18 +26,16 @@ spec:
               echo "PostgreSQL is ready"
       containers:
         - name: seed
-          image: docker.io/library/postgres:15.3-alpine3.18
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
           command:
             - sh
             - -c
             - |
-              echo "Running database seed..."
-              PGPASSWORD=password psql -h postgresql -U postgres -d workflow_builder -f /seed/seed-admin-user.sql
+              echo "Running database migrations..."
+              node lib/db/migrate.bundle.js
+              echo "Seeding development user..."
+              node scripts/seed-dev-user.bundle.js
               echo "Database seed complete"
-          volumeMounts:
-            - name: seed-scripts
-              mountPath: /seed
-      volumes:
-        - name: seed-scripts
-          configMap:
-            name: db-seed
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets

@@ -41,10 +41,20 @@ spec:
               value: "0.0.0.0"
             - name: NEXT_PUBLIC_APP_URL
               value: "https://workflow-builder.cnoe.localtest.me:8443"
-            - name: AUTH_TRUST_HOST
-              value: "true"
-            - name: AUTH_URL
-              value: "https://workflow-builder.cnoe.localtest.me:8443"
+            # Auth providers (public, for client-side detection)
+            - name: NEXT_PUBLIC_AUTH_PROVIDERS
+              value: "email,github,google"
+            # Public client IDs (for client-side OAuth button rendering)
+            - name: NEXT_PUBLIC_GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: GITHUB_CLIENT_ID
+            - name: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: GOOGLE_CLIENT_ID
             # Dapr orchestrator (legacy planner workflows)
             - name: DAPR_ORCHESTRATOR_URL
               value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"

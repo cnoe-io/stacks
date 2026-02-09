@@ -4,7 +4,7 @@ metadata:
   name: function-router
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "55"
+    argocd.argoproj.io/sync-wave: "16"
     # Kargo Stage authorized to update this app's image tag
     kargo.akuity.io/authorized-stage: kargo-pipelines:function-router-local-dev
 spec:

@@ -4,7 +4,7 @@ metadata:
   name: workflow-orchestrator
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "60"
+    argocd.argoproj.io/sync-wave: "16"
     # Kargo Stage authorized to update this app's image tag
     kargo.akuity.io/authorized-stage: kargo-pipelines:workflow-orchestrator-local-dev
 spec:
