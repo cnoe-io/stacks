@@ -111,7 +111,9 @@ copy_manifest_dir() {
     local app=$(basename "$dir")
 
     # Skip empty directories
-    [ -n "$(ls -A "$dir" 2>/dev/null)" ] || return
+    # Important: returning non-zero here will abort the whole build because the
+    # script runs with `set -e`.
+    [ -n "$(ls -A "$dir" 2>/dev/null)" ] || return 0
 
     # Check if directory has subdirectories (like entities/)
     if [ -d "$dir/entities" ]; then
