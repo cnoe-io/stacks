@@ -44,14 +44,6 @@ images:
     tagPattern: ".*"
     promotionType: kustomize
 
-  - name: vibe-coding-platform
-    argocdApp: vibe-coding-platform
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: Lexical
-    tagPattern: ".*"
-    promotionType: kustomize
-
   - name: workflow-web
     argocdApp: workflow-web
     registry: gitea.cnoe.localtest.me:8443
@@ -62,14 +54,6 @@ images:
 
   - name: workflow-builder
     argocdApp: workflow-builder
-    registry: gitea.cnoe.localtest.me:8443
-    org: giteaadmin
-    tagStrategy: Lexical
-    tagPattern: ".*"
-    promotionType: kustomize
-
-  - name: flight-booking-app
-    argocdApp: flight-booking-app
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: Lexical
