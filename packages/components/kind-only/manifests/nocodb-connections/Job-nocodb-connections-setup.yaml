@@ -45,11 +45,6 @@ spec:
                 secretKeyRef:
                   key: WORKFLOW_BUILDER_POSTGRES_PASSWORD
                   name: nocodb-external-db-credentials
-            - name: FLIGHT_BOOKING_POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: FLIGHT_BOOKING_POSTGRES_PASSWORD
-                  name: nocodb-external-db-credentials
             - name: ACTIVEPIECES_POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
