@@ -219,22 +219,6 @@ data:
           echo "⚠ Skipping Workflow Builder - no password provided"
         fi
 
-        # Create Flight Booking App connection
-        if [ -n "$FLIGHT_BOOKING_POSTGRES_PASSWORD" ]; then
-          create_external_db \
-            "flight_booking" \
-            "Flight Booking App" \
-            "Flight booking application - workflow runs, steps, events" \
-            "postgresql.flight-booking-app.svc.cluster.local" \
-            "5432" \
-            "flight_booking" \
-            "postgres" \
-            "$FLIGHT_BOOKING_POSTGRES_PASSWORD" \
-            "workflow"
-        else
-          echo "⚠ Skipping Flight Booking App - no password provided"
-        fi
-
         # Create Activepieces connection
         if [ -n "$ACTIVEPIECES_POSTGRES_PASSWORD" ]; then
           create_external_db \

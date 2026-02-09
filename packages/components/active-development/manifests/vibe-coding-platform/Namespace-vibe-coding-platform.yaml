@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: vibe-coding-platform
-  labels:
-    app.kubernetes.io/name: vibe-coding-platform
-    app.kubernetes.io/part-of: vibe-coding-platform
