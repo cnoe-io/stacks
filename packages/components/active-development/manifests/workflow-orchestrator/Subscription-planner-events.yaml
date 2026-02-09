@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/part-of: workflow-orchestrator
   annotations:
     argocd.argoproj.io/sync-wave: "0"
+scopes:
+  # Scope to workflow-orchestrator only (it handles the events)
+  - workflow-orchestrator
 spec:
   # Pub/sub component name (must match Component name)
   pubsubname: pubsub
@@ -26,6 +29,3 @@ spec:
         path: /subscriptions/planner-events
     # Default route for any other workflow.events (future expansion)
     default: /subscriptions/planner-events
-  # Scope to workflow-orchestrator only (it handles the events)
-  scopes:
-    - workflow-orchestrator
