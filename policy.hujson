@@ -198,6 +198,15 @@
       ],
       "svc:loki-hetzner": [
         "tag:k8s-services"
+      ],
+      "svc:workflow-builder": [
+        "tag:k8s-services"
+      ],
+      "svc:workflow-builder-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:workflow-builder-ryzen": [
+        "tag:k8s-services"
       ]
     }
   },
@@ -301,7 +310,10 @@
         "svc:loki:*",
         "svc:loki-thinkpad:*",
         "svc:loki-ryzen:*",
-        "svc:loki-hetzner:*"
+        "svc:loki-hetzner:*",
+        "svc:workflow-builder:*",
+        "svc:workflow-builder-thinkpad:*",
+        "svc:workflow-builder-ryzen:*"
       ]
     },
     {
