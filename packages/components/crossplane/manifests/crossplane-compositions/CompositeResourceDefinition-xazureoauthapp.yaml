@@ -51,6 +51,30 @@ spec:
                     existingAppObjectId:
                       type: string
                       description: Object ID of an existing Azure AD App Registration to adopt instead of creating a new one.
+                    requiredResourceAccess:
+                      type: array
+                      description: "Azure AD API permissions. Defaults to User.Read from Microsoft Graph if not specified."
+                      items:
+                        type: object
+                        properties:
+                          resourceAppId:
+                            type: string
+                          resourceAccess:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                type:
+                                  type: string
+                                  enum: [Scope, Role]
+                                  default: Scope
+                              required: [id, type]
+                        required: [resourceAppId, resourceAccess]
+                    keyVaultSecretPrefix:
+                      type: string
+                      description: "Prefix for Key Vault secret names when using PushSecret (e.g. MICROSOFT-ONEDRIVE)."
                   required:
                     - redirectUris
             status:

@@ -1,0 +1,23 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-people
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/7b9ee995-22fc-4b9f-970a-cf23de0ce0bf
+    displayName: Workflow-Microsoft People
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-people
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-PEOPLE
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "d56682ec-c09e-4743-aaf4-1a3aac4caa21" # Contacts.ReadWrite
+            type: Scope

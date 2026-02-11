@@ -103,3 +103,7 @@ spec:
                 atlas migrate apply --env k8s
               fi
               echo "Migrations complete"
+
+              echo "Seeding OAuth apps..."
+              node scripts/sync-oauth-apps.bundle.js
+              echo "OAuth apps seeded"

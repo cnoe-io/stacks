@@ -1,0 +1,8 @@
+namespace: workflow-builder
+
+resources:
+  - Deployment-mcp-inspector.yaml
+  - Service-mcp-inspector-client.yaml
+  - Service-mcp-inspector-proxy.yaml
+  - Ingress-mcp-inspector-client.yaml
+  - Ingress-mcp-inspector-proxy.yaml

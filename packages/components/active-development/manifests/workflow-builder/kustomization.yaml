@@ -17,13 +17,39 @@ resources:
   - Deployment-workflow-builder.yaml
   - Service-workflow-builder.yaml
   - Ingress-workflow-builder.yaml
+  - Ingress-workflow-builder-tailscale.yaml
   - Job-db-seed.yaml
   - Job-seed-functions.yaml
   - Job-sync-pieces.yaml
-  - Job-sync-oauth-apps.yaml
   # Dapr components for workflow orchestration
   - Component-workflowstatestore.yaml
   # OAuth apps managed by Crossplane
-  - AzureOAuthApp-workflow-builder.yaml
-  - AzureOAuthApp-workflow-builder-todo.yaml
-  - GoogleOAuthApp-workflow-builder.yaml
+  - AzureOAuthApp-wb-todo.yaml
+  - AzureOAuthApp-wb-dynamics-365-bc.yaml
+  - AzureOAuthApp-wb-onedrive.yaml
+  - AzureOAuthApp-wb-outlook-calendar.yaml
+  - AzureOAuthApp-wb-teams.yaml
+  - AzureOAuthApp-wb-excel.yaml
+  - AzureOAuthApp-wb-outlook.yaml
+  - AzureOAuthApp-wb-power-bi.yaml
+  - AzureOAuthApp-wb-planner.yaml
+  - AzureOAuthApp-wb-onenote.yaml
+  - AzureOAuthApp-wb-sharepoint.yaml
+  - AzureOAuthApp-wb-people.yaml
+  - AzureOAuthApp-wb-dynamics-crm.yaml
+  - GoogleOAuthApp-wb-google-calendar.yaml
+  - GoogleOAuthApp-wb-google-sheets.yaml
+  - GoogleOAuthApp-wb-google-drive.yaml
+  - GoogleOAuthApp-wb-google-docs.yaml
+  - GoogleOAuthApp-wb-google-forms.yaml
+  - GoogleOAuthApp-wb-google-slides.yaml
+  - GoogleOAuthApp-wb-google-tasks.yaml
+  - GoogleOAuthApp-wb-google-contacts.yaml
+  - GoogleOAuthApp-wb-googlechat.yaml
+  - GoogleOAuthApp-wb-google-cloud-storage.yaml
+  - GoogleOAuthApp-wb-google-my-business.yaml
+  - GoogleOAuthApp-wb-google-search-console.yaml
+  # PushSecrets: push Crossplane connection secrets to Key Vault
+  - PushSecrets-oauth-apps.yaml
+  # Job: push clientIds from XR status to Key Vault (PostSync hook)
+  - Job-push-oauth-client-ids.yaml

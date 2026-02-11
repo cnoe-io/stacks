@@ -20,7 +20,7 @@ spec:
         apiVersion: pt.fn.crossplane.io/v1beta1
         kind: Resources
         resources:
-          - name: calendar-api
+          - name: api-service
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ProjectService
@@ -45,12 +45,12 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-calendar-api"
+                      fmt: "%s-api-service"
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.parameters.projectId
                 toFieldPath: spec.forProvider.project
               - type: FromCompositeFieldPath
-                fromFieldPath: spec.parameters.calendarApiService
+                fromFieldPath: spec.parameters.apiService
                 toFieldPath: spec.forProvider.service
                 policy:
                   fromFieldPath: Optional

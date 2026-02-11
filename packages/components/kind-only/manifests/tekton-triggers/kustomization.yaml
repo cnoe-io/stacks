@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # v0.26.0 used gcr.io which now returns 403 unauthenticated in some environments.
+  # v0.30.0+ uses ghcr.io.
+  - https://github.com/tektoncd/triggers/releases/download/v0.33.0/release.yaml
+  - https://github.com/tektoncd/triggers/releases/download/v0.33.0/interceptors.yaml

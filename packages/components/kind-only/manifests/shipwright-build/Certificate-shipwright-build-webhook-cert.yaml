@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shipwright-build-webhook-cert
+  namespace: shipwright-build
+spec:
+  secretName: shipwright-build-webhook-cert
+  issuerRef:
+    name: shipwright-build-selfsigned
+    kind: Issuer
+  dnsNames:
+    - shp-build-webhook.shipwright-build.svc
+    - shp-build-webhook.shipwright-build.svc.cluster.local
+

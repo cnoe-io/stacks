@@ -1,0 +1,41 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-teams
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/27fc5f32-c812-4a14-955e-7f6065174caa
+    displayName: Workflow-Microsoft Teams
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-teams
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-TEAMS
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+            type: Scope
+          - id: "101147cf-4178-4455-9d58-02b5c164e759" # Channel.Create
+            type: Scope
+          - id: "9d8982ae-4365-4f57-95e9-d6032a4c0b87" # Channel.ReadBasic.All
+            type: Scope
+          - id: "ebf0f66e-9fb1-49e4-a278-222f76911cf4" # ChannelMessage.Send
+            type: Scope
+          - id: "485be79e-c497-4b35-9400-0e3fa7f2a5d4" # Team.ReadBasic.All
+            type: Scope
+          - id: "9ff7295e-131b-4d94-90e1-69fde507ac11" # Chat.ReadWrite
+            type: Scope
+          - id: "767156cb-16ae-4d10-8f8b-41b657c8c8c8" # ChannelMessage.Read.All
+            type: Scope
+          - id: "2497278c-d82d-46a2-b1ce-39d4cdde5570" # TeamMember.Read.All
+            type: Scope
+          - id: "b340eb25-3456-403f-be2f-af7a0d370277" # User.ReadBasic.All
+            type: Scope
+          - id: "9c7a330d-35b3-4aa1-963d-cb2b9f927841" # Presence.Read.All
+            type: Scope

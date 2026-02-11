@@ -1,6 +1,0 @@
-namespace: workflow-builder
-
-resources:
-  - ServiceAccount-workflow-functions.yaml
-  - Secret-gitea-registry-creds.yaml
-  - ConfigMap-knative-deployment-patch.yaml

@@ -1,0 +1,25 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-todo
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/072542e9-f523-4a3f-9926-4d9510b823dc
+    displayName: Workflow-Microsoft To Do
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-todo
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-TODO
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "2219042f-cab5-40cc-b0d2-16b1540b4c5f" # Tasks.ReadWrite
+            type: Scope
+          - id: "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+            type: Scope

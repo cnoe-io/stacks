@@ -10,3 +10,4 @@ resources:
   - Composition-xgoogleoauthapp.yaml
 
   - ClusterRole-crossplane-external-secrets-access.yaml
+  - ClusterRole-crossplane-azuread-access.yaml

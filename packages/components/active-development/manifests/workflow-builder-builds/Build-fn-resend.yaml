@@ -1,0 +1,23 @@
+apiVersion: shipwright.io/v1beta1
+kind: Build
+metadata:
+  name: fn-resend
+  namespace: workflow-builder
+spec:
+  source:
+    type: Git
+    git:
+      url: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/workflow-builder.git
+      revision: main
+    contextDir: .
+  strategy:
+    name: kaniko-push-insecure
+    kind: ClusterBuildStrategy
+  paramValues:
+    - name: dockerfile
+      value: services/fn-resend/Dockerfile
+  output:
+    image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-resend:latest
+    pushSecret: gitea-registry-creds
+    insecure: true
+

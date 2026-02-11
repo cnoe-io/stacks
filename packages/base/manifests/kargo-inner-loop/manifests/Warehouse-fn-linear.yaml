@@ -1,0 +1,30 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  labels:
+    app.kubernetes.io/component: warehouse
+    app.kubernetes.io/name: fn-linear-warehouse
+    app.kubernetes.io/part-of: kargo-inner-loop
+    kargo.akuity.io/loop: inner
+  name: fn-linear
+  namespace: kargo-pipelines
+spec:
+  freightCreationPolicy: Automatic
+  interval: 30s
+  subscriptions:
+    # Config source - Gitea repo from idpbuilder
+    # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
+    - git:
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-fn-linear-manifests.git
+        branch: main
+        insecureSkipTLSVerify: true
+        strictSemvers: false
+    # Image source - local dev images from Gitea registry
+    - image:
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/fn-linear
+        imageSelectionStrategy: NewestBuild
+        allowTags: ^git-[0-9a-f]{40}$
+        discoveryLimit: 10
+        insecureSkipTLSVerify: true
+        strictSemvers: false
+        platform: linux/amd64

@@ -1,0 +1,29 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-sharepoint
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/871f9dc6-0848-4cd3-8cb7-7a89b948d793
+    displayName: Workflow-Microsoft SharePoint
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-sharepoint
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-SHAREPOINT
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "205e70e5-aba6-4c52-a976-6d2d46c48043" # Sites.Read.All
+            type: Scope
+          - id: "89fe6a52-be36-487e-b7d8-d061c450a026" # Sites.ReadWrite.All
+            type: Scope
+          - id: "65e50fdc-43b7-4915-933e-e8138f11f40a" # Sites.Manage.All
+            type: Scope
+          - id: "863451e7-0667-486c-a5d6-d135439485f0" # Files.ReadWrite.All
+            type: Scope

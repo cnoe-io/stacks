@@ -1,0 +1,14 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: workflow-builder-fn-builds
+  namespace: workflow-builder
+spec:
+  serviceAccountName: workflow-builder-build-trigger
+  triggers:
+    - name: build-fn-images
+      bindings:
+        - ref: workflow-builder-fn-builds
+      template:
+        ref: workflow-builder-fn-builds
+

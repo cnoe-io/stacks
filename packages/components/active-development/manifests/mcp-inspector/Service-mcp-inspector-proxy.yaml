@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-inspector-proxy
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: mcp-inspector
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  selector:
+    app.kubernetes.io/name: mcp-inspector
+  ports:
+    - name: proxy
+      port: 6277
+      targetPort: proxy

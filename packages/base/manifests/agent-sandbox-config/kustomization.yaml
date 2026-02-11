@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
   - SandboxTemplate-dapr-agent.yaml
-  - SandboxTemplate-vibe-coding-sandbox.yaml
+
   - SandboxWarmPool-dapr-agent.yaml
   - Configuration-sandbox-dapr.yaml
   - sandbox-router.yaml

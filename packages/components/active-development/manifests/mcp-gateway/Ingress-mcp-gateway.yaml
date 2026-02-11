@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: workflow-builder-mcp-gateway
+  namespace: workflow-builder
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: workflow-builder.cnoe.localtest.me
+      http:
+        paths:
+          - path: /api/v1/projects/.*/mcp-server/http
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: mcp-gateway
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - workflow-builder.cnoe.localtest.me
+      secretName: nginx-tls
+

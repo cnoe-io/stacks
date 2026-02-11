@@ -1,0 +1,7 @@
+namespace: workflow-builder
+
+resources:
+  - Deployment-mcp-gateway.yaml
+  - Service-mcp-gateway.yaml
+  - Ingress-mcp-gateway.yaml
+

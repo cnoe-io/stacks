@@ -1,0 +1,29 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-outlook
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/9c3e437b-2f22-49c0-9567-a20c8dc7a9bc
+    displayName: Workflow-Microsoft Outlook
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-outlook
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-OUTLOOK
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "024d486e-b451-40bb-833d-3e66d98c5c73" # Mail.ReadWrite
+            type: Scope
+          - id: "e383f46e-2787-4529-855e-0e479a3ffac0" # Mail.Send
+            type: Scope
+          - id: "465a38f9-76ea-45b9-9f34-9e8b0d4b0b42" # Calendars.Read
+            type: Scope
+          - id: "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+            type: Scope

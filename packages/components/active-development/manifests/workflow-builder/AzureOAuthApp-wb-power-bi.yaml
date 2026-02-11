@@ -1,0 +1,23 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-power-bi
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/7269091a-2b74-4ed5-9a84-fa80bd6bb119
+    displayName: Workflow-Microsoft Power BI
+    signInAudience: AzureADMultipleOrgs
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-power-bi
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-POWER-BI
+    requiredResourceAccess:
+      - resourceAppId: "00000009-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "322b68b2-0804-416e-86a5-d772c567b6e6" # Dataset.ReadWrite.All
+            type: Scope

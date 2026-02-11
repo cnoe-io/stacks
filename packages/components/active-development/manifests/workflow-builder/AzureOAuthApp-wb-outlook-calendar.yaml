@@ -1,0 +1,25 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-outlook-calendar
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/13acd727-2405-4757-b936-10bdd4af331a
+    displayName: Workflow-Microsoft Outlook Calendar
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-outlook-calendar
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-OUTLOOK-CALENDAR
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+            type: Scope
+          - id: "1ec239c2-d7c9-4623-a91a-a9775856bb36" # Calendars.ReadWrite
+            type: Scope

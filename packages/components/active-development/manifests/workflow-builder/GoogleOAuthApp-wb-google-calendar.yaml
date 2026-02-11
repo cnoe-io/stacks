@@ -1,0 +1,12 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: GoogleOAuthApp
+metadata:
+  name: wb-google-calendar
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    projectId: sodium-daylight-456500-p2
+    apiService: calendar-json.googleapis.com
+    oauthJSONRemoteKey: WORKFLOW-BUILDER-GOOGLE-OAUTH-JSON

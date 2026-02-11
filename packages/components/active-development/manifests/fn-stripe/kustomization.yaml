@@ -1,4 +1,4 @@
 namespace: workflow-builder
 
 resources:
-  - Function-fn-stripe.yaml
+  - Service-fn-stripe.yaml

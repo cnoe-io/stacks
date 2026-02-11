@@ -76,4 +76,4 @@ resources:
   # NOTE: workflow-builder app moved to components/active-development
   - apps/nats.yaml
   - apps/workflow-dapr-components.yaml
-  # NOTE: workflow-web and vibe-coding-platform apps moved to components/active-development
+  # NOTE: workflow-web app moved to components/active-development

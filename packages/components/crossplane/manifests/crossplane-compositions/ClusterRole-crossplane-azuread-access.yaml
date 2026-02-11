@@ -1,0 +1,29 @@
+# Grants the Crossplane core SA access to manage Azure AD managed resources.
+# Normally created by the Crossplane RBAC manager when providers are healthy,
+# but needed explicitly when the provider health check fails.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane-azuread-access
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+rules:
+  - apiGroups:
+      - applications.azuread.m.upbound.io
+    resources:
+      - applications
+      - applications/status
+      - applications/finalizers
+      - passwords
+      - passwords/status
+      - passwords/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete

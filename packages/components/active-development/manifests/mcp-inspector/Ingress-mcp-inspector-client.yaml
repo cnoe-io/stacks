@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-inspector-client
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: mcp-inspector.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-client
+                port:
+                  number: 6274
+  tls:
+    - hosts:
+        - mcp-inspector.cnoe.localtest.me
+      secretName: nginx-tls

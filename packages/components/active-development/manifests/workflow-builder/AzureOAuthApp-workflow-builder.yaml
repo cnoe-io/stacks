@@ -14,3 +14,4 @@ spec:
       - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
     secretDisplayName: workflow-builder
     secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT

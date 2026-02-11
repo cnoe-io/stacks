@@ -1,0 +1,112 @@
+# Reads clientId from each AzureOAuthApp XR status and pushes to Azure Key Vault.
+# Runs as an ArgoCD PostSync hook after AzureOAuthApps are created.
+# The clientId is not sensitive but must be in Key Vault for the ExternalSecret to pull it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: push-oauth-client-ids
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "86"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: workflow-builder
+      initContainers:
+        - name: extract-client-ids
+          image: docker.io/bitnami/kubectl:1.32
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              echo "Extracting clientIds from AzureOAuthApp XR statuses..."
+
+              # Map: XR name -> Key Vault key prefix
+              cat > /shared/apps.txt <<'APPS'
+              wb-todo=MICROSOFT-TODO
+              wb-dynamics-365-bc=MICROSOFT-DYNAMICS-365-BC
+              wb-onedrive=MICROSOFT-ONEDRIVE
+              wb-outlook-calendar=MICROSOFT-OUTLOOK-CALENDAR
+              wb-teams=MICROSOFT-TEAMS
+              wb-excel=MICROSOFT-EXCEL
+              wb-outlook=MICROSOFT-OUTLOOK
+              wb-power-bi=MICROSOFT-POWER-BI
+              wb-planner=MICROSOFT-PLANNER
+              wb-onenote=MICROSOFT-ONENOTE
+              wb-sharepoint=MICROSOFT-SHAREPOINT
+              wb-people=MICROSOFT-PEOPLE
+              wb-dynamics-crm=MICROSOFT-DYNAMICS-CRM
+              APPS
+
+              > /shared/client-ids.env
+              while IFS='=' read -r XR_NAME PREFIX; do
+                XR_NAME=$(echo "$XR_NAME" | xargs)
+                PREFIX=$(echo "$PREFIX" | xargs)
+                [ -z "$XR_NAME" ] && continue
+
+                CLIENT_ID=$(kubectl get azureoauthapp "$XR_NAME" -n workflow-builder \
+                  -o jsonpath='{.status.clientId}' 2>/dev/null || true)
+
+                if [ -n "$CLIENT_ID" ]; then
+                  echo "OAUTH-APP-${PREFIX}-CLIENT-ID=${CLIENT_ID}" >> /shared/client-ids.env
+                  echo "  Found: $XR_NAME -> $CLIENT_ID"
+                else
+                  echo "  Skip: $XR_NAME (no clientId yet)"
+                fi
+              done < /shared/apps.txt
+
+              echo "Extracted $(wc -l < /shared/client-ids.env) clientIds"
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+      containers:
+        - name: push-to-keyvault
+          image: mcr.microsoft.com/azure-cli:2.67.0
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+
+              if [ ! -s /shared/client-ids.env ]; then
+                echo "No clientIds to push, exiting"
+                exit 0
+              fi
+
+              echo "Logging into Azure..."
+              az login --federated-token "$(cat $AZURE_FEDERATED_TOKEN_FILE)" \
+                --service-principal -u "$AZURE_CLIENT_ID" -t "$AZURE_TENANT_ID" \
+                --allow-no-subscriptions -o none
+
+              VAULT_NAME="keyvault-thcmfmoo5oeow"
+              PUSHED=0
+
+              while IFS='=' read -r KV_KEY CLIENT_ID; do
+                echo "PUSH: $KV_KEY"
+                az keyvault secret set --vault-name "$VAULT_NAME" \
+                  --name "$KV_KEY" --value "$CLIENT_ID" -o none
+                PUSHED=$((PUSHED + 1))
+              done < /shared/client-ids.env
+
+              echo "Done: pushed $PUSHED clientIds to Key Vault"
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: shared
+          emptyDir: {}

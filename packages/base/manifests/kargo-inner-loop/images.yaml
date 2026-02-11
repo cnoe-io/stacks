@@ -15,7 +15,7 @@
 #   argocdApp     - ArgoCD Application name to update
 #   registry      - Container registry URL
 #   org           - Registry organization/namespace
-#   tagStrategy   - Kargo image selection: SemVer or Lexical
+#   tagStrategy   - Kargo image selection: SemVer, Lexical, or NewestBuild
 #   tagPattern    - Regex pattern for allowed tags
 #   promotionType - kustomize or helm
 #   warehouseName - (optional) Override warehouse name if different from 'name'
@@ -82,4 +82,94 @@ images:
     org: giteaadmin
     tagStrategy: Lexical
     tagPattern: ".*"
+    promotionType: kustomize
+
+  - name: mcp-gateway
+    argocdApp: mcp-gateway
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    # We publish immutable git-tagged images; never promote :latest.
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  # workflow-builder serverless functions (fn-*)
+  - name: fn-activepieces
+    argocdApp: fn-activepieces
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-system
+    argocdApp: fn-system
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-openai
+    argocdApp: fn-openai
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-slack
+    argocdApp: fn-slack
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-github
+    argocdApp: fn-github
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-resend
+    argocdApp: fn-resend
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-stripe
+    argocdApp: fn-stripe
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-linear
+    argocdApp: fn-linear
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-perplexity
+    argocdApp: fn-perplexity
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: fn-firecrawl
+    argocdApp: fn-firecrawl
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize

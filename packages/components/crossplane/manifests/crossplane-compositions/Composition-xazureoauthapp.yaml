@@ -76,6 +76,11 @@ spec:
                 toFieldPath: spec.forProvider.web.redirectUris
                 policy:
                   fromFieldPath: Optional
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.requiredResourceAccess
+                toFieldPath: spec.forProvider.requiredResourceAccess
+                policy:
+                  fromFieldPath: Optional
               - type: ToCompositeFieldPath
                 fromFieldPath: status.atProvider.clientId
                 toFieldPath: status.clientId

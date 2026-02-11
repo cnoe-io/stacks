@@ -16,13 +16,6 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder
-  # Ignore OpenFunction-managed fields
-  ignoreDifferences:
-    - group: core.openfunction.io
-      kind: Function
-      jsonPointers:
-        - /spec/image
-        - /status
   syncPolicy:
     automated:
       selfHeal: true

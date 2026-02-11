@@ -1,4 +1,4 @@
 namespace: workflow-builder
 
 resources:
-  - Function-fn-github.yaml
+  - Service-fn-github.yaml

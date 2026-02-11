@@ -4,7 +4,7 @@ metadata:
   name: contour
   namespace: argocd
   annotations:
-    # Deploy very early - OpenFunction depends on this
+    # Deploy early - used for gateway/ingress needs
     argocd.argoproj.io/sync-wave: "30"
 spec:
   project: default

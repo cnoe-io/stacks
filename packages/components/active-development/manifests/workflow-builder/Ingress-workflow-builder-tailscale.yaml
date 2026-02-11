@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: workflow-builder-tailscale
+  namespace: workflow-builder
+spec:
+  defaultBackend:
+    service:
+      name: workflow-builder
+      port:
+        number: 3000
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - workflow-builder-${TAILSCALE_HOST}

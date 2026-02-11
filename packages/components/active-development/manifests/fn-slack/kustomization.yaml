@@ -1,4 +1,4 @@
 namespace: workflow-builder
 
 resources:
-  - Function-fn-slack.yaml
+  - Service-fn-slack.yaml

@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-builder-build-webhook-setup-script
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder-build-webhook-setup
+    app.kubernetes.io/component: webhook-automation
+    app.kubernetes.io/part-of: workflow-builder
+data:
+  setup-webhook.sh: |
+    #!/bin/sh
+    set -e
+
+    # We install git lazily (only used for initial repo seeding), but doing it
+    # unconditionally keeps the script simpler and the job is not performance-critical.
+    apk add --no-cache git >/dev/null
+
+    GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+    OWNER="giteaAdmin"
+    REPO="workflow-builder"
+    UPSTREAM_GIT_URL="https://github.com/PittampalliOrg/workflow-builder.git"
+
+    # Tekton Triggers creates a Service named "el-<EventListener name>"
+    WEBHOOK_URL="http://el-workflow-builder-fn-builds.workflow-builder.svc.cluster.local:8080"
+
+    GITEA_USER="$(cat /gitea-credentials/username)"
+    GITEA_PASS="$(cat /gitea-credentials/password)"
+
+    echo "Configuring workflow-builder push webhook for Shipwright builds..."
+    echo "Repo: ${OWNER}/${REPO}"
+    echo "Target: ${WEBHOOK_URL}"
+
+    echo "Ensuring repo exists..."
+    REPO_STATUS="$(
+      curl -s -o /dev/null -w "%{http_code}" \
+        -u "${GITEA_USER}:${GITEA_PASS}" \
+        "${GITEA_URL}/api/v1/repos/${OWNER}/${REPO}"
+    )"
+
+    if [ "${REPO_STATUS}" != "200" ]; then
+      echo "Repo missing (HTTP ${REPO_STATUS}), creating ${OWNER}/${REPO}..."
+      CREATE_CODE="$(
+        curl -s -w "%{http_code}" -o /tmp/create-repo.json -X POST \
+          -u "${GITEA_USER}:${GITEA_PASS}" \
+          "${GITEA_URL}/api/v1/user/repos" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"name\": \"${REPO}\",
+            \"private\": false,
+            \"auto_init\": true,
+            \"default_branch\": \"main\"
+          }"
+      )"
+
+      if [ "${CREATE_CODE}" != "201" ]; then
+        echo "[-] Failed to create repo (HTTP ${CREATE_CODE})"
+        cat /tmp/create-repo.json
+        exit 1
+      fi
+
+      echo "[+] Repo created"
+    else
+      echo "Repo exists"
+    fi
+
+    # Check if webhook already exists
+    EXISTING_ID="$(
+      curl -s -u "${GITEA_USER}:${GITEA_PASS}" \
+        "${GITEA_URL}/api/v1/repos/${OWNER}/${REPO}/hooks" | \
+        jq -r --arg url "${WEBHOOK_URL}" '.[] | select(.config.url == $url) | .id' | \
+        head -n 1
+    )"
+
+    if [ -n "${EXISTING_ID}" ] && [ "${EXISTING_ID}" != "null" ]; then
+      echo "Webhook already exists (id: ${EXISTING_ID})."
+    else
+      echo "Creating webhook..."
+      CODE="$(
+        curl -s -w "%{http_code}" -o /tmp/response.json -X POST \
+          -u "${GITEA_USER}:${GITEA_PASS}" \
+          "${GITEA_URL}/api/v1/repos/${OWNER}/${REPO}/hooks" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"type\": \"gitea\",
+            \"active\": true,
+            \"events\": [\"push\"],
+            \"config\": {
+              \"url\": \"${WEBHOOK_URL}\",
+              \"content_type\": \"json\"
+            }
+          }"
+      )"
+
+      if [ "${CODE}" = "201" ]; then
+        HOOK_ID="$(jq -r '.id' /tmp/response.json)"
+        echo "[+] Created webhook (id: ${HOOK_ID})"
+      else
+        echo "[-] Failed to create webhook (HTTP ${CODE})"
+        cat /tmp/response.json
+        exit 1
+      fi
+    fi
+
+    # Seed the repo from GitHub if it looks empty (required for Shipwright Build sources).
+    # This is safe and idempotent; once seeded, we no-op on subsequent runs.
+    echo "Checking if repo is seeded with workflow-builder sources..."
+    # Use a file that exists in upstream main to determine whether the repo has been seeded.
+    CONTENTS_STATUS="$(
+      curl -s -o /dev/null -w "%{http_code}" \
+        -u "${GITEA_USER}:${GITEA_PASS}" \
+        "${GITEA_URL}/api/v1/repos/${OWNER}/${REPO}/contents/services/function-router/Dockerfile?ref=main"
+    )"
+
+    if [ "${CONTENTS_STATUS}" = "200" ]; then
+      echo "Repo already seeded"
+      exit 0
+    fi
+
+    echo "Repo not seeded yet (HTTP ${CONTENTS_STATUS}), importing from ${UPSTREAM_GIT_URL}..."
+
+    rm -rf /tmp/upstream /tmp/target
+
+    echo "Cloning upstream..."
+    git clone --depth 1 --branch main "${UPSTREAM_GIT_URL}" /tmp/upstream
+    # Do not copy upstream's .git directory into the target repo.
+    # If we do, git will think all files are already tracked and we won't create
+    # a commit on the target repo (and we risk overwriting target git metadata).
+    rm -rf /tmp/upstream/.git
+
+    echo "Cloning target..."
+    git clone "http://${GITEA_USER}:${GITEA_PASS}@my-gitea-http.gitea.svc.cluster.local:3000/${OWNER}/${REPO}.git" /tmp/target
+
+    cd /tmp/target
+    git config user.email "admin@example.com"
+    git config user.name "workflow-builder-repo-init"
+
+    # Replace repository contents (keep .git)
+    find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+    (cd /tmp/upstream && tar cf - .) | tar xf -
+
+    # Commit and push
+    git add -A
+    if git diff --cached --quiet; then
+      echo "No changes to commit after import (unexpected, but OK)"
+      exit 0
+    fi
+
+    git commit -m "chore: seed workflow-builder repo from upstream"
+    git push origin main --force
+
+    echo "[+] Repo seeded (this push should trigger Shipwright builds via webhook)"

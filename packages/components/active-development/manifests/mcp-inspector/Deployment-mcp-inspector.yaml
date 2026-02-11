@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-inspector
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: mcp-inspector
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-inspector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcp-inspector
+        app.kubernetes.io/part-of: workflow-builder
+    spec:
+      containers:
+        - name: mcp-inspector
+          image: ghcr.io/modelcontextprotocol/inspector:latest
+          imagePullPolicy: Always
+          ports:
+            - name: client
+              containerPort: 6274
+            - name: proxy
+              containerPort: 6277
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: MCP_AUTO_OPEN_ENABLED
+              value: "false"
+            - name: DANGEROUSLY_OMIT_AUTH
+              value: "true"
+            - name: MCP_SERVER_REQUEST_TIMEOUT
+              value: "300000"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

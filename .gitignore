@@ -80,3 +80,7 @@ packages/dist/
 client_secret_*.apps.googleusercontent.com.json
 sodium-daylight-*.json
 Workflow Builder(Microsoft Graph format).json
+
+# Tailscale cert/key artifacts (local machine-specific; never commit)
+*.ts.net.key
+*.ts.net.crt

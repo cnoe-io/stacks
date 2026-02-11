@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workflow-builder-builds
+  namespace: argocd
+  annotations:
+    # Install after Shipwright (kind-only) and after workflow-builder namespace exists
+    argocd.argoproj.io/sync-wave: "70"
+spec:
+  project: default
+  source:
+    repoURL: cnoe://workflow-builder-builds/manifests
+    targetRevision: HEAD
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+

@@ -1,0 +1,25 @@
+namespace: workflow-builder
+
+resources:
+  - Secret-gitea-git-creds.yaml
+  - ConfigMap-workflow-builder-build-webhook-script.yaml
+  - Job-workflow-builder-build-webhook-setup.yaml
+  - ServiceAccount-build-trigger.yaml
+  - Role-build-trigger.yaml
+  - RoleBinding-build-trigger.yaml
+  - RoleBinding-tekton-triggers-eventlistener-roles.yaml
+  - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
+  - Build-fn-activepieces.yaml
+  - Build-fn-system.yaml
+  - Build-mcp-gateway.yaml
+  - Build-fn-openai.yaml
+  - Build-fn-slack.yaml
+  - Build-fn-github.yaml
+  - Build-fn-resend.yaml
+  - Build-fn-stripe.yaml
+  - Build-fn-linear.yaml
+  - Build-fn-perplexity.yaml
+  - Build-fn-firecrawl.yaml
+  - TriggerBinding-workflow-builder-fn-builds.yaml
+  - TriggerTemplate-workflow-builder-fn-builds.yaml
+  - EventListener-workflow-builder-fn-builds.yaml

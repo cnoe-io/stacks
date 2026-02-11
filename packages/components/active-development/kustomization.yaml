@@ -28,19 +28,19 @@ resources:
   - apps/ai-chatbot.yaml
   - apps/function-router.yaml
   - apps/workflow-builder.yaml
+  - apps/mcp-gateway.yaml
+  - apps/mcp-inspector.yaml
   - apps/workflow-orchestrator.yaml
   - apps/workflow-web.yaml
   # Planner services
   - apps/planner-dapr-agent.yaml
-  # Contour Gateway (OpenFunction's recommended Gateway implementation)
+  # Contour Gateway (kept for general ingress/gateway needs)
   - apps/contour.yaml
-  # OpenFunction gateway (must deploy after Contour - enables internal service addresses)
-  - apps/openfunction-gateway.yaml
-  # OpenFunction shared infrastructure (must deploy before fn-* apps)
-  - apps/openfunction-shared.yaml
-  # Standalone function executors (always-on)
+  # Shared infrastructure for workflow-builder functions (registry creds, service account)
+  - apps/workflow-functions-shared.yaml
+  # Serverless functions (scale-to-zero Knative Services)
   - apps/fn-activepieces.yaml
-  # OpenFunction functions (scale-to-zero)
+  - apps/fn-system.yaml
   - apps/fn-openai.yaml
   - apps/fn-slack.yaml
   - apps/fn-github.yaml
@@ -49,6 +49,8 @@ resources:
   - apps/fn-linear.yaml
   - apps/fn-perplexity.yaml
   - apps/fn-firecrawl.yaml
+  # Centralized in-cluster builds for fn-* images (Shipwright + Tekton)
+  - apps/workflow-builder-builds.yaml
 
 # Image tag reference (documentation)
 # All active-development images use :latest for local development
@@ -61,6 +63,8 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
     newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway
+    newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
@@ -71,7 +75,9 @@ images:
   # Standalone function executor images
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
     newTag: latest
-  # OpenFunction images
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
+    newTag: latest
+  # Function images
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-openai
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-slack

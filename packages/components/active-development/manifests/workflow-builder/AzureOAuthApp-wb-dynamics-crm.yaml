@@ -1,0 +1,23 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-dynamics-crm
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/83fb58b1-78d6-46e6-a6ec-645d7f29f0ae
+    displayName: Workflow-Dynamics CRM
+    signInAudience: AzureADMultipleOrgs
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-dynamics-crm
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-DYNAMICS-CRM
+    requiredResourceAccess:
+      - resourceAppId: "00000007-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "78ce3f0f-a1ce-49c2-8cde-64b5c0896db4" # user_impersonation
+            type: Scope

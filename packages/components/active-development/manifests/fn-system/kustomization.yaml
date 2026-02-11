@@ -1,0 +1,4 @@
+namespace: workflow-builder
+
+resources:
+  - Service-fn-system.yaml

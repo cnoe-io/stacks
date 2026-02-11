@@ -16,14 +16,6 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder
-  # Ignore DevSpace-managed fields to allow local development without drift detection
-  ignoreDifferences:
-    - group: apps
-      kind: Deployment
-      jsonPointers:
-        - /spec/template/spec/containers/0/image
-        - /spec/template/spec/containers/0/resources
-        - /spec/replicas
   syncPolicy:
     automated:
       selfHeal: true

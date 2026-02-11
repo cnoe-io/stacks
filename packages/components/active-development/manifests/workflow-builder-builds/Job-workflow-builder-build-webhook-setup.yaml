@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workflow-builder-build-webhook-setup
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder-build-webhook-setup
+    app.kubernetes.io/part-of: workflow-builder
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: webhook-setup
+          image: dwdraju/alpine-curl-jq:latest
+          command:
+            - /bin/sh
+            - /scripts/setup-webhook.sh
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            - name: gitea-credentials
+              mountPath: /gitea-credentials
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: script
+          configMap:
+            name: workflow-builder-build-webhook-setup-script
+            defaultMode: 493
+        - name: gitea-credentials
+          secret:
+            secretName: gitea-git-creds
+            items:
+              - key: username
+                path: username
+              - key: password
+                path: password
+  ttlSecondsAfterFinished: 3600
+

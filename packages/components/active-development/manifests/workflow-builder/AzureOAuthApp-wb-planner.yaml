@@ -1,0 +1,27 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureOAuthApp
+metadata:
+  name: wb-planner
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  parameters:
+    existingAppObjectId: /applications/f10a367e-fb36-4b7d-a5e8-cb44060ba2cc
+    displayName: Workflow-Microsoft Planner
+    signInAudience: AzureADandPersonalMicrosoftAccount
+    redirectUris:
+      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+    secretDisplayName: wb-planner
+    secretValidityDuration: 17520h
+    keyVaultSecretPrefix: MICROSOFT-PLANNER
+    requiredResourceAccess:
+      - resourceAppId: "00000003-0000-0000-c000-000000000000"
+        resourceAccess:
+          - id: "2219042f-cab5-40cc-b0d2-16b1540b4c5f" # Tasks.ReadWrite
+            type: Scope
+          - id: "e1fe6dd8-ba31-4d61-89e7-88639da4683d" # User.Read
+            type: Scope
+          - id: "5f8c59db-677d-491f-a6b8-5f174b11ec1d" # Group.Read.All
+            type: Scope

@@ -28,7 +28,7 @@ spec:
                   properties:
                     projectId:
                       type: string
-                    calendarApiService:
+                    apiService:
                       type: string
                       default: calendar-json.googleapis.com
                     oauthJSONRemoteKey:

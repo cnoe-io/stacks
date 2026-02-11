@@ -5,24 +5,41 @@ metadata:
   namespace: workflow-builder
 data:
   # Function slug → target service mapping
-  # type: "openfunction" = scale-to-zero OpenFunction (URL resolved dynamically via K8s API)
+  # type: "knative" = scale-to-zero Knative Service (internal DNS name)
   # type: "builtin" = always-on function-runner service (Dapr service invocation)
   functions.json: |
     {
-      "openai/generate-text": { "appId": "fn-openai", "type": "openfunction" },
-      "openai/generate-image": { "appId": "fn-openai", "type": "openfunction" },
-      "slack/send-message": { "appId": "fn-slack", "type": "openfunction" },
-      "github/create-issue": { "appId": "fn-github", "type": "openfunction" },
-      "github/list-issues": { "appId": "fn-github", "type": "openfunction" },
-      "github/get-issue": { "appId": "fn-github", "type": "openfunction" },
-      "resend/send-email": { "appId": "fn-resend", "type": "openfunction" },
-      "stripe/create-customer": { "appId": "fn-stripe", "type": "openfunction" },
-      "stripe/get-customer": { "appId": "fn-stripe", "type": "openfunction" },
-      "linear/create-ticket": { "appId": "fn-linear", "type": "openfunction" },
-      "linear/find-issues": { "appId": "fn-linear", "type": "openfunction" },
-      "perplexity/search": { "appId": "fn-perplexity", "type": "openfunction" },
-      "perplexity/ask": { "appId": "fn-perplexity", "type": "openfunction" },
-      "firecrawl/scrape": { "appId": "fn-firecrawl", "type": "openfunction" },
-      "firecrawl/search": { "appId": "fn-firecrawl", "type": "openfunction" },
-      "_default": { "appId": "fn-activepieces", "type": "openfunction" }
+      "system/*": { "appId": "fn-system", "type": "knative" },
+      "openai/generate-text": { "appId": "fn-openai", "type": "knative" },
+      "openai/generate-image": { "appId": "fn-openai", "type": "knative" },
+      "openai/*": { "appId": "fn-openai", "type": "knative" },
+      "slack/send-message": { "appId": "fn-slack", "type": "knative" },
+      "slack/*": { "appId": "fn-slack", "type": "knative" },
+      "github/create-issue": { "appId": "fn-github", "type": "knative" },
+      "github/list-issues": { "appId": "fn-github", "type": "knative" },
+      "github/get-issue": { "appId": "fn-github", "type": "knative" },
+      "github/*": { "appId": "fn-github", "type": "knative" },
+      "resend/send-email": { "appId": "fn-resend", "type": "knative" },
+      "resend/*": { "appId": "fn-resend", "type": "knative" },
+      "stripe/create-customer": { "appId": "fn-stripe", "type": "knative" },
+      "stripe/get-customer": { "appId": "fn-stripe", "type": "knative" },
+      "stripe/*": { "appId": "fn-stripe", "type": "knative" },
+      "linear/create-ticket": { "appId": "fn-linear", "type": "knative" },
+      "linear/find-issues": { "appId": "fn-linear", "type": "knative" },
+      "linear/*": { "appId": "fn-linear", "type": "knative" },
+      "perplexity/search": { "appId": "fn-perplexity", "type": "knative" },
+      "perplexity/ask": { "appId": "fn-perplexity", "type": "knative" },
+      "perplexity/*": { "appId": "fn-perplexity", "type": "knative" },
+      "firecrawl/scrape": { "appId": "fn-firecrawl", "type": "knative" },
+      "firecrawl/search": { "appId": "fn-firecrawl", "type": "knative" },
+      "firecrawl/*": { "appId": "fn-firecrawl", "type": "knative" },
+      "planner/clone": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/run-workflow": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/plan": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/execute": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/multi-step": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/approve": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/status": { "appId": "planner-dapr-agent", "type": "knative" },
+      "planner/*": { "appId": "planner-dapr-agent", "type": "knative" },
+      "_default": { "appId": "fn-activepieces", "type": "knative" }
     }

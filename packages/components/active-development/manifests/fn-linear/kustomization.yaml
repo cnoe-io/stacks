@@ -1,4 +1,4 @@
 namespace: workflow-builder
 
 resources:
-  - Function-fn-linear.yaml
+  - Service-fn-linear.yaml

@@ -2,7 +2,6 @@ namespace: workflow-builder
 
 resources:
   - ServiceAccount-function-router.yaml
-  - RBAC-openfunction-reader.yaml
   - ConfigMap-function-router-config.yaml
   - ConfigMap-function-router-dapr-config.yaml
   - ConfigMap-function-registry.yaml
