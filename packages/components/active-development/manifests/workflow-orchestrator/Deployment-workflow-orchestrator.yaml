@@ -54,6 +54,12 @@ spec:
               value: "1"
             - name: PYTHONDONTWRITEBYTECODE
               value: "1"
+            - name: INTERNAL_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: INTERNAL_API_TOKEN
+                  optional: true
           resources:
             requests:
               memory: "256Mi"

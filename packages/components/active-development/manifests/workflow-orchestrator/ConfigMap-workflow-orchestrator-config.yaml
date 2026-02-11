@@ -7,7 +7,9 @@ data:
   NODE_ENV: "production"
   PORT: "8080"
   LOG_LEVEL: "info"
-  # Function router routes to OpenFunctions (fn-openai, fn-slack, etc.)
+  # Internal workflow-builder URL used for orchestrator connection token decryption.
+  WORKFLOW_BUILDER_URL: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
+  # Function router routes to serverless functions (fn-openai, fn-slack, etc.)
   FUNCTION_RUNNER_APP_ID: "function-router"
   # Dapr pub/sub component name (must match Component-pubsub.yaml metadata.name)
   PUBSUB_NAME: "pubsub"
