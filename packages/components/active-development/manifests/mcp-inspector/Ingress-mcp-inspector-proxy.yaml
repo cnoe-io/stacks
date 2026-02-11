@@ -11,10 +11,52 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: mcp-inspector-proxy.cnoe.localtest.me
+    - host: mcp-inspector.cnoe.localtest.me
       http:
         paths:
-          - path: /
+          - path: /sse
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /message
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /stdio
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /config
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-inspector-proxy
+                port:
+                  number: 6277
+          - path: /sandbox
             pathType: Prefix
             backend:
               service:
@@ -23,5 +65,5 @@ spec:
                   number: 6277
   tls:
     - hosts:
-        - mcp-inspector-proxy.cnoe.localtest.me
+        - mcp-inspector.cnoe.localtest.me
       secretName: nginx-tls

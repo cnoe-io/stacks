@@ -40,8 +40,6 @@ stringData:
     PROVIDER=memory
     PROVIDER_CONFIG=
   webhook: |-
-    # Allow webhooks to target in-cluster services (e.g., Tekton EventListeners).
-    # This is a local dev cluster; locking this down is out of scope here.
     ALLOWED_HOST_LIST=*
     SKIP_TLS_VERIFY=true
   actions: |-

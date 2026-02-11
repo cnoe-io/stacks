@@ -35,6 +35,10 @@ spec:
               value: "true"
             - name: MCP_SERVER_REQUEST_TIMEOUT
               value: "300000"
+            - name: ALLOWED_ORIGINS
+              value: "https://mcp-inspector.cnoe.localtest.me:8443,http://localhost:6274"
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
           readinessProbe:
             httpGet:
               path: /health
