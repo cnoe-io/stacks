@@ -33,7 +33,7 @@ spec:
           default: openAI
           openAI:
             provider: OpenAI
-            model: "codex-mini-latest"
+            model: "gpt-5.2-codex"
             apiKeySecretRef: kagent-openai
             apiKeySecretKey: OPENAI_API_KEY
         namespace: kagent
