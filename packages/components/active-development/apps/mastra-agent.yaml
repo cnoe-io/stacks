@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mastra-agent
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:mastra-agent-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://mastra-agent/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dapr-agents
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

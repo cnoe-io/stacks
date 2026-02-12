@@ -30,6 +30,13 @@ spec:
               value: "production"
             - name: LOG_LEVEL
               value: "info"
+            - name: INTERNAL_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: INTERNAL_API_TOKEN
+            - name: WORKFLOW_BUILDER_URL
+              value: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
           resources:
             requests:
               cpu: 100m

@@ -14,31 +14,32 @@ spec:
     chart: kagent
     helm:
       valuesObject:
-        # Scaled to 0 by default - set replicas to 1 when needed
+        fullnameOverride: "kagent"
         controller:
           logLevel: info
-          replicas: 0
+          replicas: 1
           resources:
             limits:
               memory: 1Gi
             requests:
               cpu: 100m
               memory: 128Mi
-        ingress:
-          className: nginx
-          enabled: true
-          hosts:
-            - host: kagent.cnoe.localtest.me
-              paths:
-                - path: /
-                  pathType: Prefix
+        grafana-mcp:
+          fullnameOverride: "kagent-grafana-mcp"
         kmcp:
           enabled: true
-          replicas: 0
+          fullnameOverride: "kagent-kmcp"
+        providers:
+          default: openAI
+          openAI:
+            provider: OpenAI
+            model: "gpt-5.3-codex"
+            apiKeySecretRef: kagent-openai
+            apiKeySecretKey: OPENAI_API_KEY
         namespace: kagent
         ui:
           enabled: true
-          replicas: 0
+          replicas: 1
           resources:
             limits:
               memory: 512Mi
@@ -46,7 +47,7 @@ spec:
               cpu: 100m
               memory: 128Mi
     repoURL: ghcr.io/kagent-dev/kagent/helm
-    targetRevision: 0.7.4
+    targetRevision: 0.7.13
   syncPolicy:
     automated:
       prune: true

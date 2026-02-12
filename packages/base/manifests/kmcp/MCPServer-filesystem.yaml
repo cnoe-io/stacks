@@ -10,6 +10,7 @@ spec:
   transportType: stdio
   stdioTransport: {}
   deployment:
+    image: ghcr.io/astral-sh/uv:debian
     cmd: uvx
     args:
       - mcp-server-filesystem

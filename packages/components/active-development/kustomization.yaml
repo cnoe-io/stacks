@@ -49,6 +49,8 @@ resources:
   - apps/fn-linear.yaml
   - apps/fn-perplexity.yaml
   - apps/fn-firecrawl.yaml
+  # Mastra agent (Dapr-native tool execution service)
+  - apps/mastra-agent.yaml
   # Centralized in-cluster builds for fn-* images (Shipwright + Tekton)
   - apps/workflow-builder-builds.yaml
 
@@ -93,4 +95,7 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-perplexity
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-firecrawl
+    newTag: latest
+  # Mastra agent
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-agent
     newTag: latest

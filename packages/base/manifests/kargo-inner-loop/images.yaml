@@ -84,6 +84,14 @@ images:
     tagPattern: ".*"
     promotionType: kustomize
 
+  - name: mastra-agent
+    argocdApp: mastra-agent
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: Lexical
+    tagPattern: ".*"
+    promotionType: kustomize
+
   - name: mcp-gateway
     argocdApp: mcp-gateway
     registry: gitea.cnoe.localtest.me:8443

@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flowise-db-init
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-init
+          image: docker.io/library/postgres:15.3-alpine3.18
+          env:
+            - name: PGHOST
+              value: postgresql
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              value: password
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+
+              echo "Creating flowise database if not exists..."
+              psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -tc \
+                "SELECT 1 FROM pg_database WHERE datname = 'flowise'" \
+                | grep -q 1 \
+                || psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -c "CREATE DATABASE flowise"
+              echo "Database ready"

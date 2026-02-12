@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ExternalSecret-flowise-secrets.yaml
+  - PersistentVolumeClaim-flowise-data.yaml
+  - Job-flowise-db-init.yaml
+  - Deployment-flowise.yaml
+  - Service-flowise.yaml
+  - Ingress-flowise.yaml
+  - Ingress-flowise-tailscale.yaml

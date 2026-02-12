@@ -4,7 +4,11 @@ metadata:
   name: workflow-builder-mcp-gateway
   namespace: workflow-builder
   annotations:
+    argocd.argoproj.io/sync-wave: "65"
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
 spec:
   ingressClassName: nginx
   rules:

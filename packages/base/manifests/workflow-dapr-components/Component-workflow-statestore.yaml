@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/name: workflow-statestore
     app.kubernetes.io/component: statestore
     app.kubernetes.io/part-of: workflow-infrastructure
+# Scoped to prevent other Dapr apps in dapr-agents from loading this component
+# (queryIndexes requires RediSearch which plain Redis does not support)
+scopes:
+  - workflow-web
 spec:
   type: state.redis
   version: v1

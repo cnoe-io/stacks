@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kagent
+  namespace: kagent
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kagent.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kagent-ui
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - kagent.cnoe.localtest.me
+      secretName: nginx-tls

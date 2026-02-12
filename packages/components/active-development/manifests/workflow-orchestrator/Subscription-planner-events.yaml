@@ -27,5 +27,8 @@ spec:
       # Execution phase completion
       - match: event.type == "planner_execution_completed"
         path: /subscriptions/planner-events
+      # Workflow-builder agent primitive completion
+      - match: event.type == "agent_completed"
+        path: /subscriptions/planner-events
     # Default route for any other workflow.events (future expansion)
     default: /subscriptions/planner-events

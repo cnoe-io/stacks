@@ -13,7 +13,7 @@ spec:
   source:
     chart: kagent-crds
     repoURL: ghcr.io/kagent-dev/kagent/helm
-    targetRevision: 0.7.4
+    targetRevision: 0.7.13
   syncPolicy:
     automated:
       prune: false

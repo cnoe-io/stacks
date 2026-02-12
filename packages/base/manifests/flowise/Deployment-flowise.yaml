@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowise
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  labels:
+    app.kubernetes.io/name: flowise
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flowise
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flowise
+        app.kubernetes.io/part-of: workflow-builder
+    spec:
+      containers:
+        - name: flowise
+          image: docker.io/flowiseai/flowise:2.2.7
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_TYPE
+              value: postgres
+            - name: DATABASE_HOST
+              value: postgresql
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_NAME
+              value: flowise
+            - name: DATABASE_USER
+              value: postgres
+            - name: DATABASE_PASSWORD
+              value: password
+            - name: DISABLE_FLOWISE_TELEMETRY
+              value: "true"
+            - name: FLOWISE_SECRETKEY_OVERWRITE
+              valueFrom:
+                secretKeyRef:
+                  name: flowise-secrets
+                  key: FLOWISE_SECRETKEY_OVERWRITE
+            - name: FLOWISE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: flowise-secrets
+                  key: FLOWISE_USERNAME
+            - name: FLOWISE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: flowise-secrets
+                  key: FLOWISE_PASSWORD
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: OPENAI_API_KEY
+          volumeMounts:
+            - name: flowise-data
+              mountPath: /root/.flowise
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /api/v1/ping
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ping
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/ping
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: flowise-data
+          persistentVolumeClaim:
+            claimName: flowise-data

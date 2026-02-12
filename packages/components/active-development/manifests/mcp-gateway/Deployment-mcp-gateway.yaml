@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: mcp-gateway
   namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "62"
   labels:
     app.kubernetes.io/name: mcp-gateway
     app.kubernetes.io/part-of: workflow-builder
