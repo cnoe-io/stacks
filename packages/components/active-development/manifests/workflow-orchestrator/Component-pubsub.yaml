@@ -14,6 +14,7 @@ scopes:
   - workflow-orchestrator
   - planner-dapr-agent
   - function-router
+  - mastra-agent-mcp
 spec:
   type: pubsub.jetstream
   version: v1

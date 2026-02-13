@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mastra-agent-mcp
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  labels:
+    app: mastra-agent-mcp
+    app.kubernetes.io/runtime: nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mastra-agent-mcp
+  template:
+    metadata:
+      labels:
+        app: mastra-agent-mcp
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "mastra-agent-mcp"
+        dapr.io/app-port: "3300"
+        dapr.io/app-protocol: "http"
+        dapr.io/config: "workflow-builder-tracing"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      serviceAccountName: mastra-agent-mcp
+      containers:
+        - name: mastra-agent-mcp
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-agent-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3300
+          envFrom:
+            - configMapRef:
+                name: mastra-agent-mcp-config
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "50m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3300
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3300
+            initialDelaySeconds: 5
+            periodSeconds: 10
