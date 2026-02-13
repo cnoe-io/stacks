@@ -1,0 +1,39 @@
+# RBAC Role for provisioning piece-mcp-server Deployments and Services.
+#
+# Grants the workflow-builder ServiceAccount permission to create, read, list,
+# patch, and delete Deployments and Services for dynamically provisioned
+# piece-mcp-servers. Used by the auto-provisioner in the Next.js app.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: piece-mcp-provisioner
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: workflow-builder
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "delete", "patch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: piece-mcp-provisioner-binding
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: workflow-builder
+subjects:
+  - kind: ServiceAccount
+    name: workflow-builder
+    namespace: workflow-builder
+roleRef:
+  kind: Role
+  name: piece-mcp-provisioner
+  apiGroup: rbac.authorization.k8s.io

@@ -41,5 +41,7 @@ data:
       "planner/approve": { "appId": "planner-dapr-agent", "type": "knative" },
       "planner/status": { "appId": "planner-dapr-agent", "type": "knative" },
       "planner/*": { "appId": "planner-dapr-agent", "type": "knative" },
+      "mastra/run-tool": { "appId": "mastra-agent", "type": "knative" },
+      "mastra/*": { "appId": "mastra-agent", "type": "knative" },
       "_default": { "appId": "fn-activepieces", "type": "knative" }
     }

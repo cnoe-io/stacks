@@ -10,6 +10,7 @@ resources:
   - Component-secretstore-kubernetes.yaml
   - Component-azureappconfig-workflow-builder.yaml
   - Role-secret-reader.yaml
+  - Role-piece-mcp-provisioner.yaml
   - ExternalSecret-workflow-builder.yaml
   - StatefulSet-postgresql.yaml
   - Service-postgresql.yaml

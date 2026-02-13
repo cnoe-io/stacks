@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+  name: workflow-mcp-server
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-mcp-server
+  template:
+    metadata:
+      labels:
+        app: workflow-mcp-server
+        app.kubernetes.io/name: workflow-mcp-server
+    spec:
+      containers:
+        - name: workflow-mcp-server
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3200
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3200"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: WORKFLOW_ORCHESTRATOR_URL
+              value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
+          envFrom:
+            - secretRef:
+                name: workflow-builder-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3200
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3200
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+      securityContext:
+        fsGroup: 1001

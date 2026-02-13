@@ -11,3 +11,4 @@ data:
   REGISTRY_FILE_PATH: "/config/functions.json"
   WORKFLOW_BUILDER_URL: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
   AP_API_URL: "http://activepieces.activepieces.svc.cluster.local:80"
+  MASTRA_AGENT_URL: "http://mastra-agent.dapr-agents.svc.cluster.local:3000"
