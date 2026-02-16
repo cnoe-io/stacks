@@ -4,7 +4,7 @@
 
 set -e
 
-CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+CLUSTER_NAME="${CLUSTER_HOST:-$(hostname -s 2>/dev/null || hostname)}"
 KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
 STACKS_DIR="${DEVENV_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 

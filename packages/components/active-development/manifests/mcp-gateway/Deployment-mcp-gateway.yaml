@@ -33,6 +33,16 @@ spec:
               value: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
             - name: MCP_WAIT_TIMEOUT_MS
               value: "300000"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_SERVICE_NAME
+              value: "mcp-gateway"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=workflow-builder,service.version=1.0.0"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
           envFrom:
             - secretRef:
                 name: workflow-builder-secrets
@@ -50,4 +60,3 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 2
-

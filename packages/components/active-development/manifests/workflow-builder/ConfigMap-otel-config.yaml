@@ -13,6 +13,8 @@ data:
 
   # Service identification
   OTEL_SERVICE_NAME: "workflow-builder"
+  JAEGER_QUERY_SERVICE: "workflow-builder"
+  JAEGER_QUERY_URL: "http://jaeger-query.observability.svc.cluster.local:16686"
 
   # Resource attributes for trace correlation
   OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-builder,service.version=1.0.0"

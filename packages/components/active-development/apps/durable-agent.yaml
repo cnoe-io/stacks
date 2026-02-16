@@ -1,20 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: mastra-agent
+  name: durable-agent
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "65"
-    kargo.akuity.io/authorized-stage: kargo-pipelines:mastra-agent-local-dev
+    kargo.akuity.io/authorized-stage: kargo-pipelines:durable-agent-local-dev
 spec:
   project: default
   source:
-    repoURL: cnoe://mastra-agent/manifests
+    repoURL: cnoe://durable-agent/manifests
     targetRevision: HEAD
     path: "."
   destination:
     server: https://kubernetes.default.svc
-    namespace: dapr-agents
+    namespace: workflow-builder
   ignoreDifferences:
     - group: apps
       kind: Deployment

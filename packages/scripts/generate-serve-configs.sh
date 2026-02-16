@@ -24,7 +24,7 @@ declare -A SERVICES=(
     ["langfuse"]="http://langfuse-web.langfuse.svc.cluster.local:3000"
     ["loki"]="http://loki.observability.svc.cluster.local:3100"
     ["mimir"]="http://mimir.observability.svc.cluster.local:9009"
-    ["otel-collector"]="http://opentelemetry-collector.observability.svc.cluster.local:4318"
+    ["otel-collector"]="http://otel-collector.observability.svc.cluster.local:4318"
 )
 
 # Overlay -> TAILSCALE_HOST mapping

@@ -35,6 +35,16 @@ spec:
               value: "0.0.0.0"
             - name: WORKFLOW_ORCHESTRATOR_URL
               value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_SERVICE_NAME
+              value: "workflow-mcp-server"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=workflow-builder,service.version=1.0.0"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
           envFrom:
             - secretRef:
                 name: workflow-builder-secrets

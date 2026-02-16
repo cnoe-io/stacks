@@ -84,6 +84,8 @@ data:
         endpoint: arize-phoenix.observability.svc.cluster.local:4317
         tls:
           insecure: true
+      zipkin/jaeger:
+        endpoint: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
 
     extensions:
       health_check:
@@ -107,7 +109,7 @@ data:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, k8sattributes, transform/system_namespace, batch, resource]
-          exporters: [otlp/tempo, otlphttp/langfuse, otlp/phoenix]
+          exporters: [otlp/tempo, otlphttp/langfuse, otlp/phoenix, zipkin/jaeger]
       telemetry:
         logs:
           level: warn

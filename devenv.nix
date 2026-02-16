@@ -57,7 +57,11 @@
 
     # Build kustomize packages for the current host
     "kustomize-build".exec = ''
-      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+      if [ -n "$CLUSTER_HOST" ]; then
+        CLUSTER_NAME="$CLUSTER_HOST"
+      else
+        CLUSTER_NAME="$(hostname -s 2>/dev/null || hostname)"
+      fi
       cd "$DEVENV_ROOT/packages"
       make build-kustomize-kind-$CLUSTER_NAME
     '';
@@ -70,14 +74,20 @@
 
     # Watch source manifests and rebuild on change (manual alternative to devenv up)
     "watch-kustomize".exec = ''
-      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+      if [ -n "$CLUSTER_HOST" ]; then
+        CLUSTER_NAME="$CLUSTER_HOST"
+      else
+        CLUSTER_NAME="$(hostname -s 2>/dev/null || hostname)"
+      fi
       echo "👁️  Watching packages/ for changes (Ctrl+C to stop)..."
       watchexec \
         --debounce 2000ms \
-        --exts yaml,yml \
+        --exts yaml,yml,json,sh \
         --watch "$DEVENV_ROOT/packages/base" \
         --watch "$DEVENV_ROOT/packages/components" \
         --watch "$DEVENV_ROOT/packages/overlays" \
+        --watch "$DEVENV_ROOT/packages/scripts" \
+        --watch "$DEVENV_ROOT/deployment/scripts" \
         --ignore "dist" \
         -- sh -c "echo '🔄 Change detected...'; cd '$DEVENV_ROOT/packages' && make build-kustomize-kind-$CLUSTER_NAME"
     '';
@@ -103,7 +113,11 @@
 
     # Image preloading from Docker cache to KIND + Gitea
     "preload-images".exec = ''
-      CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+      if [ -n "$CLUSTER_HOST" ]; then
+        CLUSTER_NAME="$CLUSTER_HOST"
+      else
+        CLUSTER_NAME="$(hostname -s 2>/dev/null || hostname)"
+      fi
       "$DEVENV_ROOT/deployment/scripts/preload-images.sh" "$CLUSTER_NAME"
     '';
   };
@@ -114,7 +128,11 @@
     # Watches source manifests, rebuilds kustomize, and applies via idpbuilder
     idpbuilder = {
       exec = ''
-        CLUSTER_NAME=$(hostname -s 2>/dev/null || hostname)
+        if [ -n "$CLUSTER_HOST" ]; then
+          CLUSTER_NAME="$CLUSTER_HOST"
+        else
+          CLUSTER_NAME="$(hostname -s 2>/dev/null || hostname)"
+        fi
         KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
 
         # Initial build
@@ -137,15 +155,17 @@
         # Start file watcher - rebuilds and re-applies on source changes
         echo ""
         echo "👁️  Watching source manifests for changes..."
-        echo "   Directories: packages/base/, components/, overlays/"
+        echo "   Directories: packages/base/, components/, overlays/, scripts/"
         echo "   Debounce: 2000ms"
         echo ""
         exec watchexec \
           --debounce 2000ms \
-          --exts yaml,yml \
+          --exts yaml,yml,json,sh \
           --watch "$DEVENV_ROOT/packages/base" \
           --watch "$DEVENV_ROOT/packages/components" \
           --watch "$DEVENV_ROOT/packages/overlays" \
+          --watch "$DEVENV_ROOT/packages/scripts" \
+          --watch "$DEVENV_ROOT/deployment/scripts" \
           --ignore "dist" \
           --ignore ".direnv" \
           --ignore "result*" \

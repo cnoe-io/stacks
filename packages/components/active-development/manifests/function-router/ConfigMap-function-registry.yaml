@@ -5,35 +5,17 @@ metadata:
   namespace: workflow-builder
 data:
   # Function slug → target service mapping
-  # type: "knative" = scale-to-zero Knative Service (internal DNS name)
-  # type: "builtin" = always-on function-runner service (Dapr service invocation)
+  # type: "knative" = direct HTTP call to service (internal DNS name)
+  #
+  # Routing:
+  #   system/*   → fn-system (http-request, database-query, condition)
+  #   mastra/*   → durable-agent (clone, plan, execute, workspace tools)
+  #   durable/*  → durable-agent (durable agent runs)
+  #   *          → fn-activepieces (all AP piece actions: openai, slack, github, etc.)
   functions.json: |
     {
       "system/*": { "appId": "fn-system", "type": "knative" },
-      "openai/generate-text": { "appId": "fn-openai", "type": "knative" },
-      "openai/generate-image": { "appId": "fn-openai", "type": "knative" },
-      "openai/*": { "appId": "fn-openai", "type": "knative" },
-      "slack/send-message": { "appId": "fn-slack", "type": "knative" },
-      "slack/*": { "appId": "fn-slack", "type": "knative" },
-      "github/create-issue": { "appId": "fn-github", "type": "knative" },
-      "github/list-issues": { "appId": "fn-github", "type": "knative" },
-      "github/get-issue": { "appId": "fn-github", "type": "knative" },
-      "github/*": { "appId": "fn-github", "type": "knative" },
-      "resend/send-email": { "appId": "fn-resend", "type": "knative" },
-      "resend/*": { "appId": "fn-resend", "type": "knative" },
-      "stripe/create-customer": { "appId": "fn-stripe", "type": "knative" },
-      "stripe/get-customer": { "appId": "fn-stripe", "type": "knative" },
-      "stripe/*": { "appId": "fn-stripe", "type": "knative" },
-      "linear/create-ticket": { "appId": "fn-linear", "type": "knative" },
-      "linear/find-issues": { "appId": "fn-linear", "type": "knative" },
-      "linear/*": { "appId": "fn-linear", "type": "knative" },
-      "perplexity/search": { "appId": "fn-perplexity", "type": "knative" },
-      "perplexity/ask": { "appId": "fn-perplexity", "type": "knative" },
-      "perplexity/*": { "appId": "fn-perplexity", "type": "knative" },
-      "firecrawl/scrape": { "appId": "fn-firecrawl", "type": "knative" },
-      "firecrawl/search": { "appId": "fn-firecrawl", "type": "knative" },
-      "firecrawl/*": { "appId": "fn-firecrawl", "type": "knative" },
-      "mastra/run-tool": { "appId": "mastra-agent", "type": "knative" },
-      "mastra/*": { "appId": "mastra-agent", "type": "knative" },
+      "mastra/*": { "appId": "durable-agent", "type": "knative" },
+      "durable/*": { "appId": "durable-agent", "type": "knative" },
       "_default": { "appId": "fn-activepieces", "type": "knative" }
     }

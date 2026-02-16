@@ -11,4 +11,4 @@ data:
   GRAFANA_URL: http://grafana.observability.svc.cluster.local:80
   LOKI_URL: http://loki.observability.svc.cluster.local:3100
   TEMPO_URL: http://tempo.observability.svc.cluster.local:3200
-  OTEL_COLLECTOR_URL: http://otel-collector.observability.svc.cluster.local:4317
+  OTEL_COLLECTOR_URL: http://otel-collector.observability.svc.cluster.local:4318
