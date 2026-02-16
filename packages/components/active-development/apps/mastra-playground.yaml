@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mastra-playground
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+    # Kargo Stage authorized to update this app's image tag
+    kargo.akuity.io/authorized-stage: kargo-pipelines:mastra-playground-local-dev
+spec:
+  project: default
+  source:
+    repoURL: cnoe://mastra-playground/manifests
+    targetRevision: HEAD
+    path: "."
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: workflow-builder
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+

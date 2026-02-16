@@ -3,6 +3,11 @@ kind: Ingress
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "65"
+    # Keep these values consistent to avoid ingress-nginx generating an invalid
+    # nginx.conf (proxy_buffer_size/proxy_buffers vs proxy_busy_buffers_size).
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-busy-buffers-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   name: workflow-builder
   namespace: workflow-builder
   labels:

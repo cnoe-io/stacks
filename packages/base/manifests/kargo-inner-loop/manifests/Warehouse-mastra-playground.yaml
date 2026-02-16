@@ -3,10 +3,10 @@ kind: Warehouse
 metadata:
   labels:
     app.kubernetes.io/component: warehouse
-    app.kubernetes.io/name: planner-agent-warehouse
+    app.kubernetes.io/name: mastra-playground-warehouse
     app.kubernetes.io/part-of: kargo-inner-loop
     kargo.akuity.io/loop: inner
-  name: planner-agent
+  name: mastra-playground
   namespace: kargo-pipelines
 spec:
   freightCreationPolicy: Automatic
@@ -15,13 +15,13 @@ spec:
     # Config source - Gitea repo from idpbuilder
     # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
     - git:
-        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-planner-agent-manifests.git
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-mastra-playground-manifests.git
         branch: main
         insecureSkipTLSVerify: true
         strictSemvers: false
     # Image source - local dev images from Gitea registry
     - image:
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/planner-agent
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-playground
         imageSelectionStrategy: Lexical
         allowTags: .*
         discoveryLimit: 10

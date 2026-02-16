@@ -103,6 +103,11 @@ spec:
           pathType: Prefix
           hosts:
             - grafana.cnoe.localtest.me
+        sidecar:
+          dashboards:
+            enabled: true
+            label: grafana_dashboard
+            searchNamespace: observability
         serviceMonitor:
           enabled: false
   destination:

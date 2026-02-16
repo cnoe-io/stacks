@@ -7,15 +7,15 @@ metadata:
     app.kubernetes.io/name: workflow-web
     app.kubernetes.io/component: observability
 data:
-  # OTEL Collector endpoint (gRPC)
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4317"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  # OTEL Collector endpoint (OTLP HTTP/protobuf)
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
 
   # Service identification
   OTEL_SERVICE_NAME: "workflow-web"
 
   # Resource attributes for trace correlation
-  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-web,service.version=1.0.0"
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-builder,service.version=1.0.0"
 
   # Enable trace propagation headers
   OTEL_PROPAGATORS: "tracecontext,baggage"

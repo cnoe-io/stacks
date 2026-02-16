@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: durable-agent
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  labels:
+    app: durable-agent
+    app.kubernetes.io/runtime: nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: durable-agent
+  template:
+    metadata:
+      labels:
+        app: durable-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "durable-agent"
+        dapr.io/app-port: "8001"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-api-logging: "true"
+        dapr.io/enable-workflow: "true"
+        dapr.io/graceful-shutdown-seconds: "60"
+        dapr.io/placement-host-address: "dapr-placement-server.dapr-system.svc.cluster.local:50005"
+    spec:
+      serviceAccountName: durable-agent
+      containers:
+        - name: durable-agent
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/durable-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+          envFrom:
+            - configMapRef:
+                name: durable-agent-config
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: durable-agent-secrets
+                  key: OPENAI_API_KEY
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10

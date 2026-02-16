@@ -9,6 +9,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # Keep these values consistent to avoid ingress-nginx generating an invalid
+    # nginx.conf (proxy_buffer_size/proxy_buffers vs proxy_busy_buffers_size).
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-busy-buffers-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
 spec:
   ingressClassName: nginx
   rules:
@@ -26,4 +31,3 @@ spec:
     - hosts:
         - workflow-builder.cnoe.localtest.me
       secretName: nginx-tls
-

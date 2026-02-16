@@ -394,16 +394,13 @@ setup_federated_credentials() {
         "mcp-tools:acr-sa"                     # MCP tools ACR access
         "kargo:acr-sa"                         # Kargo ACR access
         "ai-chatbot:ai-chatbot"                # AI chatbot Dapr secrets/config access
-        "planner-agent:planner-dapr-agent"     # Planner agent Dapr secrets/config access
         "workflow-orchestrator:workflow-orchestrator"  # Workflow orchestrator Dapr secrets/config access (legacy namespace)
         "workflow-builder:workflow-orchestrator"       # Workflow orchestrator in workflow-builder namespace
-        "workflow-builder:activity-executor"   # Activity executor in workflow-builder namespace
         "workflow-builder:function-runner"     # Function runner in workflow-builder namespace
         "workflow-builder:function-router"     # Function router in workflow-builder namespace
         "workflow-builder:workflow-functions"  # Shared SA for all OpenFunctions (fn-openai, fn-slack, etc.)
-        "workflow-builder:planner-dapr-agent"  # Planner Dapr agent for OpenAI Agents SDK execution
+        "workflow-builder:mastra-agent-tanstack"  # Mastra agent for AI planning and execution
         "workflow-builder:workflow-builder"    # Main workflow-builder SA (push-oauth-client-ids job)
-        "activity-executor:activity-executor"  # Activity executor Dapr secrets/config access (legacy namespace)
         "dapr-sandbox:dapr-shared"             # Shared Dapr instances for agent sandboxes
     )
 

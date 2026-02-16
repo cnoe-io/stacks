@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-otel-systems
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  otel-systems.json: |
+    {
+      "uid": "otel-systems",
+      "title": "OTEL Systems",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "tags": ["otel", "systems"],
+      "templating": {
+        "list": [
+          {
+            "type": "custom",
+            "name": "system",
+            "label": "System",
+            "hide": 0,
+            "current": { "text": "workflow-builder", "value": "workflow-builder" },
+            "options": [
+              { "text": "workflow-builder", "value": "workflow-builder", "selected": true },
+              { "text": "dapr-workflows", "value": "dapr-workflows", "selected": false }
+            ],
+            "query": "workflow-builder,dapr-workflows"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "text",
+          "title": "How To Use",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 },
+          "options": {
+            "mode": "markdown",
+            "content": "This dashboard is a lightweight index for the two OTEL systems.\\n\\nSelected system: `${system}`\\n\\nTempo TraceQL examples:\\n- All traces for the system: `{ resource.service.namespace = \\\"${system}\\\" }`\\n- Filter by service name too: `{ resource.service.namespace = \\\"${system}\\\", resource.service.name = \\\"workflow-builder\\\" }`\\n\\nIf services are missing, check that spans have `service.namespace` populated (either from the app via `OTEL_RESOURCE_ATTRIBUTES` or backfilled in the collector via `k8s.namespace.name`)."
+          }
+        },
+        {
+          "type": "text",
+          "title": "workflow-builder",
+          "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 },
+          "options": {
+            "mode": "markdown",
+            "content": "Tempo TraceQL:\\n`{ resource.service.namespace = \\\"workflow-builder\\\" }`\\n\\nTypical services:\\n- `workflow-builder`\\n- `workflow-orchestrator`\\n- `function-router`\\n- `mcp-gateway`\\n- `fn-*`"
+          }
+        },
+        {
+          "type": "text",
+          "title": "dapr-workflows",
+          "gridPos": { "x": 12, "y": 6, "w": 12, "h": 6 },
+          "options": {
+            "mode": "markdown",
+            "content": "Tempo TraceQL:\\n`{ resource.service.namespace = \\\"dapr-workflows\\\" }`\\n\\nThis is mapped from the Kubernetes namespace `dapr-agents` in the OTEL collector to make the system name clearer."
+          }
+        }
+      ]
+    }
+

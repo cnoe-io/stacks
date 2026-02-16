@@ -4,6 +4,6 @@ metadata:
   name: workflow-orchestrator-otel-config
   namespace: workflow-builder
 data:
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
   OTEL_SERVICE_NAME: "workflow-orchestrator"
-  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-orchestrator,service.version=1.0.0"
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=workflow-builder,service.version=1.0.0"

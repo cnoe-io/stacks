@@ -36,7 +36,7 @@ resources:
   - apps/dapr-runtime.yaml
   - apps/dapr-shared.yaml
   - apps/dapr-agents-demo.yaml
-  # NOTE: planner-agent app moved to components/active-development
+  # NOTE: mastra-agent app moved to components/active-development
   - apps/default-secretstore.yaml
   - apps/example-namespace.yaml
   - apps/external-secrets.yaml

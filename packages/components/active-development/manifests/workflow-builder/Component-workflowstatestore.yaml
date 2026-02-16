@@ -9,10 +9,9 @@ metadata:
     app.kubernetes.io/name: workflowstatestore
     app.kubernetes.io/component: statestore
     app.kubernetes.io/part-of: workflow-orchestrator
-# Scoping: Visible to workflow-orchestrator and planner-dapr-agent sidecars
+# Scoping: Visible to workflow-orchestrator
 scopes:
   - workflow-orchestrator
-  - planner-dapr-agent
 spec:
   type: state.redis
   version: v1

@@ -21,6 +21,3 @@ data:
   # When enabled, the workflow patterns runtime is initialized for Dapr workflows
   WORKFLOW_PATTERNS_ENABLED: "true"
 
-  # Planner Dapr Agent app-id for Dapr service invocation
-  # Since planner-dapr-agent is in the same namespace (ai-chatbot), no namespace suffix needed
-  PLANNER_DAPR_AGENT_APP_ID: "planner-dapr-agent"

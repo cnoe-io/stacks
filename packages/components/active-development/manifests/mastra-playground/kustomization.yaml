@@ -1,0 +1,7 @@
+namespace: workflow-builder
+
+resources:
+  - Deployment-mastra-playground.yaml
+  - Service-mastra-playground.yaml
+  - Ingress-mastra-playground.yaml
+

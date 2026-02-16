@@ -13,5 +13,3 @@ data:
   FUNCTION_RUNNER_APP_ID: "function-router"
   # Dapr pub/sub component name (must match Component-pubsub.yaml metadata.name)
   PUBSUB_NAME: "pubsub"
-  # Planner agent app ID for Dapr service invocation (planner-dapr-agent has /run endpoint)
-  PLANNER_APP_ID: "planner-dapr-agent"

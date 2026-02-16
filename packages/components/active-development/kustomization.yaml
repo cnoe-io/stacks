@@ -30,10 +30,9 @@ resources:
   - apps/workflow-builder.yaml
   - apps/mcp-gateway.yaml
   - apps/mcp-inspector.yaml
+  - apps/mastra-playground.yaml
   - apps/workflow-orchestrator.yaml
   - apps/workflow-web.yaml
-  # Planner services
-  - apps/planner-dapr-agent.yaml
   # Contour Gateway (kept for general ingress/gateway needs)
   - apps/contour.yaml
   # Shared infrastructure for workflow-builder functions (registry creds, service account)
@@ -71,8 +70,7 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
     newTag: latest
-  # Planner services
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/planner-dapr-agent
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-playground
     newTag: latest
   # Standalone function executor images
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces

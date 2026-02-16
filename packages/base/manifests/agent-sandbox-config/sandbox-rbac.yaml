@@ -1,5 +1,5 @@
 # RBAC for services that need to create and manage Agent Sandboxes
-# This allows the planner-dapr-agent to orchestrate sandbox execution
+# This allows mastra-agent-tanstack to orchestrate sandbox execution
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -34,13 +34,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: planner-dapr-agent-sandbox-creator
+  name: mastra-agent-tanstack-sandbox-creator
 subjects:
 - kind: ServiceAccount
-  name: planner-dapr-agent
-  namespace: ai-chatbot
-- kind: ServiceAccount
-  name: planner-dapr-agent
+  name: mastra-agent-tanstack
   namespace: workflow-builder
 roleRef:
   kind: ClusterRole

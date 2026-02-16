@@ -105,8 +105,7 @@ spec:
               value: "pubsub"
             - name: WORKING_DIRECTORY
               value: "/workspace"
-            # Planner Agent workflow service configuration
-            # planner-dapr-agent is in workflow-builder namespace (cross-namespace via Dapr)
+            # Workflow orchestrator service configuration
             - name: WORKFLOW_SERVICE_URL
               value: "http://workflow-orchestrator.workflow-builder.svc.cluster.local:8080"
             - name: WORKFLOW_PATTERNS_ENABLED
@@ -127,10 +126,10 @@ spec:
               value: "true"
             - name: DAPR_WORKFLOW_STATE_STORE
               value: "statestore"
-            # Workflow state key for reading planner-agent workflow state
+            # Workflow state key for reading workflow state
             - name: WORKFLOW_STATE_KEY
               value: "workflow-llm||llm.orchestrator:LLMOrchestrator:workflow_state"
-            # Redis for workflow state (dapr-agents instance where planner-agent writes)
+            # Redis for workflow state (dapr-agents instance)
             - name: WORKFLOW_REDIS_HOST
               value: "redis-service.dapr-agents.svc.cluster.local"
             - name: WORKFLOW_REDIS_PORT

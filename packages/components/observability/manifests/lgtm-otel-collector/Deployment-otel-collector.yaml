@@ -15,6 +15,7 @@ spec:
       labels:
         app: otel-collector
     spec:
+      serviceAccountName: otel-collector
       containers:
         - command:
             - /otelcol-contrib

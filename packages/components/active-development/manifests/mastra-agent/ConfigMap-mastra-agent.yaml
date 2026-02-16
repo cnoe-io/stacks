@@ -6,7 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: mastra-agent
 data:
-  PORT: "3000"
+  APP_PORT: "8001"
+  OPENAI_MODEL: "gpt-4o"
+  MAX_ITERATIONS: "10"
+  STATE_KEY: "mastra-weather-agent"
+  DAPR_STATE_STORE: "statestore"
   DAPR_HTTP_PORT: "3500"
   DAPR_GRPC_PORT: "50001"
-  DAPR_STATE_STORE: "mastra-statestore"

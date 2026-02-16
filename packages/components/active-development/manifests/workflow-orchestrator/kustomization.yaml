@@ -12,7 +12,6 @@ resources:
 - Component-pubsub.yaml
 - Component-azureappconfig.yaml
 - Component-secretstore-azure-keyvault.yaml
-- Subscription-planner-events.yaml
 - Job-nats-stream-init.yaml
 - Deployment-workflow-orchestrator.yaml
 - Service-workflow-orchestrator.yaml

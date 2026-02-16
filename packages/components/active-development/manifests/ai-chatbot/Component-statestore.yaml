@@ -16,6 +16,5 @@ spec:
     - name: actorStateStore
       value: "true"
     # Disable key prefix so keys are stored without app-id prefix
-    # Required for cross-app workflow index sharing with planner-dapr-agent
     - name: keyPrefix
       value: "none"

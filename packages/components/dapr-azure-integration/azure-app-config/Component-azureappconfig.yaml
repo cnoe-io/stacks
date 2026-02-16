@@ -25,7 +25,7 @@ spec:
     - name: azureClientId
       value: ""
     # Filter by label to get only app-specific configurations
-    # PATCH THIS: e.g., "ai-chatbot", "planner-agent"
+    # PATCH THIS: e.g., "ai-chatbot", "workflow-builder"
     - name: label
       value: "REPLACE_ME"
     # Poll interval for configuration changes (supports dynamic updates)

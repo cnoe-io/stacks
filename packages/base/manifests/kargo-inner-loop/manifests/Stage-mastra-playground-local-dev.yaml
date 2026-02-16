@@ -5,16 +5,16 @@ metadata:
     kargo.akuity.io/color: green
   labels:
     app.kubernetes.io/component: stage
-    app.kubernetes.io/name: planner-agent-local-dev-stage
+    app.kubernetes.io/name: mastra-playground-local-dev-stage
     app.kubernetes.io/part-of: kargo-inner-loop
     kargo.akuity.io/loop: inner
-  name: planner-agent-local-dev
+  name: mastra-playground-local-dev
   namespace: kargo-pipelines
 spec:
   requestedFreight:
     - origin:
         kind: Warehouse
-        name: planner-agent
+        name: mastra-playground
       sources:
         direct: true
   promotionTemplate:
@@ -22,11 +22,11 @@ spec:
       vars:
         # ${TAILSCALE_HOST} is substituted by build.sh at build time
         - name: gitRepoURL
-          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-planner-agent-manifests.git
+          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-mastra-playground-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/planner-agent
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-playground
         - name: argoAppName
-          value: planner-agent
+          value: mastra-playground
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo
@@ -54,7 +54,7 @@ spec:
           config:
             path: ./src
             message: |
-              chore: update planner-agent to ${{ imageFrom(vars.imageRepoURL).Tag }}
+              chore: update mastra-playground to ${{ imageFrom(vars.imageRepoURL).Tag }}
 
               Image: ${{ vars.imageRepoURL }}:${{ imageFrom(vars.imageRepoURL).Tag }}
               Freight: ${{ ctx.targetFreight.name }}

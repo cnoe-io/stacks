@@ -30,8 +30,6 @@ resources:
   - Deployment-ai-chatbot.yaml
   - Service-ai-chatbot.yaml
   - Ingress-ai-chatbot.yaml
-  # Note: planner-dapr-agent now lives in workflow-builder namespace
-  # ai-chatbot invokes it via Dapr cross-namespace service invocation
 
 # Image tag - using latest for active development
 images:
