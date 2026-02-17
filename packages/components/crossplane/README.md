@@ -12,6 +12,10 @@ This component manages Crossplane + provider installation and OAuth app automati
   - `manifests/crossplane-providers/*`
 - XRDs + Compositions:
   - `manifests/crossplane-compositions/*`
+- ObjectStorage now supports:
+  - native metadata-only composition (`Composition-objectstorage.yaml`)
+  - Azure Blob container composition (`Composition-objectstorage-azure.yaml`)
+  - dedicated Azure claim type (`AzureObjectStorage`) via `Composition-azureobjectstorage.yaml`
 - Crossplane RBAC for composing ExternalSecrets:
   - `manifests/crossplane-compositions/ClusterRole-crossplane-external-secrets-access.yaml`
 - Workflow Builder claims:
@@ -30,6 +34,12 @@ AzureAD provider is configured to use **Azure Workload Identity** via OIDC token
 Current app ID wired for provider auth in this repo:
 
 - `61cc905a-2792-459e-a87a-baeb87ba6df6`
+
+Azure storage provisioning uses Crossplane provider workload identity:
+
+- `Provider-provider-azure-storage.yaml`
+- reuses `DeploymentRuntimeConfig-provider-azuread-workload-identity.yaml`
+- `ClusterProviderConfig-azure-storage-default.yaml`
 
 ## Required Azure Key Vault secrets
 
@@ -77,6 +87,10 @@ packages/components/crossplane/scripts/bootstrap-gcp-crossplane-prereqs.sh \
 - `crossplane-providers`
 - `crossplane-compositions`
 - `workflow-builder`
+
+For workspace-change reconstruction blob persistence, the Workflow Builder claim is:
+
+- `packages/components/active-development/manifests/workflow-builder/ObjectStorage-workspace-changes.yaml`
 
 ## Verification checks
 

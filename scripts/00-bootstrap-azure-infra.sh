@@ -256,8 +256,12 @@ check_infrastructure() {
                 configured_issuer=$(az ad app federated-credential list --id "$AZURE_CLIENT_ID" \
                     --query "[0].issuer" -o tsv 2>/dev/null || echo "")
                 if [[ -n "${SERVICE_ACCOUNT_ISSUER:-}" ]]; then
-                    local expected_issuer="${SERVICE_ACCOUNT_ISSUER%/}"
-                    local actual_issuer="${configured_issuer%/}"
+                    # OIDC issuer matching is exact; preserve/require trailing slash.
+                    local expected_issuer="${SERVICE_ACCOUNT_ISSUER}"
+                    if [[ "${expected_issuer}" != */ ]]; then
+                        expected_issuer="${expected_issuer}/"
+                    fi
+                    local actual_issuer="${configured_issuer}"
                     if [[ "$expected_issuer" == "$actual_issuer" ]]; then
                         log_success "OIDC Issuer: matches ($configured_issuer)"
                     else
@@ -398,14 +402,20 @@ setup_federated_credentials() {
         "workflow-builder:workflow-orchestrator"       # Workflow orchestrator in workflow-builder namespace
         "workflow-builder:function-runner"     # Function runner in workflow-builder namespace
         "workflow-builder:function-router"     # Function router in workflow-builder namespace
+        "workflow-builder:durable-agent"       # Durable agent (workspace blob binding + sandbox orchestration)
         "workflow-builder:workflow-functions"  # Shared SA for all OpenFunctions (fn-openai, fn-slack, etc.)
         "workflow-builder:mastra-agent-tanstack"  # Mastra agent for AI planning and execution
         "workflow-builder:workflow-builder"    # Main workflow-builder SA (push-oauth-client-ids job)
         "dapr-sandbox:dapr-shared"             # Shared Dapr instances for agent sandboxes
+        "crossplane-system:provider-azure-storage-wi" # Crossplane Azure Storage provider SA
     )
 
-    # Remove trailing slash from issuer if present
-    local issuer="${SERVICE_ACCOUNT_ISSUER%/}"
+    # OIDC issuer matching is exact; projected Kubernetes service account tokens
+    # include a trailing slash in `iss`, so ensure we do too.
+    local issuer="${SERVICE_ACCOUNT_ISSUER}"
+    if [[ "${issuer}" != */ ]]; then
+        issuer="${issuer}/"
+    fi
 
     for sa_config in "${SA_CONFIGS[@]}"; do
         local namespace="${sa_config%%:*}"
@@ -421,11 +431,8 @@ setup_federated_credentials() {
             --query "[?name=='${fic_name}'].issuer | [0]" -o tsv 2>/dev/null || echo "")
 
         if [[ -n "$existing_issuer" ]]; then
-            # Check if issuer needs updating
-            local existing_issuer_normalized="${existing_issuer%/}"
-            local new_issuer_normalized="${issuer%/}"
-
-            if [[ "$existing_issuer_normalized" != "$new_issuer_normalized" ]]; then
+            # Check if issuer needs updating (exact match required by Entra).
+            if [[ "$existing_issuer" != "$issuer" ]]; then
                 if [[ "$UPDATE_ISSUER" == "true" ]] || [[ "$FORCE_RECREATE" == "true" ]]; then
                     log_warn "Updating federated credential issuer: $fic_name"
                     log_info "  Old: $existing_issuer"
@@ -485,6 +492,48 @@ setup_federated_credentials() {
             --output none
 
         log_success "Created federated credential: $fic_name"
+    done
+}
+
+#
+# Configure Azure Storage management access for workload identity app
+#
+setup_storage_access() {
+    print_header "Configuring Azure Storage Access"
+
+    # Get service principal object ID
+    local sp_object_id
+    sp_object_id=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+
+    # Scope at resource group so Crossplane can manage storage accounts/containers in this RG
+    local rg_scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}"
+
+    # Required roles for ARM + blob container operations
+    local -a roles=(
+        "Storage Account Contributor"
+        "Storage Blob Data Contributor"
+    )
+
+    for role_name in "${roles[@]}"; do
+        local existing_role
+        existing_role=$(az role assignment list \
+            --assignee "$sp_object_id" \
+            --role "$role_name" \
+            --scope "$rg_scope" \
+            --query "[0].id" -o tsv 2>/dev/null || echo "")
+
+        if [[ -n "$existing_role" ]]; then
+            log_success "${role_name} role already assigned on ${rg_scope}"
+            continue
+        fi
+
+        log_info "Assigning ${role_name} role on ${rg_scope}..."
+        az role assignment create \
+            --assignee "$sp_object_id" \
+            --role "$role_name" \
+            --scope "$rg_scope" \
+            --output none
+        log_success "${role_name} role assigned"
     done
 }
 
@@ -735,6 +784,7 @@ main() {
 
         APP_OBJECT_ID=$(az ad app show --id "$AZURE_CLIENT_ID" --query id -o tsv)
         setup_federated_credentials
+        setup_storage_access
         setup_keyvault
         setup_appconfig
         log_success "Issuer update complete!"
@@ -747,6 +797,7 @@ main() {
     setup_oidc_storage
     setup_azure_ad_app
     setup_federated_credentials
+    setup_storage_access
     setup_keyvault
     setup_appconfig
     save_configuration

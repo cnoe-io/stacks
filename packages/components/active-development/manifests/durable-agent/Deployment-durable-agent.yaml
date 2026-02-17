@@ -17,6 +17,7 @@ spec:
     metadata:
       labels:
         app: durable-agent
+        azure.workload.identity/use: "true"
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "durable-agent"
@@ -32,17 +33,42 @@ spec:
         - name: durable-agent
           image: gitea.cnoe.localtest.me:8443/giteaadmin/durable-agent:latest
           imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -lc
+          args:
+            - |
+              until nc -z 127.0.0.1 "${DAPR_GRPC_PORT:-50001}"; do
+                echo "[startup] waiting for Dapr gRPC on ${DAPR_GRPC_PORT:-50001}..."
+                sleep 1
+              done
+              exec node dist/service/main.js
           ports:
             - containerPort: 8001
           envFrom:
             - configMapRef:
                 name: durable-agent-config
           env:
+            # Pin workspace sandbox backend at the deployment layer so runtime
+            # behavior is stable even if ConfigMap keys drift.
+            - name: SANDBOX_BACKEND
+              value: "k8s"
+            - name: SANDBOX_TEMPLATE
+              value: "dapr-agent"
+            - name: SANDBOX_NAMESPACE
+              value: "agent-sandbox"
+            - name: SANDBOX_WORKSPACE_DIR
+              value: "/app"
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: durable-agent-secrets
                   key: OPENAI_API_KEY
+            - name: WORKSPACE_RECON_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: workflow-builder-secrets
+                  key: DATABASE_URL
           resources:
             requests:
               memory: "128Mi"

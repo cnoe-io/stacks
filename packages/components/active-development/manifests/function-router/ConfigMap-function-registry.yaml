@@ -11,11 +11,13 @@ data:
   #   system/*   → fn-system (http-request, database-query, condition)
   #   mastra/*   → durable-agent (clone, plan, execute, workspace tools)
   #   durable/*  → durable-agent (durable agent runs)
+  #   workspace/*→ durable-agent (workspace profile/file/command nodes)
   #   *          → fn-activepieces (all AP piece actions: openai, slack, github, etc.)
   functions.json: |
     {
       "system/*": { "appId": "fn-system", "type": "knative" },
       "mastra/*": { "appId": "durable-agent", "type": "knative" },
       "durable/*": { "appId": "durable-agent", "type": "knative" },
+      "workspace/*": { "appId": "durable-agent", "type": "knative" },
       "_default": { "appId": "fn-activepieces", "type": "knative" }
     }

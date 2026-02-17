@@ -1,0 +1,12 @@
+apiVersion: platform.pittampalli.io/v1alpha1
+kind: AzureObjectStorage
+metadata:
+  name: workspace-change-blobs
+  namespace: workflow-builder
+spec:
+  parameters:
+    storageAccountName: "${AZURE_STORAGE_ACCOUNT}"
+    containerName: "workflow-builder-workspace-changes"
+    metadata:
+      owner: durable-agent
+      purpose: workspace-reconstruction

@@ -9,6 +9,7 @@ resources:
   - Configuration-workflow-builder-tracing.yaml
   - Component-secretstore-kubernetes.yaml
   - Component-azureappconfig-workflow-builder.yaml
+  - ObjectStorage-workspace-changes.yaml
   - Role-secret-reader.yaml
   - Role-piece-mcp-provisioner.yaml
   - ExternalSecret-workflow-builder.yaml

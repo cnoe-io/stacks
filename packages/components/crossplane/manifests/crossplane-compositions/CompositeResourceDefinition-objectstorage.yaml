@@ -23,9 +23,32 @@ spec:
             spec:
               type: object
               properties:
+                compositionRef:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                compositionSelector:
+                  type: object
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                compositionUpdatePolicy:
+                  type: string
+                  enum:
+                    - Automatic
+                    - Manual
                 parameters:
                   type: object
                   properties:
+                    provider:
+                      type: string
+                      enum:
+                        - native
+                        - azure
+                      default: native
                     class:
                       type: string
                       enum:
@@ -40,12 +63,29 @@ spec:
                         - medium
                         - large
                       default: medium
+                    storageAccountName:
+                      type: string
+                      description: Existing Azure Storage Account name to host blob containers.
+                    containerName:
+                      type: string
+                      description: Azure Blob container name.
+                      default: default
                     data:
                       type: object
                       additionalProperties:
                         type: string
+                  required:
+                    - provider
             status:
               type: object
               properties:
                 configMapName:
+                  type: string
+                storageAccountName:
+                  type: string
+                containerName:
+                  type: string
+                containerId:
+                  type: string
+                resourceManagerId:
                   type: string

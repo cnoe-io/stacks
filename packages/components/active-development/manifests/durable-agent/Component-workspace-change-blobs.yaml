@@ -1,0 +1,21 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: workspace-change-blobs
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+spec:
+  type: bindings.azure.blobstorage
+  version: v1
+  metadata:
+    - name: storageAccount
+      value: "${AZURE_STORAGE_ACCOUNT}"
+    - name: container
+      value: "workflow-builder-workspace-changes"
+    - name: azureClientId
+      value: ""
+    - name: decodeBase64
+      value: "false"
+scopes:
+  - durable-agent

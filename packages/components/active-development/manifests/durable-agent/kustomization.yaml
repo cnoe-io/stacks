@@ -8,6 +8,7 @@ resources:
 - ConfigMap-durable-agent.yaml
 - ExternalSecret-durable-agent.yaml
 - Component-durable-statestore.yaml
+- Component-workspace-change-blobs.yaml
 - Deployment-durable-agent.yaml
 - Service-durable-agent.yaml
 

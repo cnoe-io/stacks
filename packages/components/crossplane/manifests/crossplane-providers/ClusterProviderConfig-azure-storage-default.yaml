@@ -1,0 +1,14 @@
+apiVersion: azure.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: azure-storage-default
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  clientID: 61cc905a-2792-459e-a87a-baeb87ba6df6
+  tenantID: 0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38
+  subscriptionID: "${AZURE_SUBSCRIPTION_ID}"
+  oidcTokenFilePath: /var/run/secrets/azure/tokens/azure-identity-token
+  credentials:
+    source: OIDCTokenFile

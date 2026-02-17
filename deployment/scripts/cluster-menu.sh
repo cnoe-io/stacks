@@ -330,7 +330,9 @@ kustomize-build() {
   # Source environment variables (Azure credentials, etc.)
   if [ -f "$STACKS_DIR/.env-files/kind.env" ] && [[ "$ENV" == "kind"* ]]; then
     echo "📋 Loading environment from kind.env..."
+    set -a
     source "$STACKS_DIR/.env-files/kind.env"
+    set +a
   fi
 
   cd "$STACKS_DIR/packages"
@@ -555,7 +557,11 @@ cluster-apply-manifests() {
   local CLUSTER_NAME="$CLUSTER_HOST"
 
   # Source environment files (kind.env for KIND clusters)
-  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
+    set -a
+    source "$STACKS_DIR/.env-files/kind.env"
+    set +a
+  }
 
   # Clear any WSL Docker environment variables
   if [[ -S /var/run/docker.sock ]]; then
@@ -686,7 +692,11 @@ cluster-deploy() {
   local ORIG_DIR="$(pwd)"
 
   # Source environment files FIRST (before any operations that need them)
-  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
+    set -a
+    source "$STACKS_DIR/.env-files/kind.env"
+    set +a
+  }
 
   # Export hostname for cluster naming (required by cluster-apply-manifests)
   export CLUSTER_HOST="$(detect_hostname)" || { cd "$ORIG_DIR"; return 1; }
@@ -912,7 +922,11 @@ cluster-build() {
     export DOCKER_HOST=""
   fi
 
-  [ -f "$STACKS_DIR/.env-files/kind.env" ] && source "$STACKS_DIR/.env-files/kind.env"
+  [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
+    set -a
+    source "$STACKS_DIR/.env-files/kind.env"
+    set +a
+  }
 
   # Ensure kustomize packages are ready
   echo "🔍 Checking kustomize packages..."
@@ -1083,7 +1097,9 @@ cluster-update-gum() {
   # Source environment files FIRST (kind.env for KIND clusters)
   [ -f "$STACKS_DIR/.env-files/kind.env" ] && {
     gum style --foreground 45 "📋 Loading environment from kind.env..."
+    set -a
     source "$STACKS_DIR/.env-files/kind.env"
+    set +a
   }
 
   # Export hostname for synthesis (host-aware Tailscale names)

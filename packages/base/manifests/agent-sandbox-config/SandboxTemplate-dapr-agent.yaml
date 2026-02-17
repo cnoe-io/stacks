@@ -22,7 +22,7 @@ spec:
       containers:
         - name: agent
           # Agent Sandbox Python runtime - handles /execute requests on port 8888
-          image: registry.k8s.io/agent-sandbox/python-runtime-sandbox:v0.1.0
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/node-sandbox:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8888

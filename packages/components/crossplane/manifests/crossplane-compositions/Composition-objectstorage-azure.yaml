@@ -1,0 +1,65 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: objectstorage-azure.platform.pittampalli.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    platform.pittampalli.io/provider: azure
+    platform.pittampalli.io/resource: objectstorage
+spec:
+  compositeTypeRef:
+    apiVersion: platform.pittampalli.io/v1alpha1
+    kind: ObjectStorage
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: azure-blob-container
+            base:
+              apiVersion: storage.azure.m.upbound.io/v1beta1
+              kind: Container
+              metadata:
+                name: placeholder
+              spec:
+                forProvider:
+                  containerAccessType: private
+                  storageAccountName: placeholder
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: azure-storage-default
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.namespace
+                toFieldPath: metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-blob-container"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.storageAccountName
+                toFieldPath: spec.forProvider.storageAccountName
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.containerName
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - type: ToCompositeFieldPath
+                fromFieldPath: spec.forProvider.storageAccountName
+                toFieldPath: status.storageAccountName
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.containerName
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.id
+                toFieldPath: status.containerId
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.resourceManagerId
+                toFieldPath: status.resourceManagerId

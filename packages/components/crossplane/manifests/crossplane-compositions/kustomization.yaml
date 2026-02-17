@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - CompositeResourceDefinition-objectstorage.yaml
   - Composition-objectstorage.yaml
+  - CompositeResourceDefinition-azureobjectstorage.yaml
+  - Composition-azureobjectstorage.yaml
+  - Composition-objectstorage-azure.yaml
   - CompositeResourceDefinition-xazureoauthapp.yaml
   - Composition-xazureoauthapp.yaml
   - CompositeResourceDefinition-xgoogleoauthapp.yaml

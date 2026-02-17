@@ -270,6 +270,21 @@ fi
 echo "Step 4: Substituting remaining host-specific values..."
 find "${DIST_DIR}/${ENV}" -name "*.yaml" -type f | while read -r file; do
     sed -i "s/\${TAILSCALE_HOST}/${TAILSCALE_HOST}/g; s/\${TAILSCALE_TAILNET}/${TAILSCALE_TAILNET}/g" "$file"
+    if [ -n "${AZURE_STORAGE_ACCOUNT:-}" ]; then
+        sed -i "s/\${AZURE_STORAGE_ACCOUNT}/${AZURE_STORAGE_ACCOUNT}/g" "$file"
+    fi
+    if [ -n "${AZURE_CLIENT_ID:-}" ]; then
+        sed -i "s/\${AZURE_CLIENT_ID}/${AZURE_CLIENT_ID}/g" "$file"
+    fi
+    if [ -n "${AZURE_TENANT_ID:-}" ]; then
+        sed -i "s/\${AZURE_TENANT_ID}/${AZURE_TENANT_ID}/g" "$file"
+    fi
+    if [ -n "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+        sed -i "s/\${AZURE_SUBSCRIPTION_ID}/${AZURE_SUBSCRIPTION_ID}/g" "$file"
+    fi
+    if [ -n "${RESOURCE_GROUP:-}" ]; then
+        sed -i "s/\${RESOURCE_GROUP}/${RESOURCE_GROUP}/g" "$file"
+    fi
 done
 
 # ═══════════════════════════════════════════════════════════════════════════════
