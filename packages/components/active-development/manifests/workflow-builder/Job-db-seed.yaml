@@ -35,8 +35,152 @@ spec:
             - sh
             - -c
             - |
-              echo "Seeding development user..."
+              echo "Seeding development users and API keys..."
               node scripts/seed-dev-user.bundle.js
+              echo "Ensuring GitHub user API key seed..."
+              node - <<'NODE'
+              const { createHash, randomBytes } = require("node:crypto");
+              const postgres = require("postgres");
+
+              const databaseUrl = process.env.DATABASE_URL;
+              if (!databaseUrl) {
+                throw new Error("DATABASE_URL is required");
+              }
+
+              const apiKey = process.env.SEED_GITHUB_USER_API_KEY?.trim();
+              if (!apiKey) {
+                console.log("[seed] SEED_GITHUB_USER_API_KEY not set; skipping API key seed");
+                process.exit(0);
+              }
+              if (!apiKey.startsWith("wfb_")) {
+                throw new Error("SEED_GITHUB_USER_API_KEY must start with 'wfb_'");
+              }
+
+              const configuredUserId = process.env.SEED_GITHUB_USER_ID?.trim() || "";
+              const configuredEmail = process.env.SEED_GITHUB_USER_EMAIL?.trim() || "";
+              const configuredName = process.env.SEED_GITHUB_USER_API_KEY_NAME?.trim() || null;
+
+              async function resolveGithubUserId(sql) {
+                if (configuredUserId) {
+                  const byId = await sql`
+                    select user_id
+                    from user_identities
+                    where user_id = ${configuredUserId}
+                      and provider = 'GITHUB'
+                    limit 1
+                  `;
+                  if (byId.length === 0) {
+                    throw new Error(
+                      `Configured SEED_GITHUB_USER_ID (${configuredUserId}) does not map to a GITHUB identity`,
+                    );
+                  }
+                  return configuredUserId;
+                }
+
+                if (configuredEmail) {
+                  const byEmail = await sql`
+                    select id
+                    from users
+                    where email = ${configuredEmail}
+                    limit 2
+                  `;
+                  if (byEmail.length === 0) {
+                    throw new Error(
+                      `Configured SEED_GITHUB_USER_EMAIL (${configuredEmail}) does not map to a user`,
+                    );
+                  }
+                  if (byEmail.length > 1) {
+                    throw new Error(
+                      `Configured SEED_GITHUB_USER_EMAIL (${configuredEmail}) is ambiguous; set SEED_GITHUB_USER_ID`,
+                    );
+                  }
+
+                  const resolvedId = byEmail[0].id;
+                  const identity = await sql`
+                    select user_id
+                    from user_identities
+                    where user_id = ${resolvedId}
+                      and provider = 'GITHUB'
+                    limit 1
+                  `;
+                  if (identity.length === 0) {
+                    throw new Error(
+                      `User resolved by email (${configuredEmail}) does not have a GITHUB identity`,
+                    );
+                  }
+                  return resolvedId;
+                }
+
+                const githubUsers = await sql`
+                  select user_id
+                  from user_identities
+                  where provider = 'GITHUB'
+                  limit 2
+                `;
+                if (githubUsers.length === 0) {
+                  throw new Error(
+                    "No GITHUB users found. Set SEED_GITHUB_USER_ID/SEED_GITHUB_USER_EMAIL or sign in with GitHub first.",
+                  );
+                }
+                if (githubUsers.length > 1) {
+                  throw new Error(
+                    "Multiple GITHUB users found. Set SEED_GITHUB_USER_ID (preferred) or SEED_GITHUB_USER_EMAIL.",
+                  );
+                }
+                return githubUsers[0].user_id;
+              }
+
+              async function main() {
+                const sql = postgres(databaseUrl, { max: 1 });
+                try {
+                  const githubUserId = await resolveGithubUserId(sql);
+                  const keyHash = createHash("sha256").update(apiKey).digest("hex");
+                  const keyPrefix = apiKey.slice(0, 11);
+
+                  const existing = await sql`
+                    select id, user_id, name
+                    from api_keys
+                    where key_hash = ${keyHash}
+                    limit 1
+                  `;
+
+                  if (existing.length > 0) {
+                    if (existing[0].user_id !== githubUserId) {
+                      throw new Error(
+                        `Seeded API key hash already belongs to another user (${existing[0].user_id})`,
+                      );
+                    }
+                    if (configuredName && existing[0].name !== configuredName) {
+                      await sql`
+                        update api_keys
+                        set name = ${configuredName}
+                        where id = ${existing[0].id}
+                      `;
+                    }
+                    console.log(
+                      `[seed] API key already exists for GitHub user ${githubUserId} (${keyPrefix})`,
+                    );
+                    return;
+                  }
+
+                  const id = randomBytes(12).toString("hex");
+                  await sql`
+                    insert into api_keys (id, user_id, name, key_hash, key_prefix, created_at)
+                    values (${id}, ${githubUserId}, ${configuredName}, ${keyHash}, ${keyPrefix}, now())
+                  `;
+                  console.log(
+                    `[seed] Created API key for GitHub user ${githubUserId} (${keyPrefix})`,
+                  );
+                } finally {
+                  await sql.end();
+                }
+              }
+
+              main().catch((error) => {
+                console.error("[seed] GitHub API key seed failed:", error);
+                process.exit(1);
+              });
+              NODE
               echo "Database seed complete"
           envFrom:
             - secretRef:
