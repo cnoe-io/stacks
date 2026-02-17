@@ -21,9 +21,9 @@ spec:
     spec:
       containers:
         - name: agent
-          # Agent Sandbox Python runtime - handles /execute requests on port 8888
+          # Node sandbox runtime - handles /execute, /upload, and /download.
           image: gitea.cnoe.localtest.me:8443/giteaadmin/node-sandbox:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8888
               name: http
@@ -46,6 +46,11 @@ spec:
               value: "3500"
             - name: DAPR_GRPC_PORT
               value: "50001"
+            # Sandbox runtime defaults
+            - name: WORKSPACE_DIR
+              value: "/app"
+            - name: HOME
+              value: "/home/node"
             # Pod identity
             - name: POD_NAME
               valueFrom:
@@ -71,7 +76,7 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: false
-          # Python runtime sandbox handles /execute requests on port 8888
+          # Node runtime sandbox handles /execute requests on port 8888
           # No custom command needed - image has its own entrypoint
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
