@@ -25,7 +25,7 @@ data:
     jetstream {
       store_dir: /data/jetstream
       max_memory_store: 256MB
-      max_file_store: 1Gi
+      max_file_store: 1536Mi
     }
 
     # Logging

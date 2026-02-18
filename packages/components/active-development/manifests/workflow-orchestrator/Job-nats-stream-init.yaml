@@ -24,23 +24,54 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "Creating NATS JetStream stream ORCHESTRATOR..."
-              nats -s nats://nats.nats.svc.cluster.local:4222 stream add ORCHESTRATOR \
-                --defaults \
-                --subjects="workflow.>" \
-                --retention=limits \
-                --max-msgs=-1 \
-                --max-bytes=-1 \
-                --max-age=72h \
-                --storage=file \
-                --replicas=1 \
-                --discard=old \
-                --max-msg-size=-1 \
-                --dupe-window=2m \
-                --no-allow-rollup \
-                --deny-delete \
-                --deny-purge \
-                2>&1 || echo "Stream may already exist, continuing..."
+              set -eu
+              NATS_URL="nats://nats.nats.svc.cluster.local:4222"
+              STREAM_NAME="ORCHESTRATOR"
+
+              create_stream() {
+                nats -s "${NATS_URL}" stream add "${STREAM_NAME}" \
+                  --defaults \
+                  --subjects="workflow.>" \
+                  --retention=limits \
+                  --max-msgs=-1 \
+                  --max-bytes=536870912 \
+                  --max-age=12h \
+                  --storage=file \
+                  --replicas=1 \
+                  --discard=old \
+                  --max-msg-size=-1 \
+                  --max-consumers=-1 \
+                  --dupe-window=2m \
+                  --no-allow-rollup \
+                  --no-deny-delete \
+                  --no-deny-purge
+              }
+
+              echo "Reconciling NATS JetStream stream ${STREAM_NAME}..."
+              if nats -s "${NATS_URL}" stream info "${STREAM_NAME}" >/dev/null 2>&1; then
+                echo "Stream exists, updating mutable limits..."
+                if ! nats -s "${NATS_URL}" stream edit "${STREAM_NAME}" \
+                  -f \
+                  --subjects="workflow.>" \
+                  --retention=limits \
+                  --max-msgs=-1 \
+                  --max-bytes=536870912 \
+                  --max-age=12h \
+                  --replicas=1 \
+                  --discard=old \
+                  --max-msg-size=-1 \
+                  --max-consumers=-1 \
+                  --dupe-window=2m \
+                  --no-allow-rollup; then
+                  echo "Update failed due to immutable legacy settings; recreating stream..."
+                  nats -s "${NATS_URL}" stream rm "${STREAM_NAME}" --force
+                  create_stream
+                fi
+              else
+                echo "Stream does not exist, creating..."
+                create_stream
+              fi
+
               echo "Verifying stream..."
-              nats -s nats://nats.nats.svc.cluster.local:4222 stream info ORCHESTRATOR
+              nats -s "${NATS_URL}" stream info "${STREAM_NAME}"
               echo "Done."
