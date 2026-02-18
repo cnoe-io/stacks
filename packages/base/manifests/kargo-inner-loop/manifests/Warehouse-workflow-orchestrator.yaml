@@ -22,7 +22,7 @@ spec:
     # Image source - local dev images from Gitea registry
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
-        imageSelectionStrategy: Lexical
+        imageSelectionStrategy: NewestBuild
         allowTags: .*
         discoveryLimit: 10
         insecureSkipTLSVerify: true

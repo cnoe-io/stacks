@@ -72,7 +72,7 @@ images:
     argocdApp: workflow-orchestrator
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
-    tagStrategy: Lexical
+    tagStrategy: NewestBuild
     tagPattern: ".*"
     promotionType: kustomize
 
