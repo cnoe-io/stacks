@@ -52,21 +52,22 @@ source ~/stacks/deployment/scripts/cluster-menu.sh
 
 **Typical workflow - automatic sync on file changes:**
 ```bash
-devenv up               # Start watch + rebuild + apply (unified, always-on)
+dev-watch               # Start watch + rebuild + apply (standalone)
 # Edit files in packages/base/, components/, overlays/
 # Changes auto-sync within 2-3 seconds (watchexec + idpbuilder)
 ```
 
-The `devenv up` process monitors `packages/` directories and automatically:
+The `dev-watch` script (`deployment/scripts/devenv-up.sh`) monitors `packages/` directories and automatically:
 1. Rebuilds kustomize via `make build-kustomize-kind-$CLUSTER_NAME`
 2. Applies via `idpbuilder create` with correct flags
 
-**Before running `cluster-update` manually:** Check if `devenv up` is already running - if so, changes are automatically synced.
+**Before running `cluster-update` manually:** Check if `dev-watch` is already running - if so, changes are automatically synced.
 
 **Alternative commands:**
 | Command | Purpose |
 |---------|---------|
-| `devenv up` | Watch + rebuild + apply (unified) |
+| `dev-watch` | Watch + rebuild + apply (standalone) |
+| `dev-watch-only` | Watch only (skip initial build+apply) |
 | `watch-kustomize` | Watch + rebuild only (no apply) |
 | `kustomize-build` | One-shot build |
 | `apply-manifests` | One-shot apply |
@@ -155,7 +156,8 @@ See `docs/AZURE_WORKLOAD_IDENTITY.md` for configuration.
 | `preload-images.sh` | Image caching (parallel with idpbuilder) |
 | `push-devcontainers.sh` | Build/push shared devcontainers (parallel with idpbuilder) |
 | `cluster-health-check.sh` | Timing, benchmarks, health summary |
-| `devenv-watch-handler.sh` | Automatic rebuild handler for devenv up |
+| `devenv-up.sh` | Standalone watch + rebuild + apply (replaces devenv up) |
+| `devenv-watch-handler.sh` | Automatic rebuild handler for dev-watch |
 | `tailscale/tailscale-kubeconfig.sh` | Remote kubectl access via Tailscale |
 
 ## ArgoCD CLI
@@ -182,7 +184,7 @@ argocd-status                                       # Helper function
 3. Add to `kustomization.yaml` in the appropriate layer
 4. Build and deploy:
 ```bash
-make build-kind && clu  # Or let devenv up auto-apply
+make build-kind && clu  # Or let dev-watch auto-apply
 ```
 
 ### Kargo Inner-Loop Applications

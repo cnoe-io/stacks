@@ -1,4 +1,0 @@
-namespace: workflow-builder
-
-resources:
-  - Service-fn-firecrawl.yaml

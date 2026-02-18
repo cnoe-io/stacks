@@ -13,7 +13,6 @@ metadata:
 scopes:
   - workflow-orchestrator
   - function-router
-  - mastra-agent-mcp
   - durable-agent
 spec:
   type: pubsub.jetstream

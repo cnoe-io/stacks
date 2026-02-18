@@ -30,10 +30,7 @@ resources:
   - apps/workflow-builder.yaml
   - apps/mcp-gateway.yaml
   - apps/mcp-inspector.yaml
-  - apps/mastra-playground.yaml
-  - apps/mastra-agent-mcp.yaml
   - apps/workflow-orchestrator.yaml
-  - apps/workflow-web.yaml
   # Contour Gateway (kept for general ingress/gateway needs)
   - apps/contour.yaml
   # Shared infrastructure for workflow-builder functions (registry creds, service account)
@@ -41,14 +38,6 @@ resources:
   # Serverless functions (scale-to-zero Knative Services)
   - apps/fn-activepieces.yaml
   - apps/fn-system.yaml
-  - apps/fn-openai.yaml
-  - apps/fn-slack.yaml
-  - apps/fn-github.yaml
-  - apps/fn-resend.yaml
-  - apps/fn-stripe.yaml
-  - apps/fn-linear.yaml
-  - apps/fn-perplexity.yaml
-  - apps/fn-firecrawl.yaml
   # Durable agent (Dapr Workflow-backed ReAct loop, primary agent service)
   - apps/durable-agent.yaml
   # Centralized in-cluster builds for fn-* images (Shipwright + Tekton)
@@ -69,33 +58,10 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-web
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-playground
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mastra-agent-mcp
-    newTag: latest
   # Standalone function executor images
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
-    newTag: latest
-  # Function images
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-openai
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-slack
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-github
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-resend
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-stripe
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-linear
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-perplexity
-    newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-firecrawl
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/durable-agent

@@ -122,65 +122,10 @@
     '';
   };
 
-  # Background processes for `devenv up`
-  processes = {
-    # Unified file watcher + idpbuilder process
-    # Watches source manifests, rebuilds kustomize, and applies via idpbuilder
-    idpbuilder = {
-      exec = ''
-        if [ -n "$CLUSTER_HOST" ]; then
-          CLUSTER_NAME="$CLUSTER_HOST"
-        else
-          CLUSTER_NAME="$(hostname -s 2>/dev/null || hostname)"
-        fi
-        KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
-
-        # Initial build
-        echo "🔨 Initial kustomize build..."
-        cd "$DEVENV_ROOT/packages"
-        make build-kustomize-kind-$CLUSTER_NAME 2>&1
-
-        # Initial apply
-        echo ""
-        echo "🚀 Initial idpbuilder apply..."
-        idpbuilder create \
-          --name "$CLUSTER_NAME" \
-          -p "$DEVENV_ROOT/packages/dist/$KUSTOMIZE_BUILD_ENV/" \
-          --package-custom-file "nginx:$DEVENV_ROOT/deployment/overrides/nginx-hostnetwork-no-hostport.yaml" \
-          --kind-config "$DEVENV_ROOT/deployment/config/kind-config.yaml" \
-          --dev-password \
-          --color \
-          --log-level warn
-
-        # Start file watcher - rebuilds and re-applies on source changes
-        echo ""
-        echo "👁️  Watching source manifests for changes..."
-        echo "   Directories: packages/base/, components/, overlays/, scripts/"
-        echo "   Debounce: 2000ms"
-        echo ""
-        exec watchexec \
-          --debounce 2000ms \
-          --exts yaml,yml,json,sh \
-          --watch "$DEVENV_ROOT/packages/base" \
-          --watch "$DEVENV_ROOT/packages/components" \
-          --watch "$DEVENV_ROOT/packages/overlays" \
-          --watch "$DEVENV_ROOT/packages/scripts" \
-          --watch "$DEVENV_ROOT/deployment/scripts" \
-          --ignore "dist" \
-          --ignore ".direnv" \
-          --ignore "result*" \
-          --on-busy-update restart \
-          -- "$DEVENV_ROOT/deployment/scripts/devenv-watch-handler.sh"
-      '';
-      process-compose = {
-        availability = {
-          restart = "on_failure";
-          max_restarts = 5;
-          backoff_seconds = 10;
-        };
-      };
-    };
-  };
+  # NOTE: `devenv up` (processes) is NOT used - devenv-tasks generates a wrapper
+  # that re-exports all inherited env vars including BASH_FUNC_*%% from fzf/sesh,
+  # which causes "not a valid identifier" errors that cannot be fixed from within
+  # the process script. Use `dev-watch` (standalone script) instead.
 
   # Shell initialization message
   enterShell = ''
@@ -189,7 +134,8 @@
     echo "=================================================================="
     echo ""
     echo "Manifest Development:"
-    echo "  devenv up                        # Watch + rebuild + apply (unified)"
+    echo "  dev-watch                        # Watch + rebuild + apply (standalone)"
+    echo "  dev-watch-only                   # Watch only (skip initial build+apply)"
     echo "  watch-kustomize                  # Watch + rebuild only (no apply)"
     echo "  kustomize-build                  # Build kustomize packages (one-shot)"
     echo "  apply-manifests                  # Apply manifests (one-shot)"

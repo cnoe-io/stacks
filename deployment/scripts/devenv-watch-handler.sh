@@ -6,7 +6,18 @@ set -e
 
 CLUSTER_NAME="${CLUSTER_HOST:-$(hostname -s 2>/dev/null || hostname)}"
 KUSTOMIZE_BUILD_ENV="kind-$CLUSTER_NAME"
-STACKS_DIR="${DEVENV_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+STACKS_DIR="${STACKS_DIR:-${DEVENV_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}}"
+
+# Ensure yq-go (mikefarah) is available - may not be in PATH when spawned by watchexec
+if ! (command -v yq &>/dev/null && yq --version 2>&1 | grep -q mikefarah); then
+  matches=( /nix/store/*yq-go*/bin/yq )
+  if [ -f "${matches[0]}" ]; then
+    export PATH="$(dirname "${matches[0]}"):$PATH"
+  else
+    echo "❌ yq-go not found. Run inside devenv shell or: nix-env -iA nixpkgs.yq-go"
+    exit 1
+  fi
+fi
 
 echo ""
 echo "🔄 Change detected, rebuilding (kustomize)..."

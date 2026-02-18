@@ -59,6 +59,14 @@ spec:
               value: "agent-sandbox"
             - name: SANDBOX_WORKSPACE_DIR
               value: "/app"
+            - name: SANDBOX_PROVISION_TIMEOUT_MS
+              value: "180000"
+            - name: DURABLE_REQUIRE_STARTUP_INIT
+              value: "false"
+            - name: DURABLE_STARTUP_INIT_RETRY_MS
+              value: "15000"
+            - name: OPENAI_CHAT_FALLBACK_MODEL
+              value: "gpt-4o"
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -84,7 +92,7 @@ spec:
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /api/ready
               port: 8001
             initialDelaySeconds: 10
             periodSeconds: 10

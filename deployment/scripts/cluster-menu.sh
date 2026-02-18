@@ -640,33 +640,32 @@ cluster-apply-manifests() {
     echo ""
   fi
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Background DevContainer Push (runs in PARALLEL with idpbuilder and image preload)
-  # Pushes existing devcontainer images to Gitea for DevSpace development.
-  # SMART MODE: Only pushes images that already exist locally (no rebuild).
-  # This is fast for cluster-recreate where images were previously built.
-  # To force rebuild: FORCE_BUILD=true or use 'push-devcontainers --build all'
-  # ─────────────────────────────────────────────────────────────────────────────
-  local DEVCONTAINER_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
-  local DEVCONTAINER_LOG="/tmp/devcontainer-push.log"
-  if [ "${SKIP_DEVCONTAINER_PUSH:-}" != "true" ] && [ -f "$DEVCONTAINER_SCRIPT" ]; then
-    echo "🐳 Starting background devcontainer push (parallel with idpbuilder)..."
-    echo "   Mode: push existing images only (use --build for rebuild)"
-    (
-      # DevContainer script waits for Gitea, pushes existing local images
-      "$DEVCONTAINER_SCRIPT" all
-    ) > "$DEVCONTAINER_LOG" 2>&1 &
-    local DEVCONTAINER_PID=$!
-    echo "   Started background devcontainer push (PID: $DEVCONTAINER_PID)"
-    echo "   Log: $DEVCONTAINER_LOG"
-    echo ""
-  fi
-
   # Apply using idpbuilder (idempotent operation)
   # Any extra args ($@) are passed through to idpbuilder
   idpbuilder create "${IDPBUILDER_ARGS[@]}" "$@"
 
   local result=$?
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # DevContainer Push (runs AFTER idpbuilder, Gitea is guaranteed ready)
+  # Pushes existing devcontainer images to Gitea for DevSpace development.
+  # SMART MODE: Only pushes images that already exist locally (no rebuild).
+  # Runs post-idpbuilder to avoid race condition where push could happen
+  # while idpbuilder is still initializing Gitea (causing pushed images to be lost).
+  # To force rebuild: FORCE_BUILD=true or use 'push-devcontainers --build all'
+  # ─────────────────────────────────────────────────────────────────────────────
+  local DEVCONTAINER_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
+  local DEVCONTAINER_LOG="/tmp/devcontainer-push.log"
+  if [ $result -eq 0 ] && [ "${SKIP_DEVCONTAINER_PUSH:-}" != "true" ] && [ -f "$DEVCONTAINER_SCRIPT" ]; then
+    echo ""
+    echo "🐳 Pushing devcontainer images to Gitea registry..."
+    echo "   Mode: push existing images only (use --build for rebuild)"
+    if "$DEVCONTAINER_SCRIPT" all > "$DEVCONTAINER_LOG" 2>&1; then
+      echo "   ✅ Devcontainer push complete (log: $DEVCONTAINER_LOG)"
+    else
+      echo "   ⚠️  Devcontainer push failed (check $DEVCONTAINER_LOG)"
+    fi
+  fi
 
   cd "$ORIG_DIR"
   return $result
@@ -1466,6 +1465,13 @@ fi
 IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
 if [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
   alias preload-images="$IMAGE_PRELOAD_SCRIPT"
+fi
+
+# Dev watch (standalone replacement for devenv up - no process-compose overhead)
+DEVENV_UP_SCRIPT="$STACKS_DIR/deployment/scripts/devenv-up.sh"
+if [ -f "$DEVENV_UP_SCRIPT" ]; then
+  alias dev-watch="$DEVENV_UP_SCRIPT"
+  alias dev-watch-only="$DEVENV_UP_SCRIPT --watch"
 fi
 
 # DevContainer push (builds and pushes shared devcontainers to Gitea)
