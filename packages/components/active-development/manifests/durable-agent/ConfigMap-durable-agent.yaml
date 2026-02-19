@@ -17,6 +17,7 @@ data:
   ORCHESTRATOR_APP_ID: "workflow-orchestrator"
   DAPR_HTTP_PORT: "3500"
   DAPR_GRPC_PORT: "50001"
+  DAPR_SECRETS_STORE: "azure-keyvault"
   SANDBOX_BACKEND: "k8s"
   SANDBOX_TEMPLATE: "dapr-agent"
   SANDBOX_NAMESPACE: "agent-sandbox"
