@@ -80,16 +80,28 @@ spec:
               value: "true"
             - name: OPENAI_CHAT_FALLBACK_MODEL
               value: "gpt-4o"
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: durable-agent-secrets
-                  key: OPENAI_API_KEY
-            - name: WORKSPACE_RECON_DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: workflow-builder-secrets
-                  key: DATABASE_URL
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: durable-agent-secrets
+              key: OPENAI_API_KEY
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: durable-agent-secrets
+              key: ANTHROPIC_API_KEY
+              optional: true
+        - name: OPENROUTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: durable-agent-secrets
+              key: OPENROUTER_API_KEY
+              optional: true
+        - name: WORKSPACE_RECON_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: workflow-builder-secrets
+              key: DATABASE_URL
           resources:
             requests:
               memory: "256Mi"
