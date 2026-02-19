@@ -31,7 +31,7 @@ spec:
       serviceAccountName: durable-agent
       containers:
         - name: durable-agent
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:phase2-20260219-055623
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:phase2-20260219-061003-bin
           imagePullPolicy: Always
           command:
             - /bin/sh
