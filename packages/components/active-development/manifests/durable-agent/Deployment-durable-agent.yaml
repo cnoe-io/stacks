@@ -72,6 +72,12 @@ spec:
               value: "false"
             - name: DURABLE_STARTUP_INIT_RETRY_MS
               value: "15000"
+            - name: OPENCODE_DISABLE_DEFAULT_PLUGINS
+              value: "true"
+            - name: OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
+              value: "true"
+            - name: OPENCODE_DISABLE_LSP_DOWNLOAD
+              value: "true"
             - name: OPENAI_CHAT_FALLBACK_MODEL
               value: "gpt-4o"
             - name: OPENAI_API_KEY
@@ -86,11 +92,11 @@ spec:
                   key: DATABASE_URL
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "50m"
+              memory: "256Mi"
+              cpu: "100m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "1Gi"
+              cpu: "1000m"
           livenessProbe:
             httpGet:
               path: /api/health
