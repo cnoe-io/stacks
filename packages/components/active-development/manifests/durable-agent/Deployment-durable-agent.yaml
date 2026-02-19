@@ -31,7 +31,7 @@ spec:
       serviceAccountName: durable-agent
       containers:
         - name: durable-agent
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/durable-agent:latest
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:phase2-20260219-055623
           imagePullPolicy: Always
           command:
             - /bin/sh
@@ -42,7 +42,14 @@ spec:
                 echo "[startup] waiting for Dapr gRPC on ${DAPR_GRPC_PORT:-50001}..."
                 sleep 1
               done
-              exec node dist/service/main.js
+              if command -v opencode >/dev/null 2>&1; then
+                exec opencode serve --hostname 0.0.0.0 --port 8001
+              fi
+              if command -v bun >/dev/null 2>&1 && [ -f "packages/opencode/src/index.ts" ]; then
+                exec bun run --bun packages/opencode/src/index.ts serve --hostname 0.0.0.0 --port 8001
+              fi
+              echo "[startup] failed: opencode executable not found in image"
+              exit 1
           ports:
             - containerPort: 8001
           envFrom:

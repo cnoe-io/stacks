@@ -64,5 +64,5 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
     newTag: latest
   # Durable agent
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/durable-agent
-    newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
+    newTag: phase2-20260219-055623
