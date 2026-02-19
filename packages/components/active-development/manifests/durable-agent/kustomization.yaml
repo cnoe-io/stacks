@@ -14,4 +14,4 @@ resources:
 
 images:
 - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-  newTag: phase2-20260219-111725-k8s-durable
+  newTag: phase2-20260219-112933-workspace-coerce
