@@ -44,10 +44,14 @@ spec:
               # Older/alternate setups may have used public.atlas_schema_revisions.
               HAS_REVISIONS=$(psql "$DATABASE_URL" -tAc "select coalesce(to_regclass('atlas_schema_revisions.atlas_schema_revisions')::text, to_regclass('public.atlas_schema_revisions')::text)")
               TABLE_COUNT="$(psql "$DATABASE_URL" -tAc "select count(*) from information_schema.tables where table_schema='public'")"
+              WORKSPACE_CHANGE_TABLE="$(psql "$DATABASE_URL" -tAc "select coalesce(to_regclass('public.workspace_change_artifact_files')::text, '')")"
+              WORKSPACE_CHANGE_INDEX="$(psql "$DATABASE_URL" -tAc "select coalesce(to_regclass('public.idx_workspace_change_artifact_files_change_set_path_sequence')::text, '')")"
 
               # Normalize whitespace
               HAS_REVISIONS="$(echo "$HAS_REVISIONS" | tr -d '[:space:]')"
               TABLE_COUNT="$(echo "$TABLE_COUNT" | tr -d '[:space:]')"
+              WORKSPACE_CHANGE_TABLE="$(echo "$WORKSPACE_CHANGE_TABLE" | tr -d '[:space:]')"
+              WORKSPACE_CHANGE_INDEX="$(echo "$WORKSPACE_CHANGE_INDEX" | tr -d '[:space:]')"
 
               NEEDS_BASELINE="false"
               if [ -z "$HAS_REVISIONS" ] || [ "$HAS_REVISIONS" = "null" ]; then
@@ -56,10 +60,34 @@ spec:
                 fi
               fi
 
+              # Drift reconciliation:
+              # In some environments, workspace_change_artifact_files was created
+              # before Atlas revision 20260217200000 was recorded.
+              WORKSPACE_CHANGE_VERSION_COUNT="0"
+              if [ "$HAS_REVISIONS" = "atlas_schema_revisions.atlas_schema_revisions" ]; then
+                WORKSPACE_CHANGE_VERSION_COUNT="$(psql "$DATABASE_URL" -tAc "select count(*) from atlas_schema_revisions.atlas_schema_revisions where version = '20260217200000'")"
+              elif [ "$HAS_REVISIONS" = "public.atlas_schema_revisions" ]; then
+                WORKSPACE_CHANGE_VERSION_COUNT="$(psql "$DATABASE_URL" -tAc "select count(*) from public.atlas_schema_revisions where version = '20260217200000'")"
+              fi
+              WORKSPACE_CHANGE_VERSION_COUNT="$(echo "$WORKSPACE_CHANGE_VERSION_COUNT" | tr -d '[:space:]')"
+
+              if [ "$WORKSPACE_CHANGE_TABLE" = "workspace_change_artifact_files" ] && [ "$WORKSPACE_CHANGE_INDEX" != "idx_workspace_change_artifact_files_change_set_path_sequence" ]; then
+                psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE INDEX IF NOT EXISTS idx_workspace_change_artifact_files_change_set_path_sequence ON workspace_change_artifact_files (change_set_id, path, sequence)"
+                WORKSPACE_CHANGE_INDEX="idx_workspace_change_artifact_files_change_set_path_sequence"
+              fi
+
+              NEEDS_WORKSPACE_CHANGE_RECONCILE="false"
+              if [ "$WORKSPACE_CHANGE_TABLE" = "workspace_change_artifact_files" ] && [ -n "$HAS_REVISIONS" ] && [ "$HAS_REVISIONS" != "null" ] && [ "${WORKSPACE_CHANGE_VERSION_COUNT:-0}" = "0" ]; then
+                NEEDS_WORKSPACE_CHANGE_RECONCILE="true"
+              fi
+
               echo "NEEDS_BASELINE=$NEEDS_BASELINE" > /work/mode.env
               echo "TABLE_COUNT=${TABLE_COUNT:-0}" >> /work/mode.env
               echo "HAS_REVISIONS=${HAS_REVISIONS:-}" >> /work/mode.env
-              echo "DB state: revisions=${HAS_REVISIONS:-<none>} tables=${TABLE_COUNT:-0} baseline=$NEEDS_BASELINE"
+              echo "NEEDS_WORKSPACE_CHANGE_RECONCILE=$NEEDS_WORKSPACE_CHANGE_RECONCILE" >> /work/mode.env
+              echo "WORKSPACE_CHANGE_TABLE=${WORKSPACE_CHANGE_TABLE:-}" >> /work/mode.env
+              echo "WORKSPACE_CHANGE_VERSION_COUNT=${WORKSPACE_CHANGE_VERSION_COUNT:-0}" >> /work/mode.env
+              echo "DB state: revisions=${HAS_REVISIONS:-<none>} tables=${TABLE_COUNT:-0} baseline=$NEEDS_BASELINE workspace_change_table=${WORKSPACE_CHANGE_TABLE:-<none>} workspace_change_version_count=${WORKSPACE_CHANGE_VERSION_COUNT:-0} reconcile=$NEEDS_WORKSPACE_CHANGE_RECONCILE"
       containers:
         - name: migrate
           image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
@@ -89,18 +117,40 @@ spec:
                 fi
               fi
 
-              # Compute baseline version from the first migration file (timestamp prefix).
-              BASELINE_VERSION="$(ls -1 atlas/migrations/*.sql 2>/dev/null | sort | head -n 1 | xargs -I{} basename {} | cut -d_ -f1)"
-              if [ -z "${BASELINE_VERSION:-}" ]; then
-                echo "No migration files found in atlas/migrations"
+              # Compute versions from atlas.sum so selection is deterministic and
+              # matches Atlas' canonical migration order.
+              if [ ! -s "atlas/migrations/atlas.sum" ]; then
+                echo "atlas/migrations/atlas.sum not found or empty"
+                exit 1
+              fi
+              BASELINE_VERSION="$(awk 'NR==2 {print $1}' atlas/migrations/atlas.sum | cut -d_ -f1)"
+              LATEST_VERSION="$(awk 'END {print $1}' atlas/migrations/atlas.sum | cut -d_ -f1)"
+              if [ -z "${BASELINE_VERSION:-}" ] || [ -z "${LATEST_VERSION:-}" ]; then
+                echo "Failed to derive migration versions from atlas/migrations/atlas.sum"
                 exit 1
               fi
 
-              echo "Running Atlas migrations (needs_baseline=$NEEDS_BASELINE, baseline_version=$BASELINE_VERSION)..."
+              echo "Running Atlas migrations (needs_baseline=$NEEDS_BASELINE, baseline_version=$BASELINE_VERSION, latest_version=$LATEST_VERSION)..."
+              echo "Atlas status before apply:"
+              atlas migrate status --env k8s || true
+
+              if [ "${NEEDS_WORKSPACE_CHANGE_RECONCILE:-false}" = "true" ]; then
+                echo "Reconciling Atlas revision 20260217200000 for pre-existing workspace_change_artifact_files table..."
+                atlas migrate set --env k8s 20260217200000
+              fi
+
               if [ "$NEEDS_BASELINE" = "true" ]; then
                 atlas migrate apply --env k8s --baseline "$BASELINE_VERSION"
               else
                 atlas migrate apply --env k8s
+              fi
+
+              echo "Atlas status after apply:"
+              STATUS_OUTPUT="$(atlas migrate status --env k8s)"
+              echo "$STATUS_OUTPUT"
+              if echo "$STATUS_OUTPUT" | grep -q "PENDING"; then
+                echo "Atlas migrations still pending after apply"
+                exit 1
               fi
               echo "Migrations complete"
 
