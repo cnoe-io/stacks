@@ -45,8 +45,8 @@ spec:
               if command -v opencode >/dev/null 2>&1; then
                 exec opencode serve --hostname 0.0.0.0 --port 8001
               fi
-              if command -v bun >/dev/null 2>&1 && [ -f "packages/opencode/src/index.ts" ]; then
-                exec bun run --bun packages/opencode/src/index.ts serve --hostname 0.0.0.0 --port 8001
+              if command -v bun >/dev/null 2>&1 && [ -f "packages/opencode/src/server/server.ts" ]; then
+                exec bun --eval 'import { Server } from "./packages/opencode/src/server/server.ts"; const server = Server.listen({ hostname: "0.0.0.0", port: 8001 }); console.log(`opencode server listening on http://${server.hostname}:${server.port}`); await new Promise(() => {});'
               fi
               echo "[startup] failed: opencode executable not found in image"
               exit 1
