@@ -12,6 +12,8 @@ resources:
   - Build-fn-activepieces.yaml
   - Build-fn-system.yaml
   - Build-mcp-gateway.yaml
+  - Build-piece-mcp-server.yaml
+  - Build-mpak-registry.yaml
   - TriggerBinding-workflow-builder-fn-builds.yaml
   - TriggerTemplate-workflow-builder-fn-builds.yaml
   - EventListener-workflow-builder-fn-builds.yaml

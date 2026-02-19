@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nimbletools-core
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "82"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/NimbleBrainInc/nimbletools-core.git
+    targetRevision: v0.4.2
+    path: chart
+    helm:
+      releaseName: nimbletools-core
+      valuesObject:
+        global:
+          domain: cnoe.localtest.me
+        operator:
+          replicas: 1
+        controlPlane:
+          replicas: 1
+        rbacController:
+          enabled: true
+          replicas: 1
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-redirect: "false"
+        nginx-ingress:
+          enabled: false
+        monitoring:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nimbletools-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

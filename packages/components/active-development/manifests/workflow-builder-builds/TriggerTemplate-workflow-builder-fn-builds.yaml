@@ -44,3 +44,15 @@ spec:
           image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system:git-$(tt.params.git_sha)
           pushSecret: gitea-registry-creds
           insecure: true
+    - apiVersion: shipwright.io/v1beta1
+      kind: BuildRun
+      metadata:
+        generateName: piece-mcp-server-
+        namespace: workflow-builder
+      spec:
+        build:
+          name: piece-mcp-server
+        output:
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server:git-$(tt.params.git_sha)
+          pushSecret: gitea-registry-creds
+          insecure: true

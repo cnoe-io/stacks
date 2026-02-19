@@ -1,0 +1,298 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: activepieces-mcp-reconciler-script
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: activepieces-mcp-reconciler
+    app.kubernetes.io/component: reconciler
+    app.kubernetes.io/part-of: workflow-builder
+data:
+  reconcile.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    log() {
+      printf '[activepieces-mcp-reconciler] %s\n' "$*"
+    }
+
+    require_cmd() {
+      if ! command -v "$1" >/dev/null 2>&1; then
+        log "Missing required command: $1"
+        return 1
+      fi
+    }
+
+    sanitize_piece() {
+      echo "$1" \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed -e 's/[^a-z0-9-]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//'
+    }
+
+    kubectl_apply_mcpservice() {
+      local piece="$1"
+      local version="$2"
+      local reason="$3"
+      local now_epoch="$4"
+      local service_slug service_name service_dns bundle_identifier piece_npm
+
+      service_slug="$(sanitize_piece "$piece")"
+      service_name="${MCPSERVICE_NAME_PREFIX}${service_slug}"
+      service_dns="http://${service_name}-service.${MCPSERVICE_NAMESPACE}.svc.cluster.local:${MCP_SERVER_PORT}/mcp"
+      bundle_identifier="${BUNDLE_REGISTRY_BASE_URL%/}/v1/bundles/${BUNDLE_PACKAGE_PREFIX}${piece}/versions/${version}/download?os=${BUNDLE_DOWNLOAD_OS}&arch=${BUNDLE_DOWNLOAD_ARCH}"
+      piece_npm="${PIECE_PACKAGE_PREFIX}${piece}"
+
+      cat <<EOF | kubectl apply -f - >/dev/null
+    apiVersion: mcp.nimbletools.dev/v1
+    kind: MCPService
+    metadata:
+      name: ${service_name}
+      namespace: ${MCPSERVICE_NAMESPACE}
+      labels:
+        app.kubernetes.io/name: ${service_name}
+        app.kubernetes.io/part-of: workflow-builder
+        app.kubernetes.io/managed-by: activepieces-mcp-reconciler
+        activepieces.mcp/piece-name: ${piece}
+      annotations:
+        activepieces.mcp/last-seen-epoch: "${now_epoch}"
+        activepieces.mcp/reason: "${reason}"
+    spec:
+      title: "Activepieces ${piece}"
+      description: "Activepieces ${piece} piece exposed as an MCP service via NimbleTools runtime."
+      container:
+        registry: "${PIECE_MCP_IMAGE_REGISTRY}"
+        image: "${PIECE_MCP_IMAGE_REPOSITORY}:${PIECE_MCP_IMAGE_TAG}"
+        port: ${MCP_SERVER_PORT}
+        healthCheck:
+          interval: 10
+          timeout: 5
+          retries: 3
+      replicas: 1
+      timeout: ${MCP_TIMEOUT_SECONDS}
+      resources:
+        requests:
+          cpu: "${MCP_CPU_REQUEST}"
+          memory: "${MCP_MEMORY_REQUEST}"
+        limits:
+          cpu: "${MCP_CPU_LIMIT}"
+          memory: "${MCP_MEMORY_LIMIT}"
+      routing:
+        path: "/services/${service_name}"
+        port: ${MCP_SERVER_PORT}
+        healthPath: /health
+        healthCheck: true
+        mcpPath: /mcp
+        discoveryPath: /mcp/discover
+      environment:
+        PIECE_NAME: "${piece}"
+        CONNECTION_EXTERNAL_ID: "${piece}"
+        INTERNAL_API_URL: "${INTERNAL_API_URL}"
+      packages:
+        - registryType: mcpb
+          registryBaseUrl: "${BUNDLE_REGISTRY_BASE_URL}"
+          identifier: "${bundle_identifier}"
+          version: "${version}"
+          transport:
+            type: streamable-http
+          environmentVariables:
+            - name: DATABASE_URL
+              isSecret: true
+              isRequired: true
+            - name: INTERNAL_API_TOKEN
+              isSecret: true
+              isRequired: true
+            - name: OPENAI_API_KEY
+              isSecret: true
+              isRequired: false
+            - name: OAUTH_APP_GITHUB_CLIENT_ID
+              isSecret: true
+              isRequired: false
+            - name: OAUTH_APP_GITHUB_CLIENT_SECRET
+              isSecret: true
+              isRequired: false
+            - name: OAUTH_APP_GOOGLE_CLIENT_ID
+              isSecret: true
+              isRequired: false
+            - name: OAUTH_APP_GOOGLE_CLIENT_SECRET
+              isSecret: true
+              isRequired: false
+    EOF
+
+      jq -cn \
+        --arg key "$piece" \
+        --arg serviceName "${service_name}-service" \
+        --arg namespace "$MCPSERVICE_NAMESPACE" \
+        --arg piece "$piece_npm" \
+        --arg version "$version" \
+        --arg mcpUrl "$service_dns" \
+        --arg reason "$reason" \
+        --argjson categories "${PIECE_CATEGORIES_JSON}" \
+        '{
+          ($key): {
+            serviceName: $serviceName,
+            namespace: $namespace,
+            piece: $piece,
+            version: $version,
+            category: ($categories[0] // "UNCATEGORIZED"),
+            categories: $categories,
+            reason: $reason,
+            mcpUrl: $mcpUrl
+          }
+        }'
+    }
+
+    update_catalog_configmap() {
+      local catalog_json="$1"
+      local tmpdir catalog_file
+      tmpdir="$(mktemp -d)"
+      catalog_file="${tmpdir}/servers.json"
+      printf '%s\n' "$catalog_json" >"$catalog_file"
+
+      kubectl create configmap "${CATALOG_CONFIGMAP_NAME}" \
+        --namespace "${MCPSERVICE_NAMESPACE}" \
+        --from-file=servers.json="$catalog_file" \
+        --dry-run=client \
+        -o yaml | kubectl apply -f -
+
+      rm -rf "$tmpdir"
+    }
+
+    cleanup_stale_services() {
+      local now_epoch="$1"
+      local stale_ttl="${RECONCILE_TTL_SECONDS}"
+      local item encoded name piece last_seen age
+      local mcp_json
+
+      mcp_json="$(
+        kubectl get mcpservices.mcp.nimbletools.dev \
+          --namespace "${MCPSERVICE_NAMESPACE}" \
+          -l app.kubernetes.io/managed-by=activepieces-mcp-reconciler \
+          -o json
+      )"
+
+      while IFS= read -r encoded; do
+        [ -z "$encoded" ] && continue
+        item="$(echo "$encoded" | base64 -d)"
+        name="$(echo "$item" | jq -r '.metadata.name')"
+        piece="$(echo "$item" | jq -r '.metadata.labels["activepieces.mcp/piece-name"] // ""')"
+        last_seen="$(echo "$item" | jq -r '.metadata.annotations["activepieces.mcp/last-seen-epoch"] // ""')"
+
+        if [ -n "${DESIRED_REASONS[$piece]:-}" ]; then
+          continue
+        fi
+
+        if [ "${stale_ttl}" -le 0 ]; then
+          log "Deleting stale MCPService ${name} (ttl<=0)"
+          kubectl delete mcpservice "${name}" -n "${MCPSERVICE_NAMESPACE}" --ignore-not-found=true
+          continue
+        fi
+
+        if ! echo "$last_seen" | grep -Eq '^[0-9]+$'; then
+          log "Skipping stale check for ${name}; missing last-seen annotation"
+          continue
+        fi
+
+        age="$((now_epoch - last_seen))"
+        if [ "$age" -ge "$stale_ttl" ]; then
+          log "Deleting stale MCPService ${name} (age=${age}s ttl=${stale_ttl}s)"
+          kubectl delete mcpservice "${name}" -n "${MCPSERVICE_NAMESPACE}" --ignore-not-found=true
+        fi
+      done < <(echo "$mcp_json" | jq -r '.items[]? | @base64')
+    }
+
+    : "${DATABASE_URL:?DATABASE_URL is required}"
+
+    MCPSERVICE_NAMESPACE="${MCPSERVICE_NAMESPACE:-workflow-builder}"
+    CATALOG_CONFIGMAP_NAME="${CATALOG_CONFIGMAP_NAME:-activepieces-mcp-catalog}"
+    RECONCILE_TTL_SECONDS="${RECONCILE_TTL_SECONDS:-900}"
+    PINNED_PIECES="${PINNED_PIECES:-github,google-calendar,openai}"
+    MCP_SERVER_PORT="${MCP_SERVER_PORT:-3100}"
+    MCP_TIMEOUT_SECONDS="${MCP_TIMEOUT_SECONDS:-300}"
+    MCPSERVICE_NAME_PREFIX="${MCPSERVICE_NAME_PREFIX:-ap-}"
+    INTERNAL_API_URL="${INTERNAL_API_URL:-http://workflow-builder.workflow-builder.svc.cluster.local:3000}"
+    BUNDLE_REGISTRY_BASE_URL="${BUNDLE_REGISTRY_BASE_URL:-http://mpak-registry.nimbletools-system.svc.cluster.local:3200}"
+    BUNDLE_PACKAGE_PREFIX="${BUNDLE_PACKAGE_PREFIX:-@activepieces/ap-}"
+    PIECE_PACKAGE_PREFIX="${PIECE_PACKAGE_PREFIX:-@activepieces/piece-}"
+    BUNDLE_DOWNLOAD_OS="${BUNDLE_DOWNLOAD_OS:-linux}"
+    BUNDLE_DOWNLOAD_ARCH="${BUNDLE_DOWNLOAD_ARCH:-x64}"
+    PIECE_MCP_IMAGE_REGISTRY="${PIECE_MCP_IMAGE_REGISTRY:-gitea.cnoe.localtest.me:8443}"
+    PIECE_MCP_IMAGE_REPOSITORY="${PIECE_MCP_IMAGE_REPOSITORY:-giteaadmin/piece-mcp-server}"
+    PIECE_MCP_IMAGE_TAG="${PIECE_MCP_IMAGE_TAG:-latest}"
+    MCP_CPU_REQUEST="${MCP_CPU_REQUEST:-50m}"
+    MCP_MEMORY_REQUEST="${MCP_MEMORY_REQUEST:-128Mi}"
+    MCP_CPU_LIMIT="${MCP_CPU_LIMIT:-300m}"
+    MCP_MEMORY_LIMIT="${MCP_MEMORY_LIMIT:-384Mi}"
+
+    require_cmd kubectl
+    require_cmd psql
+    require_cmd jq
+
+    declare -A DESIRED_REASONS=()
+
+    # Always include pinned pieces (hot set).
+    IFS=',' read -r -a _pinned <<<"${PINNED_PIECES}"
+    for piece in "${_pinned[@]}"; do
+      piece="$(echo "$piece" | xargs)"
+      if [ -n "$piece" ]; then
+        DESIRED_REASONS["$piece"]="pinned"
+      fi
+    done
+
+    # Add pieces that currently have active connections.
+    while IFS= read -r piece; do
+      piece="$(echo "$piece" | tr -d '[:space:]')"
+      if [ -n "$piece" ]; then
+        DESIRED_REASONS["$piece"]="active"
+      fi
+    done < <(
+      psql "$DATABASE_URL" -At -c \
+        "select distinct piece_name from app_connection where status = 'ACTIVE' order by piece_name" || true
+    )
+
+    if [ "${#DESIRED_REASONS[@]}" -eq 0 ]; then
+      log "No desired pieces found from active connections or pinned list"
+    fi
+
+    now_epoch="$(date +%s)"
+    declare -a CATALOG_ENTRIES=()
+
+    mapfile -t DESIRED_PIECES < <(printf '%s\n' "${!DESIRED_REASONS[@]}" | sort)
+
+    for piece in "${DESIRED_PIECES[@]}"; do
+      reason="${DESIRED_REASONS[$piece]}"
+      escaped_piece="${piece//\'/\'\'}"
+
+      row="$(
+        psql "$DATABASE_URL" -At -F $'\t' -c \
+          "select version, coalesce(display_name, name), coalesce(array_to_json(categories)::text, '[]') from piece_metadata where name = '${escaped_piece}' order by updated_at desc limit 1" \
+          || true
+      )"
+
+      if [ -z "$row" ]; then
+        log "Skipping piece '${piece}'; no metadata row found"
+        continue
+      fi
+
+      IFS=$'\t' read -r version display_name categories_json <<<"$row"
+
+      if [ -z "${version:-}" ]; then
+        log "Skipping piece '${piece}'; metadata version is empty"
+        continue
+      fi
+
+      PIECE_CATEGORIES_JSON="${categories_json:-[]}"
+      log "Reconciling piece '${piece}' (version=${version}, reason=${reason})"
+      entry="$(kubectl_apply_mcpservice "$piece" "$version" "$reason" "$now_epoch")"
+      CATALOG_ENTRIES+=("$entry")
+    done
+
+    if [ "${#CATALOG_ENTRIES[@]}" -eq 0 ]; then
+      catalog_json='{}'
+    else
+      catalog_json="$(printf '%s\n' "${CATALOG_ENTRIES[@]}" | jq -s 'add // {}')"
+    fi
+
+    update_catalog_configmap "$catalog_json"
+    cleanup_stale_services "$now_epoch"
+
+    log "Reconciliation complete: desired=${#DESIRED_REASONS[@]} catalogEntries=${#CATALOG_ENTRIES[@]}"

@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mpak-registry
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "84"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/NimbleBrainInc/mpak.git
+    targetRevision: main
+    path: deploy/kubernetes/helm/mpak
+    helm:
+      releaseName: mpak
+      valuesObject:
+        global:
+          namespace: nimbletools-system
+        registry:
+          replicaCount: 1
+          image:
+            repository: gitea.cnoe.localtest.me:8443/giteaadmin/mpak-registry
+            tag: latest
+            pullPolicy: IfNotPresent
+          securityContext:
+            readOnlyRootFilesystem: false
+          env:
+            NODE_ENV: development
+            STORAGE_TYPE: local
+            STORAGE_PATH: /tmp/storage
+            SCANNER_ENABLED: "false"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        web:
+          replicaCount: 0
+        ingress:
+          enabled: false
+        persistence:
+          enabled: false
+        secrets:
+          # Pilot setting: reuse existing workflow-builder Postgres and isolate mpak tables by schema.
+          databaseUrl: postgresql://postgres:password@postgresql.workflow-builder.svc.cluster.local:5432/mpak_registry
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nimbletools-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

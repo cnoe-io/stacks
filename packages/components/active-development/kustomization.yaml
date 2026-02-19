@@ -42,6 +42,10 @@ resources:
   - apps/durable-agent.yaml
   # Centralized in-cluster builds for fn-* images (Shipwright + Tekton)
   - apps/workflow-builder-builds.yaml
+  # In-cluster MCP bundle registry for Nimble/MPAK-compatible bundles
+  - apps/mpak-registry.yaml
+  # Nimble MCPService instances for selected Activepieces pieces
+  - apps/nimble-activepieces-mcps.yaml
 
 # Image tag reference (documentation)
 # All active-development images use :latest for local development
@@ -63,6 +67,8 @@ images:
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
     newTag: latest
+  - name: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server
+    newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-    newTag: phase2-20260219-114857-model-config-aligned
+    newTag: phase2-20260219-1500-clone-autoprofile

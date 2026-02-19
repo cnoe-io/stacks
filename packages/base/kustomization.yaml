@@ -67,6 +67,7 @@ resources:
   - apps/metrics-server.yaml
   - apps/neo4j.yaml
   - apps/nginx-tls-secret.yaml
+  - apps/nimbletools-core.yaml
   - apps/flowise.yaml
   - apps/ollama.yaml
   - apps/postgres.yaml

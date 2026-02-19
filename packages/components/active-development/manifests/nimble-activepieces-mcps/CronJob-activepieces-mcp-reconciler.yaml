@@ -1,0 +1,86 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: activepieces-mcp-reconciler
+  namespace: workflow-builder
+  annotations:
+    argocd.argoproj.io/sync-wave: "66"
+  labels:
+    app.kubernetes.io/name: activepieces-mcp-reconciler
+    app.kubernetes.io/component: reconciler
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: activepieces-mcp-reconciler
+            app.kubernetes.io/component: reconciler
+            app.kubernetes.io/part-of: workflow-builder
+        spec:
+          serviceAccountName: activepieces-mcp-reconciler
+          restartPolicy: OnFailure
+          containers:
+            - name: reconciler
+              image: docker.io/library/postgres:15.3-alpine3.18
+              imagePullPolicy: IfNotPresent
+              command:
+                - sh
+                - -ec
+                - |
+                  apk add --no-cache bash curl jq >/dev/null
+                  if ! command -v kubectl >/dev/null 2>&1; then
+                    curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION:-v1.30.6}/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
+                    chmod +x /usr/local/bin/kubectl
+                  fi
+                  bash /scripts/reconcile.sh
+              env:
+                - name: KUBECTL_VERSION
+                  value: "v1.30.6"
+                - name: MCPSERVICE_NAMESPACE
+                  value: "workflow-builder"
+                - name: CATALOG_CONFIGMAP_NAME
+                  value: "activepieces-mcp-catalog"
+                - name: PINNED_PIECES
+                  value: "github,google-calendar,openai"
+                - name: RECONCILE_TTL_SECONDS
+                  value: "900"
+                - name: INTERNAL_API_URL
+                  value: "http://workflow-builder.workflow-builder.svc.cluster.local:3000"
+                - name: BUNDLE_REGISTRY_BASE_URL
+                  value: "http://mpak-registry.nimbletools-system.svc.cluster.local:3200"
+                - name: BUNDLE_PACKAGE_PREFIX
+                  value: "@activepieces/ap-"
+                - name: PIECE_PACKAGE_PREFIX
+                  value: "@activepieces/piece-"
+                - name: PIECE_MCP_IMAGE_REGISTRY
+                  value: "gitea.cnoe.localtest.me:8443"
+                - name: PIECE_MCP_IMAGE_REPOSITORY
+                  value: "giteaadmin/piece-mcp-server"
+                - name: PIECE_MCP_IMAGE_TAG
+                  value: "latest"
+              envFrom:
+                - secretRef:
+                    name: workflow-builder-secrets
+              volumeMounts:
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 300m
+                  memory: 512Mi
+          volumes:
+            - name: script
+              configMap:
+                name: activepieces-mcp-reconciler-script
+                defaultMode: 0755

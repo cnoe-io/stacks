@@ -41,6 +41,12 @@ if [ -f "$NIXOS_KUBEVIRT_SCRIPT" ]; then
   source "$NIXOS_KUBEVIRT_SCRIPT"
 fi
 
+# Source DB migration helpers (Atlas-first reconciliation for workflow-builder).
+DB_MIGRATIONS_SCRIPT="$STACKS_DIR/deployment/scripts/db-migrations.sh"
+if [ -f "$DB_MIGRATIONS_SCRIPT" ]; then
+  source "$DB_MIGRATIONS_SCRIPT"
+fi
+
 # 1Password service account helper
 load-1password-token() {
   # Load 1Password service account token from Azure Key Vault for automated access
@@ -811,6 +817,26 @@ cluster-deploy() {
   if [ $result -eq 0 ]; then
     fix-kind-hosts "${CLUSTER_HOST}"
     ensure-kargo-repos "${CLUSTER_HOST}"
+
+    # Atlas-first DB reconciliation:
+    # - workflow-builder migrations via Atlas (Job-db-migrate)
+    # - mpak-registry bootstrap only where Atlas is not available
+    if [ -f "$DB_MIGRATIONS_SCRIPT" ] && command -v cluster-reconcile-databases >/dev/null 2>&1; then
+      echo ""
+      echo "🗄️  Reconciling database migrations..."
+      if ! cluster-reconcile-databases --with-seed; then
+        echo "❌ Database reconciliation failed"
+        result=1
+      fi
+    fi
+
+    if [ $result -eq 0 ] && command -v cluster-reconcile-mcp-services >/dev/null 2>&1; then
+      echo ""
+      echo "🧩 Reconciling Activepieces MCP services..."
+      if ! cluster-reconcile-mcp-services >/dev/null 2>&1; then
+        echo "⚠️  Activepieces MCP reconcile did not complete; run 'clmcp' after ArgoCD sync"
+      fi
+    fi
   fi
 
   # Initialize ArgoCD authentication and save token to 1Password after successful deployment
@@ -1173,6 +1199,26 @@ cluster-update-gum() {
 
   gum style --foreground 82 "✅ Cluster updated"
 
+  # Keep KIND node /etc/hosts in sync for Gitea registry access.
+  fix-kind-hosts "${CLUSTER_HOST}"
+
+  # Atlas-first DB reconciliation after updates.
+  if [ -f "$DB_MIGRATIONS_SCRIPT" ] && command -v cluster-reconcile-databases >/dev/null 2>&1; then
+    gum style --foreground 45 "🗄️  Reconciling database migrations..."
+    if ! cluster-reconcile-databases; then
+      gum style --foreground 196 "❌ Database reconciliation failed"
+      cd "$ORIG_DIR"
+      return 1
+    fi
+  fi
+
+  if command -v cluster-reconcile-mcp-services >/dev/null 2>&1; then
+    gum style --foreground 45 "🧩 Reconciling Activepieces MCP services..."
+    if ! cluster-reconcile-mcp-services >/dev/null 2>&1; then
+      gum style --foreground 214 "⚠️  Activepieces MCP reconcile did not complete; run 'clmcp' after ArgoCD sync"
+    fi
+  fi
+
   # Step 3: Check ArgoCD applications
   gum style --foreground 45 "📊 Checking ArgoCD application status..."
   echo ""
@@ -1248,6 +1294,27 @@ cluster-update() {
     cd "$ORIG_DIR"
     return 1
   }
+
+  # Atlas-first DB reconciliation:
+  # - workflow-builder migrations via Atlas
+  # - mpak-registry bootstrap only where Atlas is not available
+  if [ -f "$DB_MIGRATIONS_SCRIPT" ] && command -v cluster-reconcile-databases >/dev/null 2>&1; then
+    echo ""
+    echo "🗄️  Reconciling database migrations..."
+    if ! cluster-reconcile-databases; then
+      echo "❌ Database reconciliation failed"
+      cd "$ORIG_DIR"
+      return 1
+    fi
+  fi
+
+  if command -v cluster-reconcile-mcp-services >/dev/null 2>&1; then
+    echo ""
+    echo "🧩 Reconciling Activepieces MCP services..."
+    if ! cluster-reconcile-mcp-services >/dev/null 2>&1; then
+      echo "⚠️  Activepieces MCP reconcile did not complete; run 'clmcp' after ArgoCD sync"
+    fi
+  fi
 
   echo ""
   echo "✅ Cluster update complete"
@@ -1342,6 +1409,101 @@ cluster-status() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
+cluster-reconcile-mcp-services() {
+  local namespace="${1:-workflow-builder}"
+  local cronjob_name="activepieces-mcp-reconciler"
+  local job_name="activepieces-mcp-reconcile-manual-$(date +%s)"
+
+  if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
+    echo "❌ Namespace '$namespace' not found"
+    return 1
+  fi
+
+  if ! kubectl get cronjob "$cronjob_name" -n "$namespace" >/dev/null 2>&1; then
+    echo "❌ CronJob '$cronjob_name' not found in namespace '$namespace'"
+    echo "   Ensure app 'nimble-activepieces-mcps' is synced in ArgoCD."
+    return 1
+  fi
+
+  echo "🔄 Triggering manual MCP reconciliation job: $job_name"
+  kubectl create job --from="cronjob/$cronjob_name" "$job_name" -n "$namespace" >/dev/null
+
+  echo "⏳ Waiting for reconcile job completion..."
+  local timeout=300
+  local waited=0
+  while [ "$waited" -lt "$timeout" ]; do
+    local complete failed
+    complete="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)"
+    failed="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)"
+
+    if [ "$complete" = "True" ]; then
+      echo "✅ MCP reconciliation completed"
+      echo ""
+      cluster-mcp-services-status "$namespace"
+      return 0
+    fi
+
+    if [ "$failed" = "True" ]; then
+      echo "❌ MCP reconciliation failed"
+      kubectl logs "job/$job_name" -n "$namespace" --tail=200 || true
+      return 1
+    fi
+
+    sleep 3
+    waited=$((waited + 3))
+  done
+
+  echo "❌ MCP reconciliation timed out after ${timeout}s"
+  kubectl logs "job/$job_name" -n "$namespace" --tail=200 || true
+  return 1
+}
+
+cluster-mcp-services-status() {
+  local namespace="${1:-workflow-builder}"
+
+  if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
+    echo "❌ Namespace '$namespace' not found"
+    return 1
+  fi
+
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🧩 ACTIVEPIECES MCP SERVICE STATUS"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  if kubectl get crd mcpservices.mcp.nimbletools.dev >/dev/null 2>&1; then
+    echo ""
+    echo "Managed MCPService resources:"
+    local managed_count
+    managed_count="$(kubectl get mcpservices.mcp.nimbletools.dev -n "$namespace" \
+      -l app.kubernetes.io/managed-by=activepieces-mcp-reconciler \
+      -o jsonpath='{.items[*].metadata.name}' 2>/dev/null | wc -w | tr -d '[:space:]')"
+    if [ "${managed_count:-0}" -gt 0 ]; then
+      kubectl get mcpservices.mcp.nimbletools.dev -n "$namespace" \
+        -l app.kubernetes.io/managed-by=activepieces-mcp-reconciler
+    else
+      echo "  No managed MCPService resources found"
+    fi
+  else
+    echo ""
+    echo "⚠️  CRD mcpservices.mcp.nimbletools.dev not found"
+  fi
+
+  echo ""
+  echo "Catalog keys (activepieces-mcp-catalog):"
+  local catalog_json
+  catalog_json="$(kubectl get configmap activepieces-mcp-catalog -n "$namespace" -o jsonpath='{.data.servers\.json}' 2>/dev/null || true)"
+  if [ -z "$catalog_json" ]; then
+    echo "  ConfigMap activepieces-mcp-catalog not found or empty"
+  elif command -v jq >/dev/null 2>&1; then
+    echo "$catalog_json" | jq -r 'keys[]' 2>/dev/null | sed 's/^/  - /' || echo "  (invalid JSON)"
+  else
+    echo "  jq not installed; raw JSON follows:"
+    echo "$catalog_json"
+  fi
+
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
 cluster-menu() {
   # Interactive menu for cluster operations
   if ! command -v gum &>/dev/null; then
@@ -1354,6 +1516,9 @@ cluster-menu() {
     echo "  cluster-update (clu)   - Update cluster"
     echo "  cluster-recreate (clr) - Recreate cluster"
     echo "  cluster-status (clst)  - Show status"
+    echo "  cluster-reconcile-databases (cldb) - Atlas-first DB reconciliation"
+    echo "  cluster-reconcile-mcp-services (clmcp) - Trigger Activepieces MCP reconciliation"
+    echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"
     return 1
   fi
 
@@ -1365,6 +1530,9 @@ cluster-menu() {
       "Update Cluster (idempotent)" \
       "Build & Deploy" \
       "Build & Deploy (with spinner)" \
+      "Reconcile DB Migrations" \
+      "Reconcile Activepieces MCP Services" \
+      "Show Activepieces MCP Status" \
       "Recreate Cluster" \
       "Show Status" \
       "Exit")
@@ -1388,10 +1556,32 @@ cluster-menu() {
         gum style --foreground 82 "Press any key to continue..."
         read -n 1 -s
         ;;
-      "Synthesize & Deploy (with spinner)")
+      "Build & Deploy (with spinner)")
         gum spin --spinner dot --title "Deploying cluster..." -- \
           env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; cluster-deploy >/dev/null 2>&1"
         gum style --foreground 82 "✅ Deployment complete"
+        echo ""
+        gum style --foreground 82 "Press any key to continue..."
+        read -n 1 -s
+        ;;
+      "Reconcile DB Migrations")
+        if [ -f "$DB_MIGRATIONS_SCRIPT" ] && command -v cluster-reconcile-databases >/dev/null 2>&1; then
+          cluster-reconcile-databases --with-seed
+        else
+          gum style --foreground 196 "❌ DB migration helper not available"
+        fi
+        echo ""
+        gum style --foreground 82 "Press any key to continue..."
+        read -n 1 -s
+        ;;
+      "Reconcile Activepieces MCP Services")
+        cluster-reconcile-mcp-services
+        echo ""
+        gum style --foreground 82 "Press any key to continue..."
+        read -n 1 -s
+        ;;
+      "Show Activepieces MCP Status")
+        cluster-mcp-services-status
         echo ""
         gum style --foreground 82 "Press any key to continue..."
         read -n 1 -s
@@ -1427,6 +1617,9 @@ alias clug="cluster-update-gum"
 alias clr="cluster-recreate"
 alias clst="cluster-status"
 alias clm="cluster-menu"
+alias cldb="cluster-reconcile-databases"
+alias clmcp="cluster-reconcile-mcp-services"
+alias clmcpst="cluster-mcp-services-status"
 # NixOS aliases (clnix, clnix-force, clnix-github, etc.) defined in nixos-kubevirt.sh
 
 # Kargo repo management (ensure host-specific repos exist in Gitea)
@@ -1496,6 +1689,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  cluster-update-gum (clug) - Interactive update with gum"
   echo "  cluster-recreate (clr)   - Delete and recreate cluster"
   echo "  cluster-status (clst)    - Show cluster and ArgoCD status"
+  echo "  cluster-reconcile-databases (cldb) - Atlas-first DB reconciliation"
+  echo "  cluster-reconcile-mcp-services (clmcp) - Trigger Activepieces MCP reconciliation"
+  echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"
   echo "  cluster-menu (clm)       - Interactive management menu (requires gum)"
   echo ""
   echo "Tailscale Remote Access:"
