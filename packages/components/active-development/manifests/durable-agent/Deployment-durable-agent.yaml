@@ -92,7 +92,10 @@ spec:
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /api/ready
+              # Use /api/health for readiness because some durable-agent images
+              # do not expose /api/ready, which keeps endpoints in notReady and
+              # breaks Dapr service invocation DNS resolution.
+              path: /api/health
               port: 8001
             initialDelaySeconds: 10
             periodSeconds: 10
