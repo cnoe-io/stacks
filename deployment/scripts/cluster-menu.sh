@@ -521,6 +521,63 @@ generate-nginx-override() {
   echo "${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
 }
 
+# Build the opencode durable-agent image from the local opencode repository.
+# The image is then pushed by preload-images.sh during cluster apply.
+build-opencode-durable-image() {
+  if [ "${SKIP_OPENCODE_DURABLE_BUILD:-}" = "true" ]; then
+    echo "⏭️  Skipping opencode durable image build (SKIP_OPENCODE_DURABLE_BUILD=true)"
+    return 0
+  fi
+
+  if ! command -v docker &>/dev/null; then
+    echo "❌ docker is required to build opencode durable image"
+    return 1
+  fi
+
+  local opencode_dir="${OPENCODE_DURABLE_REPO_DIR:-$HOME/repos/PittampalliOrg/opencode/dev}"
+  local dockerfile="${OPENCODE_DURABLE_DOCKERFILE:-Dockerfile.opencode-durable}"
+  local image_repo="${OPENCODE_DURABLE_IMAGE_REPO:-gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent}"
+  local kustomization_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/kustomization.yaml"
+  local deployment_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/Deployment-durable-agent.yaml"
+
+  if [ ! -d "$opencode_dir" ]; then
+    echo "❌ opencode repo not found at: $opencode_dir"
+    echo "   Set OPENCODE_DURABLE_REPO_DIR to the correct path or SKIP_OPENCODE_DURABLE_BUILD=true to bypass."
+    return 1
+  fi
+
+  if [ ! -f "$opencode_dir/$dockerfile" ]; then
+    echo "❌ opencode durable Dockerfile not found: $opencode_dir/$dockerfile"
+    return 1
+  fi
+
+  local image_tag="${OPENCODE_DURABLE_IMAGE_TAG:-}"
+  if [ -z "$image_tag" ] && [ -f "$kustomization_file" ]; then
+    image_tag="$(awk -v img="$image_repo" '
+      $1=="-" && $2=="name:" && $3==img {match_image=1; next}
+      match_image && $1=="newTag:" {print $2; exit}
+    ' "$kustomization_file")"
+  fi
+  if [ -z "$image_tag" ] && [ -f "$deployment_file" ]; then
+    image_tag="$(awk -v img="$image_repo" '$1=="image:" && index($2, img ":")==1 {sub(img":","",$2); print $2; exit}' "$deployment_file")"
+  fi
+  [ -z "$image_tag" ] && image_tag="latest"
+
+  local full_image="${image_repo}:${image_tag}"
+  local latest_image="${image_repo}:latest"
+
+  echo "🐳 Building opencode durable image: $full_image"
+  echo "   Source: $opencode_dir"
+  docker build -f "$opencode_dir/$dockerfile" -t "$full_image" "$opencode_dir"
+
+  if [ "$image_tag" != "latest" ]; then
+    docker tag "$full_image" "$latest_image"
+    echo "🏷️  Tagged alias: $latest_image"
+  fi
+
+  echo "✅ Built opencode durable image. Registry push will be handled by preload-images.sh."
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Portable Core - Manifest Application (no infrastructure dependencies)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -576,6 +633,9 @@ cluster-apply-manifests() {
     unset DOCKER_CERT_PATH
     export DOCKER_HOST=""
   fi
+
+  # Ensure durable-agent image comes from opencode repo (not workflow-builder legacy image).
+  build-opencode-durable-image || { cd "$ORIG_DIR"; return 1; }
 
   # Ensure kustomize packages are ready
   echo "🔍 Checking kustomize packages..."
