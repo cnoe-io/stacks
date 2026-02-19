@@ -65,4 +65,4 @@ images:
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-    newTag: phase2-20260219-072851-nullfix
+    newTag: phase2-20260219-074317-cleanupfix
