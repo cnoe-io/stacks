@@ -31,7 +31,7 @@ spec:
       serviceAccountName: durable-agent
       containers:
         - name: durable-agent
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:phase2-20260219-1500-clone-autoprofile
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:phase2-20260220-053919-change-artifacts
           imagePullPolicy: Always
           command:
             - /bin/sh
@@ -68,11 +68,17 @@ spec:
               value: "/app"
             - name: SANDBOX_PROVISION_TIMEOUT_MS
               value: "180000"
+            - name: WORKSPACE_CLONE_STRIP_GIT_DIR
+              value: "false"
             - name: DURABLE_REQUIRE_STARTUP_INIT
               value: "false"
             - name: DURABLE_STARTUP_INIT_RETRY_MS
               value: "15000"
             - name: OPENCODE_DISABLE_DEFAULT_PLUGINS
+              value: "true"
+            - name: OPENCODE_DISABLE_PROJECT_CONFIG
+              value: "true"
+            - name: OPENCODE_HEADLESS
               value: "true"
             - name: OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
               value: "true"

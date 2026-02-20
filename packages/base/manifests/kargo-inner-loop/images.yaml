@@ -12,6 +12,7 @@
 #
 # Image fields:
 #   name          - Image name (used for Warehouse/Stage naming)
+#   imageName     - (optional) Actual image repository name if different from 'name'
 #   argocdApp     - ArgoCD Application name to update
 #   registry      - Container registry URL
 #   org           - Registry organization/namespace
@@ -92,4 +93,14 @@ images:
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  # Durable agent uses opencode image repository while app/stage name remains durable-agent
+  - name: durable-agent
+    imageName: opencode-durable-agent
+    argocdApp: durable-agent
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: ".*"
     promotionType: kustomize

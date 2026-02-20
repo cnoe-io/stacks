@@ -18,6 +18,8 @@ spec:
   ignoreDifferences:
     - group: apps
       kind: Deployment
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | select(.name == "durable-agent") | .resources
       jsonPointers:
         - /spec/template/spec/containers/0/resources
         - /spec/replicas

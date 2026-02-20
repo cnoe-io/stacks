@@ -21,6 +21,7 @@ spec:
     - group: apps
       kind: Deployment
       jsonPointers:
+        - /spec/template/spec/containers/0/image
         - /spec/template/spec/containers/0/resources
         - /spec/replicas
   syncPolicy:

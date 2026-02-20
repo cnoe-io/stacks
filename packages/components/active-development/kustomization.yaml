@@ -71,4 +71,4 @@ images:
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-    newTag: phase2-20260219-1500-clone-autoprofile
+    newTag: phase2-20260220-053919-change-artifacts

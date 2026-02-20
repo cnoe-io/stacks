@@ -535,7 +535,7 @@ build-opencode-durable-image() {
   fi
 
   local opencode_dir="${OPENCODE_DURABLE_REPO_DIR:-$HOME/repos/PittampalliOrg/opencode/dev}"
-  local dockerfile="${OPENCODE_DURABLE_DOCKERFILE:-Dockerfile.opencode-durable}"
+  local dockerfile="${OPENCODE_DURABLE_DOCKERFILE:-Dockerfile.opencode-durable-headless}"
   local image_repo="${OPENCODE_DURABLE_IMAGE_REPO:-gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent}"
   local kustomization_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/kustomization.yaml"
   local deployment_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/Deployment-durable-agent.yaml"
@@ -1518,6 +1518,16 @@ cluster-reconcile-mcp-services() {
   return 1
 }
 
+cluster-reconcile-workflow-builder-db() {
+  if [ ! -f "$DB_MIGRATIONS_SCRIPT" ] || ! command -v run-workflow-builder-atlas-migrations >/dev/null 2>&1; then
+    echo "❌ workflow-builder DB migration helper not available"
+    return 1
+  fi
+
+  echo "Reconciling workflow-builder Atlas migrations..."
+  run-workflow-builder-atlas-migrations
+}
+
 cluster-mcp-services-status() {
   local namespace="${1:-workflow-builder}"
 
@@ -1576,6 +1586,7 @@ cluster-menu() {
     echo "  cluster-update (clu)   - Update cluster"
     echo "  cluster-recreate (clr) - Recreate cluster"
     echo "  cluster-status (clst)  - Show status"
+    echo "  cluster-reconcile-workflow-builder-db (clwdb) - Reconcile workflow-builder DB only"
     echo "  cluster-reconcile-databases (cldb) - Atlas-first DB reconciliation"
     echo "  cluster-reconcile-mcp-services (clmcp) - Trigger Activepieces MCP reconciliation"
     echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"
@@ -1590,6 +1601,7 @@ cluster-menu() {
       "Update Cluster (idempotent)" \
       "Build & Deploy" \
       "Build & Deploy (with spinner)" \
+      "Reconcile Workflow-Builder DB" \
       "Reconcile DB Migrations" \
       "Reconcile Activepieces MCP Services" \
       "Show Activepieces MCP Status" \
@@ -1620,6 +1632,12 @@ cluster-menu() {
         gum spin --spinner dot --title "Deploying cluster..." -- \
           env STACKS_DIR="$STACKS_DIR" bash -lc "source '$CLUSTER_MENU_SCRIPT'; cluster-deploy >/dev/null 2>&1"
         gum style --foreground 82 "✅ Deployment complete"
+        echo ""
+        gum style --foreground 82 "Press any key to continue..."
+        read -n 1 -s
+        ;;
+      "Reconcile Workflow-Builder DB")
+        cluster-reconcile-workflow-builder-db
         echo ""
         gum style --foreground 82 "Press any key to continue..."
         read -n 1 -s
@@ -1677,6 +1695,7 @@ alias clug="cluster-update-gum"
 alias clr="cluster-recreate"
 alias clst="cluster-status"
 alias clm="cluster-menu"
+alias clwdb="cluster-reconcile-workflow-builder-db"
 alias cldb="cluster-reconcile-databases"
 alias clmcp="cluster-reconcile-mcp-services"
 alias clmcpst="cluster-mcp-services-status"
@@ -1749,6 +1768,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  cluster-update-gum (clug) - Interactive update with gum"
   echo "  cluster-recreate (clr)   - Delete and recreate cluster"
   echo "  cluster-status (clst)    - Show cluster and ArgoCD status"
+  echo "  cluster-reconcile-workflow-builder-db (clwdb) - Reconcile workflow-builder DB only"
   echo "  cluster-reconcile-databases (cldb) - Atlas-first DB reconciliation"
   echo "  cluster-reconcile-mcp-services (clmcp) - Trigger Activepieces MCP reconciliation"
   echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"

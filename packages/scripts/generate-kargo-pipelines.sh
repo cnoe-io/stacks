@@ -58,6 +58,7 @@ echo ""
 for i in $(seq 0 $((image_count - 1))); do
     # Read image configuration (use -r for raw output without quotes)
     IMAGE_NAME=$(yq -r ".images[$i].name" "$CONFIG_FILE")
+    IMAGE_REPO=$(yq -r ".images[$i].imageName // .images[$i].name" "$CONFIG_FILE")
     ARGOCD_APP=$(yq -r ".images[$i].argocdApp" "$CONFIG_FILE")
     REGISTRY=$(yq -r ".images[$i].registry" "$CONFIG_FILE")
     ORG=$(yq -r ".images[$i].org" "$CONFIG_FILE")
@@ -71,6 +72,7 @@ for i in $(seq 0 $((image_count - 1))); do
     WAREHOUSE_FILE="$OUTPUT_DIR/Warehouse-${IMAGE_NAME}.yaml"
     sed \
         -e "s|__IMAGE_NAME__|${IMAGE_NAME}|g" \
+        -e "s|__IMAGE_REPO__|${IMAGE_REPO}|g" \
         -e "s|__ARGOCD_APP__|${ARGOCD_APP}|g" \
         -e "s|__REGISTRY__|${REGISTRY}|g" \
         -e "s|__ORG__|${ORG}|g" \
@@ -89,6 +91,7 @@ for i in $(seq 0 $((image_count - 1))); do
 
         sed \
             -e "s|__IMAGE_NAME__|${IMAGE_NAME}|g" \
+            -e "s|__IMAGE_REPO__|${IMAGE_REPO}|g" \
             -e "s|__ARGOCD_APP__|${ARGOCD_APP}|g" \
             -e "s|__REGISTRY__|${REGISTRY}|g" \
             -e "s|__ORG__|${ORG}|g" \
@@ -102,6 +105,7 @@ for i in $(seq 0 $((image_count - 1))); do
         # which build.sh substitutes at build time
         sed \
             -e "s|__IMAGE_NAME__|${IMAGE_NAME}|g" \
+            -e "s|__IMAGE_REPO__|${IMAGE_REPO}|g" \
             -e "s|__ARGOCD_APP__|${ARGOCD_APP}|g" \
             -e "s|__REGISTRY__|${REGISTRY}|g" \
             -e "s|__ORG__|${ORG}|g" \

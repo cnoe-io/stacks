@@ -134,7 +134,7 @@ packages/
 **Kargo-managed (Inner Loop)**: Apps with local development pipelines. Key requirements:
 - Deployment image must reference **local Gitea registry**: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
 - ArgoCD app should NOT use `ServerSideApply=true` (causes comparison errors)
-- `ignoreDifferences` should include `resources` and `replicas` but NOT `image` (Kargo manages images)
+- `ignoreDifferences` should include `image`, `resources`, and `replicas` for active-development apps
 
 See `docs/gitops-architecture-overview.md` for detailed patterns.
 
@@ -317,7 +317,7 @@ All inner-loop apps use a **single-branch model** where Kargo updates the image 
 **Key patterns:**
 - Deployments reference local Gitea registry: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
 - Kargo `kustomize-set-image` updates the tag, ArgoCD syncs the change
-- ArgoCD apps have `ignoreDifferences` for `resources` and `replicas` (NOT image) to allow DevSpace compatibility while Kargo manages images
+- ArgoCD apps have `ignoreDifferences` for `image`, `resources`, and `replicas` to avoid local-dev drift/reverts
 
 **Kargo Expression Syntax (v1.8+):**
 ```yaml

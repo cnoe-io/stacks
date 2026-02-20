@@ -56,10 +56,54 @@ _dbm_wait_for_job_complete() {
   local namespace="$1"
   local job_name="$2"
   local timeout_seconds="${3:-600}"
+  local elapsed=0
+  local seen_job="false"
 
-  if kubectl wait --for=condition=complete "job/$job_name" -n "$namespace" --timeout="${timeout_seconds}s" >/dev/null 2>&1; then
-    return 0
-  fi
+  while [ "$elapsed" -lt "$timeout_seconds" ]; do
+    if kubectl get job "$job_name" -n "$namespace" >/dev/null 2>&1; then
+      seen_job="true"
+      local succeeded failed active deletion_ts
+      succeeded="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.status.succeeded}' 2>/dev/null || true)"
+      failed="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.status.failed}' 2>/dev/null || true)"
+      active="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.status.active}' 2>/dev/null || true)"
+      deletion_ts="$(kubectl get job "$job_name" -n "$namespace" -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null || true)"
+
+      succeeded="${succeeded:-0}"
+      failed="${failed:-0}"
+      active="${active:-0}"
+
+      if [ "$succeeded" -ge 1 ]; then
+        return 0
+      fi
+
+      if [ "$failed" -ge 1 ] && [ "$active" -eq 0 ]; then
+        break
+      fi
+
+      # Argo hook jobs can be deleted immediately after success. If the job is
+      # terminating and we can observe a succeeded pod, treat it as complete.
+      if [ -n "$deletion_ts" ]; then
+        local succeeded_pod
+        succeeded_pod="$(kubectl get pod -n "$namespace" -l "job-name=$job_name" --field-selector=status.phase=Succeeded -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+        if [ -n "$succeeded_pod" ]; then
+          return 0
+        fi
+      fi
+    else
+      # If we observed the job and now it's gone with no remaining pods, assume
+      # it completed and was garbage collected by hook delete policy/TTL.
+      if [ "$seen_job" = "true" ]; then
+        local remaining_pods
+        remaining_pods="$(kubectl get pod -n "$namespace" -l "job-name=$job_name" --no-headers 2>/dev/null | wc -l | tr -d '[:space:]')"
+        if [ "${remaining_pods:-0}" -eq 0 ]; then
+          return 0
+        fi
+      fi
+    fi
+
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
 
   _dbm_log "❌ Job ${namespace}/${job_name} failed or timed out"
   kubectl get job "$job_name" -n "$namespace" -o wide || true
@@ -80,12 +124,55 @@ _dbm_secret_value() {
   kubectl get secret "$secret_name" -n "$namespace" -o "jsonpath={.data.${key}}" 2>/dev/null | base64 -d 2>/dev/null || true
 }
 
+_dbm_prepare_job_manifest() {
+  local source_manifest="$1"
+  local rendered_manifest
+  rendered_manifest="$(mktemp)"
+
+  # Manual reconciliation should not run Argo hook semantics; those hooks can
+  # attach finalizers that block direct kubectl-driven job lifecycles.
+  grep -v 'argocd.argoproj.io/' "$source_manifest" > "$rendered_manifest"
+  printf '%s\n' "$rendered_manifest"
+}
+
+_dbm_delete_job_for_recreate() {
+  local namespace="$1"
+  local job_name="$2"
+  local timeout_seconds="${3:-120}"
+  local elapsed=0
+
+  kubectl patch job "$job_name" -n "$namespace" --type='json' -p='[{"op":"remove","path":"/metadata/finalizers"}]' >/dev/null 2>&1 || true
+  kubectl delete job "$job_name" -n "$namespace" --ignore-not-found=true >/dev/null 2>&1 || true
+
+  while [ "$elapsed" -lt "$timeout_seconds" ]; do
+    if ! kubectl get job "$job_name" -n "$namespace" >/dev/null 2>&1; then
+      return 0
+    fi
+    kubectl patch job "$job_name" -n "$namespace" --type='json' -p='[{"op":"remove","path":"/metadata/finalizers"}]' >/dev/null 2>&1 || true
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+
+  _dbm_log "❌ Timed out waiting to recreate job ${namespace}/${job_name}"
+  return 1
+}
+
 _dbm_find_pod() {
   local namespace="$1"
   shift
   local selector pod_name
 
   for selector in "$@"; do
+    pod_name="$(
+      kubectl get pod -n "$namespace" -l "$selector" \
+        --field-selector=status.phase=Running \
+        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true
+    )"
+    if [ -n "$pod_name" ]; then
+      printf '%s\n' "$pod_name"
+      return 0
+    fi
+
     pod_name="$(kubectl get pod -n "$namespace" -l "$selector" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
     if [ -n "$pod_name" ]; then
       printf '%s\n' "$pod_name"
@@ -96,8 +183,51 @@ _dbm_find_pod() {
   return 1
 }
 
+_dbm_verify_workflow_builder_table() {
+  local table_name="$1"
+  local pod_name="postgresql-0"
+  local database_url
+  local regclass
+
+  if ! [[ "$table_name" =~ ^[a-z_][a-z0-9_]*$ ]]; then
+    _dbm_log "❌ Invalid table name for verification: $table_name"
+    return 1
+  fi
+
+  database_url="$(_dbm_secret_value workflow-builder workflow-builder-secrets DATABASE_URL)"
+  if [ -z "$database_url" ]; then
+    database_url="$(_dbm_secret_value workflow-builder workflow-builder-secrets database-url)"
+  fi
+  if [ -z "$database_url" ]; then
+    _dbm_log "❌ workflow-builder-secrets is missing DATABASE_URL"
+    return 1
+  fi
+
+  # Atlas jobs force sslmode=disable for in-cluster Postgres without TLS.
+  if ! echo "$database_url" | grep -q 'sslmode='; then
+    if echo "$database_url" | grep -q '?'; then
+      database_url="${database_url}&sslmode=disable"
+    else
+      database_url="${database_url}?sslmode=disable"
+    fi
+  fi
+
+  regclass="$(
+    kubectl exec -n workflow-builder "$pod_name" -- \
+      psql "$database_url" -tAc "select coalesce(to_regclass('public.${table_name}')::text,'')" 2>/dev/null | tr -d '[:space:]'
+  )"
+
+  if [ "$regclass" != "$table_name" ]; then
+    _dbm_log "❌ Expected table public.${table_name} not found after migration reconcile"
+    return 1
+  fi
+
+  _dbm_log "✅ Verified table public.${table_name}"
+}
+
 run-workflow-builder-atlas-migrations() {
   local manifest="$STACKS_DIR/packages/components/active-development/manifests/workflow-builder/Job-db-migrate.yaml"
+  local rendered_manifest
   if [ ! -f "$manifest" ]; then
     _dbm_log "❌ Missing manifest: $manifest"
     return 1
@@ -120,14 +250,32 @@ run-workflow-builder-atlas-migrations() {
     return 1
   fi
 
-  kubectl delete job db-migrate -n workflow-builder --ignore-not-found=true >/dev/null 2>&1 || true
-  kubectl apply -f "$manifest" >/dev/null
+  rendered_manifest="$(_dbm_prepare_job_manifest "$manifest")"
+  if [ ! -s "$rendered_manifest" ]; then
+    _dbm_log "❌ Failed to render db-migrate manifest"
+    rm -f "$rendered_manifest"
+    return 1
+  fi
 
-  _dbm_wait_for_job_complete workflow-builder db-migrate 900
+  if ! _dbm_delete_job_for_recreate workflow-builder db-migrate 180; then
+    rm -f "$rendered_manifest"
+    return 1
+  fi
+  kubectl apply -f "$rendered_manifest" >/dev/null
+  rm -f "$rendered_manifest"
+
+  if ! _dbm_wait_for_job_complete workflow-builder db-migrate 900; then
+    return 1
+  fi
+
+  # Guard against partially applied schema where Atlas job reported success
+  # but required MCP tables are still missing.
+  _dbm_verify_workflow_builder_table "mcp_connection"
 }
 
 run-workflow-builder-db-seed() {
   local manifest="$STACKS_DIR/packages/components/active-development/manifests/workflow-builder/Job-db-seed.yaml"
+  local rendered_manifest
   if [ ! -f "$manifest" ]; then
     _dbm_log "❌ Missing manifest: $manifest"
     return 1
@@ -150,8 +298,19 @@ run-workflow-builder-db-seed() {
     return 1
   fi
 
-  kubectl delete job db-seed -n workflow-builder --ignore-not-found=true >/dev/null 2>&1 || true
-  kubectl apply -f "$manifest" >/dev/null
+  rendered_manifest="$(_dbm_prepare_job_manifest "$manifest")"
+  if [ ! -s "$rendered_manifest" ]; then
+    _dbm_log "❌ Failed to render db-seed manifest"
+    rm -f "$rendered_manifest"
+    return 1
+  fi
+
+  if ! _dbm_delete_job_for_recreate workflow-builder db-seed 180; then
+    rm -f "$rendered_manifest"
+    return 1
+  fi
+  kubectl apply -f "$rendered_manifest" >/dev/null
+  rm -f "$rendered_manifest"
 
   _dbm_wait_for_job_complete workflow-builder db-seed 600
 }
@@ -210,8 +369,22 @@ bootstrap-mpak-registry-db() {
   )"
   if [ "$db_exists" != "1" ]; then
     _dbm_log "📦 Creating database ${db_name}..."
-    kubectl exec -n workflow-builder postgresql-0 -- \
-      psql "$admin_url" -v ON_ERROR_STOP=1 -v "db_name=${db_name}" -c "select format('create database %I', :'db_name') \\gexec" >/dev/null
+    local escaped_db_name
+    escaped_db_name="${db_name//\"/\"\"}"
+
+    # Use a direct CREATE DATABASE statement with identifier escaping; psql
+    # meta-commands (for example \gexec) are unreliable in this invocation path.
+    if ! kubectl exec -n workflow-builder postgresql-0 -- \
+      psql "$admin_url" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${escaped_db_name}\"" >/dev/null 2>&1; then
+      db_exists="$(
+        kubectl exec -n workflow-builder postgresql-0 -- \
+          psql "$admin_url" -tAc "select 1 from pg_database where datname='${db_name}'" 2>/dev/null | tr -d '[:space:]'
+      )"
+      if [ "$db_exists" != "1" ]; then
+        _dbm_log "❌ Failed to create database ${db_name}"
+        return 1
+      fi
+    fi
   fi
 
   local has_packages
@@ -234,7 +407,8 @@ bootstrap-mpak-registry-db() {
   local tmpdir
   tmpdir="$(mktemp -d)"
 
-  kubectl cp "nimbletools-system/${mpak_pod}:/app/apps/registry/prisma/migrations" "$tmpdir" >/dev/null
+  mkdir -p "$tmpdir/migrations"
+  kubectl cp "nimbletools-system/${mpak_pod}:/app/apps/registry/prisma/migrations" "$tmpdir/migrations" >/dev/null
 
   local migration_root="$tmpdir/migrations"
   if [ ! -d "$migration_root" ]; then

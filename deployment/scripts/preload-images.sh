@@ -259,11 +259,25 @@ preload_image() {
   #   - gitea.cnoe.localtest.me:8443/giteaadmin/<name>:<tag>
   #   - ghcr.io/pittampalliorg/<name>:<tag>
   #   - <name>:<tag> (local build)
-  local local_image
-  local_image=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | \
-    grep -E "(/${name}:|^${name}:)" | \
-    grep -v '<none>' | \
-    head -1 || true)
+  local local_image=""
+  if [ -n "$found_tag" ]; then
+    local_image=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | \
+      grep -E "(/${name}:${found_tag}$|^${name}:${found_tag}$)" | \
+      grep -v '<none>' | \
+      head -1 || true)
+  fi
+  if [ -z "$local_image" ] && [ -n "$requested_tag" ]; then
+    local_image=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | \
+      grep -E "(/${name}:${requested_tag}$|^${name}:${requested_tag}$)" | \
+      grep -v '<none>' | \
+      head -1 || true)
+  fi
+  if [ -z "$local_image" ]; then
+    local_image=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | \
+      grep -E "(/${name}:|^${name}:)" | \
+      grep -v '<none>' | \
+      head -1 || true)
+  fi
 
   if [ -z "$local_image" ]; then
     log "SKIP: $name - not in Docker cache"
@@ -395,12 +409,15 @@ trigger_kargo_refresh() {
     local image_count
     image_count=$(yq '.images | length' "$images_yaml" 2>/dev/null || echo 0)
     for i in $(seq 0 $((image_count - 1))); do
-      local name warehouse
+      local name image_repo warehouse
       name=$(yq -r ".images[$i].name" "$images_yaml")
+      image_repo=$(yq -r ".images[$i].imageName // .images[$i].name" "$images_yaml")
       # Use warehouseName if specified, otherwise default to name
       warehouse=$(yq -r ".images[$i].warehouseName // .images[$i].name" "$images_yaml")
-      if [ -n "$name" ] && [ "$name" != "null" ]; then
-        WAREHOUSES["$name"]="$warehouse"
+      if [ -n "$name" ] && [ "$name" != "null" ] && [ -n "$image_repo" ] && [ "$image_repo" != "null" ]; then
+        # Key by actual image repository name discovered from manifests (e.g. opencode-durable-agent),
+        # map to warehouse/stage identity (e.g. durable-agent).
+        WAREHOUSES["$image_repo"]="$warehouse"
       fi
     done
     log "Loaded ${image_count} warehouse mappings from images.yaml"

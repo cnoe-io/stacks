@@ -24,7 +24,7 @@ spec:
         - name: gitRepoURL
           value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
         - name: imageRepoURL
-          value: __REGISTRY__/__ORG__/__IMAGE_NAME__
+          value: __REGISTRY__/__ORG__/__IMAGE_REPO__
         - name: argoAppName
           value: __ARGOCD_APP__
       steps:

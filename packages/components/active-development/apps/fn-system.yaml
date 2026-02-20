@@ -16,6 +16,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder
+  # Ignore DevSpace-managed fields to allow local development without drift detection
+  ignoreDifferences:
+    - group: serving.knative.dev
+      kind: Service
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/template/metadata/annotations/autoscaling.knative.dev~1minScale
+        - /spec/template/metadata/annotations/autoscaling.knative.dev~1maxScale
   syncPolicy:
     automated:
       selfHeal: true

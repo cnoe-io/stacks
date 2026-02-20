@@ -21,7 +21,7 @@ spec:
         strictSemvers: false
     # Image source - local dev images from Gitea registry
     - image:
-        repoURL: __REGISTRY__/__ORG__/__IMAGE_NAME__
+        repoURL: __REGISTRY__/__ORG__/__IMAGE_REPO__
         imageSelectionStrategy: __TAG_STRATEGY__
         allowTags: __TAG_PATTERN__
         discoveryLimit: 10

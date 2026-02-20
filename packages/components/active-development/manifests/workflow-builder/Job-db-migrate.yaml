@@ -130,6 +130,10 @@ spec:
                 exit 1
               fi
 
+              # Allow non-linear execution order for intentionally added
+              # backfilled migrations in active-development.
+              ATLAS_EXEC_ORDER="--exec-order non-linear"
+
               echo "Running Atlas migrations (needs_baseline=$NEEDS_BASELINE, baseline_version=$BASELINE_VERSION, latest_version=$LATEST_VERSION)..."
               echo "Atlas status before apply:"
               atlas migrate status --env k8s || true
@@ -140,9 +144,9 @@ spec:
               fi
 
               if [ "$NEEDS_BASELINE" = "true" ]; then
-                atlas migrate apply --env k8s --baseline "$BASELINE_VERSION"
+                atlas migrate apply --env k8s $ATLAS_EXEC_ORDER --baseline "$BASELINE_VERSION"
               else
-                atlas migrate apply --env k8s
+                atlas migrate apply --env k8s $ATLAS_EXEC_ORDER
               fi
 
               echo "Atlas status after apply:"
