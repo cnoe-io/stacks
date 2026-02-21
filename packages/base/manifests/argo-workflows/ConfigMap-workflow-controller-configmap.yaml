@@ -20,6 +20,10 @@ data:
         - groups
     nodeEvents:
       enabled: false
+    retentionPolicy:
+      completed: 10
+      failed: 20
+      errored: 10
 kind: ConfigMap
 metadata:
   name: workflow-controller-configmap

@@ -17,7 +17,7 @@ spec:
         fullnameOverride: "kagent"
         controller:
           logLevel: info
-          replicas: 1
+          replicas: 0
           resources:
             limits:
               memory: 1Gi
@@ -27,7 +27,7 @@ spec:
         grafana-mcp:
           fullnameOverride: "kagent-grafana-mcp"
         kmcp:
-          enabled: true
+          enabled: false
           fullnameOverride: "kagent-kmcp"
         providers:
           default: openAI
@@ -38,8 +38,8 @@ spec:
             apiKeySecretKey: OPENAI_API_KEY
         namespace: kagent
         ui:
-          enabled: true
-          replicas: 1
+          enabled: false
+          replicas: 0
           resources:
             limits:
               memory: 512Mi

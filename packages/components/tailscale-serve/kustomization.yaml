@@ -7,11 +7,11 @@ resources:
   - apps/backstage-tailscale-serve.yaml
   - apps/caipe-tailscale-serve.yaml
   - apps/flipt-tailscale-serve.yaml
-  - apps/flowise-tailscale-serve.yaml
+  # - apps/flowise-tailscale-serve.yaml  # Disabled with flowise
   - apps/gitea-tailscale-serve.yaml
   - apps/grafana-tailscale-serve.yaml
   - apps/k8s-api-tailscale-serve.yaml
-  - apps/kagent-tailscale-serve.yaml
+  # - apps/kagent-tailscale-serve.yaml  # Disabled with kagent
   - apps/kargo-tailscale-serve.yaml
   - apps/keycloak-tailscale-serve.yaml
   - apps/langfuse-tailscale-serve.yaml

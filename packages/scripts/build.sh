@@ -57,7 +57,7 @@ done
 # From components (based on environment)
 case "$ENV" in
     kind|kind-*)
-        for comp in active-development kind-only crossplane tailscale-serve observability; do
+        for comp in active-development kind-only tailscale-serve observability; do
             for f in "${PACKAGES_DIR}/components/${comp}/apps/"*.yaml; do
                 [ -f "$f" ] || continue
                 app=$(basename "$f")
@@ -66,7 +66,7 @@ case "$ENV" in
         done
         ;;
     talos)
-        for comp in talos-only crossplane tailscale-serve observability; do
+        for comp in talos-only tailscale-serve observability; do
             for f in "${PACKAGES_DIR}/components/${comp}/apps/"*.yaml; do
                 [ -f "$f" ] || continue
                 app=$(basename "$f")
@@ -124,7 +124,7 @@ done
 # From components (based on environment)
 case "$ENV" in
     kind|kind-*)
-        for comp in active-development kind-only crossplane tailscale-serve observability; do
+        for comp in active-development kind-only tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue
                 copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
@@ -132,7 +132,7 @@ case "$ENV" in
         done
         ;;
     talos)
-        for comp in talos-only crossplane tailscale-serve observability; do
+        for comp in talos-only tailscale-serve observability; do
             for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
                 [ -d "$dir" ] || continue
                 copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
@@ -168,6 +168,15 @@ find "${DIST_DIR}/${ENV}" -name "*.yaml" -type f | while read -r file; do
     fi
     if [ -n "${RESOURCE_GROUP:-}" ]; then
         sed -i "s/\${RESOURCE_GROUP}/${RESOURCE_GROUP}/g" "$file"
+    fi
+done
+
+# Step 4: Remove orphaned manifest directories (no matching Application YAML)
+for dir in "${DIST_DIR}/${ENV}"/*/; do
+    [ -d "$dir" ] || continue
+    app=$(basename "$dir")
+    if [ ! -f "${DIST_DIR}/${ENV}/${app}.yaml" ]; then
+        rm -rf "$dir"
     fi
 done
 

@@ -22,6 +22,10 @@ data:
       enabled: true
     workflowEvents:
       enabled: true
+    retentionPolicy:
+      completed: 10
+      failed: 20
+      errored: 10
 kind: ConfigMap
 metadata:
   labels:

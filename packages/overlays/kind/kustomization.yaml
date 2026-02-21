@@ -10,7 +10,7 @@ resources:
 components:
   - ../../components/active-development
   - ../../components/kind-only
-  - ../../components/crossplane
+  # - ../../components/crossplane  # Disabled: OAuth apps managed outside Crossplane, providers consume ~1.75 GiB idle
   - ../../components/tailscale-serve
   - ../../components/observability
 

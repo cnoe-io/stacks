@@ -36,7 +36,7 @@ resources:
   # Shared infrastructure for workflow-builder functions (registry creds, service account)
   - apps/workflow-functions-shared.yaml
   # Serverless functions (scale-to-zero Knative Services)
-  - apps/fn-activepieces.yaml
+  # - apps/fn-activepieces.yaml  # Disabled with activepieces
   - apps/fn-system.yaml
   # Durable agent (Dapr Workflow-backed ReAct loop, primary agent service)
   - apps/durable-agent.yaml
@@ -45,7 +45,7 @@ resources:
   # In-cluster MCP bundle registry for Nimble/MPAK-compatible bundles
   - apps/mpak-registry.yaml
   # Nimble MCPService instances for selected Activepieces pieces
-  - apps/nimble-activepieces-mcps.yaml
+  # - apps/nimble-activepieces-mcps.yaml  # Disabled with activepieces
 
 # Image tag reference (documentation)
 # All active-development images use :latest for local development
@@ -63,8 +63,8 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
     newTag: latest
   # Standalone function executor images
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
-    newTag: latest
+  # - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
+  #   newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server

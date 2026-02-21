@@ -3,11 +3,12 @@ kind: Kustomization
 
 # Shared applications - deployed to all environments
 resources:
-  - apps/activepieces.yaml
-  # activepieces-seed is applied manually (one-time admin user setup)
-  - apps/agent-sandbox-crds.yaml
-  - apps/agent-sandbox.yaml
-  - apps/agent-sandbox-config.yaml
+  # activepieces disabled: not actively used
+  # - apps/activepieces.yaml
+  # agent-sandbox (ai-platform-engineering) disabled: not actively used
+  # - apps/agent-sandbox-crds.yaml
+  # - apps/agent-sandbox.yaml
+  # - apps/agent-sandbox-config.yaml
   - apps/ai-chatbot-secrets.yaml
   # NOTE: ai-chatbot app moved to components/active-development
   - apps/argocd-secretstore.yaml
@@ -32,22 +33,24 @@ resources:
   - apps/backstage-token-sync.yaml
   - apps/backstage.yaml
   - apps/cert-manager.yaml
-  - apps/dapr-agents-redis.yaml
-  - apps/dapr-agents-secrets.yaml
+  # dapr-agents disabled: not actively used
+  # - apps/dapr-agents-redis.yaml
+  # - apps/dapr-agents-secrets.yaml
   - apps/dapr-components.yaml
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
   - apps/dapr-shared.yaml
-  - apps/dapr-agents-demo.yaml
+  # - apps/dapr-agents-demo.yaml
   - apps/default-secretstore.yaml
   - apps/example-namespace.yaml
   - apps/external-secrets.yaml
   - apps/azure-keyvault-store.yaml
   - apps/gateway-api-crds.yaml
   - apps/gitea-secretstore.yaml
-  - apps/kagent-crds.yaml
-  - apps/kagent-secrets.yaml
-  - apps/kagent.yaml
+  # kagent disabled: agents idle, consuming ~2.7 GiB
+  # - apps/kagent-crds.yaml
+  # - apps/kagent-secrets.yaml
+  # - apps/kagent.yaml
   - apps/kargo-backstage-pipeline.yaml
   - apps/kargo-ca-certificates.yaml
   - apps/kargo-cluster-config.yaml
@@ -56,22 +59,26 @@ resources:
   - apps/kargo-webhook-sync.yaml
   - apps/kargo.yaml
   - apps/kargo-inner-loop.yaml
-  - apps/jupyterhub.yaml
+  # jupyterhub disabled: not actively used
+  # - apps/jupyterhub.yaml
   - apps/keycloak-config.yaml
   - apps/keycloak-secrets.yaml
   - apps/keycloak.yaml
-  - apps/kubevela.yaml
-  - apps/velaux.yaml
-  - apps/kubevela-observability.yaml
-  - apps/kubevela-dapr.yaml
-  - apps/kgateway-crds.yaml
-  - apps/kgateway.yaml
-  - apps/kmcp.yaml
+  # kubevela disabled: not actively used
+  # - apps/kubevela.yaml
+  # - apps/velaux.yaml
+  # - apps/kubevela-observability.yaml
+  # - apps/kubevela-dapr.yaml
+  # kgateway/kmcp disabled: not actively used
+  # - apps/kgateway-crds.yaml
+  # - apps/kgateway.yaml
+  # - apps/kmcp.yaml
   - apps/metrics-server.yaml
   - apps/neo4j.yaml
   - apps/nginx-tls-secret.yaml
   - apps/nimbletools-core.yaml
-  - apps/flowise.yaml
+  # flowise disabled: not actively used
+  # - apps/flowise.yaml
   - apps/ollama.yaml
   - apps/postgres.yaml
   - apps/redis.yaml

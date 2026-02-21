@@ -9,7 +9,7 @@ resources:
   - RoleBinding-build-trigger.yaml
   - RoleBinding-tekton-triggers-eventlistener-roles.yaml
   - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
-  - Build-fn-activepieces.yaml
+  # - Build-fn-activepieces.yaml  # Disabled with activepieces
   - Build-fn-system.yaml
   - Build-mcp-gateway.yaml
   - Build-piece-mcp-server.yaml
