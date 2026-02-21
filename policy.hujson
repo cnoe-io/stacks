@@ -210,6 +210,18 @@
       ],
       "svc:workflow-builder-ryzen": [
         "tag:k8s-services"
+      ],
+      "svc:flowise": [
+        "tag:k8s-services"
+      ],
+      "svc:flowise-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:flowise-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:flowise-hetzner": [
+        "tag:k8s-services"
       ]
     }
   },
@@ -330,7 +342,11 @@
         "svc:loki-hetzner:*",
         "svc:workflow-builder:*",
         "svc:workflow-builder-thinkpad:*",
-        "svc:workflow-builder-ryzen:*"
+        "svc:workflow-builder-ryzen:*",
+        "svc:flowise:*",
+        "svc:flowise-thinkpad:*",
+        "svc:flowise-ryzen:*",
+        "svc:flowise-hetzner:*"
       ]
     },
     {

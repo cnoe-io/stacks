@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"flowise-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}:443":{"Handlers":{"/":{"Proxy":"http://flowise.workflow-builder.svc.cluster.local:3000"}}}}}'
+kind: ConfigMap
+metadata:
+  name: flowise-tailscale-serve-config
+  namespace: tailscale

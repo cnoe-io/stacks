@@ -19,7 +19,6 @@ resources:
   - Deployment-workflow-builder.yaml
   - Service-workflow-builder.yaml
   - Ingress-workflow-builder.yaml
-  - Ingress-workflow-builder-tailscale.yaml
   - Job-db-seed.yaml
   - Job-seed-functions.yaml
   - Job-sync-pieces.yaml

@@ -181,6 +181,9 @@ spec:
                 process.exit(1);
               });
               NODE
+              echo "Seeding canonical workflows..."
+              node scripts/seed-workflows.bundle.js
+              echo "Workflow seed complete"
               echo "Database seed complete"
           envFrom:
             - secretRef:

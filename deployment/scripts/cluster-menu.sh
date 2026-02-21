@@ -712,6 +712,16 @@ cluster-apply-manifests() {
 
   local result=$?
 
+  # Ensure kubeconfig context is set after cluster creation/update
+  # idpbuilder creates the context but doesn't always switch to it,
+  # which causes k9s and other tools watching kubeconfig to fail
+  if [ $result -eq 0 ]; then
+    local expected_ctx="kind-${CLUSTER_NAME}"
+    if kubectl config get-contexts -o name 2>/dev/null | grep -q "^${expected_ctx}$"; then
+      kubectl config use-context "$expected_ctx" >/dev/null 2>&1 || true
+    fi
+  fi
+
   # ─────────────────────────────────────────────────────────────────────────────
   # DevContainer Push (runs AFTER idpbuilder, Gitea is guaranteed ready)
   # Pushes existing devcontainer images to Gitea for DevSpace development.

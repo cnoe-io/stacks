@@ -9,17 +9,32 @@ if [[ "${1:-}" == "--wait" ]]; then
   WAIT_FOR_GRACE_PERIOD=true
 fi
 
-# Hostname patterns to match (base hostnames only; not suffixed DNS names like "-1", "-2", ...)
-SERVICE_PATTERNS=(
-  # Legacy (pre-services) hostnames that historically caused suffix drift on cluster recreation
-  "^kagent$"
-  "^gitea$"
-  "^argocd$"
+# Dynamically extract hostname prefixes from tailscale-serve Deployment manifests.
+# Each Deployment has TS_HOSTNAME: <prefix>-${TAILSCALE_HOST}, so we extract the prefix
+# and generate patterns for both bare names and host-suffixed variants (e.g. kagent, kagent-ryzen, kagent-ryzen-1).
+TAILSCALE_SERVE_DIR="${STACKS_DIR:-$(cd "$(dirname "$0")/../../.." && pwd)}/packages/components/tailscale-serve/manifests"
+
+SERVICE_PATTERNS=()
+
+if [[ -d "$TAILSCALE_SERVE_DIR" ]]; then
+  while IFS= read -r prefix; do
+    SERVICE_PATTERNS+=("^${prefix}$" "^${prefix}-.*")
+  done < <(
+    grep -rh 'name: TS_HOSTNAME' -A1 "$TAILSCALE_SERVE_DIR"/*/Deployment-*.yaml 2>/dev/null \
+      | grep 'value:' \
+      | sed 's/.*value: *//; s/-\${TAILSCALE_HOST}//' \
+      | sort -u
+  )
+  echo "✓ Loaded ${#SERVICE_PATTERNS[@]} patterns from $(echo "${SERVICE_PATTERNS[@]}" | tr ' ' '\n' | grep '^\^[a-z]' | grep '\$$' | wc -l) services in $TAILSCALE_SERVE_DIR"
+else
+  echo "⚠️  Tailscale manifests dir not found at $TAILSCALE_SERVE_DIR, using no service patterns"
+fi
+
+# Legacy hostnames (no longer deployed but may linger as offline devices)
+SERVICE_PATTERNS+=(
   "^agentgateway$"
-  "^keycloak$"
   "^headlamp$"
   "^cnoe$"
-  "^kargo$"
   "^kargo-webhooks$"
   "^nixos-dev-vm$"
 )

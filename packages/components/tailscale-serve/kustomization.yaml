@@ -7,6 +7,7 @@ resources:
   - apps/backstage-tailscale-serve.yaml
   - apps/caipe-tailscale-serve.yaml
   - apps/flipt-tailscale-serve.yaml
+  - apps/flowise-tailscale-serve.yaml
   - apps/gitea-tailscale-serve.yaml
   - apps/grafana-tailscale-serve.yaml
   - apps/k8s-api-tailscale-serve.yaml
@@ -17,6 +18,7 @@ resources:
   - apps/loki-tailscale-serve.yaml
   - apps/mimir-tailscale-serve.yaml
   - apps/otel-collector-tailscale-serve.yaml
+  - apps/workflow-builder-tailscale-serve.yaml
   - apps/tailscale-crds.yaml
   - apps/tailscale-operator-secrets.yaml
   - apps/tailscale-operator.yaml
