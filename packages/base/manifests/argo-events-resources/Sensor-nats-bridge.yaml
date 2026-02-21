@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: nats-bridge
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: workflow-event
+      eventSourceName: nats-bridge
+      eventName: workflow-events
+  triggers:
+    - template:
+        name: workflow-event-handler
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: nats-event-handler-
+                namespace: argo
+              spec:
+                entrypoint: handle-event
+                arguments:
+                  parameters:
+                    - name: event-payload
+                templates:
+                  - name: handle-event
+                    inputs:
+                      parameters:
+                        - name: event-payload
+                    container:
+                      image: dwdraju/alpine-curl-jq:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "=== NATS Event Received ==="
+                          echo '{{inputs.parameters.event-payload}}' | jq . 2>/dev/null || echo '{{inputs.parameters.event-payload}}'
+                          echo "=== Processing complete ==="
+          parameters:
+            - src:
+                dependencyName: workflow-event
+                dataKey: body
+              dest: spec.arguments.parameters.0.value
+      retryStrategy:
+        steps: 3

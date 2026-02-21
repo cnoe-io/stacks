@@ -1,0 +1,110 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: resource-watch
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: deployment-failure
+      eventSourceName: resource-watcher
+      eventName: deployment-rollout-failures
+    - name: job-completion
+      eventSourceName: resource-watcher
+      eventName: job-completions
+  triggers:
+    - template:
+        name: deployment-failure-diagnostic
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: diag-deployment-failure-
+                namespace: argo
+              spec:
+                entrypoint: diagnose
+                arguments:
+                  parameters:
+                    - name: deployment-name
+                    - name: namespace
+                templates:
+                  - name: diagnose
+                    inputs:
+                      parameters:
+                        - name: deployment-name
+                        - name: namespace
+                    container:
+                      image: bitnami/kubectl:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "=== Deployment Status ==="
+                          kubectl get deployment "{{inputs.parameters.deployment-name}}" -n "{{inputs.parameters.namespace}}" -o yaml
+                          echo "=== Events ==="
+                          kubectl get events -n "{{inputs.parameters.namespace}}" --field-selector involvedObject.name="{{inputs.parameters.deployment-name}}" --sort-by='.lastTimestamp'
+                          echo "=== Pod Logs ==="
+                          kubectl logs -n "{{inputs.parameters.namespace}}" -l app="{{inputs.parameters.deployment-name}}" --tail=50 2>/dev/null || echo "No pods found"
+          parameters:
+            - src:
+                dependencyName: deployment-failure
+                dataKey: body.metadata.name
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: deployment-failure
+                dataKey: body.metadata.namespace
+              dest: spec.arguments.parameters.1.value
+      retryStrategy:
+        steps: 3
+    - template:
+        name: job-completion-handler
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: post-job-
+                namespace: argo
+              spec:
+                entrypoint: post-process
+                arguments:
+                  parameters:
+                    - name: job-name
+                    - name: namespace
+                templates:
+                  - name: post-process
+                    inputs:
+                      parameters:
+                        - name: job-name
+                        - name: namespace
+                    container:
+                      image: bitnami/kubectl:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "Job completed: {{inputs.parameters.job-name}} in namespace {{inputs.parameters.namespace}}"
+                          kubectl get job "{{inputs.parameters.job-name}}" -n "{{inputs.parameters.namespace}}" -o jsonpath='{.status}'
+          parameters:
+            - src:
+                dependencyName: job-completion
+                dataKey: body.metadata.name
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: job-completion
+                dataKey: body.metadata.namespace
+              dest: spec.arguments.parameters.1.value
+      retryStrategy:
+        steps: 3

@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "55"
+  name: argo-events-resources
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo-events
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: .
+    repoURL: cnoe://argo-events-resources/manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

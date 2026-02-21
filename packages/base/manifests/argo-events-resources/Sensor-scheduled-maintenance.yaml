@@ -1,0 +1,104 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: scheduled-maintenance
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: daily-cleanup
+      eventSourceName: calendar-scheduler
+      eventName: daily-cleanup
+    - name: hourly-healthcheck
+      eventSourceName: calendar-scheduler
+      eventName: hourly-healthcheck
+  triggers:
+    - template:
+        name: cleanup-old-workflows
+        conditions: daily-cleanup
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: cleanup-workflows-
+                namespace: argo
+              spec:
+                entrypoint: cleanup
+                templates:
+                  - name: cleanup
+                    container:
+                      image: bitnami/kubectl:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "=== Pruning completed/errored workflows older than 7 days ==="
+                          CUTOFF=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+                          echo "Cutoff date: $CUTOFF"
+
+                          echo "=== Completed workflows ==="
+                          kubectl get workflows -n argo --field-selector status.phase=Succeeded -o json | \
+                            jq -r --arg cutoff "$CUTOFF" '.items[] | select(.status.finishedAt < $cutoff) | .metadata.name' | \
+                            xargs -r -I{} kubectl delete workflow {} -n argo
+
+                          echo "=== Errored workflows ==="
+                          kubectl get workflows -n argo --field-selector status.phase=Error -o json | \
+                            jq -r --arg cutoff "$CUTOFF" '.items[] | select(.status.finishedAt < $cutoff) | .metadata.name' | \
+                            xargs -r -I{} kubectl delete workflow {} -n argo
+
+                          echo "=== Failed workflows ==="
+                          kubectl get workflows -n argo --field-selector status.phase=Failed -o json | \
+                            jq -r --arg cutoff "$CUTOFF" '.items[] | select(.status.finishedAt < $cutoff) | .metadata.name' | \
+                            xargs -r -I{} kubectl delete workflow {} -n argo
+
+                          echo "=== Cleanup complete ==="
+      retryStrategy:
+        steps: 3
+    - template:
+        name: healthcheck
+        conditions: hourly-healthcheck
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: healthcheck-
+                namespace: argo
+              spec:
+                entrypoint: check
+                templates:
+                  - name: check
+                    container:
+                      image: bitnami/kubectl:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "=== ArgoCD Application Sync Status ==="
+                          kubectl get applications -n argocd -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status' 2>/dev/null || echo "ArgoCD not accessible"
+
+                          echo ""
+                          echo "=== ExternalSecrets Health ==="
+                          kubectl get externalsecrets -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.conditions[0].reason' 2>/dev/null || echo "ExternalSecrets not accessible"
+
+                          echo ""
+                          echo "=== NATS Connectivity ==="
+                          kubectl exec -n nats deploy/nats -c nats -- nats server check connection 2>/dev/null && echo "NATS: OK" || echo "NATS: connection check failed"
+
+                          echo ""
+                          echo "=== Argo Events Components ==="
+                          kubectl get eventbus,eventsource,sensor -n argo-events -o custom-columns='KIND:.kind,NAME:.metadata.name,STATUS:.status.conditions[-1].type' 2>/dev/null || echo "Argo Events not accessible"
+      retryStrategy:
+        steps: 3

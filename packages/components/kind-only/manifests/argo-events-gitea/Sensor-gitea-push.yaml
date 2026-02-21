@@ -1,0 +1,113 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: gitea-push
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events-gitea
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: push-event
+      eventSourceName: gitea-webhook
+      eventName: gitea-push
+      filters:
+        data:
+          - path: body.ref
+            type: string
+            value:
+              - "refs/heads/main"
+  triggers:
+    - template:
+        name: gitea-push-workflow
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: gitea-push-
+                namespace: argo
+              spec:
+                entrypoint: pipeline
+                arguments:
+                  parameters:
+                    - name: repo-url
+                    - name: commit-sha
+                    - name: repo-name
+                templates:
+                  - name: pipeline
+                    inputs:
+                      parameters:
+                        - name: repo-url
+                        - name: commit-sha
+                        - name: repo-name
+                    steps:
+                      - - name: clone
+                          template: git-clone
+                          arguments:
+                            parameters:
+                              - name: repo-url
+                                value: "{{inputs.parameters.repo-url}}"
+                              - name: commit-sha
+                                value: "{{inputs.parameters.commit-sha}}"
+                      - - name: notify
+                          template: notify
+                          arguments:
+                            parameters:
+                              - name: repo-name
+                                value: "{{inputs.parameters.repo-name}}"
+                              - name: commit-sha
+                                value: "{{inputs.parameters.commit-sha}}"
+                  - name: git-clone
+                    inputs:
+                      parameters:
+                        - name: repo-url
+                        - name: commit-sha
+                    container:
+                      image: alpine/git:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "Cloning {{inputs.parameters.repo-url}} at {{inputs.parameters.commit-sha}}"
+                          git clone --depth 1 "{{inputs.parameters.repo-url}}" /workspace
+                          cd /workspace
+                          git checkout "{{inputs.parameters.commit-sha}}" 2>/dev/null || echo "Using HEAD"
+                          echo "=== Clone complete ==="
+                          ls -la
+                  - name: notify
+                    inputs:
+                      parameters:
+                        - name: repo-name
+                        - name: commit-sha
+                    container:
+                      image: dwdraju/alpine-curl-jq:latest
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          echo "Push event processed for {{inputs.parameters.repo-name}}"
+                          echo "Commit: {{inputs.parameters.commit-sha}}"
+                          echo "Pipeline complete."
+          parameters:
+            - src:
+                dependencyName: push-event
+                dataKey: body.repository.clone_url
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: push-event
+                dataKey: body.after
+              dest: spec.arguments.parameters.1.value
+            - src:
+                dependencyName: push-event
+                dataKey: body.repository.full_name
+              dest: spec.arguments.parameters.2.value
+      retryStrategy:
+        steps: 3

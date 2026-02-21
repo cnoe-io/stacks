@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: gitea-webhook
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: eventsource
+    app.kubernetes.io/name: argo-events-gitea
+spec:
+  eventBusName: default
+  service:
+    ports:
+      - port: 12000
+        targetPort: 12000
+  webhook:
+    gitea-push:
+      port: "12000"
+      endpoint: /gitea/push
+      method: POST
+    gitea-tag:
+      port: "12000"
+      endpoint: /gitea/tag
+      method: POST

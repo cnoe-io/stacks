@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: default
+  namespace: argo-events
+spec:
+  jetstream:
+    version: "latest"
+    replicas: 1
+    streamConfig: |
+      replicas: 1
+    settings: |
+      max_file_store: 256MB
+      max_memory_store: 128MB

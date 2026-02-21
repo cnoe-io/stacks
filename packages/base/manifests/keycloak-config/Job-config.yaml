@@ -66,7 +66,7 @@ spec:
               set -e
 
               # Always need kubectl for secret creation
-              curl -sS -LO "https://dl.k8s.io/release/v1.28.3//bin/linux/amd64/kubectl"
+              curl -sS -LO "https://dl.k8s.io/release/$(curl -sS -L https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
               chmod +x kubectl
 
               patch_client_config() {

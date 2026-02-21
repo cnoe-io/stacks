@@ -16,6 +16,9 @@ resources:
   - apps/argo-workflows.yaml
   - apps/argo-rollouts.yaml
   - apps/argo-rollouts-analysis.yaml
+  - apps/argo-events.yaml
+  - apps/argo-events-resources.yaml
+  - apps/argo-events-webhook-setup.yaml
   - apps/ingress-nginx-cert.yaml
   - apps/backstage-api-token-sync.yaml
   - apps/backstage-dapr-components.yaml

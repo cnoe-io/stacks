@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-events
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "52"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 2.4.20
+    chart: argo-events
+    helm:
+      releaseName: argo-events
+      valuesObject:
+        crds:
+          install: true
+          keep: true
+        controller:
+          replicas: 1
+          metrics:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-events
+  syncPolicy:
+    automated:
+      prune: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
