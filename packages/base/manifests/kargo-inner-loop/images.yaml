@@ -101,6 +101,7 @@ images:
     argocdApp: durable-agent
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
-    tagStrategy: NewestBuild
+    tagStrategy: Lexical
     tagPattern: ".*"
+    discoveryLimit: 100
     promotionType: kustomize

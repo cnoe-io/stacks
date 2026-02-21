@@ -64,6 +64,7 @@ for i in $(seq 0 $((image_count - 1))); do
     ORG=$(yq -r ".images[$i].org" "$CONFIG_FILE")
     TAG_STRATEGY=$(yq -r ".images[$i].tagStrategy" "$CONFIG_FILE")
     TAG_PATTERN=$(yq -r ".images[$i].tagPattern" "$CONFIG_FILE")
+    DISCOVERY_LIMIT=$(yq -r ".images[$i].discoveryLimit // 10" "$CONFIG_FILE")
     PROMOTION_TYPE=$(yq -r ".images[$i].promotionType" "$CONFIG_FILE")
 
     echo "  Processing: $IMAGE_NAME ($PROMOTION_TYPE)"
@@ -78,6 +79,7 @@ for i in $(seq 0 $((image_count - 1))); do
         -e "s|__ORG__|${ORG}|g" \
         -e "s|__TAG_STRATEGY__|${TAG_STRATEGY}|g" \
         -e "s|__TAG_PATTERN__|${TAG_PATTERN}|g" \
+        -e "s|__DISCOVERY_LIMIT__|${DISCOVERY_LIMIT}|g" \
         "$TEMPLATES_DIR/Warehouse.yaml.tpl" > "$WAREHOUSE_FILE"
 
     # Generate Stage (select template based on promotion type)

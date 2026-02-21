@@ -22,9 +22,9 @@ spec:
     # Image source - local dev images from Gitea registry
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-        imageSelectionStrategy: NewestBuild
+        imageSelectionStrategy: Lexical
         allowTags: .*
-        discoveryLimit: 10
+        discoveryLimit: 100
         insecureSkipTLSVerify: true
         strictSemvers: false
         platform: linux/amd64

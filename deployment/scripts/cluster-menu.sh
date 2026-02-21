@@ -687,6 +687,35 @@ cluster-apply-manifests() {
     IDPBUILDER_ARGS+=(--package-custom-file "gitea:${GITEA_OVERRIDE_FILE}")
   fi
 
+  # Clean stale idpbuilder resources from previous runs. Old CustomPackage/
+  # GitRepository CRs can reference files that no longer exist in dist/,
+  # causing reconcile loops and blocking update completion.
+  local IDP_NS="idpbuilder-${CLUSTER_NAME}"
+  if kubectl get namespace "$IDP_NS" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    local stale_custom=0
+    local stale_git=0
+
+    while IFS=$'\t' read -r name file; do
+      [ -n "$file" ] || continue
+      if [ ! -f "$file" ]; then
+        kubectl delete custompackages.idpbuilder.cnoe.io "$name" -n "$IDP_NS" --ignore-not-found >/dev/null 2>&1 || true
+        stale_custom=$((stale_custom + 1))
+      fi
+    done < <(kubectl get custompackages.idpbuilder.cnoe.io -n "$IDP_NS" -o json | jq -r '.items[] | [.metadata.name, (.spec.argoCD.applicationFile // "")] | @tsv')
+
+    while IFS=$'\t' read -r name path; do
+      [ -n "$path" ] || continue
+      if [ ! -d "$path" ]; then
+        kubectl delete gitrepositories.idpbuilder.cnoe.io "$name" -n "$IDP_NS" --ignore-not-found >/dev/null 2>&1 || true
+        stale_git=$((stale_git + 1))
+      fi
+    done < <(kubectl get gitrepositories.idpbuilder.cnoe.io -n "$IDP_NS" -o json | jq -r '.items[] | [.metadata.name, (.spec.source.path // "")] | @tsv')
+
+    if [ "$stale_custom" -gt 0 ] || [ "$stale_git" -gt 0 ]; then
+      echo "🧹 Removed stale idpbuilder resources (custompackages: ${stale_custom}, gitrepositories: ${stale_git})"
+    fi
+  fi
+
   # ─────────────────────────────────────────────────────────────────────────────
   # Background Image Preloading (runs in PARALLEL with idpbuilder)
   # Started AFTER kustomize-build so dist/ folder has the manifest files

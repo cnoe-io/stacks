@@ -61,7 +61,7 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
-    newTag: latest
+    newTag: plan-execid-fix-20260221-165107
   # Standalone function executor images
   # - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
   #   newTag: latest
@@ -71,4 +71,4 @@ images:
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-    newTag: phase2-20260220-053919-change-artifacts
+    newTag: workspace-fallback-fix-20260221-172147

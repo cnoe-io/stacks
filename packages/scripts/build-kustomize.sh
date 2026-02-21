@@ -202,34 +202,16 @@ for dir in "${PACKAGES_DIR}/base/manifests/"*/; do
     copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
 done
 
-# From components (based on environment)
-# Note: This mirrors what kustomize does via components in overlays
-case "$ENV" in
-    kind|kind-*)
-        for comp in active-development kind-only tailscale-serve observability; do
-            for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
-                [ -d "$dir" ] || continue
-                copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
-            done
-        done
-        ;;
-    talos)
-        for comp in talos-only tailscale-serve observability; do
-            for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
-                [ -d "$dir" ] || continue
-                copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
-            done
-        done
-        ;;
-    hub)
-        for comp in talos-only tailscale-serve observability; do
-            for dir in "${PACKAGES_DIR}/components/${comp}/manifests/"*/; do
-                [ -d "$dir" ] || continue
-                copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
-            done
-        done
-        ;;
-esac
+# From all components: copy every available manifest directory, then prune
+# against generated Application files in Step 5. This keeps build logic aligned
+# with overlay composition without hard-coding component lists.
+for comp_dir in "${PACKAGES_DIR}/components/"*/; do
+    [ -d "$comp_dir" ] || continue
+    for dir in "${comp_dir}manifests/"*/; do
+        [ -d "$dir" ] || continue
+        copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
+    done
+done
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Step 3: Generate Tailscale serve ConfigMaps from per-overlay JSON configs
@@ -288,7 +270,20 @@ find "${DIST_DIR}/${ENV}" -name "*.yaml" -type f | while read -r file; do
 done
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 5: Report results
+# Step 5: Remove orphaned manifest directories
+# idpbuilder expects each top-level manifest directory to have a matching
+# Application file (<name>.yaml). Keep only directories that have an app.
+# ═══════════════════════════════════════════════════════════════════════════════
+for dir in "${DIST_DIR}/${ENV}"/*/; do
+    [ -d "$dir" ] || continue
+    app=$(basename "$dir")
+    if [ ! -f "${DIST_DIR}/${ENV}/${app}.yaml" ]; then
+        rm -rf "$dir"
+    fi
+done
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Step 6: Report results
 # ═══════════════════════════════════════════════════════════════════════════════
 app_count=$(ls -1 "${DIST_DIR}/${ENV}"/*.yaml 2>/dev/null | wc -l)
 manifest_dirs=$(find "${DIST_DIR}/${ENV}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)

@@ -24,7 +24,7 @@ spec:
         repoURL: __REGISTRY__/__ORG__/__IMAGE_REPO__
         imageSelectionStrategy: __TAG_STRATEGY__
         allowTags: __TAG_PATTERN__
-        discoveryLimit: 10
+        discoveryLimit: __DISCOVERY_LIMIT__
         insecureSkipTLSVerify: true
         strictSemvers: false
         platform: linux/amd64
