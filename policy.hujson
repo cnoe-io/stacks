@@ -283,6 +283,8 @@
         "tag:k8s-api:*",
         "tag:k8s-operator:443",
         "tag:k8s-services:*",
+        "10.244.0.0/16:*",
+        "10.96.0.0/16:*",
         "tag:vm:*"
       ]
     },
