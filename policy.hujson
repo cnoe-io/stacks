@@ -21,11 +21,13 @@
     "routes": {
       "10.244.0.0/16": [
         "tag:k8s-operator",
-        "tag:k8s-services"
+        "tag:k8s-services",
+        "tag:k8s-api"
       ],
       "10.96.0.0/16": [
         "tag:k8s-operator",
-        "tag:k8s-services"
+        "tag:k8s-services",
+        "tag:k8s-api"
       ]
     },
     "services": {

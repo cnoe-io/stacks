@@ -7,7 +7,7 @@ spec:
   hostname: ${TAILSCALE_HOST}-api
   subnetRouter:
     advertiseRoutes:
-      - 10.43.0.0/16
-      - 10.42.0.0/16
+      - 10.244.0.0/16
+      - 10.96.0.0/16
   tags:
     - tag:k8s-api
