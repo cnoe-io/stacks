@@ -245,7 +245,11 @@
     },
     {
       "src": ["vpittamp@github"],
-      "dst": ["tag:k8s-operator"],
+      "dst": [
+        "tag:k8s-operator",
+        "tag:k8s-services",
+        "tag:k8s-api"
+      ],
       "app": {
         "tailscale.com/cap/kubernetes": [
           {
