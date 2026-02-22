@@ -61,7 +61,7 @@ spec:
             - name: DAPR_K8S_SECRET_NAME
               value: "workflow-builder-secrets"
             - name: NEXT_PUBLIC_APP_URL
-              value: "https://workflow-builder.cnoe.localtest.me:8443"
+              value: "https://workflow-builder-ryzen.tail286401.ts.net"
             # Auth providers (public, for client-side detection)
             - name: NEXT_PUBLIC_AUTH_PROVIDERS
               value: "email,github,google"
