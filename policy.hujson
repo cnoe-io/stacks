@@ -3,6 +3,10 @@
     "tag:k8s-operator": [
       "vpittamp@github"
     ],
+    "tag:k8s-api": [
+      "tag:k8s-operator",
+      "vpittamp@github"
+    ],
     "tag:k8s": [
       "vpittamp@github"
     ],
