@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "redisinsight-localdev.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://redisinsight.observability.svc.cluster.local:5540"
+        }
+      }
+    }
+  }
+}

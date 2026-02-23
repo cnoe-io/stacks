@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "mcp-inspector-client-ryzen.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://mcp-inspector-client.workflow-builder.svc.cluster.local:6274"
+        }
+      }
+    }
+  }
+}

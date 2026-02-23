@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "crawl4ai-thinkpad.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://crawl4ai.ai-platform-engineering.svc.cluster.local:11235"
+        }
+      }
+    }
+  }
+}

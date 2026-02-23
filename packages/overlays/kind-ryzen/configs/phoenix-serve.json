@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "phoenix-ryzen.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://arize-phoenix.observability.svc.cluster.local:6006"
+        }
+      }
+    }
+  }
+}

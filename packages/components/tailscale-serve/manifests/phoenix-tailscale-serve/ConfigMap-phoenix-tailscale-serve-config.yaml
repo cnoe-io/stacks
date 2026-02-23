@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"phoenix-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}:443":{"Handlers":{"/":{"Proxy":"http://arize-phoenix.observability.svc.cluster.local:6006"}}}}}'
+kind: ConfigMap
+metadata:
+  name: phoenix-tailscale-serve-config
+  namespace: tailscale

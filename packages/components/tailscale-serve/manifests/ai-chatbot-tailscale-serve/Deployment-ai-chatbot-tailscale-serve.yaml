@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ai-chatbot-tailscale-serve
+  name: ai-chatbot-${TAILSCALE_HOST}-tailscale-serve
+  namespace: tailscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-chatbot-tailscale-serve
+  template:
+    metadata:
+      labels:
+        app: ai-chatbot-tailscale-serve
+    spec:
+      containers:
+        - env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  key: authKey
+                  name: tailscale-auth-key
+            - name: TS_HOSTNAME
+              value: ai-chatbot-${TAILSCALE_HOST}
+            - name: TS_SERVE_CONFIG
+              value: /config/serve.json
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_EXTRA_ARGS
+              value: --reset
+            - name: TS_KUBE_SECRET
+              value: ai-chatbot-tailscale-state
+          image: tailscale/tailscale:v1.86.5
+          name: tailscale
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - mountPath: /var/lib/tailscale
+              name: state
+            - mountPath: /config
+              name: config
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: ai-chatbot-${TAILSCALE_HOST}-tailscale-state
+        - configMap:
+            name: ai-chatbot-tailscale-serve-config
+          name: config

@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"crawl4ai-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}:443":{"Handlers":{"/":{"Proxy":"http://crawl4ai.ai-platform-engineering.svc.cluster.local:11235"}}}}}'
+kind: ConfigMap
+metadata:
+  name: crawl4ai-tailscale-serve-config
+  namespace: tailscale

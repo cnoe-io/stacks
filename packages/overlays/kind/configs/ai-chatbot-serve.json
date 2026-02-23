@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "ai-chatbot-localdev.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://ai-chatbot.ai-chatbot.svc.cluster.local:3000"
+        }
+      }
+    }
+  }
+}

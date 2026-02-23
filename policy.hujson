@@ -228,6 +228,87 @@
       ],
       "svc:flowise-hetzner": [
         "tag:k8s-services"
+      ],
+      "svc:ai-chatbot": [
+        "tag:k8s-services"
+      ],
+      "svc:ai-chatbot-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:ai-chatbot-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:argo-workflows": [
+        "tag:k8s-services"
+      ],
+      "svc:argo-workflows-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:argo-workflows-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:crawl4ai": [
+        "tag:k8s-services"
+      ],
+      "svc:crawl4ai-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:crawl4ai-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:dapr": [
+        "tag:k8s-services"
+      ],
+      "svc:dapr-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:dapr-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-client": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-client-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-client-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-proxy": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-proxy-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:mcp-inspector-proxy-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:nocodb": [
+        "tag:k8s-services"
+      ],
+      "svc:nocodb-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:nocodb-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:phoenix": [
+        "tag:k8s-services"
+      ],
+      "svc:phoenix-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:phoenix-ryzen": [
+        "tag:k8s-services"
+      ],
+      "svc:redisinsight": [
+        "tag:k8s-services"
+      ],
+      "svc:redisinsight-thinkpad": [
+        "tag:k8s-services"
+      ],
+      "svc:redisinsight-ryzen": [
+        "tag:k8s-services"
       ]
     }
   },
@@ -370,7 +451,34 @@
         "svc:flowise:*",
         "svc:flowise-thinkpad:*",
         "svc:flowise-ryzen:*",
-        "svc:flowise-hetzner:*"
+        "svc:flowise-hetzner:*",
+        "svc:ai-chatbot:*",
+        "svc:ai-chatbot-thinkpad:*",
+        "svc:ai-chatbot-ryzen:*",
+        "svc:argo-workflows:*",
+        "svc:argo-workflows-thinkpad:*",
+        "svc:argo-workflows-ryzen:*",
+        "svc:crawl4ai:*",
+        "svc:crawl4ai-thinkpad:*",
+        "svc:crawl4ai-ryzen:*",
+        "svc:dapr:*",
+        "svc:dapr-thinkpad:*",
+        "svc:dapr-ryzen:*",
+        "svc:mcp-inspector-client:*",
+        "svc:mcp-inspector-client-thinkpad:*",
+        "svc:mcp-inspector-client-ryzen:*",
+        "svc:mcp-inspector-proxy:*",
+        "svc:mcp-inspector-proxy-thinkpad:*",
+        "svc:mcp-inspector-proxy-ryzen:*",
+        "svc:nocodb:*",
+        "svc:nocodb-thinkpad:*",
+        "svc:nocodb-ryzen:*",
+        "svc:phoenix:*",
+        "svc:phoenix-thinkpad:*",
+        "svc:phoenix-ryzen:*",
+        "svc:redisinsight:*",
+        "svc:redisinsight-thinkpad:*",
+        "svc:redisinsight-ryzen:*"
       ]
     },
     {

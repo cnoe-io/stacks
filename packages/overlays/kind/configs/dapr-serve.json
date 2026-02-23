@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "dapr-localdev.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://dapr-dashboard.dapr-system.svc.cluster.local:8080"
+        }
+      }
+    }
+  }
+}

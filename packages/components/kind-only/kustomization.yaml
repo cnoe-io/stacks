@@ -44,5 +44,14 @@ resources:
   - apps/nocodb-external-secrets.yaml
   - apps/nocodb-postgres.yaml
   - apps/nocodb-secrets.yaml
+  - apps/ai-chatbot-tailscale-serve.yaml
+  - apps/argo-workflows-tailscale-serve.yaml
+  - apps/crawl4ai-tailscale-serve.yaml
+  - apps/dapr-tailscale-serve.yaml
+  - apps/mcp-inspector-client-tailscale-serve.yaml
+  - apps/mcp-inspector-proxy-tailscale-serve.yaml
+  - apps/nocodb-tailscale-serve.yaml
+  - apps/phoenix-tailscale-serve.yaml
+  - apps/redisinsight-tailscale-serve.yaml
   - apps/nocodb.yaml
   - apps/spark-operator.yaml

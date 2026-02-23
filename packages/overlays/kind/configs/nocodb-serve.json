@@ -1,0 +1,16 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "nocodb-localdev.tail286401.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://nocodb.nocodb.svc.cluster.local:8080"
+        }
+      }
+    }
+  }
+}
