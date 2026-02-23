@@ -30,8 +30,8 @@ Then verify:
 ```bash
 kubectl get pods -n nimbletools-system
 kubectl get crd mcpservices.mcp.nimbletools.dev
-kubectl get application -n argocd nimbletools-core
-kubectl get application -n argocd nimble-activepieces-mcps
+kubectl get applications.argoproj.io -n argocd nimbletools-core
+kubectl get applications.argoproj.io -n argocd nimble-activepieces-mcps
 ```
 
 ## Endpoints

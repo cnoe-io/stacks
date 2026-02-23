@@ -45,7 +45,7 @@ resources:
   # In-cluster MCP bundle registry for Nimble/MPAK-compatible bundles
   - apps/mpak-registry.yaml
   # Nimble MCPService instances for selected Activepieces pieces
-  # - apps/nimble-activepieces-mcps.yaml  # Disabled with activepieces
+  - apps/nimble-activepieces-mcps.yaml
 
 # Image tag reference (documentation)
 # All active-development images use :latest for local development

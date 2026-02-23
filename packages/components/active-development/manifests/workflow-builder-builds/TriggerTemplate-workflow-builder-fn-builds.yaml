@@ -11,18 +11,6 @@ spec:
     - apiVersion: shipwright.io/v1beta1
       kind: BuildRun
       metadata:
-        generateName: fn-activepieces-
-        namespace: workflow-builder
-      spec:
-        build:
-          name: fn-activepieces
-        output:
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces:git-$(tt.params.git_sha)
-          pushSecret: gitea-registry-creds
-          insecure: true
-    - apiVersion: shipwright.io/v1beta1
-      kind: BuildRun
-      metadata:
         generateName: mcp-gateway-
         namespace: workflow-builder
       spec:
@@ -53,6 +41,18 @@ spec:
         build:
           name: piece-mcp-server
         output:
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server:git-$(tt.params.git_sha)
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server:latest
+          pushSecret: gitea-registry-creds
+          insecure: true
+    - apiVersion: shipwright.io/v1beta1
+      kind: BuildRun
+      metadata:
+        generateName: mpak-registry-
+        namespace: workflow-builder
+      spec:
+        build:
+          name: mpak-registry
+        output:
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/mpak-registry:latest
           pushSecret: gitea-registry-creds
           insecure: true
