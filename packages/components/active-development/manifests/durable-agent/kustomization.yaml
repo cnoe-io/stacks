@@ -14,4 +14,4 @@ resources:
 
 images:
 - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-  newTag: workspace-fallback-fix-20260221-172147
+  newTag: dev-20260223-111928-claude-plan

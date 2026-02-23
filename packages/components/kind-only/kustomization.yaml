@@ -46,4 +46,3 @@ resources:
   - apps/nocodb-secrets.yaml
   - apps/nocodb.yaml
   - apps/spark-operator.yaml
-  - apps/argo-events-gitea.yaml

@@ -57,11 +57,11 @@ images:
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-router
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
-    newTag: latest
+    newTag: dev-20260223-114519-oauth-url-resolve
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway
     newTag: latest
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
-    newTag: plan-execid-fix-20260221-165107
+    newTag: dev-20260222-114456-a3e16257
   # Standalone function executor images
   # - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
   #   newTag: latest
@@ -71,4 +71,4 @@ images:
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-    newTag: workspace-fallback-fix-20260221-172147
+    newTag: dev-20260223-111928-claude-plan

@@ -1,0 +1,125 @@
+apiVersion: v1
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+        spike_limit_mib: 128
+      k8sattributes:
+        auth_type: serviceAccount
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.deployment.name
+        # Associate incoming OTLP traffic with a pod using the client connection.
+        pod_association:
+          - sources:
+              - from: connection
+      transform/system_namespace:
+        error_mode: ignore
+        trace_statements:
+          - context: resource
+            statements:
+              # Normalize "system" grouping: map dapr-agents namespace to dapr-workflows.
+              - set(attributes["service.namespace"], "dapr-workflows") where (attributes["service.namespace"] == nil or attributes["service.namespace"] == "dapr-agents") and attributes["k8s.namespace.name"] == "dapr-agents"
+              # Backfill service.namespace from k8s namespace when missing.
+              - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["service.namespace"] == nil and attributes["k8s.namespace.name"] != nil
+        metric_statements:
+          - context: resource
+            statements:
+              - set(attributes["service.namespace"], "dapr-workflows") where (attributes["service.namespace"] == nil or attributes["service.namespace"] == "dapr-agents") and attributes["k8s.namespace.name"] == "dapr-agents"
+              - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["service.namespace"] == nil and attributes["k8s.namespace.name"] != nil
+        log_statements:
+          - context: resource
+            statements:
+              - set(attributes["service.namespace"], "dapr-workflows") where (attributes["service.namespace"] == nil or attributes["service.namespace"] == "dapr-agents") and attributes["k8s.namespace.name"] == "dapr-agents"
+              - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["service.namespace"] == nil and attributes["k8s.namespace.name"] != nil
+      batch:
+        timeout: 5s
+        send_batch_size: 1000
+        send_batch_max_size: 1500
+      resource:
+        attributes:
+          - key: service.instance.id
+            from_attribute: host.name
+            action: insert
+          - key: deployment.environment
+            value: homelab
+            action: insert
+
+    exporters:
+      prometheusremotewrite:
+        endpoint: http://mimir.observability.svc.cluster.local:9009/api/v1/push
+        resource_to_telemetry_conversion:
+          enabled: true
+        external_labels:
+          cluster: homelab
+          source: otel-collector
+      loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+        default_labels_enabled:
+          exporter: false
+          job: true
+          instance: true
+          level: true
+      otlp/tempo:
+        endpoint: tempo.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+      otlphttp/langfuse:
+        endpoint: http://langfuse.observability.svc.cluster.local:3000/api/public/otel
+        headers:
+          Authorization: "${env:LANGFUSE_AUTH}"
+      otlp/phoenix:
+        endpoint: arize-phoenix.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+      # Mirror telemetry to SigNoz during pilot while preserving current LGTM exports.
+      otlp/signoz:
+        endpoint: signoz-otel-collector.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    service:
+      extensions: [health_check, pprof, zpages]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/system_namespace, batch, resource]
+          exporters: [prometheusremotewrite, otlp/signoz]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/system_namespace, batch, resource]
+          exporters: [loki, otlp/signoz]
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/system_namespace, batch, resource]
+          exporters: [otlp/tempo, otlphttp/langfuse, otlp/phoenix, otlp/signoz]
+      telemetry:
+        logs:
+          level: warn
+        metrics:
+          address: 0.0.0.0:8888
+          level: basic
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: observability

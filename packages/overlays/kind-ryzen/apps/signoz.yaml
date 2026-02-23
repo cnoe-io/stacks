@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: signoz
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-58"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.signoz.io
+    targetRevision: 0.112.0
+    chart: signoz
+    helm:
+      releaseName: signoz
+      valuesObject:
+        global:
+          clusterName: ryzen
+          cloud: other
+        signoz:
+          ingress:
+            enabled: false
+          service:
+            type: ClusterIP
+          persistence:
+            enabled: true
+            size: 2Gi
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        clickhouse:
+          persistence:
+            enabled: true
+            size: 20Gi
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+        otelCollector:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          ports:
+            jaeger-compact:
+              enabled: false
+            jaeger-thrift:
+              enabled: false
+            jaeger-grpc:
+              enabled: false
+            zipkin:
+              enabled: false
+            logsheroku:
+              enabled: false
+            logsjson:
+              enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

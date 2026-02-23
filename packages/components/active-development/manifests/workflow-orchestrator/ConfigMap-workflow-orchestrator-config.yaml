@@ -13,3 +13,8 @@ data:
   FUNCTION_RUNNER_APP_ID: "function-router"
   # Dapr pub/sub component name (must match Component-pubsub.yaml metadata.name)
   PUBSUB_NAME: "pubsub"
+  # Native parent-child Dapr workflow execution is the default durable path.
+  DURABLE_AGENT_ENABLE_NATIVE_CHILD_WORKFLOW: "true"
+  DURABLE_AGENT_CHILD_WORKFLOW_RUN_NAME: "durableRunWorkflow"
+  DURABLE_AGENT_CHILD_WORKFLOW_PLAN_NAME: "durablePlanWorkflow"
+  DURABLE_AGENT_CHILD_WORKFLOW_EXEC_PLAN_NAME: "durableRunWorkflow"

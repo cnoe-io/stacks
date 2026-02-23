@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: obi
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-53"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    targetRevision: 0.4.3
+    chart: opentelemetry-ebpf-instrumentation
+    helm:
+      releaseName: obi
+      valuesObject:
+        preset: application
+        serviceMonitor:
+          enabled: false
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        env:
+          OTEL_EBPF_BPF_TC_BACKEND: auto
+        config:
+          data:
+            discovery:
+              instrument:
+                - k8s_namespace: ai-chatbot
+                - k8s_namespace: workflow-builder
+                - k8s_namespace: backstage
+                - k8s_namespace: dapr-agents
+            routes:
+              unmatched: heuristic
+            otel_traces_export:
+              endpoint: http://otel-collector.observability.svc.cluster.local:4317
+            otel_metrics_export:
+              endpoint: http://otel-collector.observability.svc.cluster.local:4318
+            attributes:
+              kubernetes:
+                enable: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

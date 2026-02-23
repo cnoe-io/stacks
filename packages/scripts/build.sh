@@ -85,6 +85,15 @@ case "$ENV" in
         ;;
 esac
 
+# From overlay-specific apps (optional)
+if [ -d "${PACKAGES_DIR}/overlays/${ENV}/apps" ]; then
+    for f in "${PACKAGES_DIR}/overlays/${ENV}/apps/"*.yaml; do
+        [ -f "$f" ] || continue
+        app=$(basename "$f")
+        cp "$f" "${DIST_DIR}/${ENV}/${app}"
+    done
+fi
+
 # Step 2: Copy manifests to match Application structure
 # idpbuilder expects: <app>.yaml + <app>/<subdir>/*.yaml
 # Standard pattern: cnoe://<app>/manifests -> <app>/manifests/
@@ -148,6 +157,15 @@ case "$ENV" in
         done
         ;;
 esac
+
+# From overlay-specific manifests (optional)
+# These override base/component manifests for a specific environment.
+if [ -d "${PACKAGES_DIR}/overlays/${ENV}/manifests" ]; then
+    for dir in "${PACKAGES_DIR}/overlays/${ENV}/manifests/"*/; do
+        [ -d "$dir" ] || continue
+        copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
+    done
+fi
 
 # Step 3: Substitute host-specific values in all YAML files
 # This replaces ${TAILSCALE_HOST} and ${TAILSCALE_TAILNET} placeholders using sed

@@ -18,4 +18,4 @@ resources:
 
 images:
 - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
-  newTag: latest
+  newTag: dev-20260222-151250-nativechild-track

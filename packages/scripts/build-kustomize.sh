@@ -213,6 +213,15 @@ for comp_dir in "${PACKAGES_DIR}/components/"*/; do
     done
 done
 
+# From overlay-specific manifests (optional)
+# These override base/component manifests for a specific environment.
+if [ -d "${PACKAGES_DIR}/overlays/${ENV}/manifests" ]; then
+    for dir in "${PACKAGES_DIR}/overlays/${ENV}/manifests/"*/; do
+        [ -d "$dir" ] || continue
+        copy_manifest_dir "$dir" "${DIST_DIR}/${ENV}"
+    done
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Step 3: Generate Tailscale serve ConfigMaps from per-overlay JSON configs
 # This replaces the templated ConfigMaps with concrete ones (no placeholders)

@@ -102,7 +102,7 @@ spec:
           tls:
             selfSignedCert: true
     repoURL: ghcr.io/akuity/kargo-charts
-    targetRevision: 1.8.4
+    targetRevision: 1.9.3
   syncPolicy:
     automated:
       prune: true

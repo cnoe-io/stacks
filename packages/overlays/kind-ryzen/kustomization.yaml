@@ -6,6 +6,10 @@ kind: Kustomization
 
 resources:
   - ../kind
+  # Pilot-only apps for SigNoz + OBI on ryzen
+  - apps/signoz.yaml
+  - apps/obi.yaml
+  - apps/signoz-tailscale-serve.yaml
 
 # Override cluster name for Ryzen host
 configMapGenerator:
