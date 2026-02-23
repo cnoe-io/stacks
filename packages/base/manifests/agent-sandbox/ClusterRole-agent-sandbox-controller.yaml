@@ -45,6 +45,10 @@ rules:
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Network policies for SandboxTemplate.spec.networkPolicy enforcement
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   # Namespace access for multi-namespace sandbox management
   - apiGroups: [""]
     resources: ["namespaces"]

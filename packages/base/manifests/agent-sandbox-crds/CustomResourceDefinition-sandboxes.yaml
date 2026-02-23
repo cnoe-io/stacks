@@ -1,3 +1,4 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3818,6 +3819,12 @@ spec:
                 maximum: 1
                 minimum: 0
                 type: integer
+              shutdownPolicy:
+                default: Retain
+                enum:
+                - Delete
+                - Retain
+                type: string
               shutdownTime:
                 format: date-time
                 type: string
@@ -3993,4 +4000,3 @@ spec:
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}
-

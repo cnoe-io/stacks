@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: agent-sandbox
 spec:
   # Number of pre-warmed sandboxes to maintain
-  # Each sandbox will have a fully initialized Dapr sidecar ready for instant allocation
+  # Warmed sandboxes run with shared Dapr endpoints (no per-pod sidecar injection)
   replicas: 2
   # Reference to the SandboxTemplate to use
   sandboxTemplateRef:
