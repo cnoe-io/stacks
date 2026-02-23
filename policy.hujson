@@ -264,6 +264,17 @@
     }
   ],
   "acls": [
+    // Deterministic OTEL remote sink transport (port 4320) between user-owned devices.
+    // Kept explicit even though broader user-to-user rules exist, to document required flow.
+    {
+      "action": "accept",
+      "src": [
+        "vpittamp@github"
+      ],
+      "dst": [
+        "vpittamp@github:4320"
+      ]
+    },
     {
       "action": "accept",
       "src": [
