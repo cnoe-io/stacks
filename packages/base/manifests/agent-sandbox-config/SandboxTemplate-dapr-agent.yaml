@@ -42,7 +42,7 @@ spec:
               port: 8888
             initialDelaySeconds: 30
             periodSeconds: 30
-            failureThreshold: 10
+            failureThreshold: 60
             timeoutSeconds: 10
           env:
             # Shared Dapr endpoints (dapr-shared DaemonSet in dapr-sandbox namespace)
