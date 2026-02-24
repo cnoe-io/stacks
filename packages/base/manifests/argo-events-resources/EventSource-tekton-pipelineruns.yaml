@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/name: argo-events
 spec:
   eventBusName: default
+  template:
+    serviceAccountName: argo-events-eventsource-sa
   resource:
     workflow-builder-pipelineruns:
       namespace: workflow-builder

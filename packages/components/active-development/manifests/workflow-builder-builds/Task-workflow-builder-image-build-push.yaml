@@ -4,7 +4,8 @@ metadata:
   name: workflow-builder-image-build-push
   namespace: workflow-builder
   labels:
-    app.kubernetes.io/name: workflow-builder-builds
+    app.kubernetes.io/name: workflow-builder-image-builds
+    app.kubernetes.io/component: build-task
     app.kubernetes.io/part-of: workflow-builder
 spec:
   description: Clone source and build/push one image with Buildah.
@@ -26,6 +27,13 @@ spec:
     - name: image
       type: string
       description: Fully-qualified image reference including tag.
+  results:
+    - name: image_ref
+      type: string
+      description: Fully-qualified image reference pushed to registry.
+    - name: image_digest
+      type: string
+      description: Digest reported by the registry push.
   steps:
     - name: clone-source
       image: alpine/git:2.47.2
@@ -61,6 +69,7 @@ spec:
         CONTEXT="/workspace/source/$(params.context_dir)"
         DOCKERFILE="/workspace/source/$(params.dockerfile)"
         IMAGE="$(params.image)"
+        DIGEST_FILE="$(mktemp)"
 
         buildah bud \
           --storage-driver="${STORAGE_DRIVER}" \
@@ -73,8 +82,12 @@ spec:
         buildah push \
           --storage-driver="${STORAGE_DRIVER}" \
           --tls-verify=false \
+          --digestfile "${DIGEST_FILE}" \
           "${IMAGE}" \
           "docker://${IMAGE}"
+
+        printf "%s" "${IMAGE}" > "$(results.image_ref.path)"
+        cat "${DIGEST_FILE}" > "$(results.image_digest.path)"
       volumeMounts:
         - name: registry-auth
           mountPath: /tekton/home/.docker

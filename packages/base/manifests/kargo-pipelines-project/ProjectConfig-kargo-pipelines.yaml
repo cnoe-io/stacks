@@ -12,6 +12,10 @@ metadata:
 spec:
   # Webhooks configured at cluster-level via ClusterConfig (kargo-cluster-config)
   promotionPolicies:
+    # agent-sandbox apps are currently disabled; keep promotions manual until enabled.
+    - autoPromotionEnabled: false
+      stageSelector:
+        name: node-sandbox-local-dev
     - autoPromotionEnabled: true
       stageSelector:
         name: backstage-dev

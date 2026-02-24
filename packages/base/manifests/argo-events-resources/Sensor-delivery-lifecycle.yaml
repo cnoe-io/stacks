@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: delivery-lifecycle
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: kargo-stage-updated
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^(workflow-builder-local-dev|workflow-mcp-server-local-dev|function-router-local-dev|workflow-orchestrator-local-dev|durable-agent-local-dev|mcp-gateway-local-dev|fn-system-local-dev|node-sandbox-local-dev)$
+          - path: body.status.phase
+            type: string
+            value:
+              - .+
+  triggers:
+    - template:
+        name: publish-kargo-stage-event
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: delivery-kargo-stage-
+                namespace: argo-events
+              type: Normal
+              reason: KargoStageUpdated
+              source:
+                component: argo-events.delivery-lifecycle
+              message: "Kargo stage update observed"
+              involvedObject:
+                apiVersion: kargo.akuity.io/v1alpha1
+                kind: Stage
+                name: unknown
+                namespace: kargo-pipelines
+          parameters:
+            - src:
+                dependencyName: kargo-stage-updated
+                dataKey: body.metadata.name
+                value: unknown
+              dest: involvedObject.name
+            - src:
+                dependencyName: kargo-stage-updated
+                dataKey: body.status.phase
+                value: unknown
+              dest: message
+      retryStrategy:
+        steps: 3

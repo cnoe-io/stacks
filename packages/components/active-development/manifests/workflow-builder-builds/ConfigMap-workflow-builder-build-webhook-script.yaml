@@ -22,7 +22,7 @@ data:
     UPSTREAM_GIT_URL="https://github.com/PittampalliOrg/workflow-builder.git"
 
     # Tekton Triggers creates a Service named "el-<EventListener name>"
-    WEBHOOK_URL="http://el-workflow-builder-fn-builds.workflow-builder.svc.cluster.local:8080"
+    WEBHOOK_URL="http://el-workflow-builder-image-builds.workflow-builder.svc.cluster.local:8080"
 
     GITEA_USER="$(cat /gitea-credentials/username)"
     GITEA_PASS="$(cat /gitea-credentials/password)"

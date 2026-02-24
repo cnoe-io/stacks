@@ -5,7 +5,7 @@ metadata:
   namespace: workflow-builder
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: argo-events-eventsource-sa
     namespace: argo-events
 roleRef:
   apiGroup: rbac.authorization.k8s.io

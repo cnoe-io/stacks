@@ -1,12 +1,26 @@
 apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
-  name: workflow-builder-fn-builds
+  name: workflow-builder-image-builds
   namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder-image-builds
+    app.kubernetes.io/component: trigger
+    app.kubernetes.io/part-of: workflow-builder
 spec:
   serviceAccountName: workflow-builder-build-trigger
+  resources:
+    kubernetesResource:
+      replicas: 1
+      spec:
+        template:
+          spec:
+            tolerations:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
   triggers:
-    - name: build-fn-images
+    - name: build-workflow-builder-images
       interceptors:
         - ref:
             name: cel
@@ -17,6 +31,6 @@ spec:
                 body.deleted == false &&
                 body.after.matches('^[0-9a-f]{40}$')
       bindings:
-        - ref: workflow-builder-fn-builds
+        - ref: workflow-builder-image-builds
       template:
-        ref: workflow-builder-fn-builds
+        ref: workflow-builder-image-builds

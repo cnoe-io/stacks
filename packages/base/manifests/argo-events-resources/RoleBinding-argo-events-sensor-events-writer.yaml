@@ -1,15 +1,15 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: argo-events-sensor-eventsources
+  name: argo-events-sensor-events-writer
   namespace: argo-events
   labels:
     app.kubernetes.io/component: sensor
     app.kubernetes.io/name: argo-events
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: argo-events-sensor-workflows
+  kind: Role
+  name: argo-events-sensor-events-writer
 subjects:
   - kind: ServiceAccount
     name: argo-events-sensor-sa

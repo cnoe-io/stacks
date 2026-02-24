@@ -22,59 +22,41 @@ spec:
               - .+
   triggers:
     - template:
-        name: tekton-pipelinerun-observer
+        name: publish-tekton-pipelinerun-event
         k8s:
           operation: create
           source:
             resource:
-              apiVersion: argoproj.io/v1alpha1
-              kind: Workflow
+              apiVersion: v1
+              kind: Event
               metadata:
-                generateName: tekton-build-observer-
-                namespace: argo
-              spec:
-                entrypoint: observe
-                arguments:
-                  parameters:
-                    - name: pipelinerun-name
-                    - name: pipelinerun-namespace
-                    - name: completion-time
-                templates:
-                  - name: observe
-                    inputs:
-                      parameters:
-                        - name: pipelinerun-name
-                        - name: pipelinerun-namespace
-                        - name: completion-time
-                    container:
-                      image: alpine:3.21
-                      command:
-                        - /bin/sh
-                        - -c
-                      args:
-                        - |
-                          if [ -z "{{inputs.parameters.completion-time}}" ]; then
-                            echo "Skipping non-terminal PipelineRun update for {{inputs.parameters.pipelinerun-name}}"
-                            exit 0
-                          fi
-
-                          echo "Tekton PipelineRun completed"
-                          echo "Name: {{inputs.parameters.pipelinerun-name}}"
-                          echo "Namespace: {{inputs.parameters.pipelinerun-namespace}}"
-                          echo "CompletionTime: {{inputs.parameters.completion-time}}"
+                generateName: delivery-tekton-pipelinerun-
+                namespace: argo-events
+              type: Normal
+              reason: TektonPipelineRunCompleted
+              source:
+                component: argo-events.tekton-pipelineruns
+              message: "Tekton PipelineRun completed"
+              involvedObject:
+                apiVersion: tekton.dev/v1
+                kind: PipelineRun
+                name: unknown
+                namespace: workflow-builder
           parameters:
             - src:
                 dependencyName: pipelinerun-update
                 dataKey: body.metadata.name
-              dest: spec.arguments.parameters.0.value
+                value: unknown
+              dest: involvedObject.name
             - src:
                 dependencyName: pipelinerun-update
-                dataKey: body.metadata.namespace
-              dest: spec.arguments.parameters.1.value
+                dataKey: body.status.conditions.0.reason
+                value: Tekton PipelineRun completed
+              dest: message
             - src:
                 dependencyName: pipelinerun-update
                 dataKey: body.status.completionTime
                 value: ""
-              dest: spec.arguments.parameters.2.value
+              dest: eventTime
       retryStrategy:
         steps: 3

@@ -34,8 +34,8 @@ images:
   # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
   # to avoid conflicts with the existing pipeline
 
-  # Active-development apps with custom images built from local Gitea registry
-  # These apps use :latest tags by default; Kargo manages versioned promotions
+  # Active-development apps with custom images built from local Gitea registry.
+  # Tekton publishes immutable git-sha tags and Kargo promotes those tags.
 
   - name: ai-chatbot
     argocdApp: ai-chatbot
@@ -50,7 +50,17 @@ images:
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: NewestBuild
-    tagPattern: "^dev-[0-9]{8}-[0-9]{6}-[0-9a-f]{7,}$"
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  # workflow-mcp-server is built from workflow-builder monorepo and promoted
+  # through the same app manifests repo as workflow-builder.
+  - name: workflow-mcp-server
+    argocdApp: workflow-builder
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize
 
   - name: workflow-orchestrator
@@ -58,15 +68,15 @@ images:
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: NewestBuild
-    tagPattern: "^dev-[0-9]{8}-[0-9]{6}-[0-9a-f]{7,}$"
+    tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize
 
   - name: function-router
     argocdApp: function-router
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
-    tagStrategy: Lexical
-    tagPattern: ".*"
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize
 
   - name: mcp-gateway
@@ -102,6 +112,16 @@ images:
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: NewestBuild
-    tagPattern: "^dev-[0-9]{8}-[0-9]{6}-[0-9a-f]{7,}$"
+    tagPattern: "^git-[0-9a-f]{40}$"
     discoveryLimit: 100
+    promotionType: kustomize
+
+  # Node sandbox is currently built and published with immutable tags.
+  # Promotion can be enabled when agent-sandbox apps are enabled.
+  - name: node-sandbox
+    argocdApp: agent-sandbox-config
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize

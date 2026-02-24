@@ -25,8 +25,6 @@ spec:
           value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
         - name: imageRepoURL
           value: __REGISTRY__/__ORG__/__IMAGE_REPO__
-        - name: argoAppName
-          value: __ARGOCD_APP__
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo
@@ -65,14 +63,3 @@ spec:
           config:
             path: ./src
             targetBranch: main
-
-        # Step 5: Sync ArgoCD (the base app, not a separate -local-dev app)
-        - as: sync-argocd
-          uses: argocd-update
-          config:
-            apps:
-              - name: ${{ vars.argoAppName }}
-                namespace: argocd
-                sources:
-                  - repoURL: ${{ vars.gitRepoURL }}
-                    desiredRevision: ${{ outputs['push-changes'].commit }}

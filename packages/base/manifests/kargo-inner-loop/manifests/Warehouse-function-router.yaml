@@ -22,9 +22,8 @@ spec:
     # Image source - local dev images from Gitea registry
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/function-router
-        imageSelectionStrategy: Lexical
-        allowTagsRegexes:
-          - .*
+        imageSelectionStrategy: NewestBuild
+        allowTags: ^git-[0-9a-f]{40}$
         discoveryLimit: 10
         insecureSkipTLSVerify: true
         strictSemvers: false

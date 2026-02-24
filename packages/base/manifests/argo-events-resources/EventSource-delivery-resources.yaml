@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: delivery-resources
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: eventsource
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-eventsource-sa
+  resource:
+    kargo-stage-updates:
+      namespace: kargo-pipelines
+      group: kargo.akuity.io
+      version: v1alpha1
+      resource: stages
+      eventTypes:
+        - UPDATE

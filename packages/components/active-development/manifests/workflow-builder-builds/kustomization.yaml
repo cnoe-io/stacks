@@ -1,7 +1,7 @@
 namespace: workflow-builder
 
 resources:
-  - Secret-gitea-git-creds.yaml
+  - ExternalSecret-gitea-git-creds.yaml
   - ConfigMap-workflow-builder-build-webhook-script.yaml
   - Job-workflow-builder-build-webhook-setup.yaml
   - ServiceAccount-build-trigger.yaml
@@ -10,7 +10,14 @@ resources:
   - RoleBinding-tekton-triggers-eventlistener-roles.yaml
   - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
   - Task-workflow-builder-image-build-push.yaml
-  - Pipeline-workflow-builder-builds.yaml
+  - Pipeline-workflow-builder-image-build.yaml
+  - Pipeline-workflow-mcp-server-image-build.yaml
+  - Pipeline-function-router-image-build.yaml
+  - Pipeline-workflow-orchestrator-image-build.yaml
+  - Pipeline-durable-agent-image-build.yaml
+  - Pipeline-mcp-gateway-image-build.yaml
+  - Pipeline-fn-system-image-build.yaml
+  - Pipeline-node-sandbox-image-build.yaml
   - TriggerBinding-workflow-builder-fn-builds.yaml
   - TriggerTemplate-workflow-builder-fn-builds.yaml
   - EventListener-workflow-builder-fn-builds.yaml
