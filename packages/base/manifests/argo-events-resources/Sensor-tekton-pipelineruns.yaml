@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: tekton-pipelineruns
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: pipelinerun-update
+      eventSourceName: tekton-pipelineruns
+      eventName: workflow-builder-pipelineruns
+  triggers:
+    - template:
+        name: tekton-pipelinerun-observer
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: tekton-build-observer-
+                namespace: argo
+              spec:
+                entrypoint: observe
+                arguments:
+                  parameters:
+                    - name: pipelinerun-name
+                    - name: pipelinerun-namespace
+                    - name: completion-time
+                templates:
+                  - name: observe
+                    inputs:
+                      parameters:
+                        - name: pipelinerun-name
+                        - name: pipelinerun-namespace
+                        - name: completion-time
+                    container:
+                      image: alpine:3.21
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - |
+                          if [ -z "{{inputs.parameters.completion-time}}" ]; then
+                            echo "Skipping non-terminal PipelineRun update for {{inputs.parameters.pipelinerun-name}}"
+                            exit 0
+                          fi
+
+                          echo "Tekton PipelineRun completed"
+                          echo "Name: {{inputs.parameters.pipelinerun-name}}"
+                          echo "Namespace: {{inputs.parameters.pipelinerun-namespace}}"
+                          echo "CompletionTime: {{inputs.parameters.completion-time}}"
+          parameters:
+            - src:
+                dependencyName: pipelinerun-update
+                dataKey: body.metadata.name
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: pipelinerun-update
+                dataKey: body.metadata.namespace
+              dest: spec.arguments.parameters.1.value
+            - src:
+                dependencyName: pipelinerun-update
+                dataKey: body.status.completionTime
+              dest: spec.arguments.parameters.2.value
+      retryStrategy:
+        steps: 3

@@ -27,7 +27,7 @@ data:
     GITEA_USER="$(cat /gitea-credentials/username)"
     GITEA_PASS="$(cat /gitea-credentials/password)"
 
-    echo "Configuring workflow-builder push webhook for Shipwright builds..."
+    echo "Configuring workflow-builder push webhook for Tekton pipeline builds..."
     echo "Repo: ${OWNER}/${REPO}"
     echo "Target: ${WEBHOOK_URL}"
 
@@ -102,7 +102,7 @@ data:
       fi
     fi
 
-    # Seed the repo from GitHub if it looks empty (required for Shipwright Build sources).
+    # Seed the repo from GitHub if it looks empty (required for Tekton build sources).
     # This is safe and idempotent; once seeded, we no-op on subsequent runs.
     echo "Checking if repo is seeded with workflow-builder sources..."
     # Use a file that exists in upstream main to determine whether the repo has been seeded.
@@ -149,4 +149,4 @@ data:
     git commit -m "chore: seed workflow-builder repo from upstream"
     git push origin main --force
 
-    echo "[+] Repo seeded (this push should trigger Shipwright builds via webhook)"
+    echo "[+] Repo seeded (this push should trigger Tekton builds via webhook)"

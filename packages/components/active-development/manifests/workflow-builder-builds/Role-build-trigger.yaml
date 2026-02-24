@@ -4,7 +4,6 @@ metadata:
   name: workflow-builder-build-trigger
   namespace: workflow-builder
 rules:
-  - apiGroups: ["shipwright.io"]
-    resources: ["buildruns"]
+  - apiGroups: ["tekton.dev"]
+    resources: ["pipelineruns"]
     verbs: ["create", "get", "list", "watch"]
-

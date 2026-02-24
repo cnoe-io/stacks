@@ -1,0 +1,69 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: workflow-builder-kaniko-build-push
+  namespace: workflow-builder
+  labels:
+    app.kubernetes.io/name: workflow-builder-builds
+    app.kubernetes.io/part-of: workflow-builder
+spec:
+  description: Clone the workflow-builder source repository and build/push one image with Kaniko.
+  params:
+    - name: git_url
+      type: string
+      default: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/workflow-builder.git
+    - name: git_revision
+      type: string
+      description: Branch, tag, or commit SHA to check out.
+      default: main
+    - name: context_dir
+      type: string
+      description: Build context directory relative to repo root.
+      default: .
+    - name: dockerfile
+      type: string
+      description: Dockerfile path relative to repo root.
+    - name: image
+      type: string
+      description: Fully-qualified image reference including tag.
+  steps:
+    - name: clone-source
+      image: alpine/git:2.47.2
+      script: |
+        #!/bin/sh
+        set -eu
+
+        rm -rf /workspace/source
+        git init /workspace/source
+        cd /workspace/source
+
+        git remote add origin "$(params.git_url)"
+        git fetch --depth 1 origin "$(params.git_revision)"
+        git checkout --detach FETCH_HEAD
+
+        echo "Checked out revision: $(git rev-parse HEAD)"
+
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v1.23.2
+      command:
+        - /kaniko/executor
+      args:
+        - --context=/workspace/source/$(params.context_dir)
+        - --dockerfile=/workspace/source/$(params.dockerfile)
+        - --destination=$(params.image)
+        - --insecure
+        - --skip-tls-verify
+        - --skip-tls-verify-pull
+        - --cache=true
+        - --cleanup=false
+        - --ignore-path=/product_uuid
+      volumeMounts:
+        - name: registry-auth
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: registry-auth
+      secret:
+        secretName: gitea-registry-creds
+        items:
+          - key: .dockerconfigjson
+            path: config.json

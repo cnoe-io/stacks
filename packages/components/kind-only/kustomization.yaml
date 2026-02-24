@@ -39,7 +39,6 @@ resources:
   - apps/tekton-pipelines.yaml
   - apps/tekton-triggers.yaml
   - apps/tekton-dashboard.yaml
-  - apps/shipwright-build.yaml
   - apps/nocodb-connections.yaml
   - apps/nocodb-dev-credentials.yaml
   - apps/nocodb-external-secrets.yaml

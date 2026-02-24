@@ -40,7 +40,7 @@ resources:
   - apps/fn-system.yaml
   # Durable agent (Dapr Workflow-backed ReAct loop, primary agent service)
   - apps/durable-agent.yaml
-  # Centralized in-cluster builds for fn-* images (Shipwright + Tekton)
+  # Centralized in-cluster builds for workflow-builder runtime images (Tekton)
   - apps/workflow-builder-builds.yaml
   # In-cluster MCP bundle registry for Nimble/MPAK-compatible bundles
   - apps/mpak-registry.yaml

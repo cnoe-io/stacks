@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: tekton-pipelineruns
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: eventsource
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  resource:
+    workflow-builder-pipelineruns:
+      namespace: workflow-builder
+      group: tekton.dev
+      version: v1
+      resource: pipelineruns
+      eventTypes:
+        - UPDATE
