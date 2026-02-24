@@ -36,7 +36,7 @@ spec:
         - name: workflow-orchestrator
           # Python orchestrator with native Dapr child workflow support
           image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator:dev-20260222-151250-nativechild-track
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           envFrom:
