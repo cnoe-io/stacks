@@ -68,6 +68,7 @@ spec:
             - src:
                 dependencyName: pipelinerun-update
                 dataKey: body.status.completionTime
+                value: ""
               dest: spec.arguments.parameters.2.value
       retryStrategy:
         steps: 3

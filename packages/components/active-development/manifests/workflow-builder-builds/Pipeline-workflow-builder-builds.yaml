@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: workflow-builder-builds
     app.kubernetes.io/part-of: workflow-builder
 spec:
-  description: Build and push workflow-builder runtime images with Kargo-compatible tags.
+  description: Build and push workflow-builder images equivalent to prior Shipwright BuildRuns.
   params:
     - name: git_url
       type: string
@@ -15,6 +15,12 @@ spec:
     - name: git_sha
       type: string
       description: Full 40-character git SHA from push webhook payload.
+    - name: mpak_git_url
+      type: string
+      default: https://github.com/NimbleBrainInc/mpak.git
+    - name: mpak_git_revision
+      type: string
+      default: main
 
   tasks:
     - name: compute-tags
@@ -26,9 +32,6 @@ spec:
           - name: git_tag
             type: string
             description: git-<40sha>
-          - name: dev_tag
-            type: string
-            description: dev-YYYYMMDD-HHMMSS-<shortsha>
         steps:
           - name: compute
             image: bash:5.2
@@ -42,62 +45,10 @@ spec:
                 exit 1
               fi
 
-              SHORT_SHA="${GIT_SHA:0:8}"
-              UTC_TS="$(date -u +%Y%m%d-%H%M%S)"
-
               printf "git-%s" "${GIT_SHA}" > "$(results.git_tag.path)"
-              printf "dev-%s-%s" "${UTC_TS}" "${SHORT_SHA}" > "$(results.dev_tag.path)"
       params:
         - name: git_sha
           value: $(params.git_sha)
-
-    - name: build-workflow-builder
-      runAfter: [compute-tags]
-      taskRef:
-        name: workflow-builder-kaniko-build-push
-      params:
-        - name: git_url
-          value: $(params.git_url)
-        - name: git_revision
-          value: $(params.git_sha)
-        - name: context_dir
-          value: .
-        - name: dockerfile
-          value: Dockerfile
-        - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:$(tasks.compute-tags.results.dev_tag)
-
-    - name: build-workflow-orchestrator
-      runAfter: [compute-tags]
-      taskRef:
-        name: workflow-builder-kaniko-build-push
-      params:
-        - name: git_url
-          value: $(params.git_url)
-        - name: git_revision
-          value: $(params.git_sha)
-        - name: context_dir
-          value: services/workflow-orchestrator
-        - name: dockerfile
-          value: services/workflow-orchestrator/Dockerfile
-        - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator:$(tasks.compute-tags.results.dev_tag)
-
-    - name: build-function-router
-      runAfter: [compute-tags]
-      taskRef:
-        name: workflow-builder-kaniko-build-push
-      params:
-        - name: git_url
-          value: $(params.git_url)
-        - name: git_revision
-          value: $(params.git_sha)
-        - name: context_dir
-          value: .
-        - name: dockerfile
-          value: services/function-router/Dockerfile
-        - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/function-router:$(tasks.compute-tags.results.dev_tag)
 
     - name: build-fn-system
       runAfter: [compute-tags]
@@ -131,22 +82,6 @@ spec:
         - name: image
           value: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway:$(tasks.compute-tags.results.git_tag)
 
-    - name: build-workflow-mcp-server
-      runAfter: [compute-tags]
-      taskRef:
-        name: workflow-builder-kaniko-build-push
-      params:
-        - name: git_url
-          value: $(params.git_url)
-        - name: git_revision
-          value: $(params.git_sha)
-        - name: context_dir
-          value: .
-        - name: dockerfile
-          value: services/workflow-mcp-server/Dockerfile
-        - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server:latest
-
     - name: build-piece-mcp-server
       runAfter: [compute-tags]
       taskRef:
@@ -162,3 +97,19 @@ spec:
           value: services/piece-mcp-server/Dockerfile
         - name: image
           value: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server:latest
+
+    - name: build-mpak-registry
+      runAfter: [compute-tags]
+      taskRef:
+        name: workflow-builder-kaniko-build-push
+      params:
+        - name: git_url
+          value: $(params.mpak_git_url)
+        - name: git_revision
+          value: $(params.mpak_git_revision)
+        - name: context_dir
+          value: .
+        - name: dockerfile
+          value: apps/registry/Dockerfile
+        - name: image
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/mpak-registry:latest

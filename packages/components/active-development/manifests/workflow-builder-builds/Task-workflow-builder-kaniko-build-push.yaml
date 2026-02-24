@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: workflow-builder-builds
     app.kubernetes.io/part-of: workflow-builder
 spec:
-  description: Clone the workflow-builder source repository and build/push one image with Kaniko.
+  description: Clone the workflow-builder source repository and build/push one image with Buildah.
   params:
     - name: git_url
       type: string
@@ -44,22 +44,40 @@ spec:
         echo "Checked out revision: $(git rev-parse HEAD)"
 
     - name: build-and-push
-      image: gcr.io/kaniko-project/executor:v1.23.2
-      command:
-        - /kaniko/executor
-      args:
-        - --context=/workspace/source/$(params.context_dir)
-        - --dockerfile=/workspace/source/$(params.dockerfile)
-        - --destination=$(params.image)
-        - --insecure
-        - --skip-tls-verify
-        - --skip-tls-verify-pull
-        - --cache=true
-        - --cleanup=false
-        - --ignore-path=/product_uuid
+      image: quay.io/buildah/stable:v1.39
+      securityContext:
+        privileged: true
+      env:
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: BUILDAH_ISOLATION
+          value: chroot
+        - name: REGISTRY_AUTH_FILE
+          value: /tekton/home/.docker/config.json
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        CONTEXT="/workspace/source/$(params.context_dir)"
+        DOCKERFILE="/workspace/source/$(params.dockerfile)"
+        IMAGE="$(params.image)"
+
+        buildah bud \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --isolation="${BUILDAH_ISOLATION}" \
+          --format docker \
+          --file "${DOCKERFILE}" \
+          --tag "${IMAGE}" \
+          "${CONTEXT}"
+
+        buildah push \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --tls-verify=false \
+          "${IMAGE}" \
+          "docker://${IMAGE}"
       volumeMounts:
         - name: registry-auth
-          mountPath: /kaniko/.docker
+          mountPath: /tekton/home/.docker
   volumes:
     - name: registry-auth
       secret:
