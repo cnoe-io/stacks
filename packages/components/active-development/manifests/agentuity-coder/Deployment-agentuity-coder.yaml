@@ -31,6 +31,12 @@ spec:
             - containerPort: 3000
               name: http
           env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: BETTER_AUTH_BASE_URL
+              value: "https://agentuity.cnoe.localtest.me"
             - name: DATABASE_URL
               value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
             - name: AGENTUITY_AUTH_SECRET
