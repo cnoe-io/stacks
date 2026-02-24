@@ -22,7 +22,7 @@ spec:
       containers:
         - name: mcp-gateway
           image: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080

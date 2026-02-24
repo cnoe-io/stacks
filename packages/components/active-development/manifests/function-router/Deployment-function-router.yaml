@@ -28,17 +28,17 @@ spec:
       serviceAccountName: function-router
       containers:
         - name: function-router
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/function-router:latest
-          imagePullPolicy: Always
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/function-router:git-cd48cf23169dc47622dd110c281ff6584ac3a2c9
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
             - name: GITEA_USERNAME
-              value: giteaAdmin
+              value: giteaadmin
             - name: GITEA_PASSWORD
               value: developer
             - name: GITEA_REPO_OWNER
-              value: giteaAdmin
+              value: giteaadmin
           envFrom:
             - configMapRef:
                 name: function-router-config

@@ -20,7 +20,7 @@ spec:
       containers:
         - name: fn-activepieces
           image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:

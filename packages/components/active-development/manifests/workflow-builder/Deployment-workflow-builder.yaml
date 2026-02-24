@@ -33,8 +33,8 @@ spec:
       serviceAccountName: workflow-builder
       containers:
         - name: workflow-builder
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:dev-20260223-114519-oauth-url-resolve
-          imagePullPolicy: Always
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:git-91663d8d30c683fb8f013f46a628761a4a5aa471
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: http

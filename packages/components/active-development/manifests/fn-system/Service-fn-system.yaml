@@ -21,7 +21,7 @@ spec:
       containers:
         - name: function
           image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:

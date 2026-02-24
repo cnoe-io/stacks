@@ -14,4 +14,4 @@ resources:
 
 images:
 - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
-  newTag: dev-20260223-111928-claude-plan
+  newTag: git-8ee69d19546314ed27eaa36b0c58da39e9c96ca5

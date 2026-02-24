@@ -91,7 +91,7 @@ spec:
       containers:
         - name: migrate
           image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
             runAsGroup: 0

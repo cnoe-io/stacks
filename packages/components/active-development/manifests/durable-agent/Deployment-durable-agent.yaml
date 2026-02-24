@@ -31,8 +31,8 @@ spec:
       serviceAccountName: durable-agent
       containers:
         - name: durable-agent
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:dev-20260223-111928-claude-plan
-          imagePullPolicy: Always
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent:git-8ee69d19546314ed27eaa36b0c58da39e9c96ca5
+          imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
             - -lc

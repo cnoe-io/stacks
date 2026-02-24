@@ -20,7 +20,7 @@ spec:
       containers:
         - name: mcp-inspector
           image: ghcr.io/modelcontextprotocol/inspector:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: client
               containerPort: 6274
