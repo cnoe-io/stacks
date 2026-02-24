@@ -28,6 +28,9 @@ spec:
             - containerPort: 8888
               name: http
               protocol: TCP
+            - containerPort: 5901
+              name: vnc
+              protocol: TCP
           readinessProbe:
             httpGet:
               path: /
