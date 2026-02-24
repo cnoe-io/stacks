@@ -32,6 +32,13 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          env:
+            - name: GITEA_USERNAME
+              value: giteaAdmin
+            - name: GITEA_PASSWORD
+              value: developer
+            - name: GITEA_REPO_OWNER
+              value: giteaAdmin
           envFrom:
             - configMapRef:
                 name: function-router-config
