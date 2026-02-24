@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentuity-coder
+  namespace: agentuity-coder
+  labels:
+    app.kubernetes.io/name: agentuity-coder
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-busy-buffers-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: coder.cnoe.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentuity-coder
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - coder.cnoe.localtest.me
+      secretName: nginx-tls

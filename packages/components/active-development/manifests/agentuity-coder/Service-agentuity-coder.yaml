@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentuity-coder
+  namespace: agentuity-coder
+  labels:
+    app.kubernetes.io/name: agentuity-coder
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: agentuity-coder

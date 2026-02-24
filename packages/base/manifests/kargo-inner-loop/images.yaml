@@ -8,7 +8,7 @@
 #
 # Global config:
 #   clusterHost  - Hostname used by idpbuilder (detected from CLUSTER_HOST env or hostname -s)
-#   giteaOrg     - Gitea organization for manifests (default: giteaAdmin)
+#   giteaOrg     - Gitea organization for manifests (default: giteaadmin)
 #
 # Image fields:
 #   name          - Image name (used for Warehouse/Stage naming)
@@ -20,6 +20,7 @@
 #   tagPattern    - Regex pattern for allowed tags
 #   promotionType - kustomize or helm
 #   warehouseName - (optional) Override warehouse name if different from 'name'
+#   promoteWith   - (optional) Promote this image via another image's Stage/Warehouse
 #
 # For helm apps, you must also specify:
 #   helmRepoURL  - Helm chart repository URL (to match ArgoCD source)
@@ -27,7 +28,7 @@
 #
 # Global configuration
 config:
-  giteaOrg: giteaAdmin
+  giteaOrg: giteaadmin
   giteaRegistry: gitea.cnoe.localtest.me:8443
 
 images:
@@ -62,6 +63,10 @@ images:
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
     promotionType: kustomize
+    # Use workflow-builder Stage/Warehouse as the single promotion path for this app.
+    promoteWith: workflow-builder
+    # Ensures preload refresh maps workflow-mcp-server image pushes to workflow-builder Warehouse.
+    warehouseName: workflow-builder
 
   - name: workflow-orchestrator
     argocdApp: workflow-orchestrator
@@ -116,10 +121,17 @@ images:
     discoveryLimit: 100
     promotionType: kustomize
 
-  # Node sandbox is currently built and published with immutable tags.
-  # Promotion can be enabled when agent-sandbox apps are enabled.
+  # Node sandbox is built and published with immutable git-sha tags.
   - name: node-sandbox
     argocdApp: agent-sandbox-config
+    registry: gitea.cnoe.localtest.me:8443
+    org: giteaadmin
+    tagStrategy: NewestBuild
+    tagPattern: "^git-[0-9a-f]{40}$"
+    promotionType: kustomize
+
+  - name: agentuity-coder
+    argocdApp: agentuity-coder
     registry: gitea.cnoe.localtest.me:8443
     org: giteaadmin
     tagStrategy: NewestBuild

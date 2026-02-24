@@ -1,0 +1,13 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: agentuity-coder-image-build-binding
+  namespace: workflow-builder
+spec:
+  params:
+    - name: git_sha
+      value: $(body.after)
+    - name: image_name
+      value: agentuity-coder
+    - name: pipeline_name
+      value: agentuity-coder-image-build

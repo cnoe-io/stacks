@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentuity-coder
+  namespace: agentuity-coder
+  labels:
+    app.kubernetes.io/name: agentuity-coder
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentuity-coder
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentuity-coder
+    spec:
+      initContainers:
+        - name: db-migrate
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/agentuity-coder:latest
+          command: ["bun", "run", "db:migrate"]
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
+      containers:
+        - name: agentuity-coder
+          image: gitea.cnoe.localtest.me:8443/giteaadmin/agentuity-coder:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
+            - name: AGENTUITY_AUTH_SECRET
+              value: "dummy-auth-secret-for-local-dev-12345678"
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

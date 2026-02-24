@@ -18,6 +18,15 @@ resources:
   - Pipeline-mcp-gateway-image-build.yaml
   - Pipeline-fn-system-image-build.yaml
   - Pipeline-node-sandbox-image-build.yaml
-  - TriggerBinding-workflow-builder-fn-builds.yaml
+  - Pipeline-agentuity-coder-image-build.yaml
+  - TriggerBinding-workflow-builder-image-build.yaml
+  - TriggerBinding-workflow-mcp-server-image-build.yaml
+  - TriggerBinding-function-router-image-build.yaml
+  - TriggerBinding-workflow-orchestrator-image-build.yaml
+  - TriggerBinding-durable-agent-image-build.yaml
+  - TriggerBinding-mcp-gateway-image-build.yaml
+  - TriggerBinding-fn-system-image-build.yaml
+  - TriggerBinding-node-sandbox-image-build.yaml
+  - TriggerBinding-agentuity-coder-image-build.yaml
   - TriggerTemplate-workflow-builder-fn-builds.yaml
   - EventListener-workflow-builder-fn-builds.yaml

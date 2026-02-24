@@ -20,7 +20,7 @@ spec:
                 operator: Exists
                 effect: NoSchedule
   triggers:
-    - name: build-workflow-builder-images
+    - name: build-workflow-builder-image
       interceptors:
         - ref:
             name: cel
@@ -29,8 +29,388 @@ spec:
               value: >-
                 body.ref == 'refs/heads/main' &&
                 body.deleted == false &&
-                body.after.matches('^[0-9a-f]{40}$')
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f == 'Dockerfile' ||
+                      f.startsWith('app/') ||
+                      f.startsWith('components/') ||
+                      f.startsWith('hooks/') ||
+                      f.startsWith('lib/') ||
+                      f.startsWith('public/') ||
+                      f.startsWith('scripts/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f == 'Dockerfile' ||
+                      f.startsWith('app/') ||
+                      f.startsWith('components/') ||
+                      f.startsWith('hooks/') ||
+                      f.startsWith('lib/') ||
+                      f.startsWith('public/') ||
+                      f.startsWith('scripts/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f == 'Dockerfile' ||
+                      f.startsWith('app/') ||
+                      f.startsWith('components/') ||
+                      f.startsWith('hooks/') ||
+                      f.startsWith('lib/') ||
+                      f.startsWith('public/') ||
+                      f.startsWith('scripts/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
       bindings:
-        - ref: workflow-builder-image-builds
+        - ref: workflow-builder-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-workflow-mcp-server-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/workflow-mcp-server/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/workflow-mcp-server/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/workflow-mcp-server/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: workflow-mcp-server-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-function-router-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/function-router/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/function-router/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/function-router/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: function-router-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-workflow-orchestrator-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/workflow-orchestrator/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/workflow-orchestrator/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/workflow-orchestrator/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: workflow-orchestrator-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-durable-agent-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/durable-agent/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/durable-agent/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/durable-agent/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: durable-agent-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-mcp-gateway-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/mcp-gateway/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/mcp-gateway/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/mcp-gateway/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: mcp-gateway-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-fn-system-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/fn-system/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/fn-system/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/fn-system/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: fn-system-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-node-sandbox-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                (
+                  !has(body.commits) ||
+                  body.commits.size() == 0 ||
+                  body.commits.exists(c,
+                    (has(c.added) && c.added.exists(f,
+                      f.startsWith('services/node-sandbox/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.modified) && c.modified.exists(f,
+                      f.startsWith('services/node-sandbox/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    )) ||
+                    (has(c.removed) && c.removed.exists(f,
+                      f.startsWith('services/node-sandbox/') ||
+                      f == 'package.json' ||
+                      f == 'pnpm-lock.yaml' ||
+                      f == 'pnpm-workspace.yaml' ||
+                      f == 'tsconfig.json' ||
+                      f == 'next.config.ts'
+                    ))
+                  )
+                )
+      bindings:
+        - ref: node-sandbox-image-build-binding
+      template:
+        ref: workflow-builder-image-builds
+
+    - name: build-agentuity-coder-image
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$') &&
+                has(body.repository) &&
+                body.repository.name == 'agentuity-coder'
+      bindings:
+        - ref: agentuity-coder-image-build-binding
       template:
         ref: workflow-builder-image-builds

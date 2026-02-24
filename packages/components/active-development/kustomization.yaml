@@ -28,6 +28,7 @@ resources:
   - apps/ai-chatbot.yaml
   - apps/function-router.yaml
   - apps/workflow-builder.yaml
+  - apps/agentuity-coder.yaml
   - apps/mcp-gateway.yaml
   - apps/mcp-inspector.yaml
   - apps/workflow-orchestrator.yaml

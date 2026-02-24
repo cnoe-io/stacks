@@ -19,6 +19,7 @@ resources:
   - apps/mimir-tailscale-serve.yaml
   - apps/otel-collector-tailscale-serve.yaml
   - apps/workflow-builder-tailscale-serve.yaml
+  - apps/agentuity-coder-tailscale-serve.yaml
   - apps/tailscale-crds.yaml
   - apps/tailscale-operator-secrets.yaml
   - apps/tailscale-operator.yaml
