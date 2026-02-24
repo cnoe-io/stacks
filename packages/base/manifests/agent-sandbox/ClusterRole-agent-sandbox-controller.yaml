@@ -26,9 +26,9 @@ rules:
   - apiGroups: ["extensions.agents.x-k8s.io"]
     resources: ["sandboxtemplates/finalizers", "sandboxclaims/finalizers", "sandboxwarmpools/finalizers"]
     verbs: ["update"]
-  # Pod management for sandbox workloads
+  # Pod and PVC management for sandbox workloads
   - apiGroups: [""]
-    resources: ["pods"]
+    resources: ["persistentvolumeclaims", "pods"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["pods/status"]

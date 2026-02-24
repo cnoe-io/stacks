@@ -23,7 +23,7 @@ spec:
         - name: agent
           # Node sandbox runtime - handles /execute, /upload, and /download.
           image: gitea.cnoe.localtest.me:8443/giteaadmin/node-sandbox:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8888
               name: http
@@ -34,6 +34,14 @@ spec:
               port: 8888
             initialDelaySeconds: 2
             periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8888
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
           env:
             # Shared Dapr endpoints (dapr-shared DaemonSet in dapr-sandbox namespace)
             # Sandboxes use these endpoints instead of localhost sidecar
@@ -62,11 +70,11 @@ spec:
                   fieldPath: metadata.namespace
           resources:
             limits:
-              cpu: "1"
-              memory: 512Mi
+              cpu: "4"
+              memory: 4Gi
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

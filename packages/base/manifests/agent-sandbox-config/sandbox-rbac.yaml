@@ -10,10 +10,10 @@ rules:
 - apiGroups: ["extensions.agents.x-k8s.io"]
   resources: ["sandboxclaims"]
   verbs: ["create", "get", "list", "watch", "delete"]
-# Sandboxes are in the core agents API group
+# Sandboxes are in the core agents API group (patch needed for shutdownTime TTL)
 - apiGroups: ["agents.x-k8s.io"]
   resources: ["sandboxes"]
-  verbs: ["get", "list", "watch"]
+  verbs: ["get", "list", "watch", "patch"]
 # Core resources for port-forwarding (Dev Mode)
 - apiGroups: [""]
   resources: ["services"]
