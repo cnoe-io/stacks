@@ -23,8 +23,8 @@ spec:
     - image:
         repoURL: __REGISTRY__/__ORG__/__IMAGE_REPO__
         imageSelectionStrategy: __TAG_STRATEGY__
-        allowTags: __TAG_PATTERN__
+        allowTagsRegexes:
+          - __TAG_PATTERN__
         discoveryLimit: __DISCOVERY_LIMIT__
         insecureSkipTLSVerify: true
         strictSemvers: false
-        platform: linux/amd64

@@ -24,7 +24,8 @@ spec:
         strictSemvers: false
     # Outer loop - production images from GHCR
     - image:
-        allowTags: ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
+        allowTagsRegexes:
+          - ^v?[0-9]+\.[0-9]+\.[0-9]+([\+-].*)?$
         discoveryLimit: 20
         imageSelectionStrategy: SemVer
         repoURL: ghcr.io/pittampalliorg/backstage
@@ -34,4 +35,3 @@ spec:
         imageSelectionStrategy: Lexical
         discoveryLimit: 10
         insecureSkipTLSVerify: true
-        platform: linux/amd64

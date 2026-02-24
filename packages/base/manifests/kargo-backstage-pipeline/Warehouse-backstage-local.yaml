@@ -25,4 +25,3 @@ spec:
         imageSelectionStrategy: Lexical
         discoveryLimit: 10
         insecureSkipTLSVerify: true
-        platform: linux/amd64
