@@ -20,8 +20,21 @@ spec:
           clusterName: thinkpad
           cloud: other
         signoz:
+          env:
+            SIGNOZ_TOKENIZER_JWT_SECRET: "thinkpad-signoz-jwt-secret-2026-02-24-change-me"
+            SIGNOZ_USER_ROOT_ENABLED: "true"
+            SIGNOZ_USER_ROOT_EMAIL: "vinod@pittampalli.com"
+            SIGNOZ_USER_ROOT_PASSWORD: "StacksSignoz!2026"
+            SIGNOZ_USER_ROOT_ORG_NAME: "default"
           ingress:
-            enabled: false
+            enabled: true
+            className: nginx
+            hosts:
+              - host: signoz.cnoe.localtest.me
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    port: 8080
           service:
             type: ClusterIP
           persistence:
@@ -44,8 +57,14 @@ spec:
               memory: 200Mi
             limits:
               cpu: 1000m
-              memory: 2Gi
+              memory: 8Gi
         otelCollector:
+          configMap:
+            create: false
+          command:
+            extraArgs:
+              - "--config=/conf/otel-collector-config.yaml"
+              - "--copy-path=/var/tmp/collector-config.yaml"
           resources:
             requests:
               cpu: 100m

@@ -92,6 +92,9 @@ spec:
         - name: migrate
           image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
           imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
           envFrom:
             - secretRef:
                 name: workflow-builder-secrets
@@ -123,6 +126,10 @@ spec:
                 echo "atlas/migrations/atlas.sum not found or empty"
                 exit 1
               fi
+              # Keep atlas.sum in sync with migration files in dev images.
+              # This prevents checksum-mismatch failures when a migration file
+              # is added but atlas.sum in the image is stale.
+              atlas migrate hash --env k8s
               BASELINE_VERSION="$(awk 'NR==2 {print $1}' atlas/migrations/atlas.sum | cut -d_ -f1)"
               LATEST_VERSION="$(awk 'END {print $1}' atlas/migrations/atlas.sum | cut -d_ -f1)"
               if [ -z "${BASELINE_VERSION:-}" ] || [ -z "${LATEST_VERSION:-}" ]; then
