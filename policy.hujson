@@ -208,13 +208,13 @@
       "svc:loki-hetzner": [
         "tag:k8s-services"
       ],
-      "svc:agentuity-coder": [
+      "svc:agentuity": [
         "tag:k8s-services"
       ],
-      "svc:agentuity-coder-thinkpad": [
+      "svc:agentuity-thinkpad": [
         "tag:k8s-services"
       ],
-      "svc:agentuity-coder-ryzen": [
+      "svc:agentuity-ryzen": [
         "tag:k8s-services"
       ],
       "svc:workflow-builder": [
@@ -454,9 +454,9 @@
         "svc:loki-thinkpad:*",
         "svc:loki-ryzen:*",
         "svc:loki-hetzner:*",
-        "svc:agentuity-coder:*",
-        "svc:agentuity-coder-thinkpad:*",
-        "svc:agentuity-coder-ryzen:*",
+        "svc:agentuity:*",
+        "svc:agentuity-thinkpad:*",
+        "svc:agentuity-ryzen:*",
         "svc:workflow-builder:*",
         "svc:workflow-builder-thinkpad:*",
         "svc:workflow-builder-ryzen:*",
