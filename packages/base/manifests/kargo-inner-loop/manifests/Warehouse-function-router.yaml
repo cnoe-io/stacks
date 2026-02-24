@@ -23,7 +23,8 @@ spec:
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/function-router
         imageSelectionStrategy: Lexical
-        allowTags: .*
+        allowTagsRegexes:
+          - .*
         discoveryLimit: 10
         insecureSkipTLSVerify: true
         strictSemvers: false

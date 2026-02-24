@@ -4,7 +4,7 @@ metadata:
   name: tekton-pipelines
   namespace: argocd
   annotations:
-    # Install after Knative (10). Shipwright depends on Tekton.
+    # Install after Knative (10)
     argocd.argoproj.io/sync-wave: "12"
 spec:
   project: default
@@ -22,4 +22,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-

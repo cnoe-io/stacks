@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: workflow-builder-builds
     app.kubernetes.io/part-of: workflow-builder
 spec:
-  description: Build and push workflow-builder images equivalent to prior Shipwright BuildRuns.
+  description: Build and push workflow-builder runtime images with Tekton.
   params:
     - name: git_url
       type: string
@@ -53,7 +53,7 @@ spec:
     - name: build-fn-system
       runAfter: [compute-tags]
       taskRef:
-        name: workflow-builder-kaniko-build-push
+        name: workflow-builder-image-build-push
       params:
         - name: git_url
           value: $(params.git_url)
@@ -69,7 +69,7 @@ spec:
     - name: build-mcp-gateway
       runAfter: [compute-tags]
       taskRef:
-        name: workflow-builder-kaniko-build-push
+        name: workflow-builder-image-build-push
       params:
         - name: git_url
           value: $(params.git_url)
@@ -85,7 +85,7 @@ spec:
     - name: build-piece-mcp-server
       runAfter: [compute-tags]
       taskRef:
-        name: workflow-builder-kaniko-build-push
+        name: workflow-builder-image-build-push
       params:
         - name: git_url
           value: $(params.git_url)
@@ -101,7 +101,7 @@ spec:
     - name: build-mpak-registry
       runAfter: [compute-tags]
       taskRef:
-        name: workflow-builder-kaniko-build-push
+        name: workflow-builder-image-build-push
       params:
         - name: git_url
           value: $(params.mpak_git_url)

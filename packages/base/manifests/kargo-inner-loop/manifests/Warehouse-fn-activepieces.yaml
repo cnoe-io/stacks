@@ -23,7 +23,8 @@ spec:
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
         imageSelectionStrategy: NewestBuild
-        allowTags: ^git-[0-9a-f]{40}$
+        allowTagsRegexes:
+          - ^git-[0-9a-f]{40}$
         discoveryLimit: 10
         insecureSkipTLSVerify: true
         strictSemvers: false

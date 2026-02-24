@@ -9,7 +9,7 @@ resources:
   - RoleBinding-build-trigger.yaml
   - RoleBinding-tekton-triggers-eventlistener-roles.yaml
   - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
-  - Task-workflow-builder-kaniko-build-push.yaml
+  - Task-workflow-builder-image-build-push.yaml
   - Pipeline-workflow-builder-builds.yaml
   - TriggerBinding-workflow-builder-fn-builds.yaml
   - TriggerTemplate-workflow-builder-fn-builds.yaml

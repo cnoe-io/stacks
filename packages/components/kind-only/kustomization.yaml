@@ -37,6 +37,7 @@ resources:
   - apps/idpbuilder-gitea.yaml
   - apps/knative-serving.yaml
   - apps/tekton-pipelines.yaml
+  - apps/tekton-chains.yaml
   - apps/tekton-triggers.yaml
   - apps/tekton-dashboard.yaml
   - apps/nocodb-connections.yaml

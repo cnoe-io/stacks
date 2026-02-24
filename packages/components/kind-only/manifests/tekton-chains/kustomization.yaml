@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://github.com/tektoncd/chains/releases/download/v0.26.2/release.yaml
+  - ServiceAccount-tekton-chains-signing-secret-init.yaml
+  - Role-tekton-chains-signing-secret-init.yaml
+  - RoleBinding-tekton-chains-signing-secret-init.yaml
+  - Job-tekton-chains-signing-secret-init.yaml
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: chains-config
+      namespace: tekton-chains
+    patch: |-
+      - op: add
+        path: /data
+        value:
+          artifacts.taskrun.format: in-toto
+          artifacts.taskrun.storage: oci
+          artifacts.taskrun.signer: x509
+          artifacts.oci.storage: oci
+          artifacts.oci.format: simplesigning
+          artifacts.oci.signer: x509
+          transparency.enabled: "false"

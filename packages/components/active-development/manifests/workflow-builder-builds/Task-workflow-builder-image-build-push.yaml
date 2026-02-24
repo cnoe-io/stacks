@@ -1,13 +1,13 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: workflow-builder-kaniko-build-push
+  name: workflow-builder-image-build-push
   namespace: workflow-builder
   labels:
     app.kubernetes.io/name: workflow-builder-builds
     app.kubernetes.io/part-of: workflow-builder
 spec:
-  description: Clone the workflow-builder source repository and build/push one image with Buildah.
+  description: Clone source and build/push one image with Buildah.
   params:
     - name: git_url
       type: string

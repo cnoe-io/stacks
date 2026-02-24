@@ -7,8 +7,16 @@ spec:
   serviceAccountName: workflow-builder-build-trigger
   triggers:
     - name: build-fn-images
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.deleted == false &&
+                body.after.matches('^[0-9a-f]{40}$')
       bindings:
         - ref: workflow-builder-fn-builds
       template:
         ref: workflow-builder-fn-builds
-
