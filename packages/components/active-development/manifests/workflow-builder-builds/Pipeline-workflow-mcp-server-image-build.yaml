@@ -31,7 +31,7 @@ spec:
         - name: dockerfile
           value: services/workflow-mcp-server/Dockerfile
         - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server:git-$(params.git_sha)
+          value: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server:git-$(params.git_sha)
   results:
     - name: image_ref
       value: $(tasks.build-and-push.results.image_ref)

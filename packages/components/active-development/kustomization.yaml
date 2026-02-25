@@ -55,23 +55,23 @@ resources:
 # NOTE: Since manifests are copied directly (not via kustomize), tags are
 # hardcoded in Deployment files. This block documents which images are used.
 images:
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+  - name: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/function-router
+  - name: gitea.cnoe.localtest.me/giteaadmin/function-router
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+  - name: gitea.cnoe.localtest.me/giteaadmin/workflow-builder
     newTag: dev-20260223-114519-oauth-url-resolve
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway
+  - name: gitea.cnoe.localtest.me/giteaadmin/mcp-gateway
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
+  - name: gitea.cnoe.localtest.me/giteaadmin/workflow-orchestrator
     newTag: dev-20260222-114456-a3e16257
   # Standalone function executor images
-  # - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
+  # - name: gitea.cnoe.localtest.me/giteaadmin/fn-activepieces
   #   newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/fn-system
+  - name: gitea.cnoe.localtest.me/giteaadmin/fn-system
     newTag: latest
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/piece-mcp-server
+  - name: gitea.cnoe.localtest.me/giteaadmin/piece-mcp-server
     newTag: latest
   # Durable agent
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
+  - name: gitea.cnoe.localtest.me/giteaadmin/opencode-durable-agent
     newTag: dev-20260223-111928-claude-plan

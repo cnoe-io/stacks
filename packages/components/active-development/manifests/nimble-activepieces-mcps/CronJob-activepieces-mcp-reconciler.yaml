@@ -60,7 +60,7 @@ spec:
                 - name: PIECE_PACKAGE_PREFIX
                   value: "@activepieces/piece-"
                 - name: PIECE_MCP_IMAGE_REGISTRY
-                  value: "gitea.cnoe.localtest.me:8443"
+                  value: "gitea.cnoe.localtest.me"
                 - name: PIECE_MCP_IMAGE_REPOSITORY
                   value: "giteaadmin/piece-mcp-server"
                 - name: PIECE_MCP_IMAGE_TAG

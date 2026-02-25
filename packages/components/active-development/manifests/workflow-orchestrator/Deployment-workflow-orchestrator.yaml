@@ -35,7 +35,7 @@ spec:
       containers:
         - name: workflow-orchestrator
           # Python orchestrator with native Dapr child workflow support
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator:git-fb1f106b352bd1c2055355a6c29c7edc2187cdfe
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-orchestrator:git-fb1f106b352bd1c2055355a6c29c7edc2187cdfe
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -24,7 +24,7 @@ spec:
         - name: gitRepoURL
           value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-durable-agent-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
+          value: gitea.cnoe.localtest.me/giteaadmin/opencode-durable-agent
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo

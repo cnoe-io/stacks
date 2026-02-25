@@ -29,7 +29,7 @@
 # Global configuration
 config:
   giteaOrg: giteaadmin
-  giteaRegistry: gitea.cnoe.localtest.me:8443
+  giteaRegistry: gitea.cnoe.localtest.me
 
 images:
   # NOTE: backstage is managed by kargo-backstage-pipeline, not included here
@@ -40,7 +40,7 @@ images:
 
   - name: ai-chatbot
     argocdApp: ai-chatbot
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: Lexical
     tagPattern: ".*"
@@ -48,7 +48,7 @@ images:
 
   - name: workflow-builder
     argocdApp: workflow-builder
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -58,7 +58,7 @@ images:
   # through the same app manifests repo as workflow-builder.
   - name: workflow-mcp-server
     argocdApp: workflow-builder
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -70,7 +70,7 @@ images:
 
   - name: workflow-orchestrator
     argocdApp: workflow-orchestrator
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -78,7 +78,7 @@ images:
 
   - name: function-router
     argocdApp: function-router
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -86,7 +86,7 @@ images:
 
   - name: mcp-gateway
     argocdApp: mcp-gateway
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     # We publish immutable git-tagged images; never promote :latest.
     tagStrategy: NewestBuild
@@ -96,7 +96,7 @@ images:
   # workflow-builder serverless functions (fn-*)
   - name: fn-activepieces
     argocdApp: fn-activepieces
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -104,7 +104,7 @@ images:
 
   - name: fn-system
     argocdApp: fn-system
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -114,7 +114,7 @@ images:
   - name: durable-agent
     imageName: opencode-durable-agent
     argocdApp: durable-agent
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -124,7 +124,7 @@ images:
   # Node sandbox is built and published with immutable git-sha tags.
   - name: node-sandbox
     argocdApp: agent-sandbox-config
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"
@@ -132,7 +132,7 @@ images:
 
   - name: agentuity-coder
     argocdApp: agentuity-coder
-    registry: gitea.cnoe.localtest.me:8443
+    registry: gitea.cnoe.localtest.me
     org: giteaadmin
     tagStrategy: NewestBuild
     tagPattern: "^git-[0-9a-f]{40}$"

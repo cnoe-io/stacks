@@ -21,7 +21,7 @@ spec:
         strictSemvers: false
     # Image source - local dev images from Gitea registry
     - image:
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/mcp-gateway
+        repoURL: gitea.cnoe.localtest.me/giteaadmin/mcp-gateway
         imageSelectionStrategy: NewestBuild
         allowTagsRegexes:
           - ^git-[0-9a-f]{40}$

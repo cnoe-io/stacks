@@ -19,7 +19,7 @@ spec:
       serviceAccountName: workflow-functions
       containers:
         - name: fn-activepieces
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/fn-activepieces:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

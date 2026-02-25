@@ -12,7 +12,7 @@ data:
       listen: ':7007'
       reading:
         allow:
-          - host: 'gitea.cnoe.localtest.me:8443'
+          - host: 'gitea.cnoe.localtest.me'
           - host: '*.cnoe.localtest.me:8443'
       database:
         client: pg
@@ -86,7 +86,7 @@ data:
               privateKey: ${GITHUB_PRIVATE_KEY}
               webhookSecret: ${GITHUB_WEBHOOK_SECRET}
       gitea:
-        - host: gitea.cnoe.localtest.me:8443
+        - host: gitea.cnoe.localtest.me
           baseUrl: http://gitea-http.gitea.svc.cluster.local:3000
           apiBaseUrl: http://gitea-http.gitea.svc.cluster.local:3000/api/v1
           username: ${GITEA_USERNAME}

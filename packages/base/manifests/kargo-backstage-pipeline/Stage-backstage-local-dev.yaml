@@ -24,7 +24,7 @@ spec:
         - name: gitRepoURL
           value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-backstage-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/backstage
+          value: gitea.cnoe.localtest.me/giteaadmin/backstage
         - name: argoAppName
           value: backstage
       steps:

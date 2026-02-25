@@ -22,7 +22,7 @@ spec:
       containers:
         - name: agent
           # Node sandbox runtime - handles /execute, /upload, and /download.
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/node-sandbox:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/node-sandbox:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8888

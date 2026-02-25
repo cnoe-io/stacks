@@ -13,5 +13,5 @@ resources:
 - Service-durable-agent.yaml
 
 images:
-- name: gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent
+- name: gitea.cnoe.localtest.me/giteaadmin/opencode-durable-agent
   newTag: git-8ee69d19546314ed27eaa36b0c58da39e9c96ca5

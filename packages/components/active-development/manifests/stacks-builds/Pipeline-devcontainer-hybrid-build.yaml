@@ -29,7 +29,7 @@ spec:
         - name: dockerfile
           value: devcontainers/Dockerfile.nodejs-python
         - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-python-devspace:latest
+          value: gitea.cnoe.localtest.me/giteaadmin/nodejs-python-devspace:latest
   results:
     - name: image_ref
       value: $(tasks.build-and-push.results.image_ref)

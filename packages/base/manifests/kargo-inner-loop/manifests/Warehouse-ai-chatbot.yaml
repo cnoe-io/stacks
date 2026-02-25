@@ -21,7 +21,7 @@ spec:
         strictSemvers: false
     # Image source - local dev images from Gitea registry
     - image:
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+        repoURL: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
         imageSelectionStrategy: Lexical
         allowTagsRegexes:
           - .*

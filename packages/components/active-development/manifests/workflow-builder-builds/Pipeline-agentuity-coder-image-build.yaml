@@ -31,7 +31,7 @@ spec:
         - name: dockerfile
           value: Dockerfile
         - name: image
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/agentuity-coder:git-$(params.git_sha)
+          value: gitea.cnoe.localtest.me/giteaadmin/agentuity-coder:git-$(params.git_sha)
   results:
     - name: image_ref
       value: $(tasks.build-and-push.results.image_ref)

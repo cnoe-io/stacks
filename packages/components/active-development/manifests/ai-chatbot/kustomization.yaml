@@ -33,7 +33,7 @@ resources:
 
 # Image tag - using latest for active development
 images:
-  - name: gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot
+  - name: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
     newTag: latest
 
 # App-specific customizations to component resources

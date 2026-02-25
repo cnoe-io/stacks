@@ -18,7 +18,7 @@ spec:
         insecureSkipTLSVerify: true
         strictSemvers: false
     - image:
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+        repoURL: gitea.cnoe.localtest.me/giteaadmin/workflow-builder
         imageSelectionStrategy: NewestBuild
         allowTagsRegexes:
           - ^git-[0-9a-f]{40}$
@@ -26,7 +26,7 @@ spec:
         insecureSkipTLSVerify: true
         strictSemvers: false
     - image:
-        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server
+        repoURL: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server
         imageSelectionStrategy: NewestBuild
         allowTagsRegexes:
           - ^git-[0-9a-f]{40}$

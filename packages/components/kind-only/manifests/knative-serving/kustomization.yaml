@@ -59,4 +59,4 @@ patches:
         name: config-deployment
         namespace: knative-serving
       data:
-        registries-skipping-tag-resolving: "kind.local,ko.local,dev.local,gitea.cnoe.localtest.me:8443"
+        registries-skipping-tag-resolving: "kind.local,ko.local,dev.local,gitea.cnoe.localtest.me"

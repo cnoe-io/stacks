@@ -24,7 +24,7 @@ spec:
         - name: gitRepoURL
           value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-workflow-orchestrator-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-orchestrator
+          value: gitea.cnoe.localtest.me/giteaadmin/workflow-orchestrator
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo

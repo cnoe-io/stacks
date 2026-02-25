@@ -90,7 +90,7 @@ spec:
               echo "DB state: revisions=${HAS_REVISIONS:-<none>} tables=${TABLE_COUNT:-0} baseline=$NEEDS_BASELINE workspace_change_table=${WORKSPACE_CHANGE_TABLE:-<none>} workspace_change_version_count=${WORKSPACE_CHANGE_VERSION_COUNT:-0} reconcile=$NEEDS_WORKSPACE_CHANGE_RECONCILE"
       containers:
         - name: migrate
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-builder:latest
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

@@ -19,14 +19,14 @@ spec:
     spec:
       initContainers:
         - name: db-migrate
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/agentuity-coder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/agentuity-coder:latest
           command: ["bun", "run", "db:migrate"]
           env:
             - name: DATABASE_URL
               value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
       containers:
         - name: agentuity-coder
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/agentuity-coder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/agentuity-coder:latest
           ports:
             - containerPort: 3000
               name: http

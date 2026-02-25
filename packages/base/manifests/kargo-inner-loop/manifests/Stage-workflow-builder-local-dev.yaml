@@ -24,9 +24,9 @@ spec:
         - name: gitRepoURL
           value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-workflow-builder-manifests.git
         - name: imageRepoURL
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+          value: gitea.cnoe.localtest.me/giteaadmin/workflow-builder
         - name: imageRepoURL_workflow_mcp_server
-          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server
+          value: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo

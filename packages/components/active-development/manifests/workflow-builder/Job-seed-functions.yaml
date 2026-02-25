@@ -35,7 +35,7 @@ spec:
               sleep 5
       containers:
         - name: seed-functions
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-builder:latest
           command:
             - sh
             - -c

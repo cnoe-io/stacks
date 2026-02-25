@@ -30,7 +30,7 @@ spec:
               echo "PostgreSQL is ready"
       containers:
         - name: seed
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-builder:latest
           command:
             - sh
             - -c

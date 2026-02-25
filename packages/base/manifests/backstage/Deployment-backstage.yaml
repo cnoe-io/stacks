@@ -58,7 +58,7 @@ spec:
                 name: gitea-credentials
             - secretRef:
                 name: argocd-credentials
-          image: gitea.cnoe.localtest.me:8443/giteaadmin/backstage:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/backstage:latest
           livenessProbe:
             failureThreshold: 3
             httpGet:

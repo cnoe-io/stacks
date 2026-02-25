@@ -19,7 +19,7 @@ spec:
         registry:
           replicaCount: 1
           image:
-            repository: gitea.cnoe.localtest.me:8443/giteaadmin/mpak-registry
+            repository: gitea.cnoe.localtest.me/giteaadmin/mpak-registry
             tag: latest
             pullPolicy: IfNotPresent
           securityContext:
