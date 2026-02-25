@@ -1,0 +1,10 @@
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: subnet-router
+  namespace: tailscale
+spec:
+  subnetRouter:
+    advertiseIPv4: 
+      - "10.244.0.0/16" # Pod CIDR
+      - "10.96.0.0/12"  # Service CIDR

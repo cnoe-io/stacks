@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentuity-coder-tailscale
+  annotations:
+    tailscale.com/hostname: "agentuity-coder-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - agentuity-coder-ryzen
+  rules:
+    - host: agentuity-coder-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentuity-coder
+                port:
+                  number: 3000

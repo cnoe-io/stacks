@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kargo-tailscale
+  annotations:
+    tailscale.com/hostname: "kargo-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - kargo-ryzen
+  rules:
+    - host: kargo-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kargo-api
+                port:
+                  number: 80

@@ -1,6 +1,8 @@
 namespace: workflow-builder
 
 resources:
+  - Ingress-mcp-inspector-client-tailscale.yaml
+  - Ingress-mcp-inspector-proxy-tailscale.yaml
   - Deployment-mcp-inspector.yaml
   - Service-mcp-inspector-client.yaml
   - Service-mcp-inspector-proxy.yaml

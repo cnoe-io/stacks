@@ -1,7 +1,0 @@
-apiVersion: v1
-data:
-  serve.json: '{"TCP":{"443":{"HTTPS":true}},"Web":{"backstage-ryzen.${TAILSCALE_TAILNET}:443":{"Handlers":{"/":{"Proxy":"http://backstage.backstage.svc.cluster.local:7007"}}}}}'
-kind: ConfigMap
-metadata:
-  name: backstage-tailscale-serve-config
-  namespace: tailscale

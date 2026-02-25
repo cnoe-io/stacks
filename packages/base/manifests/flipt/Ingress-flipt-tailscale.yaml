@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flipt-tailscale
+  annotations:
+    tailscale.com/hostname: "flipt-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - flipt-ryzen
+  rules:
+    - host: flipt-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flipt
+                port:
+                  number: 8080

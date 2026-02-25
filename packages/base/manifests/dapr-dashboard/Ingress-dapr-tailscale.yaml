@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dapr-tailscale
+  annotations:
+    tailscale.com/hostname: "dapr-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - dapr-ryzen
+  rules:
+    - host: dapr-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dapr-dashboard
+                port:
+                  number: 8080

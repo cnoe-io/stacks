@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: crawl4ai-tailscale
+  annotations:
+    tailscale.com/hostname: "crawl4ai-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - crawl4ai-ryzen
+  rules:
+    - host: crawl4ai-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: crawl4ai
+                port:
+                  number: 11235

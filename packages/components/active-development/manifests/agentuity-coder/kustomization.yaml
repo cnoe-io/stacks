@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - Ingress-agentuity-coder-tailscale.yaml
   - ExternalSecret-agentuity-coder.yaml
   - Namespace-agentuity-coder.yaml
   - StatefulSet-postgresql.yaml

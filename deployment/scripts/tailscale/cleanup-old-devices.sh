@@ -9,10 +9,9 @@ if [[ "${1:-}" == "--wait" ]]; then
   WAIT_FOR_GRACE_PERIOD=true
 fi
 
-# Dynamically extract hostname prefixes from tailscale-serve Deployment manifests.
-# Each Deployment has TS_HOSTNAME: <prefix>-${TAILSCALE_HOST}, so we extract the prefix
-# and generate patterns for both bare names and host-suffixed variants (e.g. kagent, kagent-ryzen, kagent-ryzen-1).
-TAILSCALE_SERVE_DIR="${STACKS_DIR:-$(cd "$(dirname "$0")/../../.." && pwd)}/packages/components/tailscale-serve/manifests"
+# Dynamically extract hostname prefixes from Tailscale annotations.
+# We look for tailscale.com/hostname: "<prefix>-${TAILSCALE_HOST}" (or hardcoded ryzen).
+TAILSCALE_SERVE_DIR="${STACKS_DIR:-$(cd "$(dirname "$0")/../../.." && pwd)}/packages"
 
 SERVICE_PATTERNS=()
 
@@ -20,12 +19,11 @@ if [[ -d "$TAILSCALE_SERVE_DIR" ]]; then
   while IFS= read -r prefix; do
     SERVICE_PATTERNS+=("^${prefix}$" "^${prefix}-.*")
   done < <(
-    grep -rh 'name: TS_HOSTNAME' -A1 "$TAILSCALE_SERVE_DIR"/*/Deployment-*.yaml 2>/dev/null \
-      | grep 'value:' \
-      | sed 's/.*value: *//; s/-\${TAILSCALE_HOST}//' \
+    grep -rh 'tailscale.com/hostname:' "$TAILSCALE_SERVE_DIR" 2>/dev/null \
+      | sed 's/.*"\(.*\)".*/\1/; s/-\${TAILSCALE_HOST}//; s/-ryzen//; s/-thinkpad//' \
       | sort -u
   )
-  echo "✓ Loaded ${#SERVICE_PATTERNS[@]} patterns from $(echo "${SERVICE_PATTERNS[@]}" | tr ' ' '\n' | grep '^\^[a-z]' | grep '\$$' | wc -l) services in $TAILSCALE_SERVE_DIR"
+  echo "✓ Loaded ${#SERVICE_PATTERNS[@]} patterns from Tailscale annotations in $TAILSCALE_SERVE_DIR"
 else
   echo "⚠️  Tailscale manifests dir not found at $TAILSCALE_SERVE_DIR, using no service patterns"
 fi

@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gitea-tailscale
+  annotations:
+    tailscale.com/hostname: "gitea-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - gitea-ryzen
+  rules:
+    - host: gitea-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-gitea-http
+                port:
+                  number: 3000

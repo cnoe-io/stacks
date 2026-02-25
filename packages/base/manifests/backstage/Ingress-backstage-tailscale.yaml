@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backstage-tailscale
+  annotations:
+    tailscale.com/hostname: "backstage-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - backstage-ryzen
+  rules:
+    - host: backstage-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage
+                port:
+                  number: 7007

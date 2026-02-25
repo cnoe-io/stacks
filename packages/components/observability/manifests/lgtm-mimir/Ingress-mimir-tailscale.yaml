@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mimir-tailscale
+  annotations:
+    tailscale.com/hostname: "mimir-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - mimir-ryzen
+  rules:
+    - host: mimir-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mimir
+                port:
+                  number: 9009

@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: langfuse-tailscale
+  annotations:
+    tailscale.com/hostname: "langfuse-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - langfuse-ryzen
+  rules:
+    - host: langfuse-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: langfuse
+                port:
+                  number: 3000

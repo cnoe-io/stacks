@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: phoenix-tailscale
+  annotations:
+    tailscale.com/hostname: "phoenix-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - phoenix-ryzen
+  rules:
+    - host: phoenix-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: arize-phoenix
+                port:
+                  number: 6006

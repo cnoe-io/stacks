@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signoz-tailscale
+  namespace: observability
+  annotations:
+    tailscale.com/hostname: "signoz-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - signoz-ryzen
+  rules:
+    - host: signoz-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signoz-frontend
+                port:
+                  number: 3301

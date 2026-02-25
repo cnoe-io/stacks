@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-tailscale
+  annotations:
+    tailscale.com/hostname: "argocd-ryzen"
+    tailscale.com/backend-protocol: "https"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - argocd-ryzen
+  rules:
+    - host: argocd-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 443

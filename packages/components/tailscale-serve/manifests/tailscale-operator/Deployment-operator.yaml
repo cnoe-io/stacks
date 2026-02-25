@@ -38,6 +38,8 @@ spec:
               value: /oauth/client_secret
             - name: PROXY_IMAGE
               value: tailscale/tailscale:v1.92.4
+            - name: PROXY_IMAGE_PULL_POLICY
+              value: IfNotPresent
             - name: PROXY_TAGS
               value: tag:k8s
             - name: APISERVER_PROXY
@@ -53,7 +55,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.uid
           image: tailscale/k8s-operator:v1.92.4
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: operator
           volumeMounts:
             - mountPath: /oauth

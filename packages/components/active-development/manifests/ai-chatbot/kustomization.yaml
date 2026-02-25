@@ -10,6 +10,7 @@ components:
 
 # App-specific resources (not provided by component)
 resources:
+  - Ingress-ai-chatbot-tailscale.yaml
   - Namespace-ai-chatbot.yaml
   - ServiceAccount-ai-chatbot.yaml
   - ClusterRole-ai-chatbot-sandbox-manager.yaml

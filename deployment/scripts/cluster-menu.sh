@@ -304,6 +304,12 @@ cluster-deploy() {
   echo "🚀 Creating cluster with kind..."
   kind create cluster --name "$CLUSTER_HOST" --config "$DEPLOY_DIR/config/kind-config.yaml"
 
+  echo "📦 Preloading Tailscale images to bypass Docker Hub rate limits..."
+  docker pull tailscale/k8s-operator:v1.92.4 >/dev/null 2>&1 || true
+  docker pull tailscale/tailscale:v1.92.4 >/dev/null 2>&1 || true
+  kind load docker-image tailscale/k8s-operator:v1.92.4 --name "$CLUSTER_HOST" >/dev/null 2>&1 || true
+  kind load docker-image tailscale/tailscale:v1.92.4 --name "$CLUSTER_HOST" >/dev/null 2>&1 || true
+
   "$STACKS_DIR/deployment/scripts/bootstrap-local-infra.sh"
 
     ensure-kargo-repos "${CLUSTER_HOST}"
@@ -350,6 +356,19 @@ cluster-synth() {
 
 cluster-recreate() {
   local CLUSTER_NAME="$(detect_cluster_name)"
+
+  # Tailscale best practice: Clean up old devices before cluster recreation
+  # This ensures new devices get canonical hostnames (no -1 suffix)
+  local CLEANUP_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/cleanup-old-devices.sh"
+  if command -v tailscale &>/dev/null && [ -f "$CLEANUP_SCRIPT" ]; then
+    echo "🧹 Cleaning up old Tailscale devices..."
+    if "$CLEANUP_SCRIPT"; then
+      echo "✅ Tailscale devices deleted (grace period starts now)"
+    else
+      echo "⚠️  Tailscale cleanup failed (continuing anyway)"
+    fi
+  fi
+
   echo "🗑️  Deleting cluster: ${CLUSTER_NAME}..."
   kind delete cluster --name "${CLUSTER_NAME}"
   unset ARGOCD_AUTH_TOKEN

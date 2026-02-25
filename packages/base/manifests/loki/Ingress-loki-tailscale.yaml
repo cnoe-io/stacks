@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-tailscale
+  annotations:
+    tailscale.com/hostname: "loki-ryzen"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+      - loki-ryzen
+  rules:
+    - host: loki-ryzen
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki
+                port:
+                  number: 3100
