@@ -18,6 +18,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: my-gitea-http
+                name: gitea-http
                 port:
                   number: 3000
