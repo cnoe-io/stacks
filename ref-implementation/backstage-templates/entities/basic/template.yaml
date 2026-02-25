@@ -42,7 +42,7 @@ spec:
         argoInstance: in-cluster
         projectName: default
         # necessary until we generate our own cert
-        repoUrl: https://gitea.cnoe.localtest.me:8443/giteaAdmin/${{parameters.name}}
+        repoUrl: https://gitea.cnoe.localtest.me:8443/giteaadmin/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register

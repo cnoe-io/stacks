@@ -271,7 +271,7 @@ source:
 
 1. **Relative Path**: `cnoe://` indicates a local package path
 2. **IdpBuilder Processing**: 
-   - Creates repository: `https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-localdev-backstage-dev-manifests.git`
+   - Creates repository: `https://gitea.cnoe.localtest.me:8443/giteaadmin/idpbuilder-localdev-backstage-dev-manifests.git`
    - Pushes `dist/backstage-dev/manifests/` contents
    - Rewrites Application source URL to Gitea URL
 3. **ArgoCD Sync**: ArgoCD pulls from the created Gitea repository

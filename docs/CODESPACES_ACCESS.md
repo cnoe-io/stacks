@@ -58,7 +58,7 @@ This starts port forwards for all major services. Access them via the **PORTS** 
 ### Gitea
 - **Port:** 3000
 - **Protocol:** HTTP
-- **Username:** `giteaAdmin`
+- **Username:** `giteaadmin`
 - **Get credentials:** `idpbuilder get secrets -p gitea`
 - **Note:** Anonymous read access enabled for repositories and OCI registry
 

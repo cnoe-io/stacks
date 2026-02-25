@@ -460,7 +460,7 @@ ensure-kargo-repos() {
   fi
 
   local GITEA_URL="https://gitea.cnoe.localtest.me:8443"
-  local GITEA_USER="giteaAdmin"
+  local GITEA_USER="giteaadmin"
 
   # Repositories needed by Kargo pipelines (backstage outer-loop only, inner-loop uses main branch)
   local KARGO_REPOS=(
@@ -491,6 +491,106 @@ ensure-kargo-repos() {
   done
 
   echo "✅ Kargo repositories verified"
+}
+
+# Seed workflow-builder source repository in Gitea from a local checkout.
+# This is local-first and intended for inner-loop development:
+# local git repo -> Gitea -> Tekton webhook -> image builds.
+seed-workflow-builder-gitea-repo() {
+  local LOCAL_REPO="${WORKFLOW_BUILDER_LOCAL_REPO:-$HOME/repos/PittampalliOrg/workflow-builder/main}"
+  local SOURCE_REF="${WORKFLOW_BUILDER_SEED_REF:-HEAD}"
+  local GITEA_URL="${WORKFLOW_BUILDER_GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
+  local GITEA_USER="${WORKFLOW_BUILDER_GITEA_USER:-giteaadmin}"
+  local GITEA_OWNER="${WORKFLOW_BUILDER_GITEA_OWNER:-giteaadmin}"
+  local GITEA_REPO="${WORKFLOW_BUILDER_GITEA_REPO:-workflow-builder}"
+  local WEBHOOK_TARGET="http://el-workflow-builder-image-builds.workflow-builder.svc.cluster.local:8080"
+
+  if ! command -v git >/dev/null 2>&1; then
+    echo "⚠️  git not available; skipping workflow-builder repo seeding"
+    return 0
+  fi
+
+  if [ ! -d "$LOCAL_REPO" ] || ! git -C "$LOCAL_REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "ℹ️  Local workflow-builder repo not found at $LOCAL_REPO; skipping local-first seed"
+    return 0
+  fi
+
+  if ! git -C "$LOCAL_REPO" rev-parse --verify "${SOURCE_REF}^{commit}" >/dev/null 2>&1; then
+    if git -C "$LOCAL_REPO" rev-parse --verify "main^{commit}" >/dev/null 2>&1; then
+      SOURCE_REF="main"
+    else
+      echo "⚠️  Could not resolve ${SOURCE_REF} or main in $LOCAL_REPO; skipping seed"
+      return 0
+    fi
+  fi
+
+  local GITEA_PASSWORD
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  if [ -z "$GITEA_PASSWORD" ]; then
+    echo "⚠️  Could not get Gitea credentials; skipping workflow-builder repo seeding"
+    return 0
+  fi
+
+  # Wait for Gitea API readiness.
+  local waited=0
+  local max_wait=300
+  while ! curl -k -sf "${GITEA_URL}/api/v1/version" >/dev/null 2>&1; do
+    sleep 3
+    waited=$((waited + 3))
+    if [ "$waited" -ge "$max_wait" ]; then
+      echo "⚠️  Gitea API not ready after ${max_wait}s; skipping workflow-builder repo seeding"
+      return 0
+    fi
+  done
+
+  # Ensure repository exists.
+  local repo_exists
+  repo_exists=$(curl -k -s -o /dev/null -w "%{http_code}" \
+    -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+    "${GITEA_URL}/api/v1/repos/${GITEA_OWNER}/${GITEA_REPO}")
+
+  if [ "$repo_exists" != "200" ]; then
+    echo "📦 Creating ${GITEA_OWNER}/${GITEA_REPO} in Gitea..."
+    if ! curl -k -s -X POST "${GITEA_URL}/api/v1/user/repos" \
+      -H "Content-Type: application/json" \
+      -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+      -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" \
+      >/dev/null; then
+      echo "⚠️  Failed to create ${GITEA_OWNER}/${GITEA_REPO}; skipping local seed"
+      return 0
+    fi
+  fi
+
+  # Prefer to seed after webhook exists so initial push triggers Tekton automatically.
+  if command -v jq >/dev/null 2>&1; then
+    waited=0
+    max_wait=180
+    while [ "$waited" -lt "$max_wait" ]; do
+      if curl -k -s -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+        "${GITEA_URL}/api/v1/repos/${GITEA_OWNER}/${GITEA_REPO}/hooks" 2>/dev/null | \
+        jq -e --arg url "${WEBHOOK_TARGET}" '.[] | select(.config.url == $url)' >/dev/null 2>&1; then
+        break
+      fi
+      sleep 3
+      waited=$((waited + 3))
+    done
+  fi
+
+  local ENCODED_PASSWORD="$GITEA_PASSWORD"
+  if command -v jq >/dev/null 2>&1; then
+    ENCODED_PASSWORD=$(printf '%s' "$GITEA_PASSWORD" | jq -sRr @uri)
+  fi
+
+  local REMOTE_URL="https://${GITEA_USER}:${ENCODED_PASSWORD}@gitea.cnoe.localtest.me:8443/${GITEA_OWNER}/${GITEA_REPO}.git"
+
+  echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO} (${SOURCE_REF})..."
+  if GIT_SSL_NO_VERIFY=true git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1; then
+    local seeded_sha
+    seeded_sha=$(git -C "$LOCAL_REPO" rev-parse "${SOURCE_REF}^{commit}" 2>/dev/null || echo "unknown")
+    echo "✅ Seeded ${GITEA_OWNER}/${GITEA_REPO}@${seeded_sha} to Gitea main"
+  else
+    echo "⚠️  Failed to push local workflow-builder repo to Gitea (fallback seeding may still run in-cluster)"
+  fi
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -916,6 +1016,7 @@ cluster-deploy() {
   if [ $result -eq 0 ]; then
     fix-kind-hosts "${CLUSTER_HOST}"
     ensure-kargo-repos "${CLUSTER_HOST}"
+    seed-workflow-builder-gitea-repo
 
     # Atlas-first DB reconciliation:
     # - workflow-builder migrations via Atlas (Job-db-migrate)
@@ -1420,6 +1521,7 @@ cluster-update() {
 
   # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
   fix-kind-hosts "${CLUSTER_HOST}"
+  seed-workflow-builder-gitea-repo
 
   # Step 4: Show ArgoCD application status
   echo ""
@@ -1742,6 +1844,7 @@ alias clmcpst="cluster-mcp-services-status"
 
 # Kargo repo management (ensure host-specific repos exist in Gitea)
 alias kargo-repos="ensure-kargo-repos"
+alias seed-workflow-builder-repo="seed-workflow-builder-gitea-repo"
 
 # ArgoCD Aliases (if argocd-auth.sh is loaded)
 if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
@@ -1812,6 +1915,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  cluster-reconcile-mcp-services (clmcp) - Trigger Activepieces MCP reconciliation"
   echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"
   echo "  cluster-menu (clm)       - Interactive management menu (requires gum)"
+  echo "  seed-workflow-builder-repo - Push local workflow-builder repo to Gitea main"
   echo ""
   echo "Tailscale Remote Access:"
   echo "  ts-kubeconfig            - Manage remote kubeconfig (see ts-kubeconfig help)"

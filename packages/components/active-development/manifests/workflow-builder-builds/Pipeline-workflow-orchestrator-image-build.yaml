@@ -12,7 +12,7 @@ spec:
   params:
     - name: git_url
       type: string
-      default: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/workflow-builder.git
+      default: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/workflow-builder.git
     - name: git_sha
       type: string
       description: Full 40-character lowercase git SHA.
@@ -27,7 +27,7 @@ spec:
         - name: git_revision
           value: $(params.git_sha)
         - name: context_dir
-          value: .
+          value: services/workflow-orchestrator
         - name: dockerfile
           value: services/workflow-orchestrator/Dockerfile
         - name: image

@@ -11,7 +11,7 @@ data:
     KARGO_WEBHOOK_BASE="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80"
 
     # Get credentials from mounted secrets
-    GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaAdmin")
+    GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaadmin")
     GITEA_PASS=$(cat /gitea-credentials/password)
     KARGO_WEBHOOK_SECRET=$(cat /kargo-credentials/secret)
 

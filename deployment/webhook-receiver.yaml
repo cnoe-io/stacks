@@ -35,7 +35,7 @@ spec:
                   data = json.loads(self.rfile.read(length).decode())
 
                   repo = data.get('repository', {}).get('full_name', 'unknown')
-                  # Extract app name: giteaAdmin/idpbuilder-thinkpad-backstage-manifests -> backstage
+                  # Extract app name: giteaadmin/idpbuilder-thinkpad-backstage-manifests -> backstage
                   parts = repo.split('/')[-1]
                   if parts.startswith('idpbuilder-'):
                       segments = parts.split('-')

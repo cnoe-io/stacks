@@ -44,7 +44,7 @@ def log_timestamp():
 def extract_app_name(repo_name):
     """Extract app name from idpbuilder repo name.
 
-    Example: giteaAdmin/idpbuilder-thinkpad-backstage -> backstage
+    Example: giteaadmin/idpbuilder-thinkpad-backstage -> backstage
     """
     parts = repo_name.split('/')[-1]  # Get repo name without owner
     if parts.startswith('idpbuilder-'):

@@ -19,7 +19,7 @@
 # Environment variables:
 #   GITEA_REGISTRY  Registry host (default: gitea.cnoe.localtest.me:8443)
 #   GITEA_USER      Registry user (default: giteaadmin)
-#   GITEA_PASSWORD  Registry password (default: giteaAdmin)
+#   GITEA_PASSWORD  Registry password (default: giteaadmin)
 #   FORCE_BUILD     Force docker build (default: false)
 #   SKIP_BUILD      Legacy: same as not using --build (default: true)
 

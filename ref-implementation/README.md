@@ -100,9 +100,9 @@ You can click on the ArgoCD Application name to see more details.
 
 ### What just happened?
 
-1. Backstage created [a git repository](https://cnoe.localtest.me:8443/gitea/giteaAdmin/demo), then pushed templated contents to it.
+1. Backstage created [a git repository](https://cnoe.localtest.me:8443/gitea/giteaadmin/demo), then pushed templated contents to it.
 2. Backstage created [an ArgoCD Application](https://cnoe.localtest.me:8443/argocd/applications/argocd/demo?) and pointed it to the git repository.
-3. Backstage registered the application as [a component](https://cnoe.localtest.me:8443/gitea/giteaAdmin/demo/src/branch/main/catalog-info.yaml) in Backstage.
+3. Backstage registered the application as [a component](https://cnoe.localtest.me:8443/gitea/giteaadmin/demo/src/branch/main/catalog-info.yaml) in Backstage.
 4. ArgoCD deployed the manifests stored in the repo to the cluster.
 5. Backstage retrieved application health from ArgoCD API, then displayed it.
 

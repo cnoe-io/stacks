@@ -22,9 +22,11 @@ spec:
       vars:
         # ${TAILSCALE_HOST} is substituted by build.sh at build time
         - name: gitRepoURL
-          value: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-workflow-builder-manifests.git
+          value: https://gitea.cnoe.localtest.me:8443/giteaadmin/idpbuilder-${TAILSCALE_HOST}-workflow-builder-manifests.git
         - name: imageRepoURL
           value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+        - name: imageRepoURL_workflow_mcp_server
+          value: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server
       steps:
         # Step 1: Clone the manifest repo (main branch only)
         - as: clone-repo
@@ -45,6 +47,8 @@ spec:
             images:
               - image: ${{ vars.imageRepoURL }}
                 tag: ${{ imageFrom(vars.imageRepoURL).Tag }}
+              - image: ${{ vars.imageRepoURL_workflow_mcp_server }}
+                tag: ${{ imageFrom(vars.imageRepoURL_workflow_mcp_server).Tag }}
 
         # Step 3: Commit the image tag change
         - as: commit-changes

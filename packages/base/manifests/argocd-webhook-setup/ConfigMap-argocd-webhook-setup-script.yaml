@@ -12,7 +12,7 @@ data:
     WEBHOOK_URL="http://argocd-server.argocd.svc.cluster.local/api/webhook"
 
     # Get credentials from mounted secrets
-    GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaAdmin")
+    GITEA_USER=$(cat /gitea-credentials/username 2>/dev/null || echo "giteaadmin")
     GITEA_PASS=$(cat /gitea-credentials/password)
 
     # Check if ArgoCD system webhook already exists

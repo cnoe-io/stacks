@@ -19,11 +19,11 @@ spec:
           - path: body.metadata.name
             type: string
             value:
-              - ^(workflow-builder-local-dev|workflow-mcp-server-local-dev|function-router-local-dev|workflow-orchestrator-local-dev|durable-agent-local-dev|mcp-gateway-local-dev|fn-system-local-dev|node-sandbox-local-dev)$
+              - ^(workflow-builder-local-dev|function-router-local-dev|workflow-orchestrator-local-dev|durable-agent-local-dev|mcp-gateway-local-dev|fn-system-local-dev|node-sandbox-local-dev)$
           - path: body.status.phase
             type: string
             value:
-              - .+
+              - ^Steady$
   triggers:
     - template:
         name: publish-kargo-stage-event
@@ -34,13 +34,13 @@ spec:
               apiVersion: v1
               kind: Event
               metadata:
-                generateName: delivery-kargo-stage-
+                generateName: delivery-stage-steady-
                 namespace: argo-events
               type: Normal
-              reason: KargoStageUpdated
+              reason: DeliveryStageSteady
               source:
                 component: argo-events.delivery-lifecycle
-              message: "Kargo stage update observed"
+              message: "Delivery stage reached steady state"
               involvedObject:
                 apiVersion: kargo.akuity.io/v1alpha1
                 kind: Stage

@@ -17,9 +17,11 @@ data:
     apk add --no-cache git >/dev/null
 
     GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
-    OWNER="giteaAdmin"
+    OWNER="giteaadmin"
     REPO="workflow-builder"
-    UPSTREAM_GIT_URL="https://github.com/PittampalliOrg/workflow-builder.git"
+    UPSTREAM_GIT_URL="${UPSTREAM_GIT_URL:-https://github.com/PittampalliOrg/workflow-builder.git}"
+    UPSTREAM_GIT_REF="${UPSTREAM_GIT_REF:-main}"
+    UPSTREAM_SEED_ENABLED="${UPSTREAM_SEED_ENABLED:-true}"
 
     # Tekton Triggers creates a Service named "el-<EventListener name>"
     WEBHOOK_URL="http://el-workflow-builder-image-builds.workflow-builder.svc.cluster.local:8080"
@@ -117,12 +119,18 @@ data:
       exit 0
     fi
 
-    echo "Repo not seeded yet (HTTP ${CONTENTS_STATUS}), importing from ${UPSTREAM_GIT_URL}..."
+    if [ "${UPSTREAM_SEED_ENABLED}" != "true" ]; then
+      echo "Repo not seeded yet (HTTP ${CONTENTS_STATUS}), and upstream fallback is disabled."
+      echo "Seed the repo manually (for local-first flow), then push to main to trigger Tekton builds."
+      exit 0
+    fi
+
+    echo "Repo not seeded yet (HTTP ${CONTENTS_STATUS}), importing from ${UPSTREAM_GIT_URL}@${UPSTREAM_GIT_REF}..."
 
     rm -rf /tmp/upstream /tmp/target
 
     echo "Cloning upstream..."
-    git clone --depth 1 --branch main "${UPSTREAM_GIT_URL}" /tmp/upstream
+    git clone --depth 1 --branch "${UPSTREAM_GIT_REF}" "${UPSTREAM_GIT_URL}" /tmp/upstream
     # Do not copy upstream's .git directory into the target repo.
     # If we do, git will think all files are already tracked and we won't create
     # a commit on the target repo (and we risk overwriting target git metadata).

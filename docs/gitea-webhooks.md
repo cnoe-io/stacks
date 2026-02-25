@@ -117,7 +117,7 @@ Job (mounts as files, uses basic auth)
 ```bash
 # From inside the cluster
 kubectl run -i --rm curl --image=curlimages/curl:8.5.0 -n gitea -- \
-  curl -s -u giteaAdmin:developer \
+  curl -s -u giteaadmin:developer \
   "http://my-gitea-http.gitea.svc.cluster.local:3000/api/v1/admin/hooks" | jq .
 
 # Expected output shows 2 webhooks:
@@ -208,7 +208,7 @@ Check Gitea webhook delivery history:
 
 ```bash
 kubectl run -i --rm curl --image=curlimages/curl:8.5.0 -n gitea -- \
-  curl -s -u giteaAdmin:developer \
+  curl -s -u giteaadmin:developer \
   "http://my-gitea-http.gitea.svc.cluster.local:3000/api/v1/admin/hooks/1" | jq .
 ```
 

@@ -7,153 +7,25 @@ spec:
   params:
     - name: git_sha
       description: Full git SHA from webhook payload.
+    - name: image_name
+      description: Logical image name used for labels/generateName.
+    - name: pipeline_name
+      description: Tekton Pipeline resource name to run.
   resourcetemplates:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
       metadata:
-        generateName: workflow-builder-image-build-
+        generateName: $(tt.params.image_name)-image-build-
         namespace: workflow-builder
         labels:
           app.kubernetes.io/name: workflow-builder-image-builds
           app.kubernetes.io/component: pipeline-run
           app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: workflow-builder
+          workflow-builder.cnoe.io/image: $(tt.params.image_name)
+          workflow-builder.cnoe.io/git-sha: $(tt.params.git_sha)
       spec:
         pipelineRef:
-          name: workflow-builder-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: workflow-mcp-server-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: workflow-mcp-server
-      spec:
-        pipelineRef:
-          name: workflow-mcp-server-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: function-router-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: function-router
-      spec:
-        pipelineRef:
-          name: function-router-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: workflow-orchestrator-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: workflow-orchestrator
-      spec:
-        pipelineRef:
-          name: workflow-orchestrator-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: durable-agent-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: opencode-durable-agent
-      spec:
-        pipelineRef:
-          name: durable-agent-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: mcp-gateway-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: mcp-gateway
-      spec:
-        pipelineRef:
-          name: mcp-gateway-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: fn-system-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: fn-system
-      spec:
-        pipelineRef:
-          name: fn-system-image-build
-        taskRunTemplate:
-          serviceAccountName: workflow-builder-build-trigger
-        params:
-          - name: git_sha
-            value: $(tt.params.git_sha)
-
-    - apiVersion: tekton.dev/v1
-      kind: PipelineRun
-      metadata:
-        generateName: node-sandbox-image-build-
-        namespace: workflow-builder
-        labels:
-          app.kubernetes.io/name: workflow-builder-image-builds
-          app.kubernetes.io/component: pipeline-run
-          app.kubernetes.io/part-of: workflow-builder
-          workflow-builder.cnoe.io/image: node-sandbox
-      spec:
-        pipelineRef:
-          name: node-sandbox-image-build
+          name: $(tt.params.pipeline_name)
         taskRunTemplate:
           serviceAccountName: workflow-builder-build-trigger
         params:

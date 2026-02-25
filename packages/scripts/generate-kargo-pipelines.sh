@@ -2,7 +2,7 @@
 # Generate Kargo inner-loop pipelines from images.yaml configuration
 #
 # This script reads packages/base/manifests/kargo-inner-loop/images.yaml
-# and generates Warehouse + Stage resources for each image.
+# and generates Warehouse + Stage resources for each independently promoted image.
 #
 # Usage: ./generate-kargo-pipelines.sh
 #
@@ -55,6 +55,47 @@ fi
 echo "  Found $image_count image(s) to process"
 echo ""
 
+append_promoted_images() {
+    local primary_image_name="$1"
+    local warehouse_file="$2"
+    local stage_file="$3"
+
+    local dependent_rows
+    dependent_rows=$(yq -r ".images[] | select((.promoteWith // \"\") == \"$primary_image_name\") | [(.name), (.imageName // .name), (.registry), (.org), (.tagStrategy), (.tagPattern), (.discoveryLimit // 10)] | @tsv" "$CONFIG_FILE")
+
+    if [ -z "$dependent_rows" ]; then
+        return 0
+    fi
+
+    echo "    Coupled promotions:"
+    while IFS=$'\t' read -r dep_name dep_repo dep_registry dep_org dep_tag_strategy dep_tag_pattern dep_discovery_limit; do
+        [ -n "${dep_name:-}" ] || continue
+
+        local dep_repo_url="${dep_registry}/${dep_org}/${dep_repo}"
+        local dep_var_name="imageRepoURL_${dep_name//-/_}"
+        local dep_image_expr="\${{ vars.${dep_var_name} }}"
+        local dep_tag_expr="\${{ imageFrom(vars.${dep_var_name}).Tag }}"
+
+        echo "      - ${dep_name} (${dep_repo_url})"
+
+        DEP_REPO_URL="$dep_repo_url" \
+        DEP_TAG_STRATEGY="$dep_tag_strategy" \
+        DEP_TAG_PATTERN="$dep_tag_pattern" \
+        DEP_DISCOVERY_LIMIT="$dep_discovery_limit" \
+        yq -iy '.spec.subscriptions += [{"image": {"repoURL": env.DEP_REPO_URL, "imageSelectionStrategy": env.DEP_TAG_STRATEGY, "allowTagsRegexes": [env.DEP_TAG_PATTERN], "discoveryLimit": (env.DEP_DISCOVERY_LIMIT | tonumber), "insecureSkipTLSVerify": true, "strictSemvers": false}}]' "$warehouse_file"
+
+        sed -i "/^[[:space:]]*- name: imageRepoURL$/,/^[[:space:]]*value:/ {/^[[:space:]]*value:/a\\
+        - name: ${dep_var_name}\\
+          value: ${dep_repo_url}
+        }" "$stage_file"
+
+        sed -i "/tag: \${{ imageFrom(vars.imageRepoURL).Tag }}/a\\
+              - image: ${dep_image_expr}\\
+                tag: ${dep_tag_expr}
+        " "$stage_file"
+    done <<< "$dependent_rows"
+}
+
 for i in $(seq 0 $((image_count - 1))); do
     # Read image configuration (use -r for raw output without quotes)
     IMAGE_NAME=$(yq -r ".images[$i].name" "$CONFIG_FILE")
@@ -66,6 +107,12 @@ for i in $(seq 0 $((image_count - 1))); do
     TAG_PATTERN=$(yq -r ".images[$i].tagPattern" "$CONFIG_FILE")
     DISCOVERY_LIMIT=$(yq -r ".images[$i].discoveryLimit // 10" "$CONFIG_FILE")
     PROMOTION_TYPE=$(yq -r ".images[$i].promotionType" "$CONFIG_FILE")
+    PROMOTE_WITH=$(yq -r ".images[$i].promoteWith // \"\"" "$CONFIG_FILE")
+
+    if [ -n "$PROMOTE_WITH" ]; then
+        echo "  Skipping standalone generation: ${IMAGE_NAME} (promoted with ${PROMOTE_WITH})"
+        continue
+    fi
 
     echo "  Processing: $IMAGE_NAME ($PROMOTION_TYPE)"
 
@@ -112,6 +159,10 @@ for i in $(seq 0 $((image_count - 1))); do
             -e "s|__REGISTRY__|${REGISTRY}|g" \
             -e "s|__ORG__|${ORG}|g" \
             "$TEMPLATE_FILE" > "$STAGE_FILE"
+
+        # Add additional image subscriptions/promotion updates for images that
+        # share this Stage via promoteWith.
+        append_promoted_images "$IMAGE_NAME" "$WAREHOUSE_FILE" "$STAGE_FILE"
 
         # Check for optional verification configuration
         VERIFICATION_ENABLED=$(yq -r ".images[$i].verification.enabled // false" "$CONFIG_FILE")

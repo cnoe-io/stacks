@@ -483,10 +483,10 @@ kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- \
 
 ```bash
 # Create repo via Gitea API or UI
-# Repository: giteaAdmin/feature-flags
+# Repository: giteaadmin/feature-flags
 
 # Clone locally
-git clone https://gitea.cnoe.localtest.me:8443/giteaAdmin/feature-flags.git
+git clone https://gitea.cnoe.localtest.me:8443/giteaadmin/feature-flags.git
 cd feature-flags
 ```
 

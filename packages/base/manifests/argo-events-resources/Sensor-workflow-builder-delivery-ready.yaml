@@ -1,0 +1,128 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: workflow-builder-delivery-ready
+  namespace: argo-events
+  labels:
+    app.kubernetes.io/component: sensor
+    app.kubernetes.io/name: argo-events
+spec:
+  eventBusName: default
+  template:
+    serviceAccountName: argo-events-sensor-sa
+  dependencies:
+    - name: workflow-builder-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^workflow-builder-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: function-router-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^function-router-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: workflow-orchestrator-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^workflow-orchestrator-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: durable-agent-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^durable-agent-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: mcp-gateway-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^mcp-gateway-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: fn-system-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^fn-system-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+    - name: node-sandbox-ready
+      eventSourceName: delivery-resources
+      eventName: kargo-stage-updates
+      filters:
+        data:
+          - path: body.metadata.name
+            type: string
+            value:
+              - ^node-sandbox-local-dev$
+          - path: body.status.phase
+            type: string
+            value:
+              - ^Steady$
+  triggers:
+    - template:
+        name: publish-workflow-builder-delivery-ready-event
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: delivery-workflow-builder-ready-
+                namespace: argo-events
+              type: Normal
+              reason: WorkflowBuilderDeliveryReady
+              source:
+                component: argo-events.workflow-builder-delivery-ready
+              message: "All workflow-builder local-dev delivery stages are steady"
+              involvedObject:
+                apiVersion: v1
+                kind: Namespace
+                name: workflow-builder
+                namespace: workflow-builder
+      retryStrategy:
+        steps: 3

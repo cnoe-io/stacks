@@ -479,9 +479,9 @@ In the demo entity page, you will notice a ArgoCD overview card associated with 
 
 #### What just happened?
 
-1. Backstage created [a git repository](https://cnoe.localtest.me:8443/gitea/giteaAdmin/demo), then pushed templated contents to it.
+1. Backstage created [a git repository](https://cnoe.localtest.me:8443/gitea/giteaadmin/demo), then pushed templated contents to it.
 2. Backstage created [an ArgoCD Application](https://cnoe.localtest.me:8443/argocd/applications/argocd/demo?) and pointed it to the git repository.
-3. Backstage registered the application as [a component](https://cnoe.localtest.me:8443/gitea/giteaAdmin/demo/src/branch/main/catalog-info.yaml) in Backstage.
+3. Backstage registered the application as [a component](https://cnoe.localtest.me:8443/gitea/giteaadmin/demo/src/branch/main/catalog-info.yaml) in Backstage.
 4. ArgoCD deployed the manifests stored in the repo to the cluster.
 5. Backstage retrieved application health from ArgoCD API, then displayed it.
 
@@ -741,7 +741,7 @@ The local Gitea instance created by idpbuilder contains a built-in OCI registry 
 ```
 docker login gitea.cnoe.localtest.me:8443
 # see the note section below for retrieving your password.
-Username: giteaAdmin
+Username: giteaadmin
 Password:
 docker pull docker.io/library/ubuntu:24.04
 # default way
@@ -755,7 +755,7 @@ cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
 # docker push cnoe.localtest.me:8443/giteaadmin/ubuntu:24.04
 ```
 
-**NOTE**: You can get the giteaAdmin password in the same way as you do for the web or git interface.
+**NOTE**: You can get the giteaadmin password in the same way as you do for the web or git interface.
 
 ```
 idpbuilder get secrets -p gitea
@@ -764,7 +764,7 @@ idpbuilder get secrets -p gitea
 Or you can use this to login directly:
 
 ```
-idpbuilder get secrets -p gitea -o json | jq '.[0].password' -r | docker login -u giteaAdmin --password-stdin gitea.cnoe.localtest.me:8443
+idpbuilder get secrets -p gitea -o json | jq '.[0].password' -r | docker login -u giteaadmin --password-stdin gitea.cnoe.localtest.me:8443
 ```
 
 #### Tagging Image

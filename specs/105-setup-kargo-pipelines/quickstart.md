@@ -103,7 +103,7 @@ GITEA_PASSWORD=$(idpbuilder get secrets -p gitea -o json | jq -r '.[0].data.pass
 
 # Login to Gitea registry
 echo $GITEA_PASSWORD | docker login gitea.cnoe.localtest.me:8443 \
-  -u giteaAdmin --password-stdin
+  -u giteaadmin --password-stdin
 
 # Push image
 docker push gitea.cnoe.localtest.me:8443/giteaadmin/backstage:dev-abc1234
@@ -546,7 +546,7 @@ docker tag backstage:dev-$(git rev-parse --short HEAD) \
   gitea.cnoe.localtest.me:8443/giteaadmin/backstage:dev-$(git rev-parse --short HEAD)
 
 GITEA_PASSWORD=$(idpbuilder get secrets -p gitea -o json | jq -r '.[0].data.password')
-echo $GITEA_PASSWORD | docker login gitea.cnoe.localtest.me:8443 -u giteaAdmin --password-stdin
+echo $GITEA_PASSWORD | docker login gitea.cnoe.localtest.me:8443 -u giteaadmin --password-stdin
 
 docker push gitea.cnoe.localtest.me:8443/giteaadmin/backstage:dev-$(git rev-parse --short HEAD)
 

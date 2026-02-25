@@ -83,7 +83,7 @@ For `mcpb`, NimbleTools expects the package `identifier` to be the full `.mcpb` 
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/mcp-echo/releases/download/v1.0.0/mcp-echo-v1.0.0-linux-amd64.mcpb",
+      "identifier": "http://my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/mcp-echo/releases/download/v1.0.0/mcp-echo-v1.0.0-linux-amd64.mcpb",
       "version": "1.0.0",
       "transport": { "type": "streamable-http" }
     }

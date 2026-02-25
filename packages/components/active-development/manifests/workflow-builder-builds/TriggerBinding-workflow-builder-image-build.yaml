@@ -1,0 +1,13 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: workflow-builder-image-build-binding
+  namespace: workflow-builder
+spec:
+  params:
+    - name: git_sha
+      value: $(body.after)
+    - name: image_name
+      value: workflow-builder
+    - name: pipeline_name
+      value: workflow-builder-image-build

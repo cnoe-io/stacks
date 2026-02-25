@@ -1,0 +1,67 @@
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: aio-browser
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: aio-browser
+    app.kubernetes.io/part-of: agent-sandbox
+spec:
+  podTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sandbox-aio-browser
+        app.kubernetes.io/part-of: agent-sandbox
+        app.kubernetes.io/managed-by: agent-sandbox
+      annotations:
+        dapr.io/enabled: "false"
+    spec:
+      containers:
+        - name: agent
+          # AIO Sandbox — Chrome, CDP, VNC, browser automation, MCP tools on port 8080
+          image: ghcr.io/agent-infra/sandbox:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /v1/docs
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /v1/docs
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 60
+            timeoutSeconds: 10
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            limits:
+              cpu: "4"
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          securityContext:
+            # AIO sandbox runs as root — Chrome needs --no-sandbox and
+            # the entrypoint runs groupadd/useradd which need full root caps
+            runAsUser: 0
+            readOnlyRootFilesystem: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst

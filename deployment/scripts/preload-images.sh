@@ -208,7 +208,7 @@ get_gitea_credentials() {
       password="developer"
     fi
 
-    export GITEA_USER="giteaAdmin"
+    export GITEA_USER="giteaadmin"
     export GITEA_PASSWORD="$password"
 
     # Verify credentials work by testing API auth

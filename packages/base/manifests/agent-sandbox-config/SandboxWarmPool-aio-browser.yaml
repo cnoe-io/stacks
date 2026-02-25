@@ -1,0 +1,14 @@
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxWarmPool
+metadata:
+  name: aio-browser-pool
+  namespace: agent-sandbox
+  labels:
+    app.kubernetes.io/name: aio-browser-pool
+    app.kubernetes.io/part-of: agent-sandbox
+spec:
+  # Fewer pre-warmed replicas due to heavier resource usage (Chrome)
+  replicas: 2
+  # Reference to the AIO browser SandboxTemplate
+  sandboxTemplateRef:
+    name: aio-browser

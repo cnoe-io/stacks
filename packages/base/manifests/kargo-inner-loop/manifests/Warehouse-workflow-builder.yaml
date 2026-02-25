@@ -12,16 +12,21 @@ spec:
   freightCreationPolicy: Automatic
   interval: 30s
   subscriptions:
-    # Config source - Gitea repo from idpbuilder
-    # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
     - git:
-        repoURL: https://gitea.cnoe.localtest.me:8443/giteaAdmin/idpbuilder-${TAILSCALE_HOST}-workflow-builder-manifests.git
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/idpbuilder-${TAILSCALE_HOST}-workflow-builder-manifests.git
         branch: main
         insecureSkipTLSVerify: true
         strictSemvers: false
-    # Image source - local dev images from Gitea registry
     - image:
         repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-builder
+        imageSelectionStrategy: NewestBuild
+        allowTagsRegexes:
+          - ^git-[0-9a-f]{40}$
+        discoveryLimit: 10
+        insecureSkipTLSVerify: true
+        strictSemvers: false
+    - image:
+        repoURL: gitea.cnoe.localtest.me:8443/giteaadmin/workflow-mcp-server
         imageSelectionStrategy: NewestBuild
         allowTagsRegexes:
           - ^git-[0-9a-f]{40}$

@@ -3,8 +3,10 @@ kind: Kustomization
 
 resources:
   - SandboxTemplate-dapr-agent.yaml
+  - SandboxTemplate-aio-browser.yaml
 
   - SandboxWarmPool-dapr-agent.yaml
+  - SandboxWarmPool-aio-browser.yaml
   - Configuration-sandbox-dapr.yaml
   - sandbox-router.yaml
   - sandbox-rbac.yaml
