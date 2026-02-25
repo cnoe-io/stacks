@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea-tailscale-backend
+  namespace: gitea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: gitea
+    app.kubernetes.io/name: gitea
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
