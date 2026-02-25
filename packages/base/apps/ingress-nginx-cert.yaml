@@ -14,7 +14,7 @@ spec:
   project: default
   source:
     path: packages/base/manifests/ingress-nginx-cert
-    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
+    repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     targetRevision: HEAD
   syncPolicy:
     automated:

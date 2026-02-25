@@ -43,7 +43,7 @@ spec:
         appNamespace: ray
         argoInstance: in-cluster
         projectName: default
-        repoUrl: https://gitea.cnoe.localtest.me:8443/backstage/${{parameters.name}}
+        repoUrl: http://gitea-http.gitea.svc.cluster.local:3000/backstage/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register

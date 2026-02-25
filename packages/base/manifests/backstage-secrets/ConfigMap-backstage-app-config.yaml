@@ -87,8 +87,8 @@ data:
               webhookSecret: ${GITHUB_WEBHOOK_SECRET}
       gitea:
         - host: gitea.cnoe.localtest.me:8443
-          baseUrl: https://gitea.cnoe.localtest.me:8443
-          apiBaseUrl: https://gitea.cnoe.localtest.me:8443/api/v1
+          baseUrl: http://gitea-http.gitea.svc.cluster.local:3000
+          apiBaseUrl: http://gitea-http.gitea.svc.cluster.local:3000/api/v1
           username: ${GITEA_USERNAME}
           password: ${GITEA_PASSWORD}
 
@@ -123,7 +123,7 @@ data:
               timeout: { minutes: 3 }
       locations:
         - type: url
-          target: https://gitea.cnoe.localtest.me:8443/giteaadmin/gitops-${TAILSCALE_HOST}-backstage-templates-entities/raw/branch/main/catalog-info.yaml
+          target: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-backstage-templates-entities/raw/branch/main/catalog-info.yaml
           rules:
             - allow: [Component, System, API, Resource, Location, Template, User, Group]
         # Keep local examples for fallback

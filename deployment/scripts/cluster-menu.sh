@@ -174,25 +174,6 @@ generate-kind-config() {
   sed "s|\${STACKS_DIR}|$STACKS_DIR|g" "$TEMPLATE_FILE" > "$OUTPUT_FILE"
 }
 
-fix-kind-hosts() {
-  local CLUSTER_NAME="${1:-$(detect_hostname)}"
-  echo "🔧 Fixing /etc/hosts on KIND nodes for gitea.cnoe.localtest.me..."
-
-  local INGRESS_IP
-  INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
-
-  if [ -z "$INGRESS_IP" ]; then
-    echo "⚠️  Could not get ingress-nginx ClusterIP, skipping hosts fix"
-    return 0
-  fi
-
-  local nodes
-  nodes=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -E "^${CLUSTER_NAME}-(control|worker)" || true)
-
-  for node in $nodes; do
-    docker exec "$node" sh -c "grep -q 'gitea.cnoe.localtest.me' /etc/hosts || echo '$INGRESS_IP gitea.cnoe.localtest.me' >> /etc/hosts" 2>/dev/null
-  done
-}
 
 ensure-kargo-repos() {
   local CLUSTER_NAME="${1:-$(detect_hostname 2>/dev/null)}"
@@ -202,30 +183,37 @@ ensure-kargo-repos() {
 
   echo "🔧 Ensuring Kargo repositories exist for host: $CLUSTER_NAME"
   local GITEA_PASSWORD
-  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
 
   if [ -z "$GITEA_PASSWORD" ]; then
     return 0
   fi
 
-  local GITEA_URL="https://gitea.cnoe.localtest.me:8443"
+  # Setup port-forward
+  local PF_PORT=$((30000 + RANDOM % 10000))
+  kubectl port-forward svc/gitea-http -n gitea ${PF_PORT}:3000 >/dev/null 2>&1 &
+  local PF_PID=$!
+  sleep 2
+
+  local GITEA_URL="http://127.0.0.1:${PF_PORT}"
   local GITEA_USER="giteaadmin"
   local KARGO_REPOS=("gitops-${CLUSTER_NAME}-backstage-manifests")
 
   for repo in "${KARGO_REPOS[@]}"; do
     local repo_exists
-    repo_exists=$(curl -k -s -o /dev/null -w "%{http_code}" -u "$GITEA_USER:$GITEA_PASSWORD" "$GITEA_URL/api/v1/repos/$GITEA_USER/$repo")
+    repo_exists=$(curl -s -o /dev/null -w "%{http_code}" -u "$GITEA_USER:$GITEA_PASSWORD" "$GITEA_URL/api/v1/repos/$GITEA_USER/$repo")
     if [ "$repo_exists" != "200" ]; then
       echo "   📦 Creating repository: $repo"
-      curl -k -s -X POST "$GITEA_URL/api/v1/user/repos" -H "Content-Type: application/json" -u "$GITEA_USER:$GITEA_PASSWORD" -d "{\"name\": \"$repo\", \"private\": false, \"auto_init\": true}" > /dev/null || true
+      curl -s -X POST "$GITEA_URL/api/v1/user/repos" -H "Content-Type: application/json" -u "$GITEA_USER:$GITEA_PASSWORD" -d "{"name": "$repo", "private": false, "auto_init": true}" > /dev/null || true
     fi
   done
+
+  kill $PF_PID 2>/dev/null || true
 }
 
 seed-workflow-builder-gitea-repo() {
   local LOCAL_REPO="${WORKFLOW_BUILDER_LOCAL_REPO:-$HOME/repos/PittampalliOrg/workflow-builder/main}"
   local SOURCE_REF="${WORKFLOW_BUILDER_SEED_REF:-HEAD}"
-  local GITEA_URL="${WORKFLOW_BUILDER_GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
   local GITEA_USER="${WORKFLOW_BUILDER_GITEA_USER:-giteaadmin}"
   local GITEA_OWNER="${WORKFLOW_BUILDER_GITEA_OWNER:-giteaadmin}"
   local GITEA_REPO="${WORKFLOW_BUILDER_GITEA_REPO:-workflow-builder}"
@@ -234,22 +222,31 @@ seed-workflow-builder-gitea-repo() {
   if [ ! -d "$LOCAL_REPO" ] || ! git -C "$LOCAL_REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then return 0; fi
 
   local GITEA_PASSWORD
-  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
   if [ -z "$GITEA_PASSWORD" ]; then return 0; fi
 
+  # Setup port-forward
+  local PF_PORT=$((30000 + RANDOM % 10000))
+  kubectl port-forward svc/gitea-http -n gitea ${PF_PORT}:3000 >/dev/null 2>&1 &
+  local PF_PID=$!
+  sleep 2
+
+  local GITEA_URL="http://127.0.0.1:${PF_PORT}"
+  
   local ENCODED_PASSWORD="$GITEA_PASSWORD"
-  if command -v jq >/dev/null 2>&1; then ENCODED_PASSWORD=$(printf '%s' "$GITEA_PASSWORD" | jq -sRr @uri); fi
-  local REMOTE_URL="https://${GITEA_USER}:${ENCODED_PASSWORD}@gitea.cnoe.localtest.me:8443/${GITEA_OWNER}/${GITEA_REPO}.git"
+  if command -v jq >/dev/null 2>&1; then ENCODED_PASSWORD=$(printf "%s" "$GITEA_PASSWORD" | jq -sRr @uri); fi
+  local REMOTE_URL="http://${GITEA_USER}:${ENCODED_PASSWORD}@127.0.0.1:${PF_PORT}/${GITEA_OWNER}/${GITEA_REPO}.git"
 
   echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO}..."
-  curl -k -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" >/dev/null || true
-  GIT_SSL_NO_VERIFY=true git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
+  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{"name": "${GITEA_REPO}", "private": false, "auto_init": true, "default_branch": "main"}" >/dev/null || true
+  git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
+
+  kill $PF_PID 2>/dev/null || true
 }
 
 seed-stacks-gitea-repo() {
   local LOCAL_REPO="${STACKS_DIR}"
   local SOURCE_REF="${STACKS_SEED_REF:-HEAD}"
-  local GITEA_URL="${STACKS_GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
   local GITEA_USER="${STACKS_GITEA_USER:-giteaadmin}"
   local GITEA_OWNER="${STACKS_GITEA_OWNER:-giteaadmin}"
   local GITEA_REPO="${STACKS_GITEA_REPO:-stacks}"
@@ -258,16 +255,26 @@ seed-stacks-gitea-repo() {
   if [ ! -d "$LOCAL_REPO" ] || ! git -C "$LOCAL_REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then return 0; fi
 
   local GITEA_PASSWORD
-  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
   if [ -z "$GITEA_PASSWORD" ]; then return 0; fi
 
+  # Setup port-forward
+  local PF_PORT=$((30000 + RANDOM % 10000))
+  kubectl port-forward svc/gitea-http -n gitea ${PF_PORT}:3000 >/dev/null 2>&1 &
+  local PF_PID=$!
+  sleep 2
+
+  local GITEA_URL="http://127.0.0.1:${PF_PORT}"
+
   local ENCODED_PASSWORD="$GITEA_PASSWORD"
-  if command -v jq >/dev/null 2>&1; then ENCODED_PASSWORD=$(printf '%s' "$GITEA_PASSWORD" | jq -sRr @uri); fi
-  local REMOTE_URL="https://${GITEA_USER}:${ENCODED_PASSWORD}@gitea.cnoe.localtest.me:8443/${GITEA_OWNER}/${GITEA_REPO}.git"
+  if command -v jq >/dev/null 2>&1; then ENCODED_PASSWORD=$(printf "%s" "$GITEA_PASSWORD" | jq -sRr @uri); fi
+  local REMOTE_URL="http://${GITEA_USER}:${ENCODED_PASSWORD}@127.0.0.1:${PF_PORT}/${GITEA_OWNER}/${GITEA_REPO}.git"
 
   echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO}..."
-  curl -k -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" >/dev/null || true
-  GIT_SSL_NO_VERIFY=true git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
+  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{"name": "${GITEA_REPO}", "private": false, "auto_init": true, "default_branch": "main"}" >/dev/null || true
+  git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
+
+  kill $PF_PID 2>/dev/null || true
 }
 
 cluster-deploy() {
@@ -299,8 +306,7 @@ cluster-deploy() {
 
   "$STACKS_DIR/deployment/scripts/bootstrap-local-infra.sh"
 
-  fix-kind-hosts "${CLUSTER_HOST}"
-  ensure-kargo-repos "${CLUSTER_HOST}"
+    ensure-kargo-repos "${CLUSTER_HOST}"
   seed-workflow-builder-gitea-repo
   seed-stacks-gitea-repo
 

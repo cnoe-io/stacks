@@ -7,7 +7,7 @@ data:
     echo "Configuring Gitea System Webhook for Kargo..."
 
     # Configuration
-    GITEA_URL="https://gitea.cnoe.localtest.me:8443"
+    GITEA_URL="http://gitea-http.gitea.svc.cluster.local:3000"
     KARGO_WEBHOOK_BASE="http://kargo-external-webhooks-server.kargo.svc.cluster.local:80"
 
     # Get credentials from mounted secrets

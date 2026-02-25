@@ -12,7 +12,7 @@ spec:
   project: default
   source:
     path: packages/components/kind-only/manifests/dagger-infra/manifests
-    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
+    repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

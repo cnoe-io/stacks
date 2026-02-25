@@ -8,7 +8,7 @@ data:
     echo "Target: http://argocd-server.argocd.svc.cluster.local/api/webhook"
 
     # Configuration
-    GITEA_URL="https://gitea.cnoe.localtest.me:8443"
+    GITEA_URL="http://gitea-http.gitea.svc.cluster.local:3000"
     WEBHOOK_URL="http://argocd-server.argocd.svc.cluster.local/api/webhook"
 
     # Get credentials from mounted secrets

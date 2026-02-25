@@ -41,3 +41,4 @@ kubectl create secret generic gitea-credential \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "✅ Local infrastructure bootstrapped successfully."
+

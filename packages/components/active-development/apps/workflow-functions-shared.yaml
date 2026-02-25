@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
+    repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     targetRevision: HEAD
     path: packages/components/active-development/manifests/workflow-functions-shared/manifests
   destination:
