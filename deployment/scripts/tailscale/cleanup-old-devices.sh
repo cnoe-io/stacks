@@ -46,8 +46,13 @@ CLUSTER_ID_SLUG="$(echo "${CLUSTER_ID_RAW}" | tr '[:upper:]' '[:lower:]' | sed -
 if [[ -n "$CLUSTER_ID_SLUG" ]]; then
   SERVICE_PATTERNS+=(
     "^${CLUSTER_ID_SLUG}-operator$"
+    "^${CLUSTER_ID_SLUG}-operator-.*"
     "^subnet-router-${CLUSTER_ID_SLUG}$"
+    "^subnet-router-${CLUSTER_ID_SLUG}-.*"
     "^nixos-vm-${CLUSTER_ID_SLUG}$"
+    "^nixos-vm-${CLUSTER_ID_SLUG}-.*"
+    "^${CLUSTER_ID_SLUG}-api$"
+    "^${CLUSTER_ID_SLUG}-api-.*"
   )
 fi
 
@@ -142,11 +147,20 @@ echo "✓ OAuth token obtained"
 # Get list of offline devices matching our patterns
 echo "Searching for offline devices..."
 PATTERN_REGEX=$(IFS='|'; echo "${SERVICE_PATTERNS[*]}")
-DEVICES=$(tailscale status --json | jq -r --arg pattern "$PATTERN_REGEX" '
-  .Peer[] |
-  select(.HostName | test($pattern)) |
-  select(.Online == false) |
-  "\(.ID) \(.HostName) \(.TailscaleIPs[0])"
+
+API_RESPONSE=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" "https://api.tailscale.com/api/v2/tailnet/-/devices")
+
+if ! echo "$API_RESPONSE" | jq -e '.devices' >/dev/null 2>&1; then
+  echo "Error: Failed to fetch devices from Tailscale API"
+  echo "$API_RESPONSE"
+  exit 1
+fi
+
+DEVICES=$(echo "$API_RESPONSE" | jq -r --arg pattern "$PATTERN_REGEX" '
+  .devices[] |
+  select(.name | split(".")[0] | test($pattern)) |
+  select(.connectedToControl == false) |
+  "\(.id) \(.name | split(".")[0]) \(.addresses[0])"
 ')
 
 if [[ -z "$DEVICES" ]]; then
