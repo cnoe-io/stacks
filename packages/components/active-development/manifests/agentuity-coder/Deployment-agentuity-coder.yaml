@@ -43,6 +43,18 @@ spec:
               value: "dummy-auth-secret-for-local-dev-12345678"
             - name: NODE_ENV
               value: "production"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentuity-coder-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentuity-coder-secrets
+                  key: ANTHROPIC_API_KEY
+                  optional: true
           resources:
             requests:
               cpu: 100m
