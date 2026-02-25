@@ -12,6 +12,7 @@
 #   ./tailscale-kubeconfig.sh [command]
 #
 # Commands:
+#   configure   Configure remote host via Tailscale auth proxy (native, recommended)
 #   generate    Generate new token and store in Key Vault (after cluster recreation)
 #   get         Get kubeconfig (retrieves token from Key Vault)
 #   save-op     Save kubeconfig to 1Password
@@ -41,6 +42,8 @@ CLUSTER_ID_RAW="${CLUSTER_NAME:-${CLUSTER_HOST:-}}"
 CLUSTER_ID_SLUG="$(echo "${CLUSTER_ID_RAW}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//')"
 SERVICE_NAME="${SERVICE_NAME:-${CLUSTER_ID_SLUG:+k8s-api-${CLUSTER_ID_SLUG}}}"
 SERVICE_NAME="${SERVICE_NAME:-k8s-api}"
+OPERATOR_HOSTNAME="${OPERATOR_HOSTNAME:-${CLUSTER_ID_SLUG:+${CLUSTER_ID_SLUG}-operator}}"
+OPERATOR_HOSTNAME="${OPERATOR_HOSTNAME:-operator}"
 OUTPUT_FILE="${OUTPUT_FILE:-$HOME/.kube/tailscale-cluster.yaml}"
 
 # 1Password configuration
@@ -346,6 +349,107 @@ cmd_get_op() {
     echo ""
 }
 
+# Resolve the active operator hostname on the tailnet.
+# The operator may register as <name>-1, <name>-2, etc. if stale devices exist.
+# Uses DNSName (which includes the suffix) rather than HostName (which doesn't).
+resolve_operator_hostname() {
+    local base_name="${1:-$OPERATOR_HOSTNAME}"
+
+    # Find the active (online) operator device matching our base name.
+    # DNSName includes the tailnet suffix and any numeric disambiguator.
+    local active_host
+    active_host=$(tailscale status --json 2>/dev/null | \
+        python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+peers = data.get('Peer', {})
+matches = []
+for peer in peers.values():
+    host = peer.get('HostName', '')
+    dns = peer.get('DNSName', '').rstrip('.')
+    # Extract the short hostname from DNSName (before the tailnet domain)
+    short = dns.split('.')[0] if dns else host
+    if host == '${base_name}' or host.startswith('${base_name}-'):
+        matches.append((short, peer.get('Online', False)))
+# Prefer online match; among online, prefer shortest name (no suffix)
+online = [h for h, o in matches if o]
+if online:
+    print(sorted(online, key=len)[0])
+elif matches:
+    print(sorted([h for h, _ in matches], key=len)[0])
+" 2>/dev/null)
+
+    if [ -n "$active_host" ]; then
+        echo "$active_host"
+    else
+        # Fallback to base name
+        echo "$base_name"
+    fi
+}
+
+# Configure remote machine kubeconfig via Tailscale auth proxy (native approach).
+# Uses 'tailscale configure kubeconfig' on the remote host, which leverages the
+# operator's API server proxy with Tailscale identity-based authentication.
+cmd_configure() {
+    local remote_host="${1:-}"
+
+    if [ -z "$remote_host" ]; then
+        log_error "Usage: $0 configure <remote-host>"
+        echo ""
+        echo "Configures kubectl on <remote-host> to use the Tailscale operator's"
+        echo "API server proxy for cluster access (identity-based auth, no tokens)."
+        echo ""
+        echo "Examples:"
+        echo "  $0 configure thinkpad    # Configure thinkpad for remote kubectl"
+        echo ""
+        echo "Prerequisites:"
+        echo "  - Tailscale operator running with APISERVER_PROXY=true"
+        echo "  - ClusterRoleBinding for your Tailscale identity (e.g., vpittamp@github)"
+        echo "  - Remote host on the same tailnet with 'tailscale' CLI available"
+        exit 1
+    fi
+
+    log_step "Resolving active operator hostname..."
+    local operator_host
+    operator_host=$(resolve_operator_hostname "$OPERATOR_HOSTNAME")
+    log_info "Operator device: $operator_host"
+
+    log_step "Configuring kubeconfig on $remote_host via Tailscale auth proxy..."
+
+    if ssh "$remote_host" "tailscale configure kubeconfig $operator_host" 2>&1; then
+        log_info "Kubeconfig configured on $remote_host"
+    else
+        log_error "Failed to configure kubeconfig on $remote_host"
+        echo ""
+        echo "Troubleshooting:"
+        echo "  1. Ensure the remote host is on the tailnet: tailscale status"
+        echo "  2. Ensure the operator is running: kubectl get pods -n tailscale -l app=operator"
+        echo "  3. Check operator has APISERVER_PROXY=true"
+        echo "  4. Ensure RBAC exists for your Tailscale identity"
+        exit 1
+    fi
+
+    # Verify access from remote host
+    log_step "Verifying kubectl access from $remote_host..."
+    if ssh "$remote_host" "kubectl --context ${operator_host}.${TAILNET_NAME}.ts.net get nodes --request-timeout=15s" 2>&1; then
+        echo ""
+        log_info "Remote access configured and verified!"
+    else
+        echo ""
+        log_warn "Kubeconfig set but initial connection may need a moment"
+        log_info "Test manually: ssh $remote_host kubectl get nodes"
+    fi
+
+    echo ""
+    echo "=========================================="
+    echo "Tailscale auth proxy configured on $remote_host"
+    echo "=========================================="
+    echo ""
+    echo "Context: ${operator_host}.${TAILNET_NAME}.ts.net"
+    echo "Auth:    Tailscale identity (no tokens needed)"
+    echo ""
+}
+
 # Test remote access
 cmd_test() {
     local kubeconfig="${1:-$OUTPUT_FILE}"
@@ -390,6 +494,7 @@ Usage:
   $0 <command>
 
 Commands:
+  configure   Configure remote host via Tailscale auth proxy (native, recommended)
   generate    Generate new token and store in Key Vault (run after cluster recreation)
   get         Retrieve token from Key Vault and generate kubeconfig file
   push        Push kubeconfig to remote machine via SSH (run from cluster host)
@@ -398,6 +503,9 @@ Commands:
   test        Test remote kubectl access
 
 Examples:
+  # Configure remote host via Tailscale auth proxy (recommended):
+  $0 configure thinkpad         # Uses operator's API server proxy, no tokens
+
   # After cluster recreation (on cluster host):
   $0 generate
 
@@ -433,6 +541,10 @@ EOF
 
 # Main
 case "${1:-help}" in
+    configure)
+        shift || true
+        cmd_configure "$@"
+        ;;
     generate)
         cmd_generate
         ;;

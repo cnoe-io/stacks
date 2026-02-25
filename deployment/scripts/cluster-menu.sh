@@ -424,6 +424,7 @@ TAILSCALE_KUBECONFIG_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/tailscale-
 if [ -f "$TAILSCALE_KUBECONFIG_SCRIPT" ]; then
   alias ts-kubeconfig="$TAILSCALE_KUBECONFIG_SCRIPT"
   alias ts-kubeconfig-gen="$TAILSCALE_KUBECONFIG_SCRIPT generate"
+  alias ts-kubeconfig-configure="$TAILSCALE_KUBECONFIG_SCRIPT configure"
 fi
 
 DEVENV_UP_SCRIPT="$STACKS_DIR/deployment/scripts/devenv-up.sh"
