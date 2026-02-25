@@ -35,7 +35,7 @@ spec:
               value: "0.0.0.0"
             - name: PORT
               value: "3000"
-            - name: AGENTUITY_BASE_URL
+            - name: BETTER_AUTH_URL
               value: "https://agentuity-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}"
             - name: DATABASE_URL
               value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
@@ -54,6 +54,18 @@ spec:
                 secretKeyRef:
                   name: agentuity-coder-secrets
                   key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: agentuity-coder-secrets
+                  key: GOOGLE_CLIENT_ID
+                  optional: true
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: agentuity-coder-secrets
+                  key: GOOGLE_CLIENT_SECRET
                   optional: true
           resources:
             requests:
