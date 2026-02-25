@@ -52,11 +52,11 @@ spec:
                   fieldPath: metadata.namespace
           resources:
             limits:
-              cpu: "4"
-              memory: 4Gi
+              cpu: "8"
+              memory: 8Gi
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: "1"
+              memory: 2Gi
           securityContext:
             # AIO sandbox runs as root — Chrome needs --no-sandbox and
             # the entrypoint runs groupadd/useradd which need full root caps
