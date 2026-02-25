@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: ai-platform-engineering
   name: caipe-tailscale
   annotations:
     tailscale.com/hostname: "caipe-ryzen"

@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: dapr-system
   name: dapr-tailscale
   annotations:
     tailscale.com/hostname: "dapr-ryzen"

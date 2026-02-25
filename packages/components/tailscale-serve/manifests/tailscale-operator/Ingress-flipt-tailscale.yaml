@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: feature-flags
   name: flipt-tailscale
   annotations:
     tailscale.com/hostname: "flipt-ryzen"

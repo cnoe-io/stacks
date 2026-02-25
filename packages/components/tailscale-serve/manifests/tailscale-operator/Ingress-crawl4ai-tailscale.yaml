@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: crawl4ai
   name: crawl4ai-tailscale
   annotations:
     tailscale.com/hostname: "crawl4ai-ryzen"

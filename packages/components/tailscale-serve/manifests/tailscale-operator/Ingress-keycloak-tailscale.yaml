@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: keycloak
   name: keycloak-tailscale
   annotations:
     tailscale.com/hostname: "keycloak-ryzen"

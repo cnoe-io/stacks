@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: observability
   name: langfuse-tailscale
   annotations:
     tailscale.com/hostname: "langfuse-ryzen"

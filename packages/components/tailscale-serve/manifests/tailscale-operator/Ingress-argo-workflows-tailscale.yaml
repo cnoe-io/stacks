@@ -1,6 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  namespace: argo
   name: argo-workflows-tailscale
   annotations:
     tailscale.com/hostname: "argo-workflows-ryzen"
