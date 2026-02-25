@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAMESPACE=${IDPB_NAMESPACE:-idpbuilder-localdev}
+NAMESPACE=${IDPB_NAMESPACE:-gitops-localdev}
 ARGO_NAMESPACE=${ARGO_NAMESPACE:-argocd}
 
 log() {

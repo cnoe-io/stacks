@@ -7,7 +7,7 @@ rules:
   - apiGroups:
       - ""
     resourceNames:
-      - idpbuilder-cert
+      - gitops-cert
     resources:
       - secrets
     verbs:

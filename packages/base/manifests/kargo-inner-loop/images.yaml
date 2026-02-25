@@ -7,7 +7,7 @@
 #   - Warehouse refresh mappings in preload-images.sh
 #
 # Global config:
-#   clusterHost  - Hostname used by idpbuilder (detected from CLUSTER_HOST env or hostname -s)
+#   clusterHost  - Hostname used by gitops (detected from CLUSTER_HOST env or hostname -s)
 #   giteaOrg     - Gitea organization for manifests (default: giteaadmin)
 #
 # Image fields:

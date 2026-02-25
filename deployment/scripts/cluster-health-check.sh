@@ -140,7 +140,7 @@ check_webhook_job() {
   # This happens with BeforeHookCreation delete policy
   local webhook_count=$(kubectl get secret -n gitea gitea-credential -o jsonpath='{.data.token}' 2>/dev/null | base64 -d | \
     xargs -I {} curl -sk -H "Authorization: token {}" \
-    "https://gitea.cnoe.localtest.me:8443/api/v1/repos/giteaadmin/idpbuilder-thinkpad-backstage-manifests/hooks" 2>/dev/null | \
+    "https://gitea.cnoe.localtest.me:8443/api/v1/repos/giteaadmin/gitops-thinkpad-backstage-manifests/hooks" 2>/dev/null | \
     jq 'length' 2>/dev/null || echo "0")
 
   if [ "$webhook_count" -gt 0 ]; then

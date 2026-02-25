@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://agentuity-coder/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/active-development/manifests/agentuity-coder/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: agentuity-coder

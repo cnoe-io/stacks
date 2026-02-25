@@ -2,7 +2,7 @@
 #
 # Register devenv webhook listener with all Gitea repositories
 #
-# This script creates webhooks on all idpbuilder-* repos to send push events
+# This script creates webhooks on all gitops-* repos to send push events
 # to the local devenv webhook listener for real-time change notifications.
 #
 # Usage:
@@ -73,16 +73,16 @@ if [[ -z "$repos_response" ]]; then
     exit 1
 fi
 
-# Filter to idpbuilder repos only
-repos=$(echo "$repos_response" | jq -r '.data[].full_name' 2>/dev/null | grep "idpbuilder-" || true)
+# Filter to gitops repos only
+repos=$(echo "$repos_response" | jq -r '.data[].full_name' 2>/dev/null | grep "gitops-" || true)
 
 if [[ -z "$repos" ]]; then
-    log_warn "No idpbuilder-* repositories found"
+    log_warn "No gitops-* repositories found"
     exit 0
 fi
 
 repo_count=$(echo "$repos" | wc -l)
-log_info "Found $repo_count idpbuilder repositories"
+log_info "Found $repo_count gitops repositories"
 echo ""
 
 # Track results
@@ -94,7 +94,7 @@ failed=0
 while IFS= read -r repo; do
     [[ -z "$repo" ]] && continue
 
-    app_name=$(echo "$repo" | sed 's/.*idpbuilder-[^-]*-//')
+    app_name=$(echo "$repo" | sed 's/.*gitops-[^-]*-//')
 
     # Check if webhook already exists
     existing_hooks=$(curl -s -k -u "$GITEA_USER:$GITEA_TOKEN" \

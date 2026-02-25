@@ -9,9 +9,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://tekton-pipelines/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: .
+    path: packages/components/kind-only/manifests/tekton-pipelines/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: tekton-pipelines

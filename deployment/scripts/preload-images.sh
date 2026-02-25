@@ -204,7 +204,7 @@ get_gitea_credentials() {
     password=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
 
     if [ -z "$password" ]; then
-      # Fallback to idpbuilder dev password
+      # Fallback to gitops dev password
       password="developer"
     fi
 

@@ -78,7 +78,7 @@ check_secret_exists() {
 }
 
 if ! $FORCE; then
-    if check_secret_exists "IDPBUILDER-TLS-CRT"; then
+    if check_secret_exists "gitops-TLS-CRT"; then
         log_warning "Persistent TLS certificate already exists in Key Vault"
         log_warning "Use --force to overwrite"
         exit 0
@@ -215,30 +215,30 @@ CA_CRT_B64=$(base64 -w0 < "$TMPDIR/ca.crt")
 
 az keyvault secret set \
     --vault-name "$VAULT_NAME" \
-    --name "IDPBUILDER-TLS-CRT" \
+    --name "gitops-TLS-CRT" \
     --value "$TLS_CRT_B64" \
-    --description "Persistent TLS certificate for idpbuilder (base64 PEM)" \
+    --description "Persistent TLS certificate for gitops (base64 PEM)" \
     --output none
 
-log_success "Uploaded IDPBUILDER-TLS-CRT"
+log_success "Uploaded gitops-TLS-CRT"
 
 az keyvault secret set \
     --vault-name "$VAULT_NAME" \
-    --name "IDPBUILDER-TLS-KEY" \
+    --name "gitops-TLS-KEY" \
     --value "$TLS_KEY_B64" \
-    --description "Persistent TLS private key for idpbuilder (base64 PEM)" \
+    --description "Persistent TLS private key for gitops (base64 PEM)" \
     --output none
 
-log_success "Uploaded IDPBUILDER-TLS-KEY"
+log_success "Uploaded gitops-TLS-KEY"
 
 az keyvault secret set \
     --vault-name "$VAULT_NAME" \
-    --name "IDPBUILDER-CA-CRT" \
+    --name "gitops-CA-CRT" \
     --value "$CA_CRT_B64" \
-    --description "Persistent CA certificate for idpbuilder (base64 PEM)" \
+    --description "Persistent CA certificate for gitops (base64 PEM)" \
     --output none
 
-log_success "Uploaded IDPBUILDER-CA-CRT"
+log_success "Uploaded gitops-CA-CRT"
 
 # =============================================================================
 # Summary
@@ -250,18 +250,18 @@ log_success "Persistent certificates uploaded to Azure Key Vault"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Secrets created in $VAULT_NAME:"
-echo "  - IDPBUILDER-TLS-CRT       (Server certificate for K8s TLS secrets)"
-echo "  - IDPBUILDER-TLS-KEY       (Server private key for K8s TLS secrets)"
-echo "  - IDPBUILDER-CA-CRT        (CA certificate for browser trust stores)"
+echo "  - gitops-TLS-CRT       (Server certificate for K8s TLS secrets)"
+echo "  - gitops-TLS-KEY       (Server private key for K8s TLS secrets)"
+echo "  - gitops-CA-CRT        (CA certificate for browser trust stores)"
 echo ""
 echo "Certificate validity: $(date -d "+$CERT_VALIDITY_DAYS days" +%Y-%m-%d)"
 echo ""
 echo "PKI Structure:"
-echo "  CA Certificate (IDPBUILDER-CA-CRT):"
+echo "  CA Certificate (gitops-CA-CRT):"
 echo "    - Has CA:TRUE (can sign certificates)"
 echo "    - Install in browser trust stores (Chrome, Firefox)"
 echo ""
-echo "  Server Certificate (IDPBUILDER-TLS-CRT):"
+echo "  Server Certificate (gitops-TLS-CRT):"
 echo "    - Has CA:FALSE (end-entity certificate)"
 echo "    - Signed by CA certificate"
 echo "    - Use in K8s TLS secrets for ingress"

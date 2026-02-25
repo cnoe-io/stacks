@@ -11,9 +11,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://atlas-operator/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/kind-only/manifests/atlas-operator/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: atlas-operator

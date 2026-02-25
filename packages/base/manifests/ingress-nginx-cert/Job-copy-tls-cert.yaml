@@ -18,12 +18,12 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "Copying idpbuilder-cert to persistent-tls-cert..."
+              echo "Copying gitops-cert to persistent-tls-cert..."
               if kubectl get secret persistent-tls-cert -n ingress-nginx 2>/dev/null; then
                 echo "persistent-tls-cert already exists, skipping"
                 exit 0
               fi
-              kubectl get secret idpbuilder-cert -n ingress-nginx -o json | \
+              kubectl get secret gitops-cert -n ingress-nginx -o json | \
                 jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.managedFields) | .metadata.name = "persistent-tls-cert"' | \
                 kubectl apply -f -
               echo "Certificate copied successfully"

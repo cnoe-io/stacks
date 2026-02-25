@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://fn-system/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/active-development/manifests/fn-system/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder

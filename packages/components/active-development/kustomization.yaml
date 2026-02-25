@@ -5,12 +5,12 @@ kind: Component
 #
 # Architecture:
 #   - Single ArgoCD app per application (no separate *-local-dev apps)
-#   - idpbuilder pushes manifests to Gitea (main branch)
+#   - gitops pushes manifests to Gitea (main branch)
 #   - Kargo updates image tags on main branch via kustomize-set-image
 #   - ArgoCD syncs from main branch
 #
 # Config changes (fast path, ~3-10s):
-#   Edit manifests/<app>/ → devenv up → idpbuilder → Gitea (main) → ArgoCD syncs
+#   Edit manifests/<app>/ → devenv up → gitops → Gitea (main) → ArgoCD syncs
 #
 # Image changes (Kargo path, ~60s):
 #   docker push → Kargo Warehouse → Stage → kustomize-set-image → push main → ArgoCD syncs

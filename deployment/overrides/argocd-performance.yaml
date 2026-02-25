@@ -1,5 +1,5 @@
 # ArgoCD Performance Tuning Override
-# Applied via: idpbuilder create --package-custom-file argocd:deployment/overrides/argocd-performance.yaml
+# Applied via: kubectl apply -f deployment/overrides/argocd-performance.yaml
 #
 # Key optimizations:
 # - Increased parallelism for faster sync of 128+ applications

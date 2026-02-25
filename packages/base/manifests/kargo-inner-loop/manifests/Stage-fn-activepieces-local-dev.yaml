@@ -22,7 +22,7 @@ spec:
       vars:
         # ${TAILSCALE_HOST} is substituted by build.sh at build time
         - name: gitRepoURL
-          value: https://gitea.cnoe.localtest.me:8443/giteaadmin/idpbuilder-${TAILSCALE_HOST}-fn-activepieces-manifests.git
+          value: https://gitea.cnoe.localtest.me:8443/giteaadmin/gitops-${TAILSCALE_HOST}-fn-activepieces-manifests.git
         - name: imageRepoURL
           value: gitea.cnoe.localtest.me:8443/giteaadmin/fn-activepieces
       steps:

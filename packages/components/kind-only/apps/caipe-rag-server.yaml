@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://caipe-rag-server/manifests
+    path: packages/components/kind-only/manifests/caipe-rag-server/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

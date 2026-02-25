@@ -32,7 +32,7 @@ DEVCONTAINERS_DIR="${STACKS_DIR}/devcontainers"
 # Registry configuration
 GITEA_REGISTRY="${GITEA_REGISTRY:-gitea.cnoe.localtest.me:8443}"
 GITEA_USER="${GITEA_USER:-giteaadmin}"
-# Default password matches idpbuilder's --dev-password default
+# Default password matches gitops's --dev-password default
 GITEA_PASSWORD="${GITEA_PASSWORD:-developer}"
 
 # Build control - default to NOT building (smart push mode)

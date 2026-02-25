@@ -10,8 +10,8 @@ metadata:
 spec:
   project: default
   source:
-    path: .
-    repoURL: cnoe://kubevela-observability/manifests
+    path: packages/base/manifests/kubevela-observability/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   destination:
     server: https://kubernetes.default.svc
     namespace: vela-system

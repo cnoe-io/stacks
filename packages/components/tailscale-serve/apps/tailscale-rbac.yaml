@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://tailscale-rbac/manifests
+    path: packages/components/tailscale-serve/manifests/tailscale-rbac/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://selfsigned-issuer/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/base/manifests/selfsigned-issuer/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

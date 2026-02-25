@@ -11,9 +11,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://caipe-mcp-github
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/kind-only/manifests/caipe-mcp-github
   destination:
     server: https://kubernetes.default.svc
     namespace: ai-platform-engineering

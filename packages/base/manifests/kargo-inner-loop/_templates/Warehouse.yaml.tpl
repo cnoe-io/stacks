@@ -12,10 +12,10 @@ spec:
   freightCreationPolicy: Automatic
   interval: 30s
   subscriptions:
-    # Config source - Gitea repo from idpbuilder
+    # Config source - Gitea repo from gitops
     # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
     - git:
-        repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/idpbuilder-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
+        repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/gitops-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
         branch: main
         insecureSkipTLSVerify: true
         strictSemvers: false

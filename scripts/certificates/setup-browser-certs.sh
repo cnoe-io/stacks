@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Certificate setup for browsers - imports IDPBuilder CA into Firefox and Chromium trust stores
+# Certificate setup for browsers - imports gitops CA into Firefox and Chromium trust stores
 set -euo pipefail
 
 GREEN='\033[0;32m'
@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${GREEN}======================================"
-echo -e "IDPBuilder Certificate Import for Browsers"
+echo -e "gitops Certificate Import for Browsers"
 echo -e "======================================${NC}"
 
 mkdir -p "$CERT_DIR" "$CHROMIUM_POLICIES_DIR"
@@ -57,7 +57,7 @@ if [[ -n "$CERT_SOURCE" ]]; then
         echo -e "${RED}❌ Provided certificate file not found: $CERT_SOURCE${NC}"
         exit 1
     fi
-    cp "$CERT_SOURCE" "$CERT_DIR/idpbuilder.crt"
+    cp "$CERT_SOURCE" "$CERT_DIR/gitops.crt"
     echo "  ✓ Certificate copied from $CERT_SOURCE"
 else
     if ! $SKIP_CLUSTER_CHECK && ! kubectl cluster-info &>/dev/null; then
@@ -66,15 +66,15 @@ else
         exit 1
     fi
 
-    echo -e "${GREEN}Extracting IDPBuilder certificate...${NC}"
-    if kubectl get secret idpbuilder-cert -n ingress-nginx &>/dev/null; then
-        kubectl get secret idpbuilder-cert -n ingress-nginx -o jsonpath='{.data.tls\.crt}' | base64 -d > "$CERT_DIR/idpbuilder.crt"
+    echo -e "${GREEN}Extracting gitops certificate...${NC}"
+    if kubectl get secret gitops-cert -n ingress-nginx &>/dev/null; then
+        kubectl get secret gitops-cert -n ingress-nginx -o jsonpath='{.data.tls\.crt}' | base64 -d > "$CERT_DIR/gitops.crt"
         echo "  ✓ Certificate extracted"
-    elif kubectl get secret idpbuilder-cert -n default &>/dev/null; then
-        kubectl get secret idpbuilder-cert -n default -o jsonpath='{.data.tls\.crt}' | base64 -d > "$CERT_DIR/idpbuilder.crt"
+    elif kubectl get secret gitops-cert -n default &>/dev/null; then
+        kubectl get secret gitops-cert -n default -o jsonpath='{.data.tls\.crt}' | base64 -d > "$CERT_DIR/gitops.crt"
         echo "  ✓ Certificate extracted"
     else
-        echo -e "${YELLOW}⚠️  Warning: IDPBuilder certificate not found${NC}"
+        echo -e "${YELLOW}⚠️  Warning: gitops certificate not found${NC}"
     fi
 fi
 
@@ -104,7 +104,7 @@ run_certutil() {
 }
 
 echo -e "${GREEN}Importing certificate to browser trust stores...${NC}"
-if [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
+if [[ -f "$CERT_DIR/gitops.crt" ]]; then
     if command -v certutil &>/dev/null; then
         # Import for Chromium (uses shared NSS database)
         echo "  Importing to Chromium NSS database..."
@@ -112,8 +112,8 @@ if [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
             mkdir -p "$HOME/.pki/nssdb"
             run_certutil -N -d sql:$HOME/.pki/nssdb --empty-password
         fi
-        run_certutil -D -n "IDPBuilder-CA" -d sql:$HOME/.pki/nssdb 2>/dev/null || true
-        run_certutil -A -n "IDPBuilder-CA" -t "C,," -d sql:$HOME/.pki/nssdb -i "$CERT_DIR/idpbuilder.crt"
+        run_certutil -D -n "gitops-CA" -d sql:$HOME/.pki/nssdb 2>/dev/null || true
+        run_certutil -A -n "gitops-CA" -t "C,," -d sql:$HOME/.pki/nssdb -i "$CERT_DIR/gitops.crt"
         echo "  ✓ Certificate imported to Chromium NSS database"
 
         # Import for Firefox (each profile has its own cert database)
@@ -124,9 +124,9 @@ if [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
                 profile_name=$(basename "$profile_dir")
                 echo "    Processing Firefox profile: $profile_name"
                 # Remove old certificate if exists
-                run_certutil -D -n "IDPBuilder-CA" -d sql:"$profile_dir" 2>/dev/null || true
+                run_certutil -D -n "gitops-CA" -d sql:"$profile_dir" 2>/dev/null || true
                 # Add new certificate
-                run_certutil -A -n "IDPBuilder-CA" -t "TC,C,C" -d sql:"$profile_dir" -i "$CERT_DIR/idpbuilder.crt"
+                run_certutil -A -n "gitops-CA" -t "TC,C,C" -d sql:"$profile_dir" -i "$CERT_DIR/gitops.crt"
                 echo "    ✓ Certificate imported to Firefox profile: $profile_name"
                 FIREFOX_IMPORTED=true
             fi
@@ -145,14 +145,14 @@ if [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
         echo -e "${YELLOW}     Please install the nss tools package to provide certutil${NC}"
     fi
 else
-    echo -e "${RED}  ❌ Certificate file not found at ${CERT_DIR}/idpbuilder.crt${NC}"
+    echo -e "${RED}  ❌ Certificate file not found at ${CERT_DIR}/gitops.crt${NC}"
 fi
 
 NEED_WRAPPER=false
 if ! command -v certutil &>/dev/null; then
     NEED_WRAPPER=true
 fi
-if [[ ! -f "$CERT_DIR/idpbuilder.crt" ]]; then
+if [[ ! -f "$CERT_DIR/gitops.crt" ]]; then
     NEED_WRAPPER=true
 fi
 
@@ -198,11 +198,11 @@ echo -e "Certificate Setup Complete!"
 echo -e "======================================${NC}"
 echo
 
-if command -v certutil &>/dev/null && [[ -f "$CERT_DIR/idpbuilder.crt" ]]; then
+if command -v certutil &>/dev/null && [[ -f "$CERT_DIR/gitops.crt" ]]; then
     echo -e "${BLUE}✅ Certificate successfully imported!${NC}"
     echo
     echo -e "${BLUE}Usage:${NC}"
-    echo "  Your browsers will now trust IDPBuilder certificates!"
+    echo "  Your browsers will now trust gitops certificates!"
     echo "  $ firefox       # Use Firefox as your default browser"
     echo "  $ chromium      # Or use Chromium"
     echo

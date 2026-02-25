@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://spark-operator/manifests
+    path: packages/components/kind-only/manifests/spark-operator/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

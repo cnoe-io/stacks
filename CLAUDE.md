@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-GitOps infrastructure repository using **Kustomize** to define Kubernetes manifests, deployed via [idpBuilder](https://cnoe.io/docs/idpbuilder) and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
+GitOps infrastructure repository using **Kustomize** to define Kubernetes manifests, deployed natively and managed by ArgoCD. Stack includes Backstage, Keycloak, External Secrets Operator, Kargo pipelines, and multi-environment support.
 
 **Quick Start:**
 ```bash
@@ -14,11 +14,9 @@ cld  # cluster-deploy: full cluster creation
 
 **CNOE** (Cloud Native Operational Excellence): Open-source-first, Kubernetes-powered platform framework. See `docs/cnoe-overview.md`.
 
-**idpBuilder**: Spins up complete IDP locally (Docker only). Creates kind cluster, installs ArgoCD + Gitea + ingress-nginx. Uses `cnoe://` URL syntax for local packages. [Documentation](https://cnoe.io/docs/idpbuilder) | [GitHub](https://github.com/cnoe-io/idpbuilder)
 
 ## Cluster Lifecycle Commands
 
-**CRITICAL:** Never use `idpbuilder` commands directly - they require the exact same flags as when the cluster was created. Always use cluster-menu.sh commands which embed the correct flags.
 
 ```bash
 source ~/stacks/deployment/scripts/cluster-menu.sh
@@ -26,7 +24,7 @@ source ~/stacks/deployment/scripts/cluster-menu.sh
 
 | Command | Alias | Purpose |
 |---------|-------|---------|
-| `cluster-deploy` | `cld` | Full cluster creation (Azure auth → kustomize build → idpbuilder → post-setup) |
+| `cluster-deploy` | `cld` | Full cluster creation (Azure auth → kustomize build → native gitops → post-setup) |
 | `cluster-recreate` | `clr` | Delete + recreate with Tailscale cleanup and health monitoring |
 | `cluster-update` | `clu` | Idempotent manifest updates (fastest path for existing clusters) |
 | `cluster-build` | `clb` | Kustomize package synthesis only (no apply) |
@@ -37,14 +35,14 @@ source ~/stacks/deployment/scripts/cluster-menu.sh
 1. Azure authentication (Key Vault access)
 2. Hostname detection (thinkpad, ryzen, hetzner)
 3. Kustomize build → `packages/dist/<env>/`
-4. idpbuilder create with correct flags
+4. native gitops create with correct flags
 5. Parallel: image preload, CA inject, Tailscale setup
 6. ArgoCD token initialization
 7. Sync apps without auto-sync
 
 ### cluster-recreate Workflow
 1. Tailscale operator cleanup (kubeconfig regeneration)
-2. idpbuilder delete
+2. native gitops delete
 3. cluster-deploy
 4. Health wait with timing summary
 
@@ -54,12 +52,12 @@ source ~/stacks/deployment/scripts/cluster-menu.sh
 ```bash
 dev-watch               # Start watch + rebuild + apply (standalone)
 # Edit files in packages/base/, components/, overlays/
-# Changes auto-sync within 2-3 seconds (watchexec + idpbuilder)
+# Changes auto-sync within 2-3 seconds (watchexec + native gitops)
 ```
 
 The `dev-watch` script (`deployment/scripts/devenv-up.sh`) monitors `packages/` directories and automatically:
 1. Rebuilds kustomize via `make build-kustomize-kind-$CLUSTER_NAME`
-2. Applies via `idpbuilder create` with correct flags
+2. Applies via `native gitops create` with correct flags
 
 **Before running `cluster-update` manually:** Check if `dev-watch` is already running - if so, changes are automatically synced.
 
@@ -108,7 +106,7 @@ packages/
 │   ├── talos/                  # Talos production
 │   └── hub/                    # Hub multi-cluster
 └── dist/                       # Generated output (gitignored)
-    └── <env>/                  # idpbuilder-compatible structure
+    └── <env>/                  # native gitops-compatible structure
         ├── <app>.yaml          # ArgoCD Application
         └── <app>/manifests/    # K8s manifests for cnoe://
 ```
@@ -118,7 +116,7 @@ packages/
 | Component | Apps | Purpose |
 |-----------|------|---------|
 | base | ~51 | Shared infrastructure (cert-manager, external-secrets, keycloak, backstage) |
-| kind-only | ~43 | KIND-specific (CAIPE, idpbuilder-gitea, azure-workload-identity) |
+| kind-only | ~43 | KIND-specific (CAIPE, native gitops-gitea, azure-workload-identity) |
 | tailscale-serve | ~20 | Tailscale proxies (*-tailscale-serve apps) |
 | observability | ~18 | LGTM stack (grafana, loki, tempo, langfuse) |
 | active-development | 7 | Apps with Kargo inner-loop pipelines (local Gitea registry images) |
@@ -129,7 +127,7 @@ packages/
 
 **Helm-based**: ArgoCD manages Helm chart with `source.repoURL` pointing to chart repository, `helm.valuesObject` for configuration.
 
-**Manifest-based**: Local manifests via `cnoe://<package>` URL. idpBuilder creates Gitea repo, pushes manifests, rewrites URL for ArgoCD.
+**Manifest-based**: Local manifests via the local stacks repository URL directly.
 
 **Kargo-managed (Inner Loop)**: Apps with local development pipelines. Key requirements:
 - Deployment image must reference **local Gitea registry**: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
@@ -153,8 +151,8 @@ See `docs/AZURE_WORKLOAD_IDENTITY.md` for configuration.
 |--------|---------|
 | `cluster-menu.sh` | Orchestration - lifecycle commands (cld, clu, clr, clst) |
 | `argocd-auth.sh` | Token management with 1Password/Azure Key Vault |
-| `preload-images.sh` | Image caching (parallel with idpbuilder) |
-| `push-devcontainers.sh` | Build/push shared devcontainers (parallel with idpbuilder) |
+| `preload-images.sh` | Image caching (parallel with native gitops) |
+| `push-devcontainers.sh` | Build/push shared devcontainers (parallel with native gitops) |
 | `cluster-health-check.sh` | Timing, benchmarks, health summary |
 | `devenv-up.sh` | Standalone watch + rebuild + apply (replaces devenv up) |
 | `devenv-watch-handler.sh` | Automatic rebuild handler for dev-watch |
@@ -223,8 +221,8 @@ kubectl kustomize packages/overlays/kind | head -100
 make build-kind
 ls packages/dist/kind/
 
-# idpBuilder logs
-idpbuilder get logs
+# native gitops logs
+native gitops get logs
 
 # ArgoCD sync issues
 argocd app sync argocd/<app> --prune --insecure
@@ -312,7 +310,7 @@ kubectl get warehouses,stages,freights -n kargo-pipelines
 ```
 
 **Single-Branch Model (Inner Loop):**
-All inner-loop apps use a **single-branch model** where Kargo updates the image tag in `kustomization.yaml` on the `main` branch. idpBuilder manages the source manifests, and Kargo modifies only the image tag.
+All inner-loop apps use a **single-branch model** where Kargo updates the image tag in `kustomization.yaml` on the `main` branch. native gitops manages the source manifests, and Kargo modifies only the image tag.
 
 **Key patterns:**
 - Deployments reference local Gitea registry: `gitea.cnoe.localtest.me:8443/giteaadmin/<app>:latest`
@@ -349,9 +347,9 @@ kubectl get agents,modelconfigs,mcpservers -n kagent
 
 ## External References
 
-**idpBuilder:**
-- Documentation: https://cnoe.io/docs/idpbuilder
-- GitHub: https://github.com/cnoe-io/idpbuilder
+**native gitops:**
+- Documentation: https://cnoe.io/docs/native gitops
+- GitHub: https://github.com/cnoe-io/native gitops
 
 **Related Docs:**
 - `docs/cnoe-overview.md` - CNOE framework

@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://backstage-templates/entities
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/base/manifests/backstage-templates/entities
     directory:
       exclude: 'catalog-info.yaml'
   destination:

@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://redisinsight-tailscale-serve/manifests
+    path: packages/components/tailscale-serve/manifests/redisinsight-tailscale-serve/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

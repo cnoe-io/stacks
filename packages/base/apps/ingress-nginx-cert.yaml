@@ -13,8 +13,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://ingress-nginx-cert
+    path: packages/base/manifests/ingress-nginx-cert
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
   syncPolicy:
     automated:

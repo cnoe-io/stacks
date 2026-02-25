@@ -11,8 +11,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: .
-    repoURL: cnoe://observability-namespace/manifests
+    path: packages/components/observability/manifests/observability-namespace/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
   syncPolicy:
     automated:
       prune: true

@@ -1,6 +1,6 @@
 site_name: 'Argo Spark Example'
 nav:
   - Home: index.md
-  - idpBuilder: idpbuilder.md
+  - gitops: gitops.md
 plugins:
   - techdocs-core

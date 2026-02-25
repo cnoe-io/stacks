@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://letsencrypt-issuer/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/talos-only/manifests/letsencrypt-issuer/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

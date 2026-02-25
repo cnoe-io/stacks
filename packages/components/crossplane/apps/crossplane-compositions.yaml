@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://crossplane-compositions/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/crossplane/manifests/crossplane-compositions/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system

@@ -5,7 +5,7 @@
 # This script:
 #   1. Reads the static Deployment from git (version-controlled, no secrets)
 #   2. Fetches TLS certificate from Azure Key Vault
-#   3. Combines them into a single YAML file for idpbuilder -c nginx:
+#   3. Combines them into a single YAML file for gitops -c nginx:
 #
 # Architecture:
 #   - Static Deployment: deployment/overrides/nginx-hostnetwork-no-hostport.yaml (in git)
@@ -76,12 +76,12 @@ command -v az &>/dev/null || { log_error "Azure CLI (az) not found"; exit 1; }
 # Check if persistent secrets exist in Key Vault
 log_info "Checking for persistent TLS certificate in Azure Key Vault..."
 
-if ! az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" &>/dev/null; then
+if ! az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-CRT" &>/dev/null; then
     log_warning "Persistent TLS certificate not found in Key Vault"
     log_warning "Run setup-persistent-certs.sh first to generate and upload certificates"
     log_info "Falling back to standard nginx deployment without embedded certificate"
 
-    # Fall back to just copying the static deployment (idpbuilder will generate its own cert)
+    # Fall back to just copying the static deployment (gitops will generate its own cert)
     if [ -f "$NGINX_DEPLOYMENT" ]; then
         cp "$NGINX_DEPLOYMENT" "$OUTPUT_FILE"
         log_info "Using standard nginx deployment: $OUTPUT_FILE"
@@ -96,8 +96,8 @@ fi
 # Fetch certificates from Azure Key Vault
 log_info "Fetching TLS certificate from Azure Key Vault..."
 
-TLS_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" --query value -o tsv)
-TLS_KEY=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-KEY" --query value -o tsv)
+TLS_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-CRT" --query value -o tsv)
+TLS_KEY=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-KEY" --query value -o tsv)
 
 if [ -z "$TLS_CRT" ] || [ -z "$TLS_KEY" ]; then
     log_error "Failed to fetch TLS certificate or key from Key Vault"
@@ -133,7 +133,7 @@ metadata:
   namespace: ingress-nginx
   labels:
     app.kubernetes.io/name: persistent-tls-cert
-    app.kubernetes.io/part-of: idpbuilder
+    app.kubernetes.io/part-of: gitops
 type: kubernetes.io/tls
 data:
 YAML_HEADER
@@ -158,7 +158,7 @@ ARGOCD_OVERRIDE_FILE="/tmp/argocd-override-with-ca.yaml"
 log_info "Generating ArgoCD override with CA trust and performance tuning..."
 
 # Fetch CA certificate
-CA_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-CA-CRT" --query value -o tsv | base64 -d)
+CA_CRT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-CA-CRT" --query value -o tsv | base64 -d)
 
 if [ -n "$CA_CRT" ]; then
     cat > "$ARGOCD_OVERRIDE_FILE" <<EOF

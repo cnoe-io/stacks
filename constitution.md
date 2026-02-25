@@ -76,7 +76,7 @@ All Kubernetes manifests MUST be defined using type-safe infrastructure tools, n
 
 ### II. GitOps-First Deployment
 
-All platform services and applications MUST be deployed via ArgoCD using GitOps patterns. No imperative `kubectl apply` commands for production resources. All idpbuilder operations MUST use the cluster-menu.sh wrapper scripts.
+All platform services and applications MUST be deployed via ArgoCD using GitOps patterns. No imperative `kubectl apply` commands for production resources. 
 
 **Rationale**: GitOps ensures declarative, version-controlled, auditable infrastructure. ArgoCD provides automatic sync, drift detection, and rollback capabilities. The `cnoe://` URL syntax enables local development with the same GitOps workflow as production. The cluster-menu.sh scripts provide consistent, idempotent cluster management with proper flag handling and environment configuration.
 
@@ -94,11 +94,10 @@ All platform services and applications MUST be deployed via ArgoCD using GitOps 
   - `60+`: Applications, Ingresses
 - Sync policy MUST specify `automated.prune` and `automated.selfHeal` for production
 - **Cluster Operations**:
-  - MUST use `cluster-update` for deploying/updating manifests (never raw `idpbuilder create`)
+  - MUST use `cluster-update` for deploying/updating manifests 
   - MUST use `cluster-recreate` for full cluster recreation
   - MUST use `cluster-synth` for synthesis-only operations
-  - Direct `idpbuilder` commands are ONLY allowed when cluster-menu.sh functions don't cover the use case
-  - cluster-menu.sh automatically handles StaticPassword flags, environment variables, and CDK8s synthesis
+    - cluster-menu.sh automatically handles StaticPassword flags, environment variables, and CDK8s synthesis
 - **ArgoCD CLI Operations**:
   - MUST use `--insecure` flag for all local development commands (self-signed certificates)
   - MUST source `deployment/scripts/cluster-menu.sh` for automatic `ARGOCD_AUTH_TOKEN` setup
@@ -109,7 +108,7 @@ All platform services and applications MUST be deployed via ArgoCD using GitOps 
 - Production environments MUST reject direct `kubectl apply` (enforced via RBAC/OPA)
 - All Application manifests MUST include `argocd.argoproj.io/sync-wave` annotations
 - CI validation MUST verify ArgoCD Application manifests synthesize correctly
-- Documentation MUST reference cluster-menu.sh functions instead of raw idpbuilder commands
+- Documentation MUST reference cluster-menu.sh functions 
 - Synthesis MUST fail if `CLUSTER_TYPE` is set to unsupported value
 
 ### III. Multi-Environment Isolation
@@ -141,7 +140,6 @@ All application configuration, secrets references, and infrastructure resources 
 - **Unified Application Config**: Single `applications.ts` file MUST contain all applications for all cluster types
 - Application configs MUST include `clusterType: 'kind' | 'talos' | 'both'` field
 - Synthesis MUST filter applications based on `clusterType` field and current `CLUSTER_TYPE` environment variable
-- Chart types MUST be registered in `IdpBuilderChartFactory`
 - Secrets MUST use External Secrets Operator (ESO) with `ExternalSecret` CRDs
 - Infrastructure resources MUST be defined in `cdk8s/charts/infra/`
 - No environment variables or ConfigMaps created outside of CDK8s synthesis
@@ -184,7 +182,7 @@ Platform technology choices MUST align with CNOE (Cloud Native Operational Excel
 
 All applications and platform services MUST be organized as self-contained packages with manifests and ArgoCD Application definitions.
 
-**Rationale**: Package-based architecture enables modular deployment, independent versioning, and clear dependency management. IdpBuilder's `cnoe://` URL syntax requires this structure for local development workflow.
+**Rationale**: Package-based architecture enables modular deployment, independent versioning, and clear dependency management. Native Kustomize overlays use this structure to inherit and patch applications.
 
 **Requirements (nixidy)**:
 - Each application MUST synthesize to `nixidy-dist/<app>/manifests/` directory
@@ -312,7 +310,7 @@ Bootstrap and synthesis workflows MUST be consolidated across cluster types (KIN
 - **Application Filtering**: Synthesis MUST only include applications where `clusterType` matches current `CLUSTER_TYPE` or is `'both'`
 - **Source URL Utility**: `cdk8s/lib/source-url.ts` MUST provide centralized logic for ArgoCD source URL generation
 - **Orchestrator Separation**: Deployment orchestrators remain cluster-specific:
-  - KIND: `deployment/scripts/cluster-menu.sh` using idpBuilder
+  - KIND: `deployment/scripts/cluster-menu.sh` natively with kind
   - Talos: `scripts/bootstrap-cluster.sh` using Helm and kubectl
 - **Legacy Script Handling**: Old scripts (`wi-kind.sh`, `wi-kind-lib.sh`) MUST display deprecation warnings
 
@@ -497,7 +495,6 @@ Network access MUST follow zero-trust principles with Tailscale as the secure ac
 - Chart classes MUST define typed interfaces extending `ChartProps` for all constructor parameters
 - Complex charts MUST include JSDoc comments explaining purpose and usage
 - Chart props MUST be validated (throw errors for invalid configurations)
-- Charts MUST be registered in `IdpBuilderChartFactory` before use
 - Chart names MUST match class names (e.g., `BackstageChart` → `'BackstageChart'`)
 
 ### Synthesis Workflow

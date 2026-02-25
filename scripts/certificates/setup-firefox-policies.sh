@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Setup Firefox policies for IDPBuilder development
+# Setup Firefox policies for gitops development
 set -euo pipefail
 
 GREEN='\033[0;32m'
@@ -13,7 +13,7 @@ FIREFOX_USER_POLICIES="$HOME/.mozilla/firefox/policies"
 FIREFOX_SYSTEM_POLICIES="/usr/lib/firefox/distribution"
 
 echo -e "${GREEN}======================================"
-echo -e "Firefox Policy Setup for IDPBuilder"
+echo -e "Firefox Policy Setup for gitops"
 echo -e "======================================${NC}"
 
 # Create user policies directory
@@ -26,8 +26,8 @@ cat > "$FIREFOX_USER_POLICIES/policies.json" <<'EOF'
     "Certificates": {
       "ImportEnterpriseRoots": true,
       "Install": [
-        "/home/vpittamp/.local/share/cluster-certs/idpbuilder.crt",
-        "/home/vpittamp/stacks/certs/idpbuilder-ca.crt"
+        "/home/vpittamp/.local/share/cluster-certs/gitops.crt",
+        "/home/vpittamp/stacks/certs/gitops-ca.crt"
       ]
     },
     "DisableSecurityBypass": {
@@ -35,7 +35,7 @@ cat > "$FIREFOX_USER_POLICIES/policies.json" <<'EOF'
       "SafeBrowsing": false
     },
     "SecurityDevices": {
-      "IDPBuilder Local Development": "/home/vpittamp/.local/share/cluster-certs/"
+      "gitops Local Development": "/home/vpittamp/.local/share/cluster-certs/"
     },
     "Preferences": {
       "security.enterprise_roots.enabled": {
@@ -110,7 +110,7 @@ for profile_dir in "$HOME"/.mozilla/firefox/*.default* "$HOME"/.mozilla/firefox/
     if [[ -d "$profile_dir" ]]; then
         profile_name=$(basename "$profile_dir")
         cat > "$profile_dir/user.js" <<'EOF'
-// IDPBuilder Development Settings
+// gitops Development Settings
 user_pref("security.enterprise_roots.enabled", true);
 user_pref("network.stricttransportsecurity.preloadlist", false);
 user_pref("dom.security.https_only_mode", false);
@@ -130,7 +130,7 @@ echo
 echo -e "${BLUE}Next steps:${NC}"
 echo "  1. Restart Firefox for policies to take effect"
 echo "  2. Run the certificate sync script: ~/stacks/scripts/sync-cluster-certificates.sh"
-echo "  3. Access IDPBuilder services at https://*.cnoe.localtest.me:8443"
+echo "  3. Access gitops services at https://*.cnoe.localtest.me:8443"
 echo
 echo -e "${YELLOW}Note:${NC} These policies reduce Firefox security for local development."
 echo "      Only use this Firefox instance for development purposes."

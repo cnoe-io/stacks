@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://grafana-dashboards/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/components/observability/manifests/grafana-dashboards/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

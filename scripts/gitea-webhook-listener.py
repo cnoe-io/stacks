@@ -42,14 +42,14 @@ def log_timestamp():
 
 
 def extract_app_name(repo_name):
-    """Extract app name from idpbuilder repo name.
+    """Extract app name from gitops repo name.
 
-    Example: giteaadmin/idpbuilder-thinkpad-backstage -> backstage
+    Example: giteaadmin/gitops-thinkpad-backstage -> backstage
     """
     parts = repo_name.split('/')[-1]  # Get repo name without owner
-    if parts.startswith('idpbuilder-'):
-        # Remove idpbuilder- prefix and cluster name
-        # idpbuilder-thinkpad-backstage -> backstage
+    if parts.startswith('gitops-'):
+        # Remove gitops- prefix and cluster name
+        # gitops-thinkpad-backstage -> backstage
         segments = parts.split('-')
         if len(segments) >= 3:
             return '-'.join(segments[2:])  # Join remaining parts (handles multi-word app names)

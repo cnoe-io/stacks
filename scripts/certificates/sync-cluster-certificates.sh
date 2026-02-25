@@ -7,10 +7,10 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Support both idpbuilder-cert and persistent-tls-cert secret names
+# Support both gitops-cert and persistent-tls-cert secret names
 # persistent-tls-cert is used when persistent certificates from AKV are enabled
 CERT_SECRET_NAME="${CERT_SECRET_NAME:-persistent-tls-cert}"
-CERT_SECRET_NAME_FALLBACK="idpbuilder-cert"
+CERT_SECRET_NAME_FALLBACK="gitops-cert"
 CERT_NAMESPACE="${CERT_NAMESPACE:-ingress-nginx}"
 VAULT_NAME="${AZURE_KEYVAULT_NAME:-keyvault-thcmfmoo5oeow}"
 REGISTRY_HOST="${REGISTRY_HOST:-gitea.cnoe.localtest.me:8443}"
@@ -89,13 +89,13 @@ ensure_binary() {
 }
 
 install_system_certificate() {
-    local ca_path="$SYSTEM_CERT_DIR/idpbuilder-ca.crt"
+    local ca_path="$SYSTEM_CERT_DIR/gitops-ca.crt"
     if [ ! -f "$ca_path" ]; then
         error_exit "CA certificate not found at $ca_path. Run script without --system first."
     fi
 
     log "Installing CA into /usr/local/share/ca-certificates"
-    run_as_root install -Dm0644 "$ca_path" /usr/local/share/ca-certificates/idpbuilder-local.crt
+    run_as_root install -Dm0644 "$ca_path" /usr/local/share/ca-certificates/gitops-local.crt
 
     local update_ca
     if update_ca=$(command -v update-ca-certificates 2>/dev/null); then
@@ -107,7 +107,7 @@ install_system_certificate() {
             trust_bin=/run/current-system/sw/bin/trust
         fi
         if [ -n "$trust_bin" ]; then
-            run_as_root "$trust_bin" anchor --store /usr/local/share/ca-certificates/idpbuilder-local.crt
+            run_as_root "$trust_bin" anchor --store /usr/local/share/ca-certificates/gitops-local.crt
         else
             warn "No system CA update helper found; relying on certificate copy only"
         fi
@@ -124,9 +124,9 @@ if [ -n "$TARGET_USER" ]; then
         run_as_root install -d -o "$TARGET_USER" -g "$user_group" "$user_home/.docker/certs.d/$REGISTRY_HOST"
         run_as_root install -m0644 -o "$TARGET_USER" -g "$user_group" "$ca_path" "$user_home/.docker/certs.d/$REGISTRY_HOST/ca.crt"
         run_as_root install -d -o "$TARGET_USER" -g "$user_group" "$user_home/.local/share/cluster-certs"
-        run_as_root install -m0644 -o "$TARGET_USER" -g "$user_group" "$ca_path" "$user_home/.local/share/cluster-certs/idpbuilder-ca.crt"
-        if [ -f "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" ]; then
-            run_as_root install -m0644 -o "$TARGET_USER" -g "$user_group" "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" "$user_home/.local/share/cluster-certs/ca-bundle-with-idpbuilder.crt"
+        run_as_root install -m0644 -o "$TARGET_USER" -g "$user_group" "$ca_path" "$user_home/.local/share/cluster-certs/gitops-ca.crt"
+        if [ -f "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt" ]; then
+            run_as_root install -m0644 -o "$TARGET_USER" -g "$user_group" "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt" "$user_home/.local/share/cluster-certs/ca-bundle-with-gitops.crt"
         fi
         break
     done < /etc/passwd
@@ -146,7 +146,7 @@ ensure_binary openssl
 # Check if persistent TLS certificate exists in Azure Key Vault
 check_persistent_cert() {
     if command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
-        if az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" &>/dev/null 2>&1; then
+        if az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-CRT" &>/dev/null 2>&1; then
             return 0
         fi
     fi
@@ -162,9 +162,9 @@ if check_persistent_cert && ! $FORCE_UPDATE; then
     trap 'rm -rf "$tmpdir"' EXIT
 
     log "Fetching certificate from Azure Key Vault..."
-    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-CRT" --query value -o tsv | base64 -d > "$tmpdir/tls.crt"
-    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-TLS-KEY" --query value -o tsv | base64 -d > "$tmpdir/tls.key"
-    az keyvault secret show --vault-name "$VAULT_NAME" --name "IDPBUILDER-CA-CRT" --query value -o tsv | base64 -d > "$tmpdir/ca.crt"
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-CRT" --query value -o tsv | base64 -d > "$tmpdir/tls.crt"
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-TLS-KEY" --query value -o tsv | base64 -d > "$tmpdir/tls.key"
+    az keyvault secret show --vault-name "$VAULT_NAME" --name "gitops-CA-CRT" --query value -o tsv | base64 -d > "$tmpdir/ca.crt"
 
     new_fingerprint=$(openssl x509 -in "$tmpdir/tls.crt" -noout -fingerprint | cut -d= -f2)
     if [ -f "$CERT_CACHE_DIR/tls.crt" ]; then
@@ -181,19 +181,19 @@ if check_persistent_cert && ! $FORCE_UPDATE; then
         install -m0600 "$tmpdir/tls.key" "$CERT_CACHE_DIR/tls.key"
         install -m0644 "$tmpdir/ca.crt" "$CERT_CACHE_DIR/ca.crt"
 
-        install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/idpbuilder-ca.crt"
-        install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/idpbuilder-tls.crt"
+        install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/gitops-ca.crt"
+        install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/gitops-tls.crt"
 
         if [ -f /etc/ssl/certs/ca-bundle.crt ]; then
-            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt"
-            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-idpbuilder.crt"
+            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt"
+            cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-gitops.crt"
         fi
     fi
 
     # Continue with browser import and system trust installation
     if [ -x "$BROWSER_SCRIPT" ]; then
         log "Importing certificate into browser profiles (Firefox and Chromium)"
-        "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/idpbuilder-ca.crt" --no-cluster-check
+        "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/gitops-ca.crt" --no-cluster-check
     fi
 
     if [ "$(id -u)" -ne 0 ]; then
@@ -255,23 +255,23 @@ else
     install -m0600 "$tmpdir/tls.key" "$CERT_CACHE_DIR/tls.key"
     install -m0644 "$tmpdir/ca.crt" "$CERT_CACHE_DIR/ca.crt"
 
-    install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/idpbuilder-ca.crt"
-    install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/idpbuilder-tls.crt"
+    install -m0644 "$tmpdir/ca.crt" "$SYSTEM_CERT_DIR/gitops-ca.crt"
+    install -m0644 "$tmpdir/tls.crt" "$SYSTEM_CERT_DIR/gitops-tls.crt"
 
     if [ -f /etc/ssl/certs/ca-bundle.crt ]; then
-        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt"
-        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-idpbuilder.crt"
+        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt"
+        cat /etc/ssl/certs/ca-bundle.crt "$tmpdir/ca.crt" > "$CERT_CACHE_DIR/ca-bundle-with-gitops.crt"
     fi
 
-    if [ "$(id -u)" -ne 0 ] && [ -f "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" ]; then
+    if [ "$(id -u)" -ne 0 ] && [ -f "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt" ]; then
         mkdir -p "$HOME/.local/share/cluster-certs"
-        cp "$SYSTEM_CERT_DIR/ca-bundle-with-idpbuilder.crt" "$HOME/.local/share/cluster-certs/ca-bundle-with-idpbuilder.crt"
+        cp "$SYSTEM_CERT_DIR/ca-bundle-with-gitops.crt" "$HOME/.local/share/cluster-certs/ca-bundle-with-gitops.crt"
     fi
 fi
 
 if [ -x "$BROWSER_SCRIPT" ]; then
     log "Importing certificate into browser profiles (Firefox and Chromium)"
-    "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/idpbuilder-ca.crt" --no-cluster-check
+    "$BROWSER_SCRIPT" --cert-file "$SYSTEM_CERT_DIR/gitops-ca.crt" --no-cluster-check
 else
     warn "Browser import script not found at $BROWSER_SCRIPT"
 fi

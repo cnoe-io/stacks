@@ -12,9 +12,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cnoe://backstage/manifests
+    repoURL: https://gitea.cnoe.localtest.me:8443/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: "."
+    path: packages/base/manifests/backstage/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: backstage
