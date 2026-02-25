@@ -43,6 +43,9 @@
       "svc:k8s-api-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:k8s-api-talos": [
+        "tag:k8s-services"
+      ],
       "svc:argocd": [
         "tag:k8s-services"
       ],
@@ -53,6 +56,9 @@
         "tag:k8s-services"
       ],
       "svc:argocd-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:argocd-talos": [
         "tag:k8s-services"
       ],
       "svc:argocd-hub": [
@@ -70,6 +76,9 @@
       "svc:langfuse-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:langfuse-talos": [
+        "tag:k8s-services"
+      ],
       "svc:gitea": [
         "tag:k8s-services"
       ],
@@ -80,6 +89,9 @@
         "tag:k8s-services"
       ],
       "svc:gitea-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:gitea-talos": [
         "tag:k8s-services"
       ],
       "svc:kagent": [
@@ -94,6 +106,9 @@
       "svc:kagent-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:kagent-talos": [
+        "tag:k8s-services"
+      ],
       "svc:kargo": [
         "tag:k8s-services"
       ],
@@ -104,6 +119,9 @@
         "tag:k8s-services"
       ],
       "svc:kargo-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:kargo-talos": [
         "tag:k8s-services"
       ],
       "svc:headlamp": [
@@ -118,6 +136,9 @@
       "svc:headlamp-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:headlamp-talos": [
+        "tag:k8s-services"
+      ],
       "svc:keycloak": [
         "tag:k8s-services"
       ],
@@ -128,6 +149,9 @@
         "tag:k8s-services"
       ],
       "svc:keycloak-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:keycloak-talos": [
         "tag:k8s-services"
       ],
       "svc:backstage": [
@@ -142,6 +166,9 @@
       "svc:backstage-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:backstage-talos": [
+        "tag:k8s-services"
+      ],
       "svc:otel-collector": [
         "tag:k8s-services"
       ],
@@ -152,6 +179,9 @@
         "tag:k8s-services"
       ],
       "svc:otel-collector-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:otel-collector-talos": [
         "tag:k8s-services"
       ],
       "svc:grafana": [
@@ -166,6 +196,9 @@
       "svc:grafana-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:grafana-talos": [
+        "tag:k8s-services"
+      ],
       "svc:nixos-vm": [
         "tag:vm"
       ],
@@ -176,6 +209,9 @@
         "tag:vm"
       ],
       "svc:nixos-vm-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:nixos-vm-talos": [
         "tag:vm"
       ],
       "svc:k8s-api-hub": [
@@ -196,6 +232,9 @@
       "svc:mimir-hetzner": [
         "tag:k8s-services"
       ],
+      "svc:mimir-talos": [
+        "tag:k8s-services"
+      ],
       "svc:loki": [
         "tag:k8s-services"
       ],
@@ -206,6 +245,9 @@
         "tag:k8s-services"
       ],
       "svc:loki-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:loki-talos": [
         "tag:k8s-services"
       ],
       "svc:agentuity": [
@@ -236,6 +278,9 @@
         "tag:k8s-services"
       ],
       "svc:flowise-hetzner": [
+        "tag:k8s-services"
+      ],
+      "svc:flowise-talos": [
         "tag:k8s-services"
       ],
       "svc:ai-chatbot": [
