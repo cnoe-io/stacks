@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: argocd-${TAILSCALE_HOST}-tailscale-state
+  name: argocd-ryzen-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: mimir-tailscale-serve
-  name: mimir-${TAILSCALE_HOST}-tailscale-serve
+  name: mimir-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: mimir-${TAILSCALE_HOST}
+              value: mimir-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: mimir-${TAILSCALE_HOST}-tailscale-state
+            claimName: mimir-ryzen-tailscale-state
         - configMap:
             name: mimir-tailscale-serve-config
           name: config

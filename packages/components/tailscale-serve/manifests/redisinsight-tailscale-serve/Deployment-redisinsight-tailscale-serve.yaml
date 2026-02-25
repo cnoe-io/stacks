@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: redisinsight-tailscale-serve
-  name: redisinsight-${TAILSCALE_HOST}-tailscale-serve
+  name: redisinsight-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: redisinsight-${TAILSCALE_HOST}
+              value: redisinsight-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: redisinsight-${TAILSCALE_HOST}-tailscale-state
+            claimName: redisinsight-ryzen-tailscale-state
         - configMap:
             name: redisinsight-tailscale-serve-config
           name: config

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: backstage-tailscale-serve
-  name: backstage-${TAILSCALE_HOST}-tailscale-serve
+  name: backstage-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: backstage-${TAILSCALE_HOST}
+              value: backstage-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: backstage-${TAILSCALE_HOST}-tailscale-state
+            claimName: backstage-ryzen-tailscale-state
         - configMap:
             name: backstage-tailscale-serve-config
           name: config

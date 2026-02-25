@@ -13,7 +13,7 @@ spec:
   interval: 30s
   subscriptions:
     - git:
-        repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-workflow-builder-manifests.git
+        repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-ryzen-workflow-builder-manifests.git
         branch: main
         insecureSkipTLSVerify: true
         strictSemvers: false

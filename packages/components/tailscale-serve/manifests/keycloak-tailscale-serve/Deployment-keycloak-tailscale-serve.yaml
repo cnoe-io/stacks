@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: keycloak-tailscale-serve
-  name: keycloak-${TAILSCALE_HOST}-tailscale-serve
+  name: keycloak-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: keycloak-${TAILSCALE_HOST}
+              value: keycloak-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: keycloak-${TAILSCALE_HOST}-tailscale-state
+            claimName: keycloak-ryzen-tailscale-state
         - configMap:
             name: keycloak-tailscale-serve-config
           name: config

@@ -20,9 +20,9 @@ spec:
   promotionTemplate:
     spec:
       vars:
-        # ${TAILSCALE_HOST} is substituted by build.sh at build time
+        # ryzen is substituted by build.sh at build time
         - name: gitRepoURL
-          value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
+          value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-ryzen-__ARGOCD_APP__-manifests.git
         - name: imageRepoURL
           value: __REGISTRY__/__ORG__/__IMAGE_REPO__
       steps:

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ai-chatbot-${TAILSCALE_HOST}-tailscale-state
+  name: ai-chatbot-ryzen-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

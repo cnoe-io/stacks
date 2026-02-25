@@ -20,9 +20,9 @@ spec:
   promotionTemplate:
     spec:
       vars:
-        # ${TAILSCALE_HOST} is substituted by build.sh at build time
+        # ryzen is substituted by build.sh at build time
         - name: gitRepoURL
-          value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-agent-sandbox-config-manifests.git
+          value: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-ryzen-agent-sandbox-config-manifests.git
         - name: imageRepoURL
           value: gitea.cnoe.localtest.me/giteaadmin/node-sandbox
       steps:

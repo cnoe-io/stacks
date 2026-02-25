@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: crawl4ai-tailscale-serve
-  name: crawl4ai-${TAILSCALE_HOST}-tailscale-serve
+  name: crawl4ai-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: crawl4ai-${TAILSCALE_HOST}
+              value: crawl4ai-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: crawl4ai-${TAILSCALE_HOST}-tailscale-state
+            claimName: crawl4ai-ryzen-tailscale-state
         - configMap:
             name: crawl4ai-tailscale-serve-config
           name: config

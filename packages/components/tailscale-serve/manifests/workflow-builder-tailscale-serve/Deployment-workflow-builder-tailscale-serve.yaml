@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: workflow-builder-tailscale-serve
-  name: workflow-builder-${TAILSCALE_HOST}-tailscale-serve
+  name: workflow-builder-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: workflow-builder-${TAILSCALE_HOST}
+              value: workflow-builder-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: workflow-builder-${TAILSCALE_HOST}-tailscale-state
+            claimName: workflow-builder-ryzen-tailscale-state
         - configMap:
             name: workflow-builder-tailscale-serve-config
           name: config

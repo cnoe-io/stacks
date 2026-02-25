@@ -36,7 +36,7 @@ spec:
             - name: PORT
               value: "3000"
             - name: BETTER_AUTH_URL
-              value: "https://agentuity-${TAILSCALE_HOST}.${TAILSCALE_TAILNET}"
+              value: "https://agentuity-ryzen.${TAILSCALE_TAILNET}"
             - name: DATABASE_URL
               value: postgresql://postgres:password@postgresql.agentuity-coder.svc.cluster.local:5432/my_coder_db
             - name: AGENTUITY_AUTH_SECRET

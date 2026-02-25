@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: kargo-tailscale-serve
-  name: kargo-${TAILSCALE_HOST}-tailscale-serve
+  name: kargo-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: kargo-${TAILSCALE_HOST}
+              value: kargo-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: kargo-${TAILSCALE_HOST}-tailscale-state
+            claimName: kargo-ryzen-tailscale-state
         - configMap:
             name: kargo-tailscale-serve-config
           name: config

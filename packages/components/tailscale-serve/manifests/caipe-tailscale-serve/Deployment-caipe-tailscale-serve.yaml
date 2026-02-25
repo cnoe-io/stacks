@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: caipe-tailscale-serve
-  name: caipe-${TAILSCALE_HOST}-tailscale-serve
+  name: caipe-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: caipe-${TAILSCALE_HOST}
+              value: caipe-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: caipe-${TAILSCALE_HOST}-tailscale-state
+            claimName: caipe-ryzen-tailscale-state
         - configMap:
             name: caipe-tailscale-serve-config
           name: config

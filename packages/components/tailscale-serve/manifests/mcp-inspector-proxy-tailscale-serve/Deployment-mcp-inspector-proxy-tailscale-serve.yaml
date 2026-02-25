@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: mcp-inspector-proxy-tailscale-serve
-  name: mcp-inspector-proxy-${TAILSCALE_HOST}-tailscale-serve
+  name: mcp-inspector-proxy-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: mcp-inspector-proxy-${TAILSCALE_HOST}
+              value: mcp-inspector-proxy-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: mcp-inspector-proxy-${TAILSCALE_HOST}-tailscale-state
+            claimName: mcp-inspector-proxy-ryzen-tailscale-state
         - configMap:
             name: mcp-inspector-proxy-tailscale-serve-config
           name: config

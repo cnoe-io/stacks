@@ -13,9 +13,9 @@ spec:
   interval: 30s
   subscriptions:
     # Config source - Gitea repo from gitops
-    # The ${TAILSCALE_HOST} placeholder is substituted by build.sh
+    # The ryzen placeholder is substituted by build.sh
     - git:
-        repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-${TAILSCALE_HOST}-__ARGOCD_APP__-manifests.git
+        repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/gitops-ryzen-__ARGOCD_APP__-manifests.git
         branch: main
         insecureSkipTLSVerify: true
         strictSemvers: false

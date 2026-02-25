@@ -71,7 +71,7 @@ spec:
             - name: RAG_SERVER_URL
               value: http://rag-server.ai-platform-engineering.svc.cluster.local:8000
             - name: CLUSTER_NAME
-              value: ${TAILSCALE_HOST}
+              value: ryzen
             - name: SYNC_INTERVAL
               value: "3600"
             - name: MAX_DOCS_PER_INGEST

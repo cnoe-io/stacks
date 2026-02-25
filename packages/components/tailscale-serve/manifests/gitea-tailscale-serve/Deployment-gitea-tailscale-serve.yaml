@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: gitea-tailscale-serve
-  name: gitea-${TAILSCALE_HOST}-tailscale-serve
+  name: gitea-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: gitea-${TAILSCALE_HOST}
+              value: gitea-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: gitea-${TAILSCALE_HOST}-tailscale-state
+            claimName: gitea-ryzen-tailscale-state
         - configMap:
             name: gitea-tailscale-serve-config
           name: config

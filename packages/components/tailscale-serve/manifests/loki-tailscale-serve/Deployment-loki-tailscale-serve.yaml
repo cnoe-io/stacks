@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: loki-tailscale-serve
-  name: loki-${TAILSCALE_HOST}-tailscale-serve
+  name: loki-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: loki-${TAILSCALE_HOST}
+              value: loki-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: loki-${TAILSCALE_HOST}-tailscale-state
+            claimName: loki-ryzen-tailscale-state
         - configMap:
             name: loki-tailscale-serve-config
           name: config

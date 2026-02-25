@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: loki-${TAILSCALE_HOST}-tailscale-state
+  name: loki-ryzen-tailscale-state
   namespace: tailscale
 spec:
   accessModes:

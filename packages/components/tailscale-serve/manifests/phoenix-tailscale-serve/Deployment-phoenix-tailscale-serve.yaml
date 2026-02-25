@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: phoenix-tailscale-serve
-  name: phoenix-${TAILSCALE_HOST}-tailscale-serve
+  name: phoenix-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: phoenix-${TAILSCALE_HOST}
+              value: phoenix-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: phoenix-${TAILSCALE_HOST}-tailscale-state
+            claimName: phoenix-ryzen-tailscale-state
         - configMap:
             name: phoenix-tailscale-serve-config
           name: config

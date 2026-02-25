@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: nocodb-tailscale-serve
-  name: nocodb-${TAILSCALE_HOST}-tailscale-serve
+  name: nocodb-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: nocodb-${TAILSCALE_HOST}
+              value: nocodb-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: nocodb-${TAILSCALE_HOST}-tailscale-state
+            claimName: nocodb-ryzen-tailscale-state
         - configMap:
             name: nocodb-tailscale-serve-config
           name: config

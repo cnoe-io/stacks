@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: subnet-router-${TAILSCALE_HOST}
+              value: subnet-router-ryzen
             - name: TS_ROUTES
               value: 10.244.0.0/16,10.96.0.0/16
             - name: TS_USERSPACE

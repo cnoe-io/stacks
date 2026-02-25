@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: langfuse-tailscale-serve
-  name: langfuse-${TAILSCALE_HOST}-tailscale-serve
+  name: langfuse-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: langfuse-${TAILSCALE_HOST}
+              value: langfuse-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: langfuse-${TAILSCALE_HOST}-tailscale-state
+            claimName: langfuse-ryzen-tailscale-state
         - configMap:
             name: langfuse-tailscale-serve-config
           name: config

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: ai-chatbot-tailscale-serve
-  name: ai-chatbot-${TAILSCALE_HOST}-tailscale-serve
+  name: ai-chatbot-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: ai-chatbot-${TAILSCALE_HOST}
+              value: ai-chatbot-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: ai-chatbot-${TAILSCALE_HOST}-tailscale-state
+            claimName: ai-chatbot-ryzen-tailscale-state
         - configMap:
             name: ai-chatbot-tailscale-serve-config
           name: config

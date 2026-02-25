@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: agentuity-coder-tailscale-serve
-  name: agentuity-coder-${TAILSCALE_HOST}-tailscale-serve
+  name: agentuity-coder-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: agentuity-${TAILSCALE_HOST}
+              value: agentuity-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: agentuity-coder-${TAILSCALE_HOST}-tailscale-state
+            claimName: agentuity-coder-ryzen-tailscale-state
         - configMap:
             name: agentuity-coder-tailscale-serve-config
           name: config

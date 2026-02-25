@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: signoz-tailscale-serve
-  name: signoz-${TAILSCALE_HOST}-tailscale-serve
+  name: signoz-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: signoz-${TAILSCALE_HOST}
+              value: signoz-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: signoz-${TAILSCALE_HOST}-tailscale-state
+            claimName: signoz-ryzen-tailscale-state
         - configMap:
             name: signoz-tailscale-serve-config
           name: config

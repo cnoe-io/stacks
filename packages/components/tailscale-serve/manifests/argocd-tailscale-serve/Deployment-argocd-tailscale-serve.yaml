@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: argocd-tailscale-serve
-  name: argocd-${TAILSCALE_HOST}-tailscale-serve
+  name: argocd-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: argocd-${TAILSCALE_HOST}
+              value: argocd-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: argocd-${TAILSCALE_HOST}-tailscale-state
+            claimName: argocd-ryzen-tailscale-state
         - configMap:
             name: argocd-tailscale-serve-config
           name: config

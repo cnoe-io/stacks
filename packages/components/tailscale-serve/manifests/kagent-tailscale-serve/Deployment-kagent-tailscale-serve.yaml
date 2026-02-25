@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: kagent-tailscale-serve
-  name: kagent-${TAILSCALE_HOST}-tailscale-serve
+  name: kagent-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: kagent-${TAILSCALE_HOST}
+              value: kagent-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: kagent-${TAILSCALE_HOST}-tailscale-state
+            claimName: kagent-ryzen-tailscale-state
         - configMap:
             name: kagent-tailscale-serve-config
           name: config

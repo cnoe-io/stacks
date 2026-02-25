@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: flipt-tailscale-serve
-  name: flipt-${TAILSCALE_HOST}-tailscale-serve
+  name: flipt-ryzen-tailscale-serve
   namespace: tailscale
 spec:
   replicas: 1
@@ -23,7 +23,7 @@ spec:
                   key: authKey
                   name: tailscale-auth-key
             - name: TS_HOSTNAME
-              value: flipt-${TAILSCALE_HOST}
+              value: flipt-ryzen
             - name: TS_SERVE_CONFIG
               value: /config/serve.json
             - name: TS_STATE_DIR
@@ -46,7 +46,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: flipt-${TAILSCALE_HOST}-tailscale-state
+            claimName: flipt-ryzen-tailscale-state
         - configMap:
             name: flipt-tailscale-serve-config
           name: config

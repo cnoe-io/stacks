@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: argo-workflows-${TAILSCALE_HOST}-tailscale-state
+  name: argo-workflows-ryzen-tailscale-state
   namespace: tailscale
 spec:
   accessModes:
