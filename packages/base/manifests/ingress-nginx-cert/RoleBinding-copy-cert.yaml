@@ -6,6 +6,9 @@ metadata:
     app.kubernetes.io/name: ingress-nginx-cert
   name: copy-cert-rolebinding
   namespace: ingress-nginx
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
