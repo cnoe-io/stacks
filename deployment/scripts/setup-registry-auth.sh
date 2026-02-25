@@ -33,8 +33,8 @@ setup_dockerhub() {
   # Try to get credentials from 1Password
   local user password auth
   if command -v op &>/dev/null; then
-    user=$(op item get "Docker Hub" --fields label=username --reveal 2>/dev/null || true)
-    password=$(op item get "Docker Hub" --fields label=password --reveal 2>/dev/null || true)
+    user=$(op item get "DOCKER_PERSONAL_ACCESS_TOKEN" --vault CLI --fields label=username --reveal 2>/dev/null || true)
+    password=$(op item get "DOCKER_PERSONAL_ACCESS_TOKEN" --vault CLI --fields label=password --reveal 2>/dev/null || true)
   fi
 
   if [ -n "$user" ] && [ -n "$password" ]; then
