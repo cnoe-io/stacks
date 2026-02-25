@@ -593,6 +593,105 @@ seed-workflow-builder-gitea-repo() {
   fi
 }
 
+# Seed the stacks repository to Gitea from local checkout.
+# Pushing the repository triggers Tekton pipelines for devcontainers, etc.
+seed-stacks-gitea-repo() {
+  local LOCAL_REPO="${STACKS_DIR}"
+  local SOURCE_REF="${STACKS_SEED_REF:-HEAD}"
+  local GITEA_URL="${STACKS_GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
+  local GITEA_USER="${STACKS_GITEA_USER:-giteaadmin}"
+  local GITEA_OWNER="${STACKS_GITEA_OWNER:-giteaadmin}"
+  local GITEA_REPO="${STACKS_GITEA_REPO:-stacks}"
+  local WEBHOOK_TARGET="http://el-stacks-builds.stacks-builds.svc.cluster.local:8080"
+
+  if ! command -v git >/dev/null 2>&1; then
+    echo "⚠️  git not available; skipping stacks repo seeding"
+    return 0
+  fi
+
+  if [ ! -d "$LOCAL_REPO" ] || ! git -C "$LOCAL_REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "ℹ️  Local stacks repo not found at $LOCAL_REPO; skipping local-first seed"
+    return 0
+  fi
+
+  if ! git -C "$LOCAL_REPO" rev-parse --verify "${SOURCE_REF}^{commit}" >/dev/null 2>&1; then
+    if git -C "$LOCAL_REPO" rev-parse --verify "main^{commit}" >/dev/null 2>&1; then
+      SOURCE_REF="main"
+    else
+      echo "⚠️  Could not resolve ${SOURCE_REF} or main in $LOCAL_REPO; skipping seed"
+      return 0
+    fi
+  fi
+
+  local GITEA_PASSWORD
+  GITEA_PASSWORD=$(kubectl get secret gitea-credential -n gitea -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  if [ -z "$GITEA_PASSWORD" ]; then
+    echo "⚠️  Could not get Gitea credentials; skipping stacks repo seeding"
+    return 0
+  fi
+
+  # Wait for Gitea API readiness.
+  local waited=0
+  local max_wait=300
+  while ! curl -k -sf "${GITEA_URL}/api/v1/version" >/dev/null 2>&1; do
+    sleep 3
+    waited=$((waited + 3))
+    if [ "$waited" -ge "$max_wait" ]; then
+      echo "⚠️  Gitea API not ready after ${max_wait}s; skipping stacks repo seeding"
+      return 0
+    fi
+  done
+
+  # Ensure repository exists.
+  local repo_exists
+  repo_exists=$(curl -k -s -o /dev/null -w "%{http_code}" \
+    -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+    "${GITEA_URL}/api/v1/repos/${GITEA_OWNER}/${GITEA_REPO}")
+
+  if [ "$repo_exists" != "200" ]; then
+    echo "📦 Creating ${GITEA_OWNER}/${GITEA_REPO} in Gitea..."
+    if ! curl -k -s -X POST "${GITEA_URL}/api/v1/user/repos" \
+      -H "Content-Type: application/json" \
+      -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+      -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" \
+      >/dev/null; then
+      echo "⚠️  Failed to create ${GITEA_OWNER}/${GITEA_REPO}; skipping local seed"
+      return 0
+    fi
+  fi
+
+  # Prefer to seed after webhook exists so initial push triggers Tekton automatically.
+  if command -v jq >/dev/null 2>&1; then
+    waited=0
+    max_wait=180
+    while [ "$waited" -lt "$max_wait" ]; do
+      if curl -k -s -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+        "${GITEA_URL}/api/v1/repos/${GITEA_OWNER}/${GITEA_REPO}/hooks" 2>/dev/null | \
+        jq -e --arg url "${WEBHOOK_TARGET}" '.[] | select(.config.url == $url)' >/dev/null 2>&1; then
+        break
+      fi
+      sleep 3
+      waited=$((waited + 3))
+    done
+  fi
+
+  local ENCODED_PASSWORD="$GITEA_PASSWORD"
+  if command -v jq >/dev/null 2>&1; then
+    ENCODED_PASSWORD=$(printf '%s' "$GITEA_PASSWORD" | jq -sRr @uri)
+  fi
+
+  local REMOTE_URL="https://${GITEA_USER}:${ENCODED_PASSWORD}@gitea.cnoe.localtest.me:8443/${GITEA_OWNER}/${GITEA_REPO}.git"
+
+  echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO} (${SOURCE_REF})..."
+  if GIT_SSL_NO_VERIFY=true git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1; then
+    local seeded_sha
+    seeded_sha=$(git -C "$LOCAL_REPO" rev-parse "${SOURCE_REF}^{commit}" 2>/dev/null || echo "unknown")
+    echo "✅ Seeded ${GITEA_OWNER}/${GITEA_REPO}@${seeded_sha} to Gitea main"
+  else
+    echo "⚠️  Failed to push local stacks repo to Gitea (fallback seeding may still run in-cluster)"
+  fi
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Nginx Override Generation
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -619,63 +718,6 @@ generate-nginx-override() {
 
   # Fallback to standard override
   echo "${STACKS_DIR}/deployment/overrides/nginx-hostnetwork-no-hostport.yaml"
-}
-
-# Build the opencode durable-agent image from the local opencode repository.
-# The image is then pushed by preload-images.sh during cluster apply.
-build-opencode-durable-image() {
-  if [ "${SKIP_OPENCODE_DURABLE_BUILD:-}" = "true" ]; then
-    echo "⏭️  Skipping opencode durable image build (SKIP_OPENCODE_DURABLE_BUILD=true)"
-    return 0
-  fi
-
-  if ! command -v docker &>/dev/null; then
-    echo "❌ docker is required to build opencode durable image"
-    return 1
-  fi
-
-  local opencode_dir="${OPENCODE_DURABLE_REPO_DIR:-$HOME/repos/PittampalliOrg/opencode/dev}"
-  local dockerfile="${OPENCODE_DURABLE_DOCKERFILE:-Dockerfile.opencode-durable-headless}"
-  local image_repo="${OPENCODE_DURABLE_IMAGE_REPO:-gitea.cnoe.localtest.me:8443/giteaadmin/opencode-durable-agent}"
-  local kustomization_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/kustomization.yaml"
-  local deployment_file="$STACKS_DIR/packages/components/active-development/manifests/durable-agent/Deployment-durable-agent.yaml"
-
-  if [ ! -d "$opencode_dir" ]; then
-    echo "❌ opencode repo not found at: $opencode_dir"
-    echo "   Set OPENCODE_DURABLE_REPO_DIR to the correct path or SKIP_OPENCODE_DURABLE_BUILD=true to bypass."
-    return 1
-  fi
-
-  if [ ! -f "$opencode_dir/$dockerfile" ]; then
-    echo "❌ opencode durable Dockerfile not found: $opencode_dir/$dockerfile"
-    return 1
-  fi
-
-  local image_tag="${OPENCODE_DURABLE_IMAGE_TAG:-}"
-  if [ -z "$image_tag" ] && [ -f "$kustomization_file" ]; then
-    image_tag="$(awk -v img="$image_repo" '
-      $1=="-" && $2=="name:" && $3==img {match_image=1; next}
-      match_image && $1=="newTag:" {print $2; exit}
-    ' "$kustomization_file")"
-  fi
-  if [ -z "$image_tag" ] && [ -f "$deployment_file" ]; then
-    image_tag="$(awk -v img="$image_repo" '$1=="image:" && index($2, img ":")==1 {sub(img":","",$2); print $2; exit}' "$deployment_file")"
-  fi
-  [ -z "$image_tag" ] && image_tag="latest"
-
-  local full_image="${image_repo}:${image_tag}"
-  local latest_image="${image_repo}:latest"
-
-  echo "🐳 Building opencode durable image: $full_image"
-  echo "   Source: $opencode_dir"
-  docker build -f "$opencode_dir/$dockerfile" -t "$full_image" "$opencode_dir"
-
-  if [ "$image_tag" != "latest" ]; then
-    docker tag "$full_image" "$latest_image"
-    echo "🏷️  Tagged alias: $latest_image"
-  fi
-
-  echo "✅ Built opencode durable image. Registry push will be handled by preload-images.sh."
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -733,9 +775,6 @@ cluster-apply-manifests() {
     unset DOCKER_CERT_PATH
     export DOCKER_HOST=""
   fi
-
-  # Ensure durable-agent image comes from opencode repo (not workflow-builder legacy image).
-  build-opencode-durable-image || { cd "$ORIG_DIR"; return 1; }
 
   # Ensure kustomize packages are ready
   echo "🔍 Checking kustomize packages..."
@@ -816,25 +855,6 @@ cluster-apply-manifests() {
     fi
   fi
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Background Image Preloading (runs in PARALLEL with idpbuilder)
-  # Started AFTER kustomize-build so dist/ folder has the manifest files
-  # The preload script has its own wait_for_gitea logic
-  # ─────────────────────────────────────────────────────────────────────────────
-  local IMAGE_PRELOAD_SCRIPT="$STACKS_DIR/deployment/scripts/preload-images.sh"
-  local IMAGE_PRELOAD_LOG="/tmp/image-preload.log"
-  if [ "${SKIP_IMAGE_PRELOAD:-}" != "true" ] && [ -f "$IMAGE_PRELOAD_SCRIPT" ]; then
-    echo "🖼️  Starting background image preload (parallel with idpbuilder)..."
-    (
-      # Preload script waits for Gitea, discovers images from dist/, pushes to registry
-      "$IMAGE_PRELOAD_SCRIPT" "$CLUSTER_NAME"
-    ) > "$IMAGE_PRELOAD_LOG" 2>&1 &
-    local IMAGE_PRELOAD_PID=$!
-    echo "   Started background image preload (PID: $IMAGE_PRELOAD_PID)"
-    echo "   Log: $IMAGE_PRELOAD_LOG"
-    echo ""
-  fi
-
   # Apply using idpbuilder (idempotent operation)
   # Any extra args ($@) are passed through to idpbuilder
   idpbuilder create "${IDPBUILDER_ARGS[@]}" "$@"
@@ -843,32 +863,16 @@ cluster-apply-manifests() {
 
   # Ensure kubeconfig context is set after cluster creation/update
   # idpbuilder creates the context but doesn't always switch to it,
+  # or export it consistently when run non-interactively,
   # which causes k9s and other tools watching kubeconfig to fail
   if [ $result -eq 0 ]; then
+    if command -v kind &>/dev/null; then
+      kind export kubeconfig --name "${CLUSTER_NAME}" >/dev/null 2>&1 || true
+    fi
+
     local expected_ctx="kind-${CLUSTER_NAME}"
     if kubectl config get-contexts -o name 2>/dev/null | grep -q "^${expected_ctx}$"; then
       kubectl config use-context "$expected_ctx" >/dev/null 2>&1 || true
-    fi
-  fi
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # DevContainer Push (runs AFTER idpbuilder, Gitea is guaranteed ready)
-  # Pushes existing devcontainer images to Gitea for DevSpace development.
-  # SMART MODE: Only pushes images that already exist locally (no rebuild).
-  # Runs post-idpbuilder to avoid race condition where push could happen
-  # while idpbuilder is still initializing Gitea (causing pushed images to be lost).
-  # To force rebuild: FORCE_BUILD=true or use 'push-devcontainers --build all'
-  # ─────────────────────────────────────────────────────────────────────────────
-  local DEVCONTAINER_SCRIPT="$STACKS_DIR/deployment/scripts/push-devcontainers.sh"
-  local DEVCONTAINER_LOG="/tmp/devcontainer-push.log"
-  if [ $result -eq 0 ] && [ "${SKIP_DEVCONTAINER_PUSH:-}" != "true" ] && [ -f "$DEVCONTAINER_SCRIPT" ]; then
-    echo ""
-    echo "🐳 Pushing devcontainer images to Gitea registry..."
-    echo "   Mode: push existing images only (use --build for rebuild)"
-    if "$DEVCONTAINER_SCRIPT" all > "$DEVCONTAINER_LOG" 2>&1; then
-      echo "   ✅ Devcontainer push complete (log: $DEVCONTAINER_LOG)"
-    else
-      echo "   ⚠️  Devcontainer push failed (check $DEVCONTAINER_LOG)"
     fi
   fi
 
@@ -1017,6 +1021,7 @@ cluster-deploy() {
     fix-kind-hosts "${CLUSTER_HOST}"
     ensure-kargo-repos "${CLUSTER_HOST}"
     seed-workflow-builder-gitea-repo
+    seed-stacks-gitea-repo
 
     # Atlas-first DB reconciliation:
     # - workflow-builder migrations via Atlas (Job-db-migrate)
@@ -1259,6 +1264,14 @@ cluster-recreate() {
   fi
 
   [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" start "cluster-delete"
+
+  # Check if k9s is running and warn the user
+  if pgrep -x "k9s" >/dev/null 2>&1; then
+    echo "⚠️  k9s is currently running. You may need to completely close and restart k9s"
+    echo "   after cluster recreation to pick up the new API server certificates and port."
+    echo ""
+  fi
+
   echo "🗑️  Deleting cluster: ${CLUSTER_NAME}..."
   idpbuilder delete --name "${CLUSTER_NAME}"
   [ -f "$HEALTH_CHECK" ] && "$HEALTH_CHECK" end "cluster-delete"
@@ -1522,6 +1535,7 @@ cluster-update() {
   # Fix /etc/hosts on KIND nodes for Gitea OCI registry access
   fix-kind-hosts "${CLUSTER_HOST}"
   seed-workflow-builder-gitea-repo
+  seed-stacks-gitea-repo
 
   # Step 4: Show ArgoCD application status
   echo ""
@@ -1845,6 +1859,7 @@ alias clmcpst="cluster-mcp-services-status"
 # Kargo repo management (ensure host-specific repos exist in Gitea)
 alias kargo-repos="ensure-kargo-repos"
 alias seed-workflow-builder-repo="seed-workflow-builder-gitea-repo"
+alias seed-stacks-repo="seed-stacks-gitea-repo"
 
 # ArgoCD Aliases (if argocd-auth.sh is loaded)
 if [ -f "$ARGOCD_AUTH_SCRIPT" ]; then
@@ -1916,6 +1931,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "  cluster-mcp-services-status (clmcpst)  - Show Activepieces MCP status"
   echo "  cluster-menu (clm)       - Interactive management menu (requires gum)"
   echo "  seed-workflow-builder-repo - Push local workflow-builder repo to Gitea main"
+  echo "  seed-stacks-repo           - Push local stacks repo to Gitea main"
   echo ""
   echo "Tailscale Remote Access:"
   echo "  ts-kubeconfig            - Manage remote kubeconfig (see ts-kubeconfig help)"

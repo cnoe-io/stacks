@@ -1,0 +1,44 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: stacks-builds
+  labels:
+    app.kubernetes.io/name: stacks-builds
+spec:
+  serviceAccountName: build-trigger
+  triggers:
+    - name: build-devcontainer-nodejs
+      interceptors:
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.ref == 'refs/heads/main'"
+      bindings:
+        - ref: devcontainer-nodejs-build-binding
+      template:
+        ref: stacks-builds
+
+    - name: build-devcontainer-python
+      interceptors:
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.ref == 'refs/heads/main'"
+      bindings:
+        - ref: devcontainer-python-build-binding
+      template:
+        ref: stacks-builds
+
+    - name: build-devcontainer-hybrid
+      interceptors:
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.ref == 'refs/heads/main'"
+      bindings:
+        - ref: devcontainer-hybrid-build-binding
+      template:
+        ref: stacks-builds

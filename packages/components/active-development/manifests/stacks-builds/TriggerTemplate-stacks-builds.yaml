@@ -1,0 +1,25 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: stacks-builds
+spec:
+  params:
+    - name: git_sha
+      description: The Git commit SHA.
+    - name: image_name
+      description: Tekton Pipeline resource name to run.
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: $(tt.params.image_name)-run-
+      spec:
+        pipelineRef:
+          name: $(tt.params.image_name)
+        params:
+          - name: git_sha
+            value: $(tt.params.git_sha)
+        workspaces:
+          - name: registry-auth
+            secret:
+              secretName: gitea-registry-creds

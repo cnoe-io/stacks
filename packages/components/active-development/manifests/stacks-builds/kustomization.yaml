@@ -1,0 +1,21 @@
+namespace: stacks-builds
+
+resources:
+  - ExternalSecret-gitea-git-creds.yaml
+  - ExternalSecret-gitea-registry-creds.yaml
+  - ConfigMap-stacks-build-webhook-script.yaml
+  - Job-stacks-build-webhook-setup.yaml
+  - ServiceAccount-build-trigger.yaml
+  - Role-build-trigger.yaml
+  - RoleBinding-build-trigger.yaml
+  - RoleBinding-tekton-triggers-eventlistener-roles.yaml
+  - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
+  - Task-stacks-image-build-push.yaml
+  - Pipeline-devcontainer-nodejs-build.yaml
+  - Pipeline-devcontainer-python-build.yaml
+  - Pipeline-devcontainer-hybrid-build.yaml
+  - TriggerBinding-devcontainer-nodejs-build.yaml
+  - TriggerBinding-devcontainer-python-build.yaml
+  - TriggerBinding-devcontainer-hybrid-build.yaml
+  - TriggerTemplate-stacks-builds.yaml
+  - EventListener-stacks-builds.yaml

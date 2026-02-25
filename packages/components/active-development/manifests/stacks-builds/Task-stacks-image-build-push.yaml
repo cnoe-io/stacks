@@ -1,0 +1,100 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: stacks-image-build-push
+  namespace: stacks-builds
+  labels:
+    app.kubernetes.io/name: stacks-builds
+    app.kubernetes.io/component: build-task
+    app.kubernetes.io/part-of: stacks
+spec:
+  description: Clone source and build/push one image with Buildah.
+  params:
+    - name: git_url
+      type: string
+      default: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
+    - name: git_revision
+      type: string
+      description: Branch, tag, or commit SHA to check out.
+      default: main
+    - name: context_dir
+      type: string
+      description: Build context directory relative to repo root.
+      default: .
+    - name: dockerfile
+      type: string
+      description: Dockerfile path relative to repo root.
+    - name: image
+      type: string
+      description: Fully-qualified image reference including tag.
+  results:
+    - name: image_ref
+      type: string
+      description: Fully-qualified image reference pushed to registry.
+    - name: image_digest
+      type: string
+      description: Digest reported by the registry push.
+  steps:
+    - name: clone-source
+      image: alpine/git:2.47.2
+      script: |
+        #!/bin/sh
+        set -eu
+
+        rm -rf /workspace/source
+        git init /workspace/source
+        cd /workspace/source
+
+        git remote add origin "$(params.git_url)"
+        git fetch --depth 1 origin "$(params.git_revision)"
+        git checkout --detach FETCH_HEAD
+
+        echo "Checked out revision: $(git rev-parse HEAD)"
+
+    - name: build-and-push
+      image: quay.io/buildah/stable:v1.39
+      securityContext:
+        privileged: true
+      env:
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: BUILDAH_ISOLATION
+          value: chroot
+        - name: REGISTRY_AUTH_FILE
+          value: /tekton/home/.docker/config.json
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        CONTEXT="/workspace/source/$(params.context_dir)"
+        DOCKERFILE="/workspace/source/$(params.dockerfile)"
+        IMAGE="$(params.image)"
+        DIGEST_FILE="$(mktemp)"
+
+        buildah bud \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --isolation="${BUILDAH_ISOLATION}" \
+          --format docker \
+          --file "${DOCKERFILE}" \
+          --tag "${IMAGE}" \
+          "${CONTEXT}"
+
+        buildah push \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --tls-verify=false \
+          --digestfile "${DIGEST_FILE}" \
+          "${IMAGE}" \
+          "docker://${IMAGE}"
+
+        printf "%s" "${IMAGE}" > "$(results.image_ref.path)"
+        cat "${DIGEST_FILE}" > "$(results.image_digest.path)"
+      volumeMounts:
+        - name: registry-auth
+          mountPath: /tekton/home/.docker
+  volumes:
+    - name: registry-auth
+      secret:
+        secretName: gitea-registry-creds
+        items:
+          - key: .dockerconfigjson
+            path: config.json

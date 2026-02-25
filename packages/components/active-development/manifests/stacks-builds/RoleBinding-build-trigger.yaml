@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: build-trigger
+  namespace: stacks-builds
+subjects:
+  - kind: ServiceAccount
+    name: build-trigger
+    namespace: stacks-builds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: build-trigger

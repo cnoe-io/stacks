@@ -43,6 +43,8 @@ resources:
   - apps/durable-agent.yaml
   # Centralized in-cluster builds for workflow-builder runtime images (Tekton)
   - apps/workflow-builder-builds.yaml
+  # Centralized in-cluster builds for stacks images (Tekton)
+  - apps/stacks-builds.yaml
   # In-cluster MCP bundle registry for Nimble/MPAK-compatible bundles
   - apps/mpak-registry.yaml
   # Nimble MCPService instances for selected Activepieces pieces

@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: stacks-build-webhook-setup
+  labels:
+    app.kubernetes.io/name: stacks-builds
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stacks-builds
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: webhook-setup
+          image: dwdraju/alpine-curl-jq:latest
+          command: ["/bin/sh", "/scripts/setup.sh"]
+          volumeMounts:
+            - name: script-vol
+              mountPath: /scripts
+            - name: gitea-creds
+              mountPath: /var/run/secrets/gitea
+              readOnly: true
+      volumes:
+        - name: script-vol
+          configMap:
+            name: stacks-build-webhook-script
+            defaultMode: 0755
+        - name: gitea-creds
+          secret:
+            secretName: gitea-git-creds

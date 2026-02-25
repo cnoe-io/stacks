@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stacks-build-webhook-script
+data:
+  setup.sh: |
+    #!/usr/bin/env sh
+    set -eu
+
+    GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+    GITEA_USER="giteaadmin"
+    REPO_NAME="stacks"
+    WEBHOOK_URL="http://el-stacks-builds.stacks-builds.svc.cluster.local:8080"
+    SECRET_DIR="/var/run/secrets/gitea"
+    PASSWORD_FILE="${SECRET_DIR}/password"
+
+    echo "Configuring stacks push webhook for Tekton pipeline builds..."
+
+    if [ ! -f "$PASSWORD_FILE" ]; then
+      echo "[-] Error: Gitea password not mounted at ${PASSWORD_FILE}"
+      exit 1
+    fi
+    GITEA_PASSWORD=$(cat "$PASSWORD_FILE")
+
+    wait_for_gitea() {
+      echo "[-] Waiting for Gitea API to be ready..."
+      local retries=30
+      while [ $retries -gt 0 ]; do
+        if curl -s -f -o /dev/null "${GITEA_URL}/api/v1/version"; then
+          echo "[+] Gitea is ready"
+          return 0
+        fi
+        sleep 5
+        retries=$((retries - 1))
+      done
+      echo "[-] Timeout waiting for Gitea"
+      return 1
+    }
+
+    wait_for_gitea || exit 1
+
+    check_repo() {
+      curl -s -f -o /dev/null -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+        "${GITEA_URL}/api/v1/repos/${GITEA_USER}/${REPO_NAME}"
+    }
+
+    echo "[-] Checking if repository ${GITEA_USER}/${REPO_NAME} exists..."
+    repo_retries=60
+    while [ $repo_retries -gt 0 ]; do
+      if check_repo; then
+        echo "[+] Repository exists."
+        break
+      fi
+      echo "[-] Repository not found yet. Retrying in 5 seconds... ($repo_retries attempts left)"
+      sleep 5
+      repo_retries=$((repo_retries - 1))
+    done
+
+    if [ $repo_retries -eq 0 ]; then
+       echo "[-] Timeout waiting for repository ${GITEA_USER}/${REPO_NAME}."
+       echo "[-] Will create webhook anyway so it's ready when repo is seeded."
+    fi
+
+    echo "[-] Checking for existing webhooks targeting ${WEBHOOK_URL}..."
+    EXISTING_HOOK=$(curl -s -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+      "${GITEA_URL}/api/v1/repos/${GITEA_USER}/${REPO_NAME}/hooks" | \
+      jq -r --arg url "${WEBHOOK_URL}" '.[]? | select(.config.url == $url) | .id' || echo "")
+
+    if [ -n "$EXISTING_HOOK" ]; then
+      echo "[+] Webhook already exists (ID: $EXISTING_HOOK)"
+    else
+      echo "[-] Creating push webhook..."
+      CREATE_RESP=$(curl -s -w "\n%{http_code}" -X POST "${GITEA_URL}/api/v1/repos/${GITEA_USER}/${REPO_NAME}/hooks" \
+        -H "Content-Type: application/json" \
+        -u "${GITEA_USER}:${GITEA_PASSWORD}" \
+        -d "{
+          \"type\": \"gitea\",
+          \"config\": {
+            \"url\": \"${WEBHOOK_URL}\",
+            \"content_type\": \"json\"
+          },
+          \"events\": [\"push\"],
+          \"active\": true
+        }")
+      
+      HTTP_STATUS=$(echo "$CREATE_RESP" | tail -n1)
+      if [ "$HTTP_STATUS" = "201" ]; then
+        echo "[+] Webhook created successfully"
+      else
+        echo "[-] Failed to create webhook (Status: $HTTP_STATUS)"
+        echo "$CREATE_RESP" | sed '$d'
+        exit 1
+      fi
+    fi
+    echo "[+] Done."
