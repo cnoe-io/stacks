@@ -36,7 +36,7 @@ spec:
             - name: MCP_SERVER_REQUEST_TIMEOUT
               value: "300000"
             - name: ALLOWED_ORIGINS
-              value: "https://mcp-inspector.cnoe.localtest.me:8443,http://localhost:6274"
+              value: "https://mcp-inspector.cnoe.localtest.me,http://localhost:6274"
             - name: NODE_TLS_REJECT_UNAUTHORIZED
               value: "0"
           readinessProbe:

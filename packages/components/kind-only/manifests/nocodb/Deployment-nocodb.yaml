@@ -30,7 +30,7 @@ spec:
                   key: NC_AUTH_JWT_SECRET
                   name: nocodb-credentials
             - name: NC_PUBLIC_URL
-              value: https://nocodb.cnoe.localtest.me:8443
+              value: https://nocodb.cnoe.localtest.me
             - name: NC_DISABLE_TELE
               value: "true"
             # Initial admin credentials for automated setup

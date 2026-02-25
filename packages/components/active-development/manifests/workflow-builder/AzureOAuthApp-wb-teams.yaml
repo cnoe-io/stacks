@@ -11,8 +11,8 @@ spec:
     displayName: Workflow-Microsoft Teams
     signInAudience: AzureADandPersonalMicrosoftAccount
     redirectUris:
-      - https://workflow-builder.cnoe.localtest.me:8443/api/app-connections/oauth2/callback
-      - https://workflow-builder.cnoe.localtest.me:8443/redirect
+      - https://workflow-builder.cnoe.localtest.me/api/app-connections/oauth2/callback
+      - https://workflow-builder.cnoe.localtest.me/redirect
     secretDisplayName: wb-teams
     secretValidityDuration: 17520h
     keyVaultSecretPrefix: MICROSOFT-TEAMS

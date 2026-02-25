@@ -17,7 +17,7 @@ data:
     # No http-relative-path for domain-based routing
 
     # the admin url requires its own configuration to reflect correct url
-    hostname-admin=keycloak.cnoe.localtest.me:8443
+    hostname-admin=keycloak.cnoe.localtest.me
 
     hostname-debug=true
 

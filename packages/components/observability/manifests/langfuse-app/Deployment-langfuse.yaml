@@ -81,7 +81,7 @@ spec:
             - name: LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE
               value: "true"
             - name: NEXTAUTH_URL
-              value: https://langfuse.cnoe.localtest.me:8443
+              value: https://langfuse.cnoe.localtest.me
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:

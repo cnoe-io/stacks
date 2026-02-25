@@ -22,10 +22,10 @@ spec:
             JupyterHub:
               authenticator_class: generic-oauth
             GenericOAuthenticator:
-              oauth_callback_url: https://jupyterhub.cnoe.localtest.me:8443/hub/oauth_callback
-              authorize_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/auth
-              token_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/token
-              userdata_url: https://keycloak.cnoe.localtest.me:8443/realms/cnoe/protocol/openid-connect/userinfo
+              oauth_callback_url: https://jupyterhub.cnoe.localtest.me/hub/oauth_callback
+              authorize_url: https://keycloak.cnoe.localtest.me/realms/cnoe/protocol/openid-connect/auth
+              token_url: https://keycloak.cnoe.localtest.me/realms/cnoe/protocol/openid-connect/token
+              userdata_url: https://keycloak.cnoe.localtest.me/realms/cnoe/protocol/openid-connect/userinfo
               client_id: jupyterhub
               username_claim: preferred_username
               allow_all: true

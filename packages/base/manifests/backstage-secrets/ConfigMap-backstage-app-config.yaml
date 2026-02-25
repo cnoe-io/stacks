@@ -5,15 +5,15 @@ data:
     # Loaded after app-config.yaml from the image (provides auth, database, integrations)
 
     app:
-      baseUrl: https://backstage.cnoe.localtest.me:8443
+      baseUrl: https://backstage.cnoe.localtest.me
 
     backend:
-      baseUrl: https://backstage.cnoe.localtest.me:8443
+      baseUrl: https://backstage.cnoe.localtest.me
       listen: ':7007'
       reading:
         allow:
           - host: 'gitea.cnoe.localtest.me'
-          - host: '*.cnoe.localtest.me:8443'
+          - host: '*.cnoe.localtest.me'
       database:
         client: pg
         connection:
@@ -142,20 +142,20 @@ data:
     # Instance name must match templates' argoInstance field
     # Uses admin credentials from argocd-credentials secret
     argocd:
-      baseUrl: https://argocd.cnoe.localtest.me:8443
+      baseUrl: https://argocd.cnoe.localtest.me
       username: admin
       password: ${ARGOCD_ADMIN_PASSWORD}
       appLocatorMethods:
         - type: 'config'
           instances:
             - name: in-cluster
-              url: https://argocd.cnoe.localtest.me:8443
+              url: https://argocd.cnoe.localtest.me
               username: admin
               password: ${ARGOCD_ADMIN_PASSWORD}
 
     # Kargo URL for templates
     kargo:
-      baseUrl: https://kargo.cnoe.localtest.me:8443
+      baseUrl: https://kargo.cnoe.localtest.me
 
     # Dapr Configuration plugin settings
     # Connects to Dapr sidecar for configuration management

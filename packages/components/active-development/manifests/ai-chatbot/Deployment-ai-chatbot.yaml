@@ -84,12 +84,12 @@ spec:
             - name: UPLOAD_DIR
               value: "/app/uploads"
             - name: NEXT_PUBLIC_APP_URL
-              value: "https://ai-chatbot.cnoe.localtest.me:8443"
+              value: "https://ai-chatbot.cnoe.localtest.me"
             # NextAuth configuration - trust the proxy/ingress host
             - name: AUTH_TRUST_HOST
               value: "true"
             - name: AUTH_URL
-              value: "https://ai-chatbot.cnoe.localtest.me:8443"
+              value: "https://ai-chatbot.cnoe.localtest.me"
             # OpenTelemetry - environment-specific override
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "deployment.environment=production,service.namespace=ai-chatbot,service.version=1.0.0"
