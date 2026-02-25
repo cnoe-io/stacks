@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: packages/base/manifests/argo-rollouts-analysis/manifests
+    path: packages/base/manifests/argo-rollouts-analysis
   destination:
     server: https://kubernetes.default.svc
     namespace: argo-rollouts

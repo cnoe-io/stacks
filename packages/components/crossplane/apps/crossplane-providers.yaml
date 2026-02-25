@@ -12,7 +12,7 @@ spec:
   source:
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: packages/components/crossplane/manifests/crossplane-providers/manifests
+    path: packages/components/crossplane/manifests/crossplane-providers
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system

@@ -11,7 +11,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: packages/base/manifests/argo-workflows/manifests
+    path: packages/base/manifests/argo-workflows
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
   syncPolicy:
     automated:

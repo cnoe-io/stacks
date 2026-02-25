@@ -11,7 +11,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: packages/components/tailscale-serve/manifests/ai-chatbot-tailscale-serve/manifests
+    path: packages/components/tailscale-serve/manifests/ai-chatbot-tailscale-serve
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
   syncPolicy:
     automated:

@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     targetRevision: HEAD
-    path: packages/components/active-development/manifests/mcp-inspector/manifests
+    path: packages/components/active-development/manifests/mcp-inspector
   destination:
     server: https://kubernetes.default.svc
     namespace: workflow-builder

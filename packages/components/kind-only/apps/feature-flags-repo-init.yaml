@@ -13,7 +13,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: packages/components/kind-only/manifests/feature-flags-repo-init/manifests
+    path: packages/components/kind-only/manifests/feature-flags-repo-init
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
   syncPolicy:
     automated:

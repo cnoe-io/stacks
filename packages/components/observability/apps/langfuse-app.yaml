@@ -11,7 +11,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: packages/components/observability/manifests/langfuse-app/manifests
+    path: packages/components/observability/manifests/langfuse-app
     repoURL: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
   syncPolicy:
     automated:
