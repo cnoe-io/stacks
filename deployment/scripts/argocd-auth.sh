@@ -65,7 +65,14 @@ argocd-generate-token() {
 
   while [ $retries -gt 0 ]; do
     # Execute directly inside the argocd-server pod to completely bypass port-forwarding flakes
-    token=$(kubectl exec -n argocd deploy/argocd-server -- bash -c "export XDG_CONFIG_HOME=/tmp; argocd login localhost:8080 --insecure --username admin --password '$admin_pass' >/dev/null 2>&1 && argocd account generate-token --account developer --server localhost:8080 --insecure" 2>/tmp/argocd-generate-token.err)
+    token=$(kubectl exec -n argocd deploy/argocd-server -- bash -c "
+      TMP_XDG=\$(mktemp -d)
+      export XDG_CONFIG_HOME=\$TMP_XDG
+      if argocd login localhost:8080 --insecure --username admin --password '$admin_pass' >/dev/stderr; then
+        argocd account generate-token --account developer --server localhost:8080 --insecure
+      fi
+      rm -rf \$TMP_XDG
+    " 2>/tmp/argocd-generate-token.err)
     
     if [ -n "$token" ] && [[ ! "$token" =~ "error" ]] && [[ ! "$token" =~ "fatal" ]]; then
       break
@@ -145,6 +152,19 @@ argocd-save-token() {
   fi
 }
 
+# Test ArgoCD authentication with retries to handle port-forward flakes
+argocd-test-auth() {
+  local retries=3
+  while [ $retries -gt 0 ]; do
+    if argocd app list $ARGOCD_OPTS &>/dev/null; then
+      return 0
+    fi
+    retries=$((retries - 1))
+    sleep 2
+  done
+  return 1
+}
+
 # Initialize ArgoCD authentication (non-interactive)
 argocd-auth-init() {
   local token
@@ -172,7 +192,7 @@ argocd-auth-init() {
   export ARGOCD_AUTH_TOKEN="$token"
 
   # Test authentication
-  if argocd app list $ARGOCD_OPTS &>/dev/null; then
+  if argocd-test-auth; then
     echo "✅ ArgoCD authentication successful" >&2
     return 0
   else
@@ -184,7 +204,7 @@ argocd-auth-init() {
       export ARGOCD_AUTH_TOKEN="$token"
       argocd-save-token "$token"
 
-      if argocd app list $ARGOCD_OPTS &>/dev/null; then
+      if argocd-test-auth; then
         echo "✅ ArgoCD authentication successful" >&2
         return 0
       fi
