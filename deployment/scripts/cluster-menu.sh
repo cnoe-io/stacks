@@ -350,6 +350,24 @@ cluster-deploy() {
   if [ "${SKIP_TAILSCALE_TOKEN:-}" != "true" ] && [ -f "$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh" ]; then
     echo "🔑 Generating Tailscale remote access token in background..."
     nohup "$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh" generate > /tmp/tailscale-token-generation.log 2>&1 &
+    
+    # Safely attempt to configure 'thinkpad' remote access in the background
+    echo "🔄 Queuing Tailscale kubeconfig configuration for 'thinkpad'..."
+    nohup bash -c '
+      # Wait up to 5 minutes for the Tailscale operator to become available
+      echo "[$(date)] Waiting for Tailscale operator to become available..." >> /tmp/tailscale-configure-thinkpad.log
+      for i in {1..30}; do
+        if kubectl get pods -n tailscale -l app=operator | grep -q "Running"; then
+          echo "[$(date)] Operator found. Proceeding with configuration..." >> /tmp/tailscale-configure-thinkpad.log
+          break
+        fi
+        sleep 10
+      done
+      
+      # Attempt configuration, ignoring errors if thinkpad is offline
+      "'$STACKS_DIR'/deployment/scripts/tailscale/tailscale-kubeconfig.sh" configure thinkpad >> /tmp/tailscale-configure-thinkpad.log 2>&1
+      echo "[$(date)] Configuration attempt completed." >> /tmp/tailscale-configure-thinkpad.log
+    ' > /dev/null 2>&1 &
   fi
 
   cd "$ORIG_DIR"
