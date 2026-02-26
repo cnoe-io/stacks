@@ -27,7 +27,7 @@ spec:
                 jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.managedFields) | .metadata.name = "persistent-tls-cert"' | \
                 kubectl apply -f -
               echo "Certificate copied successfully"
-          image: bitnami/kubectl:1.30
+          image: bitnami/kubectl:latest
           name: copy-cert
           resources:
             limits:
