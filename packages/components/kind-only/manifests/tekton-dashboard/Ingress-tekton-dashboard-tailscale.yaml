@@ -2,16 +2,18 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: tekton-dashboard-tailscale
+  labels:
+    tailscale.com/proxy-class: development
   annotations:
     argocd.argoproj.io/sync-wave: "60"
-    tailscale.com/hostname: "tekton-dashboard-ryzen"
+    tailscale.com/hostname: "tekton-ryzen"
 spec:
   ingressClassName: tailscale
   tls:
     - hosts:
-      - tekton-dashboard-ryzen
+      - tekton-ryzen
   rules:
-    - host: tekton-dashboard-ryzen
+    - host: tekton-ryzen
       http:
         paths:
           - path: /

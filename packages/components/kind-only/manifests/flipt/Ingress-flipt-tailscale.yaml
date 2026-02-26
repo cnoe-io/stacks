@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   namespace: feature-flags
   name: flipt-tailscale
+  labels:
+    tailscale.com/proxy-class: development
   annotations:
     argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "flipt-ryzen"

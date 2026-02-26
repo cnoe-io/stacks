@@ -2,6 +2,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: mcp-inspector-proxy-tailscale
+  labels:
+    tailscale.com/proxy-class: development
   annotations:
     argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "mcp-inspector-proxy-ryzen"
