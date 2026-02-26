@@ -84,30 +84,30 @@ EOF
 }
 
 # Setup local Gitea registry
-# Uses a placeholder IP that gets patched after KIND cluster creation.
-# See patch_gitea_registry_ip() for the post-create fixup.
+# Uses domain-based routing with skip_verify for self-signed certs.
+# The /etc/hosts entry on Kind nodes maps gitea.cnoe.localtest.me to the
+# control-plane IP (where ingress-nginx runs with hostPort 443).
+# This is required because Gitea's OCI registry Bearer token auth uses ROOT_URL
+# in the www-authenticate header, and localtest.me resolves to ::1 by default.
+# See: https://github.com/go-gitea/gitea/issues/29591
 setup_gitea() {
-  local cp_ip="${GITEA_CONTROL_PLANE_IP:-PLACEHOLDER_CP_IP}"
-
   # Config for gitea.cnoe.localtest.me (no port - how Deployments reference images)
   local dir="$CONTAINERD_DIR/gitea.cnoe.localtest.me"
   mkdir -p "$dir"
   cat > "$dir/hosts.toml" << EOF
 server = "https://gitea.cnoe.localtest.me"
 
-[host."https://${cp_ip}:443"]
+[host."https://gitea.cnoe.localtest.me"]
   capabilities = ["pull", "resolve", "push"]
   skip_verify = true
-  [host."https://${cp_ip}:443".header]
-    Host = ["gitea.cnoe.localtest.me"]
 EOF
-  log "gitea: configured (control-plane IP: ${cp_ip}, TLS skip)"
+  log "gitea: configured (domain-based routing with TLS skip)"
 }
 
-# Patch the Gitea registry config with the actual control-plane IP.
+# Patch /etc/hosts on Kind nodes so gitea.cnoe.localtest.me resolves to the
+# control-plane IP instead of ::1 (default for localtest.me).
+# This is required for Gitea OCI registry Bearer token auth to work from kubelet.
 # Called AFTER KIND cluster creation when the real IP is known.
-# Updates the host-side config files (bind-mounted read-only into nodes).
-# containerd reads hosts.toml fresh on each pull, so no restart needed.
 patch_gitea_registry_ip() {
   local cluster_name="${1:?Usage: patch_gitea_registry_ip <cluster-name>}"
   local cp_ip
@@ -118,25 +118,39 @@ patch_gitea_registry_ip() {
     return 1
   fi
 
-  log "Patching Gitea registry config with control-plane IP: ${cp_ip}"
+  log "Patching /etc/hosts on Kind nodes with control-plane IP: ${cp_ip}"
 
-  # Update the host-side config files (mounted read-only into KIND nodes)
+  # Add /etc/hosts entry on all nodes so gitea.cnoe.localtest.me resolves correctly.
+  # localtest.me resolves to 127.0.0.1/::1 by default, which doesn't work inside Kind
+  # because ingress-nginx runs on the control-plane node's docker IP.
+  local node
+  for node in $(kind get nodes --name "$cluster_name" 2>/dev/null); do
+    # Remove any existing gitea entry, then add the correct one
+    docker exec "$node" sh -c "sed -i '/gitea.cnoe.localtest.me/d' /etc/hosts; echo '${cp_ip} gitea.cnoe.localtest.me' >> /etc/hosts"
+    log "  ${node}: /etc/hosts updated (${cp_ip} gitea.cnoe.localtest.me)"
+  done
+
+  # Also update hosts.toml if it was bind-mounted read-only and has the old IP format
   for hosts_file in "$CONTAINERD_DIR/gitea.cnoe.localtest.me/hosts.toml"; do
-    if [ -f "$hosts_file" ]; then
+    if [ -f "$hosts_file" ] && grep -q "PLACEHOLDER_CP_IP" "$hosts_file"; then
       sed -i "s|PLACEHOLDER_CP_IP|${cp_ip}|g" "$hosts_file"
-      sed -i -E "s|https://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:443|https://${cp_ip}:443|g" "$hosts_file"
     fi
   done
 
+  # Remount certs.d as rw if needed (Kind mounts it ro from host)
+  for node in $(kind get nodes --name "$cluster_name" 2>/dev/null); do
+    docker exec "$node" mount -o remount,rw /etc/containerd/certs.d 2>/dev/null || true
+  done
+
   # Verify
-  local node
   node=$(kind get nodes --name "$cluster_name" 2>/dev/null | head -1)
   if [ -n "$node" ]; then
     log "Verified on ${node}:"
     docker exec "$node" cat /etc/containerd/certs.d/gitea.cnoe.localtest.me/hosts.toml 2>/dev/null | head -5
+    docker exec "$node" getent hosts gitea.cnoe.localtest.me 2>/dev/null
   fi
 
-  log "Gitea registry config patched successfully (${cp_ip}:443)"
+  log "Gitea registry config patched successfully (${cp_ip})"
 }
 
 main() {
