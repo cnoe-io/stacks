@@ -1,8 +1,0 @@
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Promotion
-metadata:
-  name: open-swe-local-dev-manual-fix
-  namespace: kargo-pipelines
-spec:
-  stage: open-swe-local-dev
-  freight: 90bd99fbca126b17f8134925ff3d83f349aeb1d0

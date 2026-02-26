@@ -317,7 +317,7 @@ cluster-deploy() {
   seed-stacks-gitea-repo
 
   echo "📦 Installing ArgoCD..."
-  "$STACKS_DIR/scripts/01-install-argocd.sh"
+  "$STACKS_DIR/deployment/scripts/01-install-argocd.sh"
 
   echo "⚡ Applying ArgoCD Performance overrides..."
   kubectl apply -f "$DEPLOY_DIR/overrides/argocd-performance.yaml"
