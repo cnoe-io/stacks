@@ -1,0 +1,21 @@
+controller:
+  hostNetwork: true
+  service:
+    type: ClusterIP
+  extraArgs:
+    enable-ssl-passthrough: ""
+    default-ssl-certificate: "ingress-nginx/persistent-tls-cert"
+  admissionWebhooks:
+    enabled: false
+  nodeSelector:
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+      operator: Equal
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
+      operator: Equal
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"

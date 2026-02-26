@@ -1,0 +1,32 @@
+gitea:
+  admin:
+    username: "giteaadmin"
+    password: "developer"
+    email: "giteaadmin@cnoe.localtest.me"
+  config:
+    server:
+      DOMAIN: gitea.cnoe.localtest.me
+      ROOT_URL: https://gitea.cnoe.localtest.me
+      SSH_DOMAIN: gitea.cnoe.localtest.me
+    webhook:
+      ALLOWED_HOST_LIST: "*"
+      SKIP_TLS_VERIFY: true
+    actions:
+      ENABLED: true
+ingress:
+  enabled: true
+  hosts:
+    - host: gitea.cnoe.localtest.me
+      paths:
+        - path: /
+          pathType: Prefix
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+  tls:
+    - hosts:
+      - gitea.cnoe.localtest.me
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+  tls:
+    - hosts:
+      - gitea.cnoe.localtest.me
