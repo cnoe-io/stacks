@@ -52,14 +52,15 @@ resources:
   # - apps/kagent-crds.yaml
   # - apps/kagent-secrets.yaml
   # - apps/kagent.yaml
-  - apps/kargo-backstage-pipeline.yaml
-  - apps/kargo-ca-certificates.yaml
-  - apps/kargo-cluster-config.yaml
-  - apps/kargo-pipelines-credentials.yaml
-  - apps/kargo-pipelines-project.yaml
-  - apps/kargo-webhook-sync.yaml
-  - apps/kargo.yaml
-  - apps/kargo-inner-loop.yaml
+  # kargo disabled: transitioning to GitOps Promoter + Source Hydrator
+  # - apps/kargo-backstage-pipeline.yaml
+  # - apps/kargo-ca-certificates.yaml
+  # - apps/kargo-cluster-config.yaml
+  # - apps/kargo-pipelines-credentials.yaml
+  # - apps/kargo-pipelines-project.yaml
+  # - apps/kargo-webhook-sync.yaml
+  # - apps/kargo.yaml
+  # - apps/kargo-inner-loop.yaml
   # jupyterhub disabled: not actively used
   # - apps/jupyterhub.yaml
   - apps/keycloak-config.yaml

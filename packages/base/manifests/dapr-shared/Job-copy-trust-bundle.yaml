@@ -42,8 +42,7 @@ spec:
               fi
 
               # Add back the trailing newline stripped by bash command substitution
-              CA_CRT="${CA_CRT}
-"
+              CA_CRT="$(printf '%s\n' "$CA_CRT")"
 
               # Create or update in dapr-sandbox
               kubectl create configmap dapr-trust-bundle \

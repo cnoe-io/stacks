@@ -14,6 +14,8 @@ data:
     # hostname configuration (domain-based routing)
     hostname=keycloak.cnoe.localtest.me
     hostname-port=443
+    # Override HTTPS port in issuer URL (default 8443 causes mismatch behind proxy)
+    https-port=443
     # No http-relative-path for domain-based routing
 
     # the admin url requires its own configuration to reflect correct url
