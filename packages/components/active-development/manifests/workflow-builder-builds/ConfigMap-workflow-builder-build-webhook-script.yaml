@@ -16,7 +16,7 @@ data:
     # unconditionally keeps the script simpler and the job is not performance-critical.
     apk add --no-cache git >/dev/null
 
-    GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+    GITEA_URL="http://gitea-http.gitea.svc.cluster.local:3000"
     OWNER="giteaadmin"
     REPO="workflow-builder"
     UPSTREAM_GIT_URL="${UPSTREAM_GIT_URL:-https://github.com/PittampalliOrg/workflow-builder.git}"
@@ -137,7 +137,7 @@ data:
     rm -rf /tmp/upstream/.git
 
     echo "Cloning target..."
-    git clone "http://${GITEA_USER}:${GITEA_PASS}@my-gitea-http.gitea.svc.cluster.local:3000/${OWNER}/${REPO}.git" /tmp/target
+    git clone "http://${GITEA_USER}:${GITEA_PASS}@gitea-http.gitea.svc.cluster.local:3000/${OWNER}/${REPO}.git" /tmp/target
 
     cd /tmp/target
     git config user.email "admin@example.com"

@@ -22,7 +22,7 @@ spec:
                                 # Install curl and jq
                                 apk add --no-cache curl jq
 
-                                GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+                                GITEA_URL="http://gitea-http.gitea.svc.cluster.local:3000"
                                 REPO_NAME="feature-flags"
 
                                 echo "Checking if repo exists..."
@@ -35,7 +35,7 @@ spec:
                                   cd /tmp
                                   git config --global user.email "admin@example.com"
                                   git config --global user.name "Admin"
-                                  git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/$REPO_NAME.git"
+                                  git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@gitea-http.gitea.svc.cluster.local:3000/giteaadmin/$REPO_NAME.git"
                                   cd "$REPO_NAME"
                                   if [ -d "default" ] && [ -f "default/features.yaml" ]; then
                                     echo "Feature flags already configured with correct structure, skipping"
@@ -61,7 +61,7 @@ spec:
                                   cd /tmp
                                   git config --global user.email "admin@example.com"
                                   git config --global user.name "Admin"
-                                  git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/$REPO_NAME.git"
+                                  git clone "http://$GITEA_USERNAME:$GITEA_PASSWORD@gitea-http.gitea.svc.cluster.local:3000/giteaadmin/$REPO_NAME.git"
                                   cd "$REPO_NAME"
                                 fi
 

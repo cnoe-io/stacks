@@ -10,7 +10,7 @@ spec:
   params:
     - name: git_url
       type: string
-      default: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
+      default: http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git
     - name: git_sha
       type: string
       description: Full 40-character lowercase git SHA.

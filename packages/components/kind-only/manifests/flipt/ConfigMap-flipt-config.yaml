@@ -17,7 +17,7 @@ data:
     # FLIPT_STORAGE_DEFAULT_AUTHENTICATION_BASIC_PASSWORD
     storage:
       default:
-        remote: "http://my-gitea-http.gitea.svc.cluster.local:3000/giteaadmin/feature-flags.git"
+        remote: "http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/feature-flags.git"
         ref: "main"
         poll_interval: "30s"
         insecure_skip_tls: true

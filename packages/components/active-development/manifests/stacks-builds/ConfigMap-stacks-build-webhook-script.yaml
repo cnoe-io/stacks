@@ -7,7 +7,7 @@ data:
     #!/usr/bin/env sh
     set -eu
 
-    GITEA_URL="http://my-gitea-http.gitea.svc.cluster.local:3000"
+    GITEA_URL="http://gitea-http.gitea.svc.cluster.local:3000"
     GITEA_USER="giteaadmin"
     REPO_NAME="stacks"
     WEBHOOK_URL="http://el-stacks-builds.stacks-builds.svc.cluster.local:8080"
