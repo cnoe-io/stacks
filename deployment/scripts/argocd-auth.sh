@@ -52,44 +52,39 @@ argocd-get-token() {
 
 # Generate new ArgoCD token for developer account
 argocd-generate-token() {
+  local token
+  local retries=15
+  
   local admin_pass
-
-  # Get admin password from cluster
-  admin_pass=$(kubectl get secret argocd-initial-admin-secret -n argocd \
-    -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
+  admin_pass=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
 
   if [ -z "$admin_pass" ]; then
     echo "❌ Could not retrieve ArgoCD admin password" >&2
     return 1
   fi
 
-  # Login as admin
-  if ! argocd login --port-forward --port-forward-namespace argocd \
-    --username admin \
-    --password "$admin_pass" &>/dev/null; then
-    echo "❌ Failed to login to ArgoCD" >&2
-    return 1
-  fi
-
-  # Generate token for developer account
-  local token
-  local retries=15
   while [ $retries -gt 0 ]; do
-    token=$(argocd account generate-token \
-      --account developer \
-      --port-forward --port-forward-namespace argocd 2>/dev/null)
+    # Execute directly inside the argocd-server pod to completely bypass port-forwarding flakes
+    token=$(kubectl exec -n argocd deploy/argocd-server -- bash -c "export XDG_CONFIG_HOME=/tmp; argocd login localhost:8080 --insecure --username admin --password '$admin_pass' >/dev/null 2>&1 && argocd account generate-token --account developer --server localhost:8080 --insecure" 2>/tmp/argocd-generate-token.err)
     
-    if [ -n "$token" ]; then
+    if [ -n "$token" ] && [[ ! "$token" =~ "error" ]] && [[ ! "$token" =~ "fatal" ]]; then
       break
     fi
     
+    local err_msg=$(cat /tmp/argocd-generate-token.err 2>/dev/null || true)
     echo "  [Retry] Waiting for ArgoCD to propagate developer account configuration ($retries attempts left)..." >&2
+    
+    if [ -n "$err_msg" ] && ! echo "$err_msg" | grep -q "not exist"; then
+      echo "  [Debug] Last error: $err_msg" >&2
+    fi
+    
     retries=$((retries - 1))
     sleep 3
   done
 
-  if [ -z "$token" ]; then
+  if [ -z "$token" ] || [[ "$token" =~ "error" ]] || [[ "$token" =~ "fatal" ]]; then
     echo "❌ Failed to generate ArgoCD token" >&2
+    cat /tmp/argocd-generate-token.err >&2 2>/dev/null || true
     return 1
   fi
 
