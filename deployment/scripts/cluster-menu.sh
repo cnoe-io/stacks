@@ -348,9 +348,6 @@ cluster-deploy() {
   fi
 
   if [ "${SKIP_TAILSCALE_TOKEN:-}" != "true" ] && [ -f "$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh" ]; then
-    echo "🔑 Generating Tailscale remote access token in background..."
-    nohup "$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh" generate > /tmp/tailscale-token-generation.log 2>&1 &
-    
     # Safely attempt to configure 'thinkpad' remote access in the background
     echo "🔄 Queuing Tailscale kubeconfig configuration for 'thinkpad'..."
     nohup bash -c '
