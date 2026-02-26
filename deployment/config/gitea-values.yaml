@@ -3,6 +3,7 @@ gitea:
     username: "giteaadmin"
     password: "developer"
     email: "giteaadmin@cnoe.localtest.me"
+    passwordMode: initialOnlyNoReset
   config:
     server:
       DOMAIN: gitea.cnoe.localtest.me
