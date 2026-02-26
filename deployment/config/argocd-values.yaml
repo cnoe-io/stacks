@@ -1,0 +1,6 @@
+configs:
+  cm:
+    "accounts.developer": "apiKey, login"
+  rbac:
+    "policy.csv": |
+      g, developer, role:admin

@@ -13,8 +13,8 @@
 # To get field IDs: op item get <item-id> --format json | jq '.fields[] | {label, id}'
 
 # ArgoCD server configuration
-export ARGOCD_SERVER="${ARGOCD_SERVER:-argocd.cnoe.localtest.me:8443}"
-export ARGOCD_OPTS="--insecure"
+export ARGOCD_OPTS="--port-forward --port-forward-namespace argocd"
+export ARGOCD_SERVER=$(kubectl get ingress argocd-tailscale -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "localhost:8080")
 
 # Token storage location (in 1Password)
 # Using item ID instead of name to avoid special character issues (e.g., parentheses)
@@ -64,19 +64,28 @@ argocd-generate-token() {
   fi
 
   # Login as admin
-  if ! argocd login "$ARGOCD_SERVER" \
+  if ! argocd login --port-forward --port-forward-namespace argocd \
     --username admin \
-    --password "$admin_pass" \
-    $ARGOCD_OPTS &>/dev/null; then
+    --password "$admin_pass" &>/dev/null; then
     echo "❌ Failed to login to ArgoCD" >&2
     return 1
   fi
 
   # Generate token for developer account
   local token
-  token=$(argocd account generate-token \
-    --account developer \
-    $ARGOCD_OPTS 2>/dev/null)
+  local retries=5
+  while [ $retries -gt 0 ]; do
+    token=$(argocd account generate-token \
+      --account developer \
+      --port-forward --port-forward-namespace argocd 2>/dev/null)
+    
+    if [ -n "$token" ]; then
+      break
+    fi
+    
+    retries=$((retries - 1))
+    sleep 2
+  done
 
   if [ -z "$token" ]; then
     echo "❌ Failed to generate ArgoCD token" >&2
