@@ -352,9 +352,9 @@ cluster-deploy() {
     # Safely attempt to configure 'thinkpad' remote access in the background
     echo "🔄 Queuing Tailscale kubeconfig configuration for 'thinkpad'..."
     nohup bash -c '
-      # Wait up to 5 minutes for the Tailscale operator to become available
+      # Wait up to 15 minutes for the Tailscale operator to become available
       echo "[$(date)] Waiting for Tailscale operator to become available..." >> /tmp/tailscale-configure-thinkpad.log
-      for i in {1..30}; do
+      for i in {1..90}; do
         if kubectl get pods -n tailscale -l app=operator | grep -q "Running"; then
           echo "[$(date)] Operator found. Proceeding with configuration..." >> /tmp/tailscale-configure-thinkpad.log
           break
