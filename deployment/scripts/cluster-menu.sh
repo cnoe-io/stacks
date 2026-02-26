@@ -370,7 +370,13 @@ cluster-recreate() {
   fi
 
   echo "🗑️  Deleting cluster: ${CLUSTER_NAME}..."
-  kind delete cluster --name "${CLUSTER_NAME}"
+  if ! kind delete cluster --name "${CLUSTER_NAME}"; then
+    echo "⚠️  kind delete cluster failed. Attempting force cleanup of docker containers..."
+    docker rm -f -v "${CLUSTER_NAME}-control-plane" "${CLUSTER_NAME}-worker" "${CLUSTER_NAME}-worker2" 2>/dev/null || true
+    # Try one more time to clean up kind's internal state
+    kind delete cluster --name "${CLUSTER_NAME}" >/dev/null 2>&1 || true
+  fi
+  
   unset ARGOCD_AUTH_TOKEN
   SKIP_AZURE_CHECK=true cluster-deploy "$@"
 }
