@@ -29,6 +29,7 @@ spec:
         - name: daprd
           image: ghcr.io/dapr/daprd:1.17.0-rc.8
           imagePullPolicy: IfNotPresent
+          command: ["/daprd"]
           args:
             - --mode
             - kubernetes
