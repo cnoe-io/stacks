@@ -165,6 +165,21 @@ argocd-test-auth() {
   return 1
 }
 
+# Test ArgoCD authentication robustly by executing inside the pod
+argocd-test-auth() {
+  local token="$1"
+  if [ -z "$token" ]; then
+    return 1
+  fi
+  
+  # Validate by attempting to list apps directly against localhost inside the server pod
+  # This completely bypasses all local port-forwarding flakes
+  if kubectl exec -n argocd deploy/argocd-server -- argocd app list --server localhost:8080 --auth-token "$token" --insecure &>/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
 # Initialize ArgoCD authentication (non-interactive)
 argocd-auth-init() {
   local token
@@ -174,42 +189,37 @@ argocd-auth-init() {
   # Try to get existing token
   token=$(argocd-get-token)
 
-  # If no token found, generate one
-  if [ -z "$token" ]; then
-    echo "📝 Generating new ArgoCD token..." >&2
-    token=$(argocd-generate-token)
-
-    if [ -z "$token" ]; then
-      echo "❌ Failed to initialize ArgoCD authentication" >&2
-      return 1
-    fi
-
-    # Save to 1Password if available
-    argocd-save-token "$token"
+  # Validate the existing token
+  if [ -n "$token" ] && argocd-test-auth "$token"; then
+    export ARGOCD_AUTH_TOKEN="$token"
+    echo "✅ ArgoCD authentication successful" >&2
+    return 0
   fi
 
-  # Export token for use
-  export ARGOCD_AUTH_TOKEN="$token"
+  # If token doesn't exist or is invalid (e.g. server restarted and keys changed)
+  if [ -n "$token" ]; then
+    echo "⚠️  Authentication failed (token may be stale). Retrying with new token..." >&2
+  else
+    echo "📝 Generating new ArgoCD token..." >&2
+  fi
 
-  # Test authentication
-  if argocd-test-auth; then
+  unset ARGOCD_AUTH_TOKEN
+  token=$(argocd-generate-token)
+
+  if [ -z "$token" ]; then
+    echo "❌ Failed to initialize ArgoCD authentication" >&2
+    return 1
+  fi
+
+  # Save to 1Password if available
+  argocd-save-token "$token"
+
+  # Validate the newly generated token just to be absolutely sure
+  if argocd-test-auth "$token"; then
+    export ARGOCD_AUTH_TOKEN="$token"
     echo "✅ ArgoCD authentication successful" >&2
     return 0
   else
-    echo "⚠️  Authentication may have failed. Retrying with new token..." >&2
-    unset ARGOCD_AUTH_TOKEN
-    token=$(argocd-generate-token)
-
-    if [ -n "$token" ]; then
-      export ARGOCD_AUTH_TOKEN="$token"
-      argocd-save-token "$token"
-
-      if argocd-test-auth; then
-        echo "✅ ArgoCD authentication successful" >&2
-        return 0
-      fi
-    fi
-
     echo "❌ ArgoCD authentication failed" >&2
     return 1
   fi
