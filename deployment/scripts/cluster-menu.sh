@@ -365,6 +365,7 @@ cluster-deploy() {
       "'$STACKS_DIR'/deployment/scripts/tailscale/tailscale-kubeconfig.sh" configure thinkpad >> /tmp/tailscale-configure-thinkpad.log 2>&1
       echo "[$(date)] Configuration attempt completed." >> /tmp/tailscale-configure-thinkpad.log
     ' > /dev/null 2>&1 &
+    disown || true
   fi
 
   cd "$ORIG_DIR"
