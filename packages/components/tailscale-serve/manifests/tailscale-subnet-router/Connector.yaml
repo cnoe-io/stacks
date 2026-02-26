@@ -5,6 +5,6 @@ metadata:
   namespace: tailscale
 spec:
   subnetRouter:
-    advertiseIPv4: 
+    advertiseRoutes: 
       - "10.244.0.0/16" # Pod CIDR
       - "10.96.0.0/12"  # Service CIDR
