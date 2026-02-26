@@ -84,29 +84,10 @@ EOF
 }
 
 # Setup local Gitea registry
-# Images reference gitea.cnoe.localtest.me (standard HTTPS port 443).
-# NGINX ingress runs with hostNetwork on the control-plane node, so we
-# redirect containerd to the control-plane's Docker network IP to avoid
-# DNS resolving to ::1/127.0.0.1 (which only works on the control-plane).
+# Uses a placeholder IP that gets patched after KIND cluster creation.
+# See patch_gitea_registry_ip() for the post-create fixup.
 setup_gitea() {
-  # Detect control-plane IP for KIND cluster
-  local cp_ip=""
-  if command -v docker &>/dev/null; then
-    # Find the KIND control-plane container IP
-    local cluster_name="${KIND_CLUSTER_NAME:-}"
-    if [ -z "$cluster_name" ]; then
-      # Try to detect from running containers
-      cluster_name=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -o '^[^-]*' | grep -v '^$' | sort -u | head -1)
-    fi
-    if [ -n "$cluster_name" ]; then
-      cp_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${cluster_name}-control-plane" 2>/dev/null || true)
-    fi
-  fi
-
-  if [ -z "$cp_ip" ]; then
-    log "gitea: WARNING - could not detect control-plane IP, using localhost (may fail on worker nodes)"
-    cp_ip="127.0.0.1"
-  fi
+  local cp_ip="${GITEA_CONTROL_PLANE_IP:-PLACEHOLDER_CP_IP}"
 
   # Config for gitea.cnoe.localtest.me (no port - how Deployments reference images)
   local dir="$CONTAINERD_DIR/gitea.cnoe.localtest.me"
@@ -120,21 +101,42 @@ server = "https://gitea.cnoe.localtest.me"
   [host."https://${cp_ip}:443".header]
     Host = ["gitea.cnoe.localtest.me"]
 EOF
-  log "gitea: configured (redirect to control-plane ${cp_ip}:443, TLS skip)"
+  log "gitea: configured (control-plane IP: ${cp_ip}, TLS skip)"
+}
 
-  # Also keep legacy config for gitea.cnoe.localtest.me:8443 (used by push-devcontainers.sh)
-  local dir8443="$CONTAINERD_DIR/gitea.cnoe.localtest.me:8443"
-  mkdir -p "$dir8443"
-  cat > "$dir8443/hosts.toml" << EOF
-server = "https://gitea.cnoe.localtest.me:8443"
+# Patch the Gitea registry config with the actual control-plane IP.
+# Called AFTER KIND cluster creation when the real IP is known.
+# Updates the host-side config files (bind-mounted read-only into nodes).
+# containerd reads hosts.toml fresh on each pull, so no restart needed.
+patch_gitea_registry_ip() {
+  local cluster_name="${1:?Usage: patch_gitea_registry_ip <cluster-name>}"
+  local cp_ip
+  cp_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${cluster_name}-control-plane" 2>/dev/null || true)
 
-[host."https://${cp_ip}:443"]
-  capabilities = ["pull", "resolve", "push"]
-  skip_verify = true
-  [host."https://${cp_ip}:443".header]
-    Host = ["gitea.cnoe.localtest.me"]
-EOF
-  log "gitea:8443: configured (redirect to control-plane ${cp_ip}:443, TLS skip)"
+  if [ -z "$cp_ip" ]; then
+    log "ERROR: Could not detect control-plane IP for cluster ${cluster_name}"
+    return 1
+  fi
+
+  log "Patching Gitea registry config with control-plane IP: ${cp_ip}"
+
+  # Update the host-side config files (mounted read-only into KIND nodes)
+  for hosts_file in "$CONTAINERD_DIR/gitea.cnoe.localtest.me/hosts.toml"; do
+    if [ -f "$hosts_file" ]; then
+      sed -i "s|PLACEHOLDER_CP_IP|${cp_ip}|g" "$hosts_file"
+      sed -i -E "s|https://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:443|https://${cp_ip}:443|g" "$hosts_file"
+    fi
+  done
+
+  # Verify
+  local node
+  node=$(kind get nodes --name "$cluster_name" 2>/dev/null | head -1)
+  if [ -n "$node" ]; then
+    log "Verified on ${node}:"
+    docker exec "$node" cat /etc/containerd/certs.d/gitea.cnoe.localtest.me/hosts.toml 2>/dev/null | head -5
+  fi
+
+  log "Gitea registry config patched successfully (${cp_ip}:443)"
 }
 
 main() {

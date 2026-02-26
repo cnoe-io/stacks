@@ -305,6 +305,11 @@ cluster-deploy() {
   echo "🚀 Creating cluster with kind..."
   kind create cluster --name "$CLUSTER_HOST" --config "$DEPLOY_DIR/config/kind-config.yaml"
 
+  # Patch containerd registry config with actual control-plane IP
+  # (setup-registry-auth.sh uses placeholder since IP isn't known until cluster exists)
+  source "$STACKS_DIR/deployment/scripts/setup-registry-auth.sh"
+  patch_gitea_registry_ip "$CLUSTER_HOST"
+
   echo "📦 Preloading Tailscale images to bypass Docker Hub rate limits..."
   docker pull tailscale/k8s-operator:v1.92.4 >/dev/null 2>&1 || true
   docker pull tailscale/tailscale:v1.92.4 >/dev/null 2>&1 || true
