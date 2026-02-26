@@ -60,20 +60,23 @@ images:
   # - name: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
   #   newTag: latest
   - name: gitea.cnoe.localtest.me/giteaadmin/function-router
-    newTag: latest
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
   - name: gitea.cnoe.localtest.me/giteaadmin/workflow-builder
-    newTag: dev-20260223-114519-oauth-url-resolve
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
   - name: gitea.cnoe.localtest.me/giteaadmin/mcp-gateway
-    newTag: latest
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
   - name: gitea.cnoe.localtest.me/giteaadmin/workflow-orchestrator
-    newTag: dev-20260222-114456-a3e16257
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
   # Standalone function executor images
   # - name: gitea.cnoe.localtest.me/giteaadmin/fn-activepieces
   #   newTag: latest
   - name: gitea.cnoe.localtest.me/giteaadmin/fn-system
-    newTag: latest
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
   - name: gitea.cnoe.localtest.me/giteaadmin/piece-mcp-server
     newTag: latest
   # Durable agent
   - name: gitea.cnoe.localtest.me/giteaadmin/opencode-durable-agent
-    newTag: dev-20260223-111928-claude-plan
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
+  # MCP server
+  - name: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server
+    newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288

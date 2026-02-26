@@ -35,7 +35,7 @@ spec:
               sleep 10
       containers:
         - name: sync-pieces
-          image: gitea.cnoe.localtest.me/giteaadmin/workflow-builder:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-builder:git-0aba1e985a2e53c3d099770405b0a4fc27346288
           command:
             - sh
             - -c

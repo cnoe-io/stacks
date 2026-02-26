@@ -28,7 +28,7 @@ spec:
       serviceAccountName: function-router
       containers:
         - name: function-router
-          image: gitea.cnoe.localtest.me/giteaadmin/function-router:git-cd48cf23169dc47622dd110c281ff6584ac3a2c9
+          image: gitea.cnoe.localtest.me/giteaadmin/function-router:git-0aba1e985a2e53c3d099770405b0a4fc27346288
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

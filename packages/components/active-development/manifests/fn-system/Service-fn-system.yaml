@@ -20,7 +20,7 @@ spec:
       serviceAccountName: workflow-functions
       containers:
         - name: function
-          image: gitea.cnoe.localtest.me/giteaadmin/fn-system:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/fn-system:git-0aba1e985a2e53c3d099770405b0a4fc27346288
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

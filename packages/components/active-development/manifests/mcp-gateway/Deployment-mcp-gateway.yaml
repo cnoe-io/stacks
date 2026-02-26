@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: mcp-gateway
-          image: gitea.cnoe.localtest.me/giteaadmin/mcp-gateway:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/mcp-gateway:git-0aba1e985a2e53c3d099770405b0a4fc27346288
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

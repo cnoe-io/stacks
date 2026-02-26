@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: workflow-mcp-server
-          image: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server:latest
+          image: gitea.cnoe.localtest.me/giteaadmin/workflow-mcp-server:git-0aba1e985a2e53c3d099770405b0a4fc27346288
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3200

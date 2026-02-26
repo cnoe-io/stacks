@@ -14,4 +14,4 @@ resources:
 
 images:
 - name: gitea.cnoe.localtest.me/giteaadmin/opencode-durable-agent
-  newTag: git-8ee69d19546314ed27eaa36b0c58da39e9c96ca5
+  newTag: git-0aba1e985a2e53c3d099770405b0a4fc27346288
