@@ -4,13 +4,13 @@
 
 # Automatically detect repository root (works in Codespaces, local, CI)
 if [ -z "$STACKS_DIR" ]; then
-  # Try git root first (most reliable)
-  if STACKS_DIR=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$STACKS_DIR" ]; then
-    export STACKS_DIR
-  # Fallback: derive from script location
-  elif [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  # 1. Prioritize deriving from script location to handle being sourced from other directories
+  if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
     export STACKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  # Last resort: common paths
+  # 2. Fallback: Try git root if not sourced (e.g. running commands)
+  elif STACKS_DIR=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$STACKS_DIR" ]; then
+    export STACKS_DIR
+  # 3. Last resort: common paths
   elif [ -d "/workspaces/stacks" ]; then
     export STACKS_DIR="/workspaces/stacks"
   elif [ -d "/workspace/stacks" ]; then
