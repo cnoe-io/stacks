@@ -22,12 +22,14 @@
       "10.244.0.0/16": [
         "tag:k8s-operator",
         "tag:k8s-services",
-        "tag:k8s-api"
+        "tag:k8s-api",
+        "tag:k8s"
       ],
       "10.96.0.0/16": [
         "tag:k8s-operator",
         "tag:k8s-services",
-        "tag:k8s-api"
+        "tag:k8s-api",
+        "tag:k8s"
       ]
     },
     "services": {
@@ -385,7 +387,8 @@
       "dst": [
         "tag:k8s-operator",
         "tag:k8s-services",
-        "tag:k8s-api"
+        "tag:k8s-api",
+        "tag:k8s"
       ],
       "app": {
         "tailscale.com/cap/kubernetes": [
