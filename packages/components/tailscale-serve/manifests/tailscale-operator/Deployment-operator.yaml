@@ -43,7 +43,7 @@ spec:
             - name: PROXY_TAGS
               value: tag:k8s
             - name: APISERVER_PROXY
-              value: "true"
+              value: "false"
             - name: PROXY_FIREWALL_MODE
               value: auto
             - name: POD_NAME
@@ -57,16 +57,10 @@ spec:
           image: tailscale/k8s-operator:v1.92.4
           imagePullPolicy: IfNotPresent
           name: operator
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
           volumeMounts:
             - mountPath: /oauth
               name: oauth
               readOnly: true
-            - mountPath: /dev/net/tun
-              name: dev-net-tun
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: operator
@@ -74,7 +68,3 @@ spec:
         - name: oauth
           secret:
             secretName: operator-oauth
-        - name: dev-net-tun
-          hostPath:
-            path: /dev/net/tun
-            type: CharDevice
