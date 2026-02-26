@@ -32,6 +32,11 @@ helm upgrade --install gitea gitea-charts/gitea \
   -f "${STACKS_DIR}/deployment/config/gitea-values.yaml" \
   --wait
 
+# Workaround for Gitea Helm chart bug: forcefully clear the must-change-password flag
+# so that automated git pushes during bootstrap don't fail with 401 Unauthorized
+echo "🔧 Fixing Gitea admin password constraints..."
+kubectl exec -n gitea deploy/gitea -c gitea -- gitea admin user change-password --username giteaadmin --password developer --must-change-password=false
+
 # Create gitea-credential secret to mimic gitops behavior
 echo "🔐 Creating gitea-credential secret..."
 kubectl create secret generic gitea-credential \
