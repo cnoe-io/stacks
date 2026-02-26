@@ -9,7 +9,7 @@
 # Prerequisites:
 #   - kubectl configured to the SPOKE cluster
 #   - az cli authenticated with Key Vault access
-#   - AZURE_KEYVAULT_NAME set
+#   - AZURE_KEY_VAULT_NAME set
 #
 # Usage:
 #   ./spoke-register.sh <spoke-name>
@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh" 2>/dev/null || true
 
 SPOKE_NAME="${1:?Usage: $0 <spoke-name>}"
-AZURE_KEYVAULT_NAME="${AZURE_KEYVAULT_NAME:?Set AZURE_KEYVAULT_NAME}"
+AZURE_KEY_VAULT_NAME="${AZURE_KEY_VAULT_NAME:-keyvault-thcmfmoo5oeow}"
 SA_NAME="argocd-remote-manager"
 SA_NAMESPACE="kube-system"
 TOKEN_DURATION="8760h" # 1 year
@@ -34,7 +34,7 @@ log "Registering spoke cluster: ${SPOKE_NAME}"
 
 # Step 1: Create ServiceAccount and ClusterRoleBinding on spoke
 log "Creating ServiceAccount ${SA_NAME} in ${SA_NAMESPACE}..."
-kubectl apply -f - <<EOF
+kubectl apply -f - <<YAML
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -53,7 +53,7 @@ subjects:
   - kind: ServiceAccount
     name: ${SA_NAME}
     namespace: ${SA_NAMESPACE}
-EOF
+YAML
 
 # Step 2: Generate a long-lived token
 log "Generating token (duration: ${TOKEN_DURATION})..."
@@ -68,14 +68,14 @@ SPOKE_UPPER=$(echo "${SPOKE_NAME}" | tr '[:lower:]' '[:upper:]')
 
 log "Storing token in Key Vault as ARGOCD-CLUSTER-${SPOKE_UPPER}-TOKEN..."
 az keyvault secret set \
-  --vault-name "${AZURE_KEYVAULT_NAME}" \
+  --vault-name "${AZURE_KEY_VAULT_NAME}" \
   --name "ARGOCD-CLUSTER-${SPOKE_UPPER}-TOKEN" \
   --value "${TOKEN}" \
   --output none
 
 log "Storing CA in Key Vault as ARGOCD-CLUSTER-${SPOKE_UPPER}-CA..."
 az keyvault secret set \
-  --vault-name "${AZURE_KEYVAULT_NAME}" \
+  --vault-name "${AZURE_KEY_VAULT_NAME}" \
   --name "ARGOCD-CLUSTER-${SPOKE_UPPER}-CA" \
   --value "${CA_DATA}" \
   --output none
