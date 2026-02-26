@@ -1,0 +1,234 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: nixos-kubevirt-image-build-push
+  namespace: stacks-builds
+  labels:
+    app.kubernetes.io/name: stacks-builds
+    app.kubernetes.io/component: build-task
+    app.kubernetes.io/part-of: stacks
+spec:
+  description: Build minimal NixOS qcow2 from flake output and push image-server artifact.
+  params:
+    - name: nixos_config_repo_url
+      type: string
+      description: Git URL for nixos-config flake repository.
+      default: https://github.com/vpittamp/nixos-config.git
+    - name: nixos_config_revision
+      type: string
+      description: Branch, tag, or commit SHA to check out.
+      default: main
+    - name: flake_attr
+      type: string
+      description: Flake qcow2 output (e.g. kubevirt-minimal-qcow2 for headless, kubevirt-sway-qcow2 for Wayland/Sway).
+      default: kubevirt-minimal-qcow2
+    - name: qcow2_name
+      type: string
+      description: Filename to use inside the image server container.
+      default: nixos.qcow2
+    - name: image
+      type: string
+      description: Fully-qualified image reference including tag.
+      default: gitea.cnoe.localtest.me/giteaadmin/nixos-kubevirt-minimal:latest
+    - name: build_image
+      type: string
+      description: Builder image used for installing and running nix.
+      default: debian:bookworm-slim
+    - name: image_server_base
+      type: string
+      description: Fully qualified base image used to serve qcow2 artifact.
+      default: docker.io/library/nginx:alpine
+    - name: push_image
+      type: string
+      description: Optional destination image reference for push (useful for in-cluster registry endpoint).
+      default: ""
+  results:
+    - name: image_ref
+      type: string
+      description: Fully-qualified image reference pushed to registry.
+    - name: image_digest
+      type: string
+      description: Digest reported by the registry push.
+    - name: qcow2_size_bytes
+      type: string
+      description: Size in bytes for the generated qcow2 artifact.
+  steps:
+    - name: clone-source
+      image: alpine/git:2.47.2
+      script: |
+        #!/bin/sh
+        set -eu
+
+        rm -rf /workspace/source
+        git init /workspace/source
+        cd /workspace/source
+
+        git remote add origin "$(params.nixos_config_repo_url)"
+        git fetch --depth 1 origin "$(params.nixos_config_revision)"
+        git checkout --detach FETCH_HEAD
+
+        echo "Checked out revision: $(git rev-parse HEAD)"
+
+    - name: build-qcow2
+      image: $(params.build_image)
+      env:
+        - name: HOME
+          value: /tekton/home
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        mkdir -p /workspace/out "${HOME}/.config/nix"
+        cd /workspace/source
+
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl xz-utils git
+        rm -rf /var/lib/apt/lists/*
+
+        mkdir -p /nix
+        chmod 0755 /nix
+        chown root:root /nix
+
+        if ! getent group nixbld >/dev/null; then
+          groupadd --system nixbld
+        fi
+        for n in $(seq 1 10); do
+          if ! id "nixbld${n}" >/dev/null 2>&1; then
+            useradd \
+              --system \
+              --gid nixbld \
+              --no-create-home \
+              --home-dir /var/empty \
+              --shell /usr/sbin/nologin \
+              "nixbld${n}"
+          fi
+        done
+        NIXBLD_MEMBERS=""
+        for n in $(seq 1 10); do
+          NIXBLD_MEMBERS="${NIXBLD_MEMBERS}${NIXBLD_MEMBERS:+,}nixbld${n}"
+        done
+        gpasswd -M "${NIXBLD_MEMBERS}" nixbld
+
+        curl -L https://nixos.org/nix/install | sh -s -- --no-daemon --yes
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        elif [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+        else
+          export PATH="/nix/var/nix/profiles/default/bin:/root/.nix-profile/bin:${PATH}"
+        fi
+
+        cat > "${HOME}/.config/nix/nix.conf" <<'EOF'
+        experimental-features = nix-command flakes
+        sandbox = false
+        # make-disk-image marks VM image derivations as requiring kvm.
+        # QEMU in vmTools uses accel=kvm:tcg, so builds can still run without /dev/kvm.
+        system-features = benchmark big-parallel nixos-test kvm
+        EOF
+
+        RESULT_PATH="$(nix build --print-build-logs --no-link --print-out-paths ".#$(params.flake_attr)")"
+        QCOW2_PATH="$(find "${RESULT_PATH}" -type f -name "*.qcow2" | head -n 1)"
+
+        if [ -z "${QCOW2_PATH}" ]; then
+          echo "No qcow2 artifact found in ${RESULT_PATH}" >&2
+          exit 1
+        fi
+
+        DEST="/workspace/out/$(params.qcow2_name)"
+        cp "${QCOW2_PATH}" "${DEST}"
+
+        BYTES="$(wc -c < "${DEST}" | tr -d '[:space:]')"
+        printf "%s" "${BYTES}" > "$(results.qcow2_size_bytes.path)"
+
+    - name: package-and-push
+      image: quay.io/buildah/stable:v1.39
+      securityContext:
+        privileged: true
+      env:
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: BUILDAH_ISOLATION
+          value: chroot
+        - name: REGISTRY_AUTH_FILE
+          value: /tekton/home/.docker/config.json
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+
+        IMAGE="$(params.image)"
+        PUSH_IMAGE="$(params.push_image)"
+        QCOW2_NAME="$(params.qcow2_name)"
+        DIGEST_FILE="$(mktemp)"
+        BUILD_DIR="/workspace/package"
+        IMAGE_SERVER_BASE="$(params.image_server_base)"
+
+        if [ -z "${PUSH_IMAGE}" ]; then
+          PUSH_IMAGE="${IMAGE}"
+        fi
+        PUSH_REGISTRY="${PUSH_IMAGE%%/*}"
+
+        rm -rf "${BUILD_DIR}"
+        mkdir -p "${BUILD_DIR}"
+        cp "/workspace/out/${QCOW2_NAME}" "${BUILD_DIR}/${QCOW2_NAME}"
+
+        {
+          printf 'FROM %s\n' "${IMAGE_SERVER_BASE}"
+          cat <<'EOF_DOCKERFILE'
+        COPY nixos.qcow2 /usr/share/nginx/html/nixos.qcow2
+        RUN chmod 0644 /usr/share/nginx/html/nixos.qcow2
+        EXPOSE 80
+        CMD ["nginx", "-g", "daemon off;"]
+        EOF_DOCKERFILE
+        } > "${BUILD_DIR}/Dockerfile"
+
+        if [ "${QCOW2_NAME}" != "nixos.qcow2" ]; then
+          mv "${BUILD_DIR}/${QCOW2_NAME}" "${BUILD_DIR}/nixos.qcow2"
+        fi
+
+        buildah bud \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --isolation="${BUILDAH_ISOLATION}" \
+          --format docker \
+          --file "${BUILD_DIR}/Dockerfile" \
+          --tag "${IMAGE}" \
+          "${BUILD_DIR}"
+
+        if [ -f /tekton/home/.gitea/username ] && [ -f /tekton/home/.gitea/password ]; then
+          buildah login \
+            --tls-verify=false \
+            --username "$(cat /tekton/home/.gitea/username)" \
+            --password "$(cat /tekton/home/.gitea/password)" \
+            "${PUSH_REGISTRY}"
+        fi
+
+        buildah push \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --tls-verify=false \
+          --digestfile "${DIGEST_FILE}" \
+          "${IMAGE}" \
+          "docker://${PUSH_IMAGE}"
+
+        printf "%s" "${IMAGE}" > "$(results.image_ref.path)"
+        cat "${DIGEST_FILE}" > "$(results.image_digest.path)"
+      volumeMounts:
+        - name: registry-auth
+          mountPath: /tekton/home/.docker
+        - name: gitea-basic-auth
+          mountPath: /tekton/home/.gitea
+          readOnly: true
+  volumes:
+    - name: registry-auth
+      secret:
+        secretName: gitea-registry-creds
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+    - name: gitea-basic-auth
+      secret:
+        secretName: gitea-git-creds
+        items:
+          - key: username
+            path: username
+          - key: password
+            path: password

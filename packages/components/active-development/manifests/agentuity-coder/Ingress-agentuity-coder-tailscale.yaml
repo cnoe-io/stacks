@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: agentuity-coder-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "agentuity-coder-ryzen"
 spec:
   ingressClassName: tailscale

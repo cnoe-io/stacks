@@ -4,6 +4,7 @@ metadata:
   namespace: kargo
   name: kargo-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "70"
     tailscale.com/hostname: "kargo-ryzen"
 spec:
   ingressClassName: tailscale

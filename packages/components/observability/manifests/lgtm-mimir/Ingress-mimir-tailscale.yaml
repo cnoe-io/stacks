@@ -4,6 +4,7 @@ metadata:
   namespace: observability
   name: mimir-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "mimir-ryzen"
 spec:
   ingressClassName: tailscale

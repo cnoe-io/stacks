@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: redisinsight-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "redisinsight-ryzen"
 spec:
   ingressClassName: tailscale

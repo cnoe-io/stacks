@@ -6,14 +6,17 @@ resources:
   - ConfigMap-stacks-build-webhook-script.yaml
   - Job-stacks-build-webhook-setup.yaml
   - ServiceAccount-build-trigger.yaml
+  - ServiceAccount-image-build-bot.yaml
   - Role-build-trigger.yaml
   - RoleBinding-build-trigger.yaml
   - RoleBinding-tekton-triggers-eventlistener-roles.yaml
   - ClusterRoleBinding-tekton-triggers-eventlistener-clusterroles.yaml
   - Task-stacks-image-build-push.yaml
+  - Task-nixos-kubevirt-image-build-push.yaml
   - Pipeline-devcontainer-nodejs-build.yaml
   - Pipeline-devcontainer-python-build.yaml
   - Pipeline-devcontainer-hybrid-build.yaml
+  - Pipeline-nixos-kubevirt-minimal-build.yaml
   - TriggerBinding-devcontainer-nodejs-build.yaml
   - TriggerBinding-devcontainer-python-build.yaml
   - TriggerBinding-devcontainer-hybrid-build.yaml

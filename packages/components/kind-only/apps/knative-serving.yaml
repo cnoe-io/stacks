@@ -11,6 +11,15 @@ spec:
   destination:
     namespace: knative-serving
     server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/clientConfig/caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/clientConfig/caBundle
   project: default
   source:
     path: packages/components/kind-only/manifests/knative-serving
@@ -22,3 +31,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true

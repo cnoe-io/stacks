@@ -13,7 +13,7 @@ data:
 
     # hostname configuration (domain-based routing)
     hostname=keycloak.cnoe.localtest.me
-    hostname-port=8443
+    hostname-port=443
     # No http-relative-path for domain-based routing
 
     # the admin url requires its own configuration to reflect correct url

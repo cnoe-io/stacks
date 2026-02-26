@@ -4,6 +4,7 @@ metadata:
   namespace: nocodb
   name: nocodb-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "nocodb-ryzen"
 spec:
   ingressClassName: tailscale

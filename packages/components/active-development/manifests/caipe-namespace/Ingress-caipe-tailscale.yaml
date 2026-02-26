@@ -4,6 +4,7 @@ metadata:
   namespace: ai-platform-engineering
   name: caipe-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "caipe-ryzen"
 spec:
   ingressClassName: tailscale

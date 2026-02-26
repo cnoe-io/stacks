@@ -1,0 +1,60 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: nixos-kubevirt-minimal-build
+  namespace: stacks-builds
+  labels:
+    app.kubernetes.io/name: stacks-builds
+    app.kubernetes.io/component: image-build
+    app.kubernetes.io/part-of: stacks
+spec:
+  description: Build and push NixOS KubeVirt qcow2 artifact (headless minimal by default, Wayland image selectable via flake_attr).
+  params:
+    - name: nixos_config_repo_url
+      type: string
+      default: https://github.com/vpittamp/nixos-config.git
+    - name: nixos_config_revision
+      type: string
+      description: Branch, tag, or commit SHA to check out from nixos-config.
+      default: main
+    - name: flake_attr
+      type: string
+      description: Flake qcow2 output (kubevirt-minimal-qcow2 or kubevirt-sway-qcow2).
+      default: kubevirt-minimal-qcow2
+    - name: image
+      type: string
+      description: Fully-qualified image reference including tag.
+      default: gitea.cnoe.localtest.me/giteaadmin/nixos-kubevirt-minimal:latest
+    - name: image_server_base
+      type: string
+      description: Fully qualified base image for qcow2 artifact container.
+      default: docker.io/library/nginx:alpine
+    - name: push_image
+      type: string
+      description: In-cluster registry destination used for push transport.
+      default: gitea-http.gitea.svc.cluster.local:3000/giteaadmin/nixos-kubevirt-minimal:latest
+  tasks:
+    - name: build-and-push
+      retries: 0
+      taskRef:
+        name: nixos-kubevirt-image-build-push
+      params:
+        - name: nixos_config_repo_url
+          value: $(params.nixos_config_repo_url)
+        - name: nixos_config_revision
+          value: $(params.nixos_config_revision)
+        - name: flake_attr
+          value: $(params.flake_attr)
+        - name: image
+          value: $(params.image)
+        - name: image_server_base
+          value: $(params.image_server_base)
+        - name: push_image
+          value: $(params.push_image)
+  results:
+    - name: image_ref
+      value: $(tasks.build-and-push.results.image_ref)
+    - name: image_digest
+      value: $(tasks.build-and-push.results.image_digest)
+    - name: qcow2_size_bytes
+      value: $(tasks.build-and-push.results.qcow2_size_bytes)

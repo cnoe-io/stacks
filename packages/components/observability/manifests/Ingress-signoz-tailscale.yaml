@@ -4,6 +4,7 @@ metadata:
   name: signoz-tailscale
   namespace: observability
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "signoz-ryzen"
 spec:
   ingressClassName: tailscale

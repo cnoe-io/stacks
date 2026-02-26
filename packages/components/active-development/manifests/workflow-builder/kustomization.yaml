@@ -10,7 +10,7 @@ resources:
   - Configuration-workflow-builder-tracing.yaml
   - Component-secretstore-kubernetes.yaml
   - Component-azureappconfig-workflow-builder.yaml
-  - ObjectStorage-workspace-changes.yaml
+  # - ObjectStorage-workspace-changes.yaml  # disabled: AzureObjectStorage CRD removed with Crossplane
   - Role-secret-reader.yaml
   - Role-piece-mcp-provisioner.yaml
   - ExternalSecret-workflow-builder.yaml

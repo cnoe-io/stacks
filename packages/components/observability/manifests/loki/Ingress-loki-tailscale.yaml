@@ -4,6 +4,7 @@ metadata:
   namespace: observability
   name: loki-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "loki-ryzen"
 spec:
   ingressClassName: tailscale

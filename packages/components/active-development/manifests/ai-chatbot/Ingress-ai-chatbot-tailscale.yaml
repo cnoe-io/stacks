@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: ai-chatbot-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "ai-chatbot-ryzen"
 spec:
   ingressClassName: tailscale

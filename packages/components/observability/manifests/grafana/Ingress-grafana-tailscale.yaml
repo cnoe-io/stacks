@@ -4,6 +4,7 @@ metadata:
   namespace: observability
   name: grafana-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "grafana-ryzen"
 spec:
   ingressClassName: tailscale

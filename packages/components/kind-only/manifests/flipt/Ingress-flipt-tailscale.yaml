@@ -4,6 +4,7 @@ metadata:
   namespace: feature-flags
   name: flipt-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "flipt-ryzen"
 spec:
   ingressClassName: tailscale

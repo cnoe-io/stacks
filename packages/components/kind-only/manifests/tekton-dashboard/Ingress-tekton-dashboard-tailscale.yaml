@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: tekton-dashboard-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "tekton-dashboard-ryzen"
 spec:
   ingressClassName: tailscale

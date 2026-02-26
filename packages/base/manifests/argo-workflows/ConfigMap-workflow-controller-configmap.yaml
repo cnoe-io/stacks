@@ -3,7 +3,7 @@ data:
   config: |
     sso:
       insecureSkipVerify: true
-      issuer: https://keycloak.cnoe.localtest.me/realms/cnoe
+      issuer: https://keycloak.cnoe.localtest.me:8443/realms/cnoe
       clientId:
         name: keycloak-oidc
         key: client-id

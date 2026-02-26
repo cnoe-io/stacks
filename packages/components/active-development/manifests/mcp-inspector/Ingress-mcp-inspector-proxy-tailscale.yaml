@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: mcp-inspector-proxy-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "mcp-inspector-proxy-ryzen"
 spec:
   ingressClassName: tailscale

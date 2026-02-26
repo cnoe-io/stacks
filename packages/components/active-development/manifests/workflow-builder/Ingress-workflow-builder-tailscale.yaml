@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: workflow-builder-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "workflow-builder-ryzen"
 spec:
   ingressClassName: tailscale

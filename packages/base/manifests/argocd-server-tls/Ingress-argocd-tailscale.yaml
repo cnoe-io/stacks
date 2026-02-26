@@ -4,6 +4,7 @@ metadata:
   namespace: argocd
   name: argocd-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "argocd-ryzen"
     tailscale.com/backend-protocol: "https"
 spec:

@@ -4,6 +4,7 @@ metadata:
   namespace: observability
   name: phoenix-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "phoenix-ryzen"
 spec:
   ingressClassName: tailscale

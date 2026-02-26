@@ -1,9 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: crawl4ai
+  namespace: ai-platform-engineering
   name: crawl4ai-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "crawl4ai-ryzen"
 spec:
   ingressClassName: tailscale

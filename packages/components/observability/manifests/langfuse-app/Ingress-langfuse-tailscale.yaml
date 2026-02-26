@@ -4,6 +4,7 @@ metadata:
   namespace: observability
   name: langfuse-tailscale
   annotations:
+    argocd.argoproj.io/sync-wave: "60"
     tailscale.com/hostname: "langfuse-ryzen"
 spec:
   ingressClassName: tailscale

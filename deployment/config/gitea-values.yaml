@@ -16,6 +16,7 @@ gitea:
       ENABLED: true
 ingress:
   enabled: true
+  className: nginx
   hosts:
     - host: gitea.cnoe.localtest.me
       paths:
@@ -23,11 +24,10 @@ ingress:
           pathType: Prefix
   annotations:
     nginx.ingress.kubernetes.io/ssl-passthrough: "false"
-  tls:
-    - hosts:
-      - gitea.cnoe.localtest.me
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   tls:
     - hosts:
       - gitea.cnoe.localtest.me
