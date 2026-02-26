@@ -73,7 +73,7 @@ argocd-generate-token() {
 
   # Generate token for developer account
   local token
-  local retries=5
+  local retries=15
   while [ $retries -gt 0 ]; do
     token=$(argocd account generate-token \
       --account developer \
@@ -83,8 +83,9 @@ argocd-generate-token() {
       break
     fi
     
+    echo "  [Retry] Waiting for ArgoCD to propagate developer account configuration ($retries attempts left)..." >&2
     retries=$((retries - 1))
-    sleep 2
+    sleep 3
   done
 
   if [ -z "$token" ]; then
