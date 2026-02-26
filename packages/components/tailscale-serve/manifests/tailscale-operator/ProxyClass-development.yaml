@@ -3,5 +3,4 @@ kind: ProxyClass
 metadata:
   name: development
 spec:
-  tailscale:
-    useLetsEncryptStagingEnvironment: true
+  useLetsEncryptStagingEnvironment: true
