@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "-120"
   name: tailscale-crds
   namespace: argocd
@@ -16,7 +17,6 @@ spec:
   syncPolicy:
     automated:
       prune: false
-      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

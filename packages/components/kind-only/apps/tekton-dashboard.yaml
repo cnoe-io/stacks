@@ -4,6 +4,7 @@ metadata:
   name: tekton-dashboard
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     # Install after Tekton Triggers (14)
     argocd.argoproj.io/sync-wave: "15"
 spec:

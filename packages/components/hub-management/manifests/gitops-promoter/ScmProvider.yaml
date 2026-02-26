@@ -1,0 +1,29 @@
+apiVersion: promoter.argoproj.io/v1alpha1
+kind: ScmProvider
+metadata:
+  name: github
+  namespace: argocd
+spec:
+  secretRef:
+    name: github-promoter-credentials
+  github:
+    domain: github.com
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: github-promoter-credentials
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: azure-keyvault-store
+  target:
+    name: github-promoter-credentials
+  data:
+    - secretKey: token
+      remoteRef:
+        key: GITHUB-ARGOCD-PUSH-TOKEN

@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "110"
   name: caipe-servicemonitor
   namespace: argocd

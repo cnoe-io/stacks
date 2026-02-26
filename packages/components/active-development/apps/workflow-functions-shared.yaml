@@ -4,6 +4,7 @@ metadata:
   name: workflow-functions-shared
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "45"
 spec:
   project: default
@@ -16,8 +17,8 @@ spec:
     namespace: workflow-builder
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:

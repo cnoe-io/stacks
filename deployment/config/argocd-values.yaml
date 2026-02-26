@@ -1,6 +1,8 @@
 configs:
   cm:
     "accounts.developer": "apiKey, login"
+  params:
+    hydrator.enabled: "true"
   rbac:
     "policy.csv": |
       g, developer, role:admin

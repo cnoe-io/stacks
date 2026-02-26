@@ -4,6 +4,7 @@ metadata:
   name: tekton-triggers
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     # Install after Tekton Pipelines (12) and Tekton Chains (13)
     argocd.argoproj.io/sync-wave: "14"
 spec:

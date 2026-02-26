@@ -4,6 +4,7 @@ metadata:
   name: durable-agent
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "65"
     kargo.akuity.io/authorized-stage: kargo-pipelines:durable-agent-local-dev
 spec:
@@ -25,8 +26,8 @@ spec:
         - /spec/replicas
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:

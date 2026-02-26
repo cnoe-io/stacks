@@ -4,6 +4,7 @@ metadata:
   name: keycloak-config
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "20"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -19,12 +20,12 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-      selfHeal: true
     syncOptions:
       - ServerSideApply=true

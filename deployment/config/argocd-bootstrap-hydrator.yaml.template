@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-application
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sourceHydrator:
+    drySource:
+      repoURL: ${GIT_REPO_URL}
+      path: packages/overlays/${KUSTOMIZE_ENV}
+      targetRevision: main
+      kustomize: {}
+    hydrateTo:
+      targetBranch: env/${KUSTOMIZE_ENV}-next
+    syncSource:
+      targetBranch: env/${KUSTOMIZE_ENV}
+      path: ${KUSTOMIZE_ENV}-apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     # Install early as other services depend on it
     argocd.argoproj.io/sync-wave: "10"
   name: knative-serving

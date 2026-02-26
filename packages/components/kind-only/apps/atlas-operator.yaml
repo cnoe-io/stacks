@@ -4,6 +4,7 @@ metadata:
   name: atlas-operator
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     # Install early (CRDs/operator).
     argocd.argoproj.io/sync-wave: "-110"
   finalizers:

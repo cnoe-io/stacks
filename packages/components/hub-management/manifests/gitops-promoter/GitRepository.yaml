@@ -1,0 +1,11 @@
+apiVersion: promoter.argoproj.io/v1alpha1
+kind: GitRepository
+metadata:
+  name: stacks-repo
+  namespace: argocd
+spec:
+  github:
+    owner: PittampalliOrg
+    name: stacks
+  scmProviderRef:
+    name: github

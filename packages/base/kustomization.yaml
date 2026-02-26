@@ -11,6 +11,7 @@ resources:
   # - apps/agent-sandbox-config.yaml
   - apps/ai-chatbot-secrets.yaml
   # NOTE: ai-chatbot app moved to components/active-development
+  - apps/argocd-repo-write-secret.yaml
   - apps/argocd-secretstore.yaml
   - apps/argocd-server-tls.yaml
   - apps/argocd-webhook-setup.yaml

@@ -4,6 +4,7 @@ metadata:
   name: argo-rollouts-analysis
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "-84"
 spec:
   project: default
@@ -17,12 +18,12 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-      selfHeal: true
     syncOptions:
       - CreateNamespace=true

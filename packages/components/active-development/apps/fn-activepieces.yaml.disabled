@@ -27,8 +27,8 @@ spec:
         - /spec/template/metadata/annotations/autoscaling.knative.dev~1maxScale
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     # Retry failed syncs to handle transient failures during cluster creation
     retry:
       limit: 10

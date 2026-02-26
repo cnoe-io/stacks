@@ -3,6 +3,7 @@ kind: Kustomization
 
 # Talos production environment
 # Uses GitHub URLs for GitOps
+# Spoke cluster managed by hub ArgoCD via Source Hydrator
 
 resources:
   - ../../base
@@ -13,11 +14,28 @@ components:
   - ../../components/tailscale-serve
   - ../../components/observability
 
-# Environment-specific patches
+# Rewrite Gitea URLs to GitHub URLs for external clusters
+replacements:
+  - source:
+      kind: ConfigMap
+      name: cluster-config
+      fieldPath: data.GIT_REPO_URL
+    targets:
+      - select:
+          kind: Application
+          annotationSelector: "stacks.io/repo-source=stacks"
+        fieldPaths:
+          - spec.source.repoURL
+
+# Destination patch: all apps deploy to talos spoke via Tailscale API
 patches:
-  # Patches will be added as apps are migrated
-  # - path: patches/ingress-host.yaml
-  # - path: patches/tls-enabled.yaml
+  - target:
+      kind: Application
+      group: argoproj.io
+    patch: |
+      - op: replace
+        path: /spec/destination/server
+        value: https://k8s-api-talos.tail286401.ts.net
 
 # ConfigMap with cluster configuration
 configMapGenerator:

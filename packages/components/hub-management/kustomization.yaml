@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Hub-management component
+# Provides GitOps Promoter for environment promotion
+# and spoke cluster credential management
+
+resources:
+  # GitOps Promoter
+  - apps/gitops-promoter.yaml
+  - manifests/gitops-promoter/ScmProvider.yaml
+  - manifests/gitops-promoter/GitRepository.yaml
+  - manifests/gitops-promoter/PromotionStrategy.yaml
+  - manifests/gitops-promoter/ArgoCDCommitStatus.yaml
+  # Repository write access for Source Hydrator (GitHub PAT from Key Vault)
+  - manifests/spoke-credentials/ExternalSecret-repo-write.yaml
+  # Spoke cluster credentials (synced from Azure Key Vault)
+  - manifests/spoke-credentials/ExternalSecret-cluster-ryzen.yaml
+  - manifests/spoke-credentials/ExternalSecret-cluster-thinkpad.yaml
+  - manifests/spoke-credentials/ExternalSecret-cluster-talos.yaml
+  # Spoke root applications (Source Hydrator renders per-env branches)
+  - apps/spokes/spoke-talos.yaml
+  - apps/spokes/spoke-ryzen.yaml
+  - apps/spokes/spoke-thinkpad.yaml

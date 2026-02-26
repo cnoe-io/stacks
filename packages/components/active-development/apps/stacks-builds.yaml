@@ -4,6 +4,7 @@ metadata:
   name: stacks-builds
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "70"
 spec:
   project: default

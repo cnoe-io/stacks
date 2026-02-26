@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spoke-ryzen
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sourceHydrator:
+    drySource:
+      repoURL: https://github.com/PittampalliOrg/stacks.git
+      path: packages/overlays/kind-ryzen
+      targetRevision: main
+      kustomize: {}
+    hydrateTo:
+      targetBranch: env/kind-ryzen-next
+    syncSource:
+      targetBranch: env/kind-ryzen
+      path: kind-ryzen-apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

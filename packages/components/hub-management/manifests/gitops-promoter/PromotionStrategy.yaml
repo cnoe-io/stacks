@@ -1,0 +1,17 @@
+apiVersion: promoter.argoproj.io/v1alpha1
+kind: PromotionStrategy
+metadata:
+  name: stacks-environments
+  namespace: argocd
+spec:
+  gitRepositoryRef:
+    name: stacks-repo
+  activeCommitStatuses:
+    - key: argocd-health
+  environments:
+    - branch: env/kind-ryzen
+      autoMerge: true
+    - branch: env/talos
+      autoMerge: true
+    - branch: env/hub
+      autoMerge: false

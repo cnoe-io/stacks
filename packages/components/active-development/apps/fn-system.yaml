@@ -4,6 +4,7 @@ metadata:
   name: fn-system
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "56"
     # Kargo Stage authorized to update this app's image tag
     kargo.akuity.io/authorized-stage: kargo-pipelines:fn-system-local-dev
@@ -27,8 +28,8 @@ spec:
         - /spec/template/metadata/annotations/autoscaling.knative.dev~1maxScale
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:

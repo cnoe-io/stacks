@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     # Must be after kargo (65) and kargo-pipelines-project (70) to ensure CRDs exist
     argocd.argoproj.io/sync-wave: "76"
   name: kargo-inner-loop

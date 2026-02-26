@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "80"
   name: ollama
   namespace: argocd
@@ -16,13 +17,13 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -16,8 +16,8 @@ spec:
     namespace: workflow-builder
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:

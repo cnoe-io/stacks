@@ -4,6 +4,7 @@ metadata:
   name: tekton-pipelines
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     # Install after Knative (10)
     argocd.argoproj.io/sync-wave: "12"
 spec:

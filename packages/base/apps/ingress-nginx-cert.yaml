@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "-99"
   labels:
     app.kubernetes.io/name: ingress-nginx-cert

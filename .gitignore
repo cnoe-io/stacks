@@ -44,6 +44,8 @@ nixos-images/*.img
 # Deployment runtime-generated config (keep templates, ignore generated files)
 deployment/config/*
 !deployment/config/kind-config.yaml.template
+!deployment/config/argocd-bootstrap-hydrator.yaml.template
+!deployment/config/argocd-values.yaml
 
 # Logs
 *.log

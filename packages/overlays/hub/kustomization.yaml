@@ -3,6 +3,7 @@ kind: Kustomization
 
 # Hub multi-cluster management environment
 # Manages spoke clusters via Tailscale
+# Uses Source Hydrator for rendered manifests pattern
 
 resources:
   - ../../base
@@ -11,12 +12,21 @@ components:
   - ../../components/talos-only
   - ../../components/tailscale-serve
   - ../../components/observability
+  - ../../components/hub-management
 
-# Environment-specific patches
-patches:
-  # Patches will be added as apps are migrated
-  # - path: patches/ingress-host.yaml
-  # - path: patches/tls-enabled.yaml
+# Rewrite Gitea URLs to GitHub URLs for external clusters
+# Targets only Application YAMLs annotated with stacks.io/repo-source: stacks
+replacements:
+  - source:
+      kind: ConfigMap
+      name: cluster-config
+      fieldPath: data.GIT_REPO_URL
+    targets:
+      - select:
+          kind: Application
+          annotationSelector: "stacks.io/repo-source=stacks"
+        fieldPaths:
+          - spec.source.repoURL
 
 # ConfigMap with cluster configuration
 configMapGenerator:

@@ -4,6 +4,7 @@ metadata:
   name: mcp-gateway
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     # Deploy after workflow-builder (16) since it depends on workflow-builder-secrets
     argocd.argoproj.io/sync-wave: "20"
     # Kargo Stage authorized to update this app's image tag
@@ -27,8 +28,8 @@ spec:
         - /spec/replicas
   syncPolicy:
     automated:
-      selfHeal: true
       prune: true
+      selfHeal: true
     retry:
       limit: 10
       backoff:

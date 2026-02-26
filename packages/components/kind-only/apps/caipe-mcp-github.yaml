@@ -4,6 +4,7 @@ metadata:
   name: caipe-mcp-github
   namespace: argocd
   annotations:
+    stacks.io/repo-source: stacks
     argocd.argoproj.io/sync-wave: "50"
   labels:
     app.kubernetes.io/name: caipe-mcp-github
