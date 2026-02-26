@@ -5,6 +5,9 @@ metadata:
   labels:
     app.kubernetes.io/name: dapr-shared
     app.kubernetes.io/part-of: dapr-shared
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    argocd.argoproj.io/hook: PreSync
 rules:
   # Access to Dapr components, configurations, and subscriptions
   - apiGroups: ["dapr.io"]
