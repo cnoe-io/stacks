@@ -367,16 +367,17 @@ matches = []
 for peer in peers.values():
     host = peer.get('HostName', '')
     dns = peer.get('DNSName', '').rstrip('.')
+    created = peer.get('Created', '')
     # Extract the short hostname from DNSName (before the tailnet domain)
     short = dns.split('.')[0] if dns else host
     if host == '${base_name}' or host.startswith('${base_name}-'):
-        matches.append((short, peer.get('Online', False)))
-# Prefer online match; among online, prefer shortest name (no suffix)
-online = [h for h, o in matches if o]
+        matches.append((created, short, peer.get('Online', False)))
+# Prefer online match; among online, prefer newest created date
+online = [(c, h) for c, h, o in matches if o]
 if online:
-    print(sorted(online, key=len)[0])
+    print(sorted(online, reverse=True)[0][1])
 elif matches:
-    print(sorted([h for h, _ in matches], key=len)[0])
+    print(sorted([(c, h) for c, h, _ in matches], reverse=True)[0][1])
 " 2>/dev/null)
 
     if [ -n "$active_host" ]; then
