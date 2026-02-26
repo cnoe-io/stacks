@@ -239,7 +239,7 @@ seed-workflow-builder-gitea-repo() {
   local REMOTE_URL="http://${GITEA_USER}:${ENCODED_PASSWORD}@127.0.0.1:${PF_PORT}/${GITEA_OWNER}/${GITEA_REPO}.git"
 
   echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO}..."
-  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{"name": "${GITEA_REPO}", "private": false, "auto_init": true, "default_branch": "main"}" >/dev/null || true
+  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" >/dev/null || true
   git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
 
   kill $PF_PID 2>/dev/null || true
@@ -272,7 +272,7 @@ seed-stacks-gitea-repo() {
   local REMOTE_URL="http://${GITEA_USER}:${ENCODED_PASSWORD}@127.0.0.1:${PF_PORT}/${GITEA_OWNER}/${GITEA_REPO}.git"
 
   echo "⬆️  Seeding ${GITEA_OWNER}/${GITEA_REPO} from local ${LOCAL_REPO}..."
-  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{"name": "${GITEA_REPO}", "private": false, "auto_init": true, "default_branch": "main"}" >/dev/null || true
+  curl -s -X POST "${GITEA_URL}/api/v1/user/repos" -H "Content-Type: application/json" -u "${GITEA_USER}:${GITEA_PASSWORD}" -d "{\"name\": \"${GITEA_REPO}\", \"private\": false, \"auto_init\": true, \"default_branch\": \"main\"}" >/dev/null || true
   git -C "$LOCAL_REPO" push --force "$REMOTE_URL" "${SOURCE_REF}:refs/heads/main" >/dev/null 2>&1 || true
 
   kill $PF_PID 2>/dev/null || true
