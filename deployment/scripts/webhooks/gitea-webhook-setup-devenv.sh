@@ -9,7 +9,7 @@
 #   gitea-webhook-setup
 #
 # Environment Variables:
-#   GITEA_URL       - Gitea server URL (default: https://gitea.cnoe.localtest.me:8443)
+#   GITEA_URL       - Gitea server URL (default: https://gitea.cnoe.localtest.me)
 #   GITEA_USERNAME  - Gitea username (default: giteaadmin)
 #   GITEA_PASSWORD  - Gitea password/token (required)
 #   GITEA_WEBHOOK_PORT   - Webhook listener port (default: 9999)
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 # Configuration
-GITEA_URL="${GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
+GITEA_URL="${GITEA_URL:-https://gitea.cnoe.localtest.me}"
 GITEA_USER="${GITEA_USERNAME:-giteaadmin}"
 GITEA_TOKEN="${GITEA_PASSWORD:-}"
 WEBHOOK_PORT="${GITEA_WEBHOOK_PORT:-9999}"

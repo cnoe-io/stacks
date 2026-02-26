@@ -24,7 +24,7 @@ vars:
 
   # Registry configuration
   GITEA_HOST:
-    default: "gitea.cnoe.localtest.me:8443"
+    default: "gitea.cnoe.localtest.me"
   GITEA_USER:
     default: "giteaadmin"
 

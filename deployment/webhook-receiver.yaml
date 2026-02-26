@@ -57,7 +57,7 @@ spec:
                           modified_files = c.get('modified', [])
                           removed_files = c.get('removed', [])
                           # OSC 8 hyperlink for clickable commit hash
-                          commit_url = f"https://gitea.cnoe.localtest.me:8443/{repo}/commit/{sha_full}"
+                          commit_url = f"https://gitea.cnoe.localtest.me/{repo}/commit/{sha_full}"
                           sha_link = f"\033]8;;{commit_url}\007{sha_short}\033]8;;\007"
                           print(f"  {YELLOW}{sha_link}{RESET} {msg}", flush=True)
                           print(f"  {DIM}by {author}{RESET}", flush=True)

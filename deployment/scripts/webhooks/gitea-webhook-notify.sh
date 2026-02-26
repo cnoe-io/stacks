@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-GITEA_URL="${GITEA_URL:-https://gitea.cnoe.localtest.me:8443}"
+GITEA_URL="${GITEA_URL:-https://gitea.cnoe.localtest.me}"
 
 # Check for notification support
 HAS_NOTIFY=false

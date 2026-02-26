@@ -27,7 +27,7 @@ export TMPDIR="${TMPDIR:-/tmp}"
 
 CLUSTER_NAME="${1:-$(hostname -s)}"
 LOG_PREFIX="[preload-images]"
-GITEA_REGISTRY="gitea.cnoe.localtest.me:8443"
+GITEA_REGISTRY="gitea.cnoe.localtest.me"
 GITEA_ORG="giteaadmin"
 PRELOADED_FILE="/tmp/preloaded-images-$$.txt"
 # Increased from 3 to 4 for faster parallel image pushes
@@ -39,7 +39,7 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $LOG_PREFIX $1"; }
 # Dynamically discover images from built manifests
 # Scans packages/dist/<env>/ for image references matching gitea.cnoe.localtest.me
 # Returns unique image:tag pairs that need to be pushed to Gitea
-# Output format: full image reference with tag (e.g., gitea.cnoe.localtest.me:8443/giteaadmin/ai-chatbot:latest)
+# Output format: full image reference with tag (e.g., gitea.cnoe.localtest.me/giteaadmin/ai-chatbot:latest)
 discover_gitea_images() {
   local stacks_dir="${STACKS_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
   local build_env="kind-${CLUSTER_NAME}"
@@ -61,7 +61,7 @@ discover_gitea_images() {
 
   # Extract unique image references from manifests
   # Search in */manifests/ subdirectories for Deployment YAML files
-  # Pattern: gitea.cnoe.localtest.me:8443/giteaadmin/<name>:<tag>
+  # Pattern: gitea.cnoe.localtest.me/giteaadmin/<name>:<tag>
   # Note: Preserves the requested tag from manifests (e.g., :latest)
   find "$dist_dir" -path "*/manifests/*.yaml" -exec grep -h "image:.*${GITEA_REGISTRY}" {} \; 2>/dev/null | \
     sed -E 's/.*image:\s*//; s/["\x27]//g; s/\s*$//' | \
@@ -256,7 +256,7 @@ preload_image() {
 
   # Find image in Docker daemon (check multiple patterns)
   # Images may be tagged as:
-  #   - gitea.cnoe.localtest.me:8443/giteaadmin/<name>:<tag>
+  #   - gitea.cnoe.localtest.me/giteaadmin/<name>:<tag>
   #   - ghcr.io/pittampalliorg/<name>:<tag>
   #   - <name>:<tag> (local build)
   local local_image=""

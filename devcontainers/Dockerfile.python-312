@@ -4,8 +4,8 @@
 # Used by: planner-agent and other Python/FastAPI apps
 #
 # Build & Push:
-#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/python-312-devspace:latest -f Dockerfile.python-312 .
-#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/python-312-devspace:latest
+#   docker build -t gitea.cnoe.localtest.me/giteaadmin/python-312-devspace:latest -f Dockerfile.python-312 .
+#   docker push gitea.cnoe.localtest.me/giteaadmin/python-312-devspace:latest
 
 FROM python:3.12-bookworm
 

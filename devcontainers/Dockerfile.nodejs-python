@@ -4,8 +4,8 @@
 # Use case: Next.js apps with Claude Code that need to run Python code
 #
 # Build & Push:
-#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-python-devspace:latest -f Dockerfile.nodejs-python .
-#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-python-devspace:latest
+#   docker build -t gitea.cnoe.localtest.me/giteaadmin/nodejs-python-devspace:latest -f Dockerfile.nodejs-python .
+#   docker push gitea.cnoe.localtest.me/giteaadmin/nodejs-python-devspace:latest
 
 FROM node:22-bookworm
 

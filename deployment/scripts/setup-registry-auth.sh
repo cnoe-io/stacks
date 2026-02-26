@@ -83,26 +83,58 @@ EOF
   fi
 }
 
-# Setup local Gitea registry (TLS skip only, no auth needed for pull)
+# Setup local Gitea registry
+# Images reference gitea.cnoe.localtest.me (standard HTTPS port 443).
+# NGINX ingress runs with hostNetwork on the control-plane node, so we
+# redirect containerd to the control-plane's Docker network IP to avoid
+# DNS resolving to ::1/127.0.0.1 (which only works on the control-plane).
 setup_gitea() {
-  local dir="$CONTAINERD_DIR/gitea.cnoe.localtest.me:8443"
-  local hosts_file="$dir/hosts.toml"
-
-  if [ -f "$hosts_file" ]; then
-    log "gitea: already configured"
-    return 0
+  # Detect control-plane IP for KIND cluster
+  local cp_ip=""
+  if command -v docker &>/dev/null; then
+    # Find the KIND control-plane container IP
+    local cluster_name="${KIND_CLUSTER_NAME:-}"
+    if [ -z "$cluster_name" ]; then
+      # Try to detect from running containers
+      cluster_name=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -o '^[^-]*' | grep -v '^$' | sort -u | head -1)
+    fi
+    if [ -n "$cluster_name" ]; then
+      cp_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${cluster_name}-control-plane" 2>/dev/null || true)
+    fi
   fi
 
+  if [ -z "$cp_ip" ]; then
+    log "gitea: WARNING - could not detect control-plane IP, using localhost (may fail on worker nodes)"
+    cp_ip="127.0.0.1"
+  fi
+
+  # Config for gitea.cnoe.localtest.me (no port - how Deployments reference images)
+  local dir="$CONTAINERD_DIR/gitea.cnoe.localtest.me"
   mkdir -p "$dir"
+  cat > "$dir/hosts.toml" << EOF
+server = "https://gitea.cnoe.localtest.me"
 
-  cat > "$hosts_file" << 'EOF'
-server = "https://gitea.cnoe.localtest.me:8443"
-
-[host."https://gitea.cnoe.localtest.me:8443"]
+[host."https://${cp_ip}:443"]
   capabilities = ["pull", "resolve", "push"]
   skip_verify = true
+  [host."https://${cp_ip}:443".header]
+    Host = ["gitea.cnoe.localtest.me"]
 EOF
-  log "gitea: configured (local registry, TLS skip)"
+  log "gitea: configured (redirect to control-plane ${cp_ip}:443, TLS skip)"
+
+  # Also keep legacy config for gitea.cnoe.localtest.me:8443 (used by push-devcontainers.sh)
+  local dir8443="$CONTAINERD_DIR/gitea.cnoe.localtest.me:8443"
+  mkdir -p "$dir8443"
+  cat > "$dir8443/hosts.toml" << EOF
+server = "https://gitea.cnoe.localtest.me:8443"
+
+[host."https://${cp_ip}:443"]
+  capabilities = ["pull", "resolve", "push"]
+  skip_verify = true
+  [host."https://${cp_ip}:443".header]
+    Host = ["gitea.cnoe.localtest.me"]
+EOF
+  log "gitea:8443: configured (redirect to control-plane ${cp_ip}:443, TLS skip)"
 }
 
 main() {

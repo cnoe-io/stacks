@@ -4,8 +4,8 @@
 # Used by: ai-chatbot, workflow-builder, and other Next.js/Node.js apps
 #
 # Build & Push:
-#   docker build -t gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-22-devspace:latest -f Dockerfile.nodejs-22 .
-#   docker push gitea.cnoe.localtest.me:8443/giteaadmin/nodejs-22-devspace:latest
+#   docker build -t gitea.cnoe.localtest.me/giteaadmin/nodejs-22-devspace:latest -f Dockerfile.nodejs-22 .
+#   docker push gitea.cnoe.localtest.me/giteaadmin/nodejs-22-devspace:latest
 
 FROM node:22-bookworm
 

@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-REGISTRY="${REGISTRY:-gitea.cnoe.localtest.me:8443}"
+REGISTRY="${REGISTRY:-gitea.cnoe.localtest.me}"
 ORG="${ORG:-giteaadmin}"
 
 cd "$(dirname "$0")"

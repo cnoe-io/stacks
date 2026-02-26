@@ -17,7 +17,7 @@
 #   ./push-devcontainers.sh --build all  # Build and push all
 #
 # Environment variables:
-#   GITEA_REGISTRY  Registry host (default: gitea.cnoe.localtest.me:8443)
+#   GITEA_REGISTRY  Registry host (default: gitea.cnoe.localtest.me)
 #   GITEA_USER      Registry user (default: giteaadmin)
 #   GITEA_PASSWORD  Registry password (default: giteaadmin)
 #   FORCE_BUILD     Force docker build (default: false)
@@ -30,7 +30,16 @@ STACKS_DIR="${STACKS_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 DEVCONTAINERS_DIR="${STACKS_DIR}/devcontainers"
 
 # Registry configuration
-GITEA_REGISTRY="${GITEA_REGISTRY:-gitea.cnoe.localtest.me:8443}"
+# Detect control-plane IP since NGINX ingress uses hostNetwork inside KIND container
+if [ -z "${GITEA_REGISTRY:-}" ]; then
+  CLUSTER_NAME="${KIND_CLUSTER_NAME:-$(docker ps --format '{{.Names}}' 2>/dev/null | grep -o '^[^-]*-control-plane' | sed 's/-control-plane//' | head -1)}"
+  CP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${CLUSTER_NAME}-control-plane" 2>/dev/null || true)
+  if [ -n "$CP_IP" ]; then
+    GITEA_REGISTRY="${CP_IP}:443"
+  else
+    GITEA_REGISTRY="gitea.cnoe.localtest.me"
+  fi
+fi
 GITEA_USER="${GITEA_USER:-giteaadmin}"
 # Default password matches gitops's --dev-password default
 GITEA_PASSWORD="${GITEA_PASSWORD:-developer}"
@@ -203,7 +212,7 @@ main() {
     echo "  --skip-build  Legacy: same as default (push existing only)"
     echo ""
     echo "Environment variables:"
-    echo "  GITEA_REGISTRY   Registry host (default: gitea.cnoe.localtest.me:8443)"
+    echo "  GITEA_REGISTRY   Registry host (default: gitea.cnoe.localtest.me)"
     echo "  GITEA_USER       Registry user (default: giteaadmin)"
     echo "  GITEA_PASSWORD   Registry password (default: developer)"
     echo "  FORCE_BUILD      Force docker build (default: false)"
