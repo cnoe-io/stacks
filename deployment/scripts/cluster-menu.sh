@@ -96,7 +96,8 @@ sync-manual-apps() {
 
   for app in $manual_apps; do
     echo "   Syncing: $app"
-    argocd app sync "argocd/$app" --insecure --async --timeout 300 2>/dev/null || echo "   ⚠️  Failed to sync: $app"
+    # Execute the sync inside the server pod to bypass any local port-forwarding instability
+    kubectl exec -n argocd deploy/argocd-server -- argocd app sync "argocd/$app" --server localhost:8080 --auth-token "$ARGOCD_AUTH_TOKEN" --insecure --async --timeout 300 2>/dev/null || echo "   ⚠️  Failed to sync: $app"
   done
 }
 
