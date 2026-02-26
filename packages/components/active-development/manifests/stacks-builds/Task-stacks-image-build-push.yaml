@@ -79,12 +79,15 @@ spec:
           --tag "${IMAGE}" \
           "${CONTEXT}"
 
+        # Push via internal Gitea HTTP service to avoid pgpool replication lag
+        # with chunked uploads through the HTTPS ingress
+        PUSH_IMAGE=$(echo "${IMAGE}" | sed 's|gitea.cnoe.localtest.me|gitea-http.gitea.svc.cluster.local:3000|')
         buildah push \
           --storage-driver="${STORAGE_DRIVER}" \
           --tls-verify=false \
           --digestfile "${DIGEST_FILE}" \
           "${IMAGE}" \
-          "docker://${IMAGE}"
+          "docker://${PUSH_IMAGE}"
 
         printf "%s" "${IMAGE}" > "$(results.image_ref.path)"
         cat "${DIGEST_FILE}" > "$(results.image_digest.path)"
