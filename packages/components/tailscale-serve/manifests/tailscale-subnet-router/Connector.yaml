@@ -4,7 +4,9 @@ metadata:
   name: subnet-router
   namespace: tailscale
 spec:
+  tags:
+    - tag:k8s-operator
   subnetRouter:
     advertiseRoutes: 
       - "10.244.0.0/16" # Pod CIDR
-      - "10.96.0.0/12"  # Service CIDR
+      - "10.96.0.0/16"  # Service CIDR
