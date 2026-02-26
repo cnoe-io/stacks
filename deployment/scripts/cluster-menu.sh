@@ -319,6 +319,16 @@ cluster-deploy() {
   echo "📦 Installing ArgoCD..."
   "$STACKS_DIR/deployment/scripts/01-install-argocd.sh"
 
+  echo "🔐 Configuring ArgoCD internal repository access..."
+  kubectl create secret generic repo-stacks-internal -n argocd \
+    --from-literal=url=http://gitea-http.gitea.svc.cluster.local:3000/giteaadmin/stacks.git \
+    --from-literal=username=giteaadmin \
+    --from-literal=password=developer \
+    --from-literal=type=git \
+    --from-literal=project=default \
+    --dry-run=client -o yaml | kubectl apply -f -
+  kubectl label secret repo-stacks-internal -n argocd argocd.argoproj.io/secret-type=repository --overwrite
+
   echo "⚡ Applying ArgoCD Performance overrides..."
   kubectl apply -f "$DEPLOY_DIR/overrides/argocd-performance.yaml"
 
