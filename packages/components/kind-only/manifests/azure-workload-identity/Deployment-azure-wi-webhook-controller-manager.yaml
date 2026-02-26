@@ -9,7 +9,7 @@ metadata:
   name: azure-wi-webhook-controller-manager
   namespace: azure-workload-identity-system
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: workload-identity-webhook
