@@ -81,8 +81,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: DAPR_TRUST_ANCHORS_FILE
-              value: /var/run/secrets/dapr.io/tls/ca.crt
+            - name: DAPR_TRUST_ANCHORS
+              valueFrom:
+                configMapKeyRef:
+                  name: dapr-trust-bundle
+                  key: ca.crt
             - name: DAPR_CONTROL_PLANE_TRUST_DOMAIN
               value: cluster.local
           resources:
