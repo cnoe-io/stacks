@@ -1,0 +1,2 @@
+resources:
+- Ingress-argocd-tailscale.yaml

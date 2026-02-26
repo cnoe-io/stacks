@@ -1,0 +1,2 @@
+resources:
+- Ingress-loki-tailscale.yaml

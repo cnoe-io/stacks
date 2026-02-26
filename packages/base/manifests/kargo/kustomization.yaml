@@ -1,0 +1,2 @@
+resources:
+- Ingress-kargo-tailscale.yaml

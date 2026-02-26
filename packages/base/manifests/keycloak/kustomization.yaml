@@ -1,0 +1,2 @@
+resources:
+- Ingress-keycloak-tailscale.yaml

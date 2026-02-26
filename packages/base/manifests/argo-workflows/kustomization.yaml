@@ -1,0 +1,2 @@
+resources:
+- Ingress-argo-workflows-tailscale.yaml
