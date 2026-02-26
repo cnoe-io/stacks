@@ -353,6 +353,16 @@ cluster-deploy() {
     sync-manual-apps
   fi
 
+  # Trigger Tekton pipeline builds in the background (builds all Gitea-hosted images)
+  if [ "${SKIP_TEKTON_BUILDS:-}" != "true" ] && [ -f "$STACKS_DIR/deployment/scripts/trigger-tekton-builds.sh" ]; then
+    echo "🔨 Queuing Tekton image builds in background..."
+    nohup bash -c '
+      "'$STACKS_DIR'/deployment/scripts/trigger-tekton-builds.sh" >> /tmp/tekton-builds.log 2>&1
+      echo "[$(date)] Tekton builds triggered." >> /tmp/tekton-builds.log
+    ' > /dev/null 2>&1 &
+    disown || true
+  fi
+
   if [ "${SKIP_TAILSCALE_TOKEN:-}" != "true" ] && [ -f "$STACKS_DIR/deployment/scripts/tailscale/tailscale-kubeconfig.sh" ]; then
     # Safely attempt to configure 'thinkpad' remote access in the background
     echo "🔄 Queuing Tailscale kubeconfig configuration for 'thinkpad'..."

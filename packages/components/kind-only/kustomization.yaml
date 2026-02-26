@@ -6,10 +6,12 @@ resources:
   - apps/azure-workload-identity.yaml
   - apps/atlas-operator.yaml
   - apps/caipe-agent-argocd.yaml
-  - apps/caipe-agent-backstage.yaml
+  # caipe-agent-backstage disabled: backstage not deployed
+  # - apps/caipe-agent-backstage.yaml
   - apps/caipe-agent-github.yaml
   - apps/caipe-mcp-argocd.yaml
-  - apps/caipe-mcp-backstage.yaml
+  # caipe-mcp-backstage disabled: backstage not deployed
+  # - apps/caipe-mcp-backstage.yaml
   - apps/caipe-mcp-github.yaml
   - apps/caipe-attu.yaml
   - apps/caipe-milvus.yaml

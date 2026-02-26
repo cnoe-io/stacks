@@ -160,6 +160,7 @@ spec:
         PUSH_IMAGE="$(params.push_image)"
         QCOW2_NAME="$(params.qcow2_name)"
         DIGEST_FILE="$(mktemp)"
+        AUTH_FILE="$(mktemp)"
         BUILD_DIR="/workspace/package"
         IMAGE_SERVER_BASE="$(params.image_server_base)"
 
@@ -167,6 +168,8 @@ spec:
           PUSH_IMAGE="${IMAGE}"
         fi
         PUSH_REGISTRY="${PUSH_IMAGE%%/*}"
+        cp "${REGISTRY_AUTH_FILE}" "${AUTH_FILE}"
+        export REGISTRY_AUTH_FILE="${AUTH_FILE}"
 
         rm -rf "${BUILD_DIR}"
         mkdir -p "${BUILD_DIR}"

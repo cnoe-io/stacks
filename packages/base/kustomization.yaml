@@ -9,7 +9,8 @@ resources:
   # - apps/agent-sandbox-crds.yaml
   # - apps/agent-sandbox.yaml
   # - apps/agent-sandbox-config.yaml
-  - apps/ai-chatbot-secrets.yaml
+  # ai-chatbot disabled: images not yet available in Gitea registry
+  # - apps/ai-chatbot-secrets.yaml
   # NOTE: ai-chatbot app moved to components/active-development
   - apps/argocd-repo-write-secret.yaml
   - apps/argocd-secretstore.yaml
@@ -22,17 +23,18 @@ resources:
   - apps/argo-events-resources.yaml
   # argo-events-webhook-setup removed: gitea-push workflow was placeholder only
   - apps/ingress-nginx-cert.yaml
-  - apps/backstage-api-token-sync.yaml
-  - apps/backstage-dapr-components.yaml
-  - apps/backstage-infra.yaml
-  - apps/backstage-namespace.yaml
-  - apps/backstage-secrets-backstage-staging.yaml
-  - apps/backstage-secrets-backstage.yaml
-  - apps/backstage-secrets.yaml
-  - apps/backstage-staging-namespace.yaml
-  - apps/backstage-templates.yaml
-  - apps/backstage-token-sync.yaml
-  - apps/backstage.yaml
+  # backstage disabled: images not yet available in Gitea registry
+  # - apps/backstage-api-token-sync.yaml
+  # - apps/backstage-dapr-components.yaml
+  # - apps/backstage-infra.yaml
+  # - apps/backstage-namespace.yaml
+  # - apps/backstage-secrets-backstage-staging.yaml
+  # - apps/backstage-secrets-backstage.yaml
+  # - apps/backstage-secrets.yaml
+  # - apps/backstage-staging-namespace.yaml
+  # - apps/backstage-templates.yaml
+  # - apps/backstage-token-sync.yaml
+  # - apps/backstage.yaml
   - apps/cert-manager.yaml
   # dapr-agents disabled: not actively used
   # - apps/dapr-agents-redis.yaml

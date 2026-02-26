@@ -25,10 +25,12 @@ kind: Component
 
 resources:
   # Core workflow applications
-  - apps/ai-chatbot.yaml
+  # ai-chatbot disabled: images not yet available in Gitea registry
+  # - apps/ai-chatbot.yaml
   - apps/function-router.yaml
   - apps/workflow-builder.yaml
-  - apps/agentuity-coder.yaml
+  # agentuity-coder disabled: no Gitea repo exists for this app
+  # - apps/agentuity-coder.yaml
   - apps/mcp-gateway.yaml
   - apps/mcp-inspector.yaml
   - apps/workflow-orchestrator.yaml
@@ -55,8 +57,8 @@ resources:
 # NOTE: Since manifests are copied directly (not via kustomize), tags are
 # hardcoded in Deployment files. This block documents which images are used.
 images:
-  - name: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
-    newTag: latest
+  # - name: gitea.cnoe.localtest.me/giteaadmin/ai-chatbot
+  #   newTag: latest
   - name: gitea.cnoe.localtest.me/giteaadmin/function-router
     newTag: latest
   - name: gitea.cnoe.localtest.me/giteaadmin/workflow-builder
