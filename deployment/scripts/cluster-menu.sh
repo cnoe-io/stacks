@@ -389,8 +389,8 @@ cluster-recreate() {
   local CLEANUP_SCRIPT="$STACKS_DIR/deployment/scripts/tailscale/cleanup-old-devices.sh"
   if command -v tailscale &>/dev/null && [ -f "$CLEANUP_SCRIPT" ]; then
     echo "🧹 Cleaning up old Tailscale devices..."
-    if "$CLEANUP_SCRIPT"; then
-      echo "✅ Tailscale devices deleted (grace period starts now)"
+    if "$CLEANUP_SCRIPT" --wait; then
+      echo "✅ Tailscale devices deleted and grace period completed"
     else
       echo "⚠️  Tailscale cleanup failed (continuing anyway)"
     fi
