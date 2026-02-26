@@ -37,7 +37,7 @@ resources:
   # dapr-agents disabled: not actively used
   # - apps/dapr-agents-redis.yaml
   # - apps/dapr-agents-secrets.yaml
-  - apps/dapr-components.yaml
+  # - apps/dapr-components.yaml  # disabled: targets dapr-agents namespace
   - apps/dapr-dashboard.yaml
   - apps/dapr-runtime.yaml
   - apps/dapr-shared.yaml
@@ -84,8 +84,8 @@ resources:
   - apps/postgres.yaml
   - apps/redis.yaml
   - apps/selfsigned-issuer.yaml
-  - apps/speckit-agents-rbac.yaml
+  # - apps/speckit-agents-rbac.yaml  # disabled: targets dapr-agents namespace
   # NOTE: workflow-builder app moved to components/active-development
   - apps/nats.yaml
-  - apps/workflow-dapr-components.yaml
+  # - apps/workflow-dapr-components.yaml  # disabled: targets dapr-agents namespace
   # NOTE: workflow-web app moved to components/active-development
