@@ -41,6 +41,10 @@ spec:
                 exit 1
               fi
 
+              # Add back the trailing newline stripped by bash command substitution
+              CA_CRT="${CA_CRT}
+"
+
               # Create or update in dapr-sandbox
               kubectl create configmap dapr-trust-bundle \
                 --namespace=dapr-sandbox \

@@ -86,8 +86,10 @@ spec:
                 configMapKeyRef:
                   name: dapr-trust-bundle
                   key: ca.crt
-            - name: DAPR_CONTROL_PLANE_TRUST_DOMAIN
+            - name: DAPR_CONTROLPLANE_TRUST_DOMAIN
               value: cluster.local
+            - name: DAPR_CONTROLPLANE_NAMESPACE
+              value: dapr-system
           resources:
             requests:
               cpu: 100m
