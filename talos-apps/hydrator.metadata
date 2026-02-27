@@ -1,0 +1,7 @@
+{
+  "repoURL": "https://github.com/PittampalliOrg/stacks.git",
+  "drySha": "3b3e97583051aa0677c6fa9f3f0aa3a3fb6bb074",
+  "commands": [
+    "kustomize build ./packages/overlays/talos"
+  ]
+}

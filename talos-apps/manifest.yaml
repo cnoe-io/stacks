@@ -1,0 +1,2484 @@
+apiVersion: v1
+data:
+  AZURE_KEY_VAULT_NAME: keyvault-thcmfmoo5oeow
+  CLUSTER_NAME: talos
+  GIT_BRANCH: main
+  GIT_REPO_URL: https://github.com/PittampalliOrg/stacks.git
+  INGRESS_HOST: ai401kchat.com
+  INGRESS_PORT: "443"
+  TAILSCALE_TAILNET: tail286401.ts.net
+  TLS_CLUSTER_ISSUER: letsencrypt-prod
+  TLS_ENABLED: "true"
+kind: ConfigMap
+metadata:
+  name: cluster-config-gcm6kd7khf
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "52"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: argo-events
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo-events
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: argo-events
+    helm:
+      releaseName: argo-events
+      valuesObject:
+        controller:
+          metrics:
+            enabled: true
+          replicas: 1
+        crds:
+          install: true
+          keep: true
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 2.4.20
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "55"
+    stacks.io/repo-source: stacks
+  name: argo-events-resources
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo-events
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argo-events-resources
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-85"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: argo-rollouts
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo-rollouts
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: argo-rollouts
+    helm:
+      releaseName: argo-rollouts
+      valuesObject:
+        controller:
+          metrics:
+            enabled: true
+          replicas: 1
+        dashboard:
+          enabled: true
+          ingress:
+            enabled: true
+            hosts:
+              - rollouts.cnoe.localtest.me
+            ingressClassName: nginx
+        installCRDs: true
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 2.40.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-84"
+    stacks.io/repo-source: stacks
+  name: argo-rollouts-analysis
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo-rollouts
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argo-rollouts-analysis
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    stacks.io/repo-source: stacks
+  name: argo-workflows
+  namespace: argocd
+spec:
+  destination:
+    namespace: argo
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argo-workflows
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: argocd-repo-write-secret
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argocd-repo-write-secret
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: argocd-secretstore
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argocd-secretstore
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: argocd-server-tls
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argocd-server-tls
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    stacks.io/repo-source: stacks
+  name: argocd-webhook-setup
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/argocd-webhook-setup
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-65"
+    stacks.io/repo-source: stacks
+  name: arize-phoenix
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/arize-phoenix
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-85"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: azure-keyvault-store
+  namespace: argocd
+spec:
+  destination:
+    namespace: external-secrets
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/azure-keyvault-store
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-95"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: cert-manager
+  namespace: argocd
+spec:
+  destination:
+    namespace: cert-manager
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: cert-manager
+    helm:
+      releaseName: cert-manager
+      valuesObject:
+        cainjector:
+          replicaCount: 1
+        installCRDs: true
+        replicaCount: 1
+        webhook:
+          replicaCount: 1
+    repoURL: https://charts.jetstack.io
+    targetRevision: v1.14.4
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+    stacks.io/repo-source: stacks
+  name: contour
+  namespace: argocd
+spec:
+  destination:
+    namespace: projectcontour
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/contour
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-115"
+    stacks.io/repo-source: stacks
+  name: dapr-dashboard
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-system
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/dapr-dashboard
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-120"
+    stacks.io/repo-source: stacks
+  name: dapr-runtime
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-system
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/dapr-runtime
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-110"
+    stacks.io/repo-source: stacks
+  name: dapr-shared
+  namespace: argocd
+spec:
+  destination:
+    namespace: dapr-sandbox
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/dapr-shared
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: default-secretstore
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/default-secretstore
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:durable-agent-local-dev
+    stacks.io/repo-source: stacks
+  name: durable-agent
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | select(.name == "durable-agent") | .resources
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/durable-agent
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-80"
+    stacks.io/repo-source: stacks
+  name: example-namespace
+  namespace: argocd
+spec:
+  destination:
+    namespace: example
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/example-namespace
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: external-secrets
+  namespace: argocd
+spec:
+  destination:
+    namespace: external-secrets
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: external-secrets
+    helm:
+      releaseName: external-secrets
+      valuesObject:
+        certController:
+          replicaCount: 1
+        installCRDs: true
+        replicaCount: 1
+        serviceAccount:
+          annotations:
+            azure.workload.identity/client-id: 1140d9c2-62f6-4857-94c2-7e0e6c64e562
+            azure.workload.identity/tenant-id: 0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38
+          labels:
+            azure.workload.identity/use: "true"
+        webhook:
+          replicaCount: 1
+    repoURL: https://charts.external-secrets.io
+    targetRevision: 0.9.13
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "56"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:fn-system-local-dev
+    stacks.io/repo-source: stacks
+  name: fn-system
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: serving.knative.dev
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/template/metadata/annotations/autoscaling.knative.dev~1minScale
+        - /spec/template/metadata/annotations/autoscaling.knative.dev~1maxScale
+      kind: Service
+  project: default
+  source:
+    path: packages/components/active-development/manifests/fn-system
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:function-router-local-dev
+    stacks.io/repo-source: stacks
+  name: function-router
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/function-router
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: gateway-api-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: config/crd
+    repoURL: https://github.com/kubernetes-sigs/gateway-api
+    targetRevision: v1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: gitea-secretstore
+  namespace: argocd
+spec:
+  destination:
+    namespace: gitea
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/gitea-secretstore
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: grafana
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: grafana
+    helm:
+      releaseName: grafana
+      valuesObject:
+        adminPassword: admin
+        adminUser: admin
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - access: proxy
+                isDefault: true
+                jsonData:
+                  httpMethod: POST
+                  prometheusType: Mimir
+                  timeInterval: 15s
+                name: Mimir
+                type: prometheus
+                uid: mimir
+                url: http://mimir.observability.svc.cluster.local:9009/prometheus
+              - access: proxy
+                isDefault: false
+                jsonData:
+                  maxLines: 1000
+                name: Loki
+                type: loki
+                uid: loki
+                url: http://loki.observability.svc.cluster.local:3100
+              - access: proxy
+                isDefault: false
+                jsonData:
+                  httpMethod: GET
+                  lokiSearch:
+                    datasourceUid: loki
+                  nodeGraph:
+                    enabled: true
+                  search:
+                    hide: false
+                  serviceMap:
+                    datasourceUid: mimir
+                  tracesToLogs:
+                    datasourceUid: loki
+                    filterBySpanID: true
+                    filterByTraceID: true
+                  tracesToMetrics:
+                    datasourceUid: mimir
+                    queries:
+                      - name: Request rate
+                        query: sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))
+                      - name: Error rate
+                        query: sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))
+                      - name: Duration (p95)
+                        query: histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])) by (le))
+                    spanEndTimeShift: 1h
+                    spanStartTimeShift: -1h
+                    tags:
+                      - key: service.name
+                        value: service
+                      - key: job
+                name: Tempo
+                type: tempo
+                uid: tempo
+                url: http://tempo.observability.svc.cluster.local:3200
+        grafana.ini:
+          analytics:
+            check_for_updates: true
+          log:
+            mode: console
+          server:
+            domain: grafana.cnoe.localtest.me
+            root_url: '%(protocol)s://%(domain)s:%(http_port)s/'
+        ingress:
+          enabled: true
+          hosts:
+            - grafana.cnoe.localtest.me
+          ingressClassName: nginx
+          path: /
+          pathType: Prefix
+        initChownData:
+          enabled: false
+        persistence:
+          enabled: true
+          size: 5Gi
+        replicas: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        serviceMonitor:
+          enabled: false
+        sidecar:
+          dashboards:
+            enabled: true
+            label: grafana_dashboard
+            searchNamespace: observability
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 10.5.5
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "65"
+    stacks.io/repo-source: stacks
+  name: grafana-dashboards
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/grafana-dashboards
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: ingress-nginx
+  namespace: argocd
+spec:
+  destination:
+    namespace: ingress-nginx
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: ingress-nginx
+    helm:
+      releaseName: ingress-nginx
+      valuesObject:
+        controller:
+          admissionWebhooks:
+            enabled: true
+          hostNetwork: true
+          hostPort:
+            enabled: true
+          ingressClassResource:
+            default: true
+            name: nginx
+          replicaCount: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          service:
+            type: NodePort
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    targetRevision: 4.14.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-99"
+    stacks.io/repo-source: stacks
+  labels:
+    app.kubernetes.io/name: ingress-nginx-cert
+  name: ingress-nginx-cert
+  namespace: argocd
+spec:
+  destination:
+    namespace: ingress-nginx
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/ingress-nginx-cert
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: keycloak
+  namespace: argocd
+spec:
+  destination:
+    namespace: keycloak
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/keycloak
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: keycloak-config
+  namespace: argocd
+spec:
+  destination:
+    namespace: keycloak
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/keycloak-config
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: keycloak-secrets
+  namespace: argocd
+spec:
+  destination:
+    namespace: keycloak
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/keycloak-secrets
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  name: langfuse-app
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/langfuse-app
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-65"
+    stacks.io/repo-source: stacks
+  name: langfuse-clickhouse
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/langfuse-clickhouse
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-65"
+    stacks.io/repo-source: stacks
+  name: langfuse-minio
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/langfuse-minio
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-65"
+    stacks.io/repo-source: stacks
+  name: langfuse-postgres
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/langfuse-postgres
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-65"
+    stacks.io/repo-source: stacks
+  name: langfuse-redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/langfuse-redis
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-84"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: letsencrypt-issuer
+  namespace: argocd
+spec:
+  destination:
+    namespace: cert-manager
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/talos-only/manifests/letsencrypt-issuer
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  name: lgtm-mimir
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/lgtm-mimir
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+    stacks.io/repo-source: stacks
+  name: lgtm-otel-collector
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/lgtm-otel-collector
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-60"
+    stacks.io/repo-source: stacks
+  name: lgtm-pyroscope
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/lgtm-pyroscope
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: loki
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: loki
+    helm:
+      releaseName: loki
+      valuesObject:
+        backend:
+          replicas: 0
+        deploymentMode: SingleBinary
+        gateway:
+          enabled: false
+        loki:
+          auth_enabled: false
+          commonConfig:
+            replication_factor: 1
+          ingester:
+            chunk_encoding: snappy
+          limits_config:
+            allow_structured_metadata: true
+            retention_period: 720h
+            volume_enabled: true
+          schemaConfig:
+            configs:
+              - from: "2024-01-01"
+                index:
+                  period: 24h
+                  prefix: index_
+                object_store: filesystem
+                schema: v13
+                store: tsdb
+          storage:
+            type: filesystem
+        monitoring:
+          selfMonitoring:
+            enabled: false
+            grafanaAgent:
+              installOperator: false
+          serviceMonitor:
+            enabled: false
+        read:
+          replicas: 0
+        singleBinary:
+          persistence:
+            enabled: true
+            size: 10Gi
+          replicas: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+        test:
+          enabled: false
+        write:
+          replicas: 0
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 6.49.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:mcp-gateway-local-dev
+    stacks.io/repo-source: stacks
+  name: mcp-gateway
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/mcp-gateway
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+    stacks.io/repo-source: stacks
+  name: mcp-inspector
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/mcp-inspector
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: metrics-server
+  namespace: argocd
+spec:
+  destination:
+    namespace: kube-system
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: metrics-server
+    helm:
+      releaseName: metrics-server
+      valuesObject:
+        args:
+          - --kubelet-insecure-tls
+        replicas: 1
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/
+    targetRevision: 3.12.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "84"
+  name: mpak-registry
+  namespace: argocd
+spec:
+  destination:
+    namespace: nimbletools-system
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    helm:
+      releaseName: mpak
+      valuesObject:
+        global:
+          namespace: nimbletools-system
+        ingress:
+          enabled: false
+        persistence:
+          enabled: false
+        registry:
+          env:
+            NODE_ENV: development
+            SCANNER_ENABLED: "false"
+            STORAGE_PATH: /tmp/storage
+            STORAGE_TYPE: local
+          image:
+            pullPolicy: IfNotPresent
+            repository: gitea.cnoe.localtest.me/giteaadmin/mpak-registry
+            tag: latest
+          replicaCount: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            readOnlyRootFilesystem: false
+        secrets:
+          databaseUrl: postgresql://postgres:password@postgresql.workflow-builder.svc.cluster.local:5432/mpak_registry
+        web:
+          replicaCount: 0
+    path: deploy/kubernetes/helm/mpak
+    repoURL: https://github.com/NimbleBrainInc/mpak.git
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-86"
+    stacks.io/repo-source: stacks
+  name: nats
+  namespace: argocd
+spec:
+  destination:
+    namespace: nats
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/nats
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    stacks.io/repo-source: stacks
+  name: neo4j
+  namespace: argocd
+spec:
+  destination:
+    namespace: neo4j
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/neo4j
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-55"
+    stacks.io/repo-source: stacks
+  name: nginx-tls-secret
+  namespace: argocd
+spec:
+  destination:
+    namespace: ingress-nginx
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/nginx-tls-secret
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "88"
+    stacks.io/repo-source: stacks
+  name: nimble-activepieces-mcps
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/nimble-activepieces-mcps
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "82"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: nimbletools-core
+  namespace: argocd
+spec:
+  destination:
+    namespace: nimbletools-system
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    helm:
+      releaseName: nimbletools-core
+      valuesObject:
+        controlPlane:
+          replicas: 1
+        global:
+          domain: cnoe.localtest.me
+        ingress:
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-redirect: "false"
+          className: nginx
+          enabled: true
+        monitoring:
+          enabled: true
+        nginx-ingress:
+          enabled: false
+        operator:
+          replicas: 1
+        rbacController:
+          enabled: true
+          replicas: 1
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+    path: chart
+    repoURL: https://github.com/NimbleBrainInc/nimbletools-core.git
+    targetRevision: v0.4.2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+    stacks.io/repo-source: stacks
+  name: nixos-image-server
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/nixos-image-server
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "72"
+    stacks.io/repo-source: stacks
+  name: nixos-sway-datavolume
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/nixos-sway-datavolume
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "74"
+    stacks.io/repo-source: stacks
+  name: nixos-sway-vm
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: kubevirt.io
+      jsonPointers:
+        - /spec/template/spec/domain/resources
+        - /status
+      kind: VirtualMachine
+  project: default
+  source:
+    path: packages/components/active-development/manifests/nixos-sway-vm
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+    stacks.io/repo-source: stacks
+  name: observability-namespace
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/observability-namespace
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-75"
+    stacks.io/repo-source: stacks
+  name: observability-secrets
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/observability-secrets
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "80"
+    stacks.io/repo-source: stacks
+  name: ollama
+  namespace: argocd
+spec:
+  destination:
+    namespace: ollama
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/ollama
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    stacks.io/repo-source: stacks
+  name: postgres
+  namespace: argocd
+spec:
+  destination:
+    namespace: nextjs
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/postgres
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-95"
+  name: prometheus-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: example/prometheus-operator-crd
+    repoURL: https://github.com/prometheus-operator/prometheus-operator
+    targetRevision: v0.79.2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - Replace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+    stacks.io/repo-source: stacks
+  name: redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: nextjs
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/redis
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+    stacks.io/repo-source: stacks
+  name: redisinsight
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/observability/manifests/redisinsight
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-85"
+    stacks.io/repo-source: stacks
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: selfsigned-issuer
+  namespace: argocd
+spec:
+  destination:
+    namespace: cert-manager
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/base/manifests/selfsigned-issuer
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+    stacks.io/repo-source: stacks
+  name: stacks-builds
+  namespace: argocd
+spec:
+  destination:
+    namespace: stacks-builds
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/stacks-builds
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-120"
+    stacks.io/repo-source: stacks
+  name: tailscale-crds
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-crds
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+    stacks.io/repo-source: stacks
+  name: tailscale-operator
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-operator
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-105"
+    stacks.io/repo-source: stacks
+  name: tailscale-operator-secrets
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-operator-secrets
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 5
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-90"
+    stacks.io/repo-source: stacks
+  name: tailscale-rbac
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-rbac
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-70"
+    stacks.io/repo-source: stacks
+  name: tailscale-secrets
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-secrets
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-50"
+    stacks.io/repo-source: stacks
+  name: tailscale-subnet-router
+  namespace: argocd
+spec:
+  destination:
+    namespace: tailscale
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/tailscale-serve/manifests/tailscale-subnet-router
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: tempo
+  namespace: argocd
+spec:
+  destination:
+    namespace: observability
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    chart: tempo
+    helm:
+      releaseName: tempo
+      valuesObject:
+        persistence:
+          enabled: true
+          size: 10Gi
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        serviceMonitor:
+          enabled: false
+        tempo:
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://mimir.observability.svc.cluster.local:9009/api/v1/push
+          overrides:
+            defaults:
+              metrics_generator:
+                processors:
+                  - service-graphs
+                  - span-metrics
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+                http:
+                  endpoint: 0.0.0.0:4318
+          storage:
+            trace:
+              backend: local
+              local:
+                path: /var/tempo/traces
+              wal:
+                path: /var/tempo/wal
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 1.24.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:workflow-builder-local-dev
+    stacks.io/repo-source: stacks
+  name: workflow-builder
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/workflow-builder
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+    stacks.io/repo-source: stacks
+  name: workflow-builder-builds
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/workflow-builder-builds
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "45"
+    stacks.io/repo-source: stacks
+  name: workflow-functions-shared
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  project: default
+  source:
+    path: packages/components/active-development/manifests/workflow-functions-shared
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+    kargo.akuity.io/authorized-stage: kargo-pipelines:workflow-orchestrator-local-dev
+    stacks.io/repo-source: stacks
+  name: workflow-orchestrator
+  namespace: argocd
+spec:
+  destination:
+    namespace: workflow-builder
+    server: https://k8s-api-talos.tail286401.ts.net
+  ignoreDifferences:
+    - group: apps
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+        - /spec/replicas
+      kind: Deployment
+  project: default
+  source:
+    path: packages/components/active-development/manifests/workflow-orchestrator
+    repoURL: https://github.com/PittampalliOrg/stacks.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+      limit: 10
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
